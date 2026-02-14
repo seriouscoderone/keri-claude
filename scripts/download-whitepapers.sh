@@ -55,7 +55,7 @@ download_url \
 
 # signifypy docs (singlehtml from GitHub)
 download_url \
-  "https://raw.githubusercontent.com/WebOfTrust/signifypy/main/docs/singlehtml/index.html" \
+  "https://raw.githubusercontent.com/seriouscoderone/signifypy/main/docs/singlehtml/index.html" \
   "signifypy-docs.html"
 
 echo ""
