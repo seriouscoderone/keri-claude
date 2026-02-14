@@ -37,7 +37,6 @@ download_url() {
 # SmithSamuelM/Papers - whitepapers/
 download "whitepapers/SPAC_Message.md"
 download "whitepapers/IdentifierTheory_web.pdf"
-download "whitepapers/KERI_WP.web.pdf"
 
 # SmithSamuelM/Papers - presentations/
 download "presentations/KERI_PAC_Theorem.pdf"
@@ -101,6 +100,12 @@ else
   echo "  python3 -m venv $SCRIPT_DIR/.venv"
   echo "  $SCRIPT_DIR/.venv/bin/pip install pymupdf4llm"
 fi
+
+# --- Minimize phase ---
+
+echo ""
+echo "=== Minimizing markdown ==="
+python3 "$SCRIPT_DIR/minimize-md.py" --in-place "$MARKDOWN_DIR"/*.md
 
 echo ""
 echo "=== Done ==="

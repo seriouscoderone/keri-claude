@@ -1,8 +1,4 @@
-:::::::::::::::::::::::::::: {.col-md-8 .ms-sm-auto .col-lg-9 .px-md-4 .pt-5 role="main"}
-::: {#terminology-section-utility-container .d-print-none .alert .alert-primary .p-3}
-:::
-
-# [§](#composable-event-streaming-representation-cesr){.toc-anchor .d-print-none} Composable Event Streaming Representation (CESR)
+# [§](#composable-event-streaming-representation-cesr) Composable Event Streaming Representation (CESR)
 
 **Specification Status**: v1.0
 
@@ -33,7 +29,7 @@
 :   [Commit
     history](https://github.com/trustoverip/kswg-cesr-specification/commits/main)
 
-## [§](#introduction){.toc-anchor .d-print-none} Introduction
+## [§](#introduction) Introduction
 
 The Composable Event Streaming Representation (CESR) is a dual
 text-binary encoding format that has the unique property of text-binary
@@ -85,7 +81,7 @@ text-printable type code from a binary code table could be found
 serendipitously from a set of binary encodings. This is the case for the
 Multicodec encodings, which are binary but include a subset of
 "serendipitous" ASCII codes. \[[8](#MCTable)\] \[[7](#MCMFormat)\]
-[IPFS](#term:ipfs){.term-reference}. Indeed, some \[[10](#Base58Check)\]
+[IPFS](#term:ipfs). Indeed, some \[[10](#Base58Check)\]
 applications take advantage of the binary MultiCodec tables but only use
 serendipitous text-compatible type codes. Serendipitous text encodings
 in binary code tables do not generally work for any size or type. So,
@@ -158,13 +154,13 @@ Self-Framing group encodings for attachments instead of wrappers.
 Properly, in CESR parlance, a full Message consists of a Message Body
 plus Attachments.
 
-## [§](#status-of-this-memo){.toc-anchor .d-print-none} Status of This Memo
+## [§](#status-of-this-memo) Status of This Memo
 
 Information about the current status of this document, any errata, and
 how to provide feedback on it, may be obtained at
 <https://github.com/trustoverip/kswg-cesr-specification>.
 
-## [§](#copyright-notice){.toc-anchor .d-print-none} Copyright Notice
+## [§](#copyright-notice) Copyright Notice
 
 This specification is subject to the **OWF Contributor License Agreement
 1.0 - Copyright** available at
@@ -181,7 +177,7 @@ These terms are inherited from the Technical Stack Working Group at the
 Trust over IP Foundation. [Working Group
 Charter](https://trustoverip.org/wp-content/uploads/TSWG-2-Charter-Revision.pdf).
 
-## [§](#terms-of-use){.toc-anchor .d-print-none} Terms of Use
+## [§](#terms-of-use) Terms of Use
 
 These materials are made available under and are subject to the [OWF CLA
 1.0 - Copyright & Patent
@@ -205,7 +201,7 @@ THE ToIP GOVERNING AGREEMENT, WHETHER BASED ON BREACH OF CONTRACT, TORT
 (INCLUDING NEGLIGENCE), OR OTHERWISE, AND WHETHER OR NOT THE OTHER PARTY
 HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-## [§](#scope){.toc-anchor .d-print-none} Scope
+## [§](#scope) Scope
 
 Implementation design of a protocol-based data serialization
 specification that supports loss-less round-tripping between text and
@@ -225,7 +221,7 @@ electronically transmitted information. The implementation dependency
 scope includes Base64 encoding/decoding libraries, standardized
 cryptographic primitive definitions, JSON, CBOR, and MGPK libraries.
 
-## [§](#normative-references){.toc-anchor .d-print-none} Normative references
+## [§](#normative-references) Normative references
 
 [The normative documents](#normative-section) are referred to in the
 text in such a way that some or all of their content constitutes
@@ -239,7 +235,7 @@ referenced document (including any amendments) applies.
 
 See [Bibliography - Normative Section](#normative-section)
 
-## [§](#terms-and-definitions){.toc-anchor .d-print-none} Terms and Definitions
+## [§](#terms-and-definitions) Terms and Definitions
 
 For the purposes of this document, the following terms and definitions
 apply.
@@ -250,130 +246,127 @@ at the following addresses:
 - ISO Online browsing platform: available at <https://www.iso.org/obp>
 - IEC Electropedia: available at <http://www.electropedia.org/>
 
-::: {#terminology-section-start}
-:::
-
-[[[Attachment [(Attachments, [attachment]{.term-local-original-term .term-original-term title="original term"})]{.term-local-parenthetical-terms}]{#term:attachment}]{#term:attachment}]{#term:attachments}
+[[[Attachment [(Attachments, [attachment])]]]]
 
 :   A serialized data structure that supplements a
-    [Message](#term:message){.term-reference} Body, typically following
+    [Message](#term:message) Body, typically following
     it in transmission. Attachments may include signatures, receipts, or
     other metadata necessary to verify or interpret the message. They
     are considered an integral part of the overall
-    [Message](#term:message){.term-reference}.
+    [Message](#term:message).
 
-:   More: [CESR](#term:cesr){.term-reference} also provides the
+:   More: [CESR](#term:cesr) also provides the
     attachment codes needed for differentiating the types of
     cryptographic material (such as signatures) used as attachments on
     all event types for the KERI.
 
-[[Autonomic identifier [([autonomic-identifier]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:autonomic-identifier title="Externally defined as autonomic-identifier"}]{#term:autonomic-identifier .term-external original-term="autonomic-identifier"}
+[[Autonomic identifier [([autonomic-identifier])]]]
 
-:   
+:
 
-[[CESR [([composable-event-streaming-representation]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:composable-event-streaming-representation title="Externally defined as composable-event-streaming-representation"}]{#term:cesr .term-external original-term="composable-event-streaming-representation"}
+[[CESR [([composable-event-streaming-representation])]]]
 
-:   
+:
 
-[[CESRgram]{.term-local-original-term .term-original-term title="original term"}]{#term:cesrgram}
+[[CESRgram]]
 :   a CESR-encoded message --- essentially a serialized binary or text
     representation of an event, message, or attachment using the
-    [CESR](#term:cesr){.term-reference} format.
+    [CESR](#term:cesr) format.
 
-[[[Composability [(Concatenation Composability, [composability]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:composability title="Externally defined as composability"}]{#term:composability}]{#term:concatenation-composability .term-external original-term="composability"}
+[[[Composability [(Concatenation Composability, [composability])]]]]
 
-:   
+:
 
-[[[Cryptographic agility [(agility, [cryptographic-agility]{.term-local-original-term .term-original-term title="original term"})]{.term-local-parenthetical-terms}]{#term:cryptographic-agility}]{#term:cryptographic-agility}]{#term:agility}
+[[[Cryptographic agility [(agility, [cryptographic-agility])]]]]
 :   a SAID MUST include a pre-pended derivation code that specifies the
     cryptographic algorithm used to generate the digest. This provides
     cryptographic agility for CESR.
 
-[[Cryptographic primitive [([cryptographic-primitive]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:cryptographic-primitive title="Externally defined as cryptographic-primitive"}]{#term:cryptographic-primitive .term-external original-term="cryptographic-primitive"}
+[[Cryptographic primitive [([cryptographic-primitive])]]]
 
-:   
+:
 
-[[Domain [([domain]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:domain title="Externally defined as domain"}]{#term:domain .term-external original-term="domain"}
+[[Domain [([domain])]]]
 
-:   
+:
 
-[[Framing code [([framing-code]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:framing-code title="Externally defined as framing-code"}]{#term:framing-code .term-external original-term="framing-code"}
+[[Framing code [([framing-code])]]]
 
-:   
+:
 
-[[Group/Count codes [([group-count-codes]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:group-count-codes title="Externally defined as group-count-codes"}]{#term:group-count-codes .term-external original-term="group-count-codes"}
+[[Group/Count codes [([group-count-codes])]]]
 
-:   
+:
 
-[[IPFS [([interplanetary-file-system]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:interplanetary-file-system title="Externally defined as interplanetary-file-system"}]{#term:ipfs .term-external original-term="interplanetary-file-system"}
+[[IPFS [([interplanetary-file-system])]]]
 
-:   
+:
 
-[[JSONPath]{.term-external-original-term .term-original-term title="original term"}]{#term:jsonpath .term-external original-term="JSONPath"}
+[[JSONPath]]
 
-:   
+:
 
-[[[Key Event Receipt Infrastructure [(KERI, [key-event-receipt-infrastructure]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:key-event-receipt-infrastructure title="Externally defined as key-event-receipt-infrastructure"}]{#term:key-event-receipt-infrastructure}]{#term:keri .term-external original-term="key-event-receipt-infrastructure"}
+[[[Key Event Receipt Infrastructure [(KERI, [key-event-receipt-infrastructure])]]]]
 
-:   
+:
 
-[[[Message [(Messages, [message]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:message title="Externally defined as message"}]{#term:message}]{#term:messages .term-external original-term="message"}
+[[[Message [(Messages, [message])]]]]
 :   CESR-based messages typically can have
-    [Attachments](#term:attachments){.term-reference} and their
+    [Attachments](#term:attachments) and their
     attachment codes.
 
-[[Mid-padding [([mid-padding]{.term-local-original-term .term-original-term title="original term"})]{.term-local-parenthetical-terms}]{#term:mid-padding}]{#term:mid-padding}
+[[Mid-padding [([mid-padding])]]]
 
-:   the chosen approach for [CESR](#term:cesr){.term-reference}. Adds
+:   the chosen approach for [CESR](#term:cesr). Adds
     leading pad bytes to the value portion pre-conversion, effectively
     placing the padding after the framing code but before the value i.e.
     mid-padding.
 
 :   Source: dr. S. Smith
 
-[[Ondex [([ondex]{.term-local-original-term .term-original-term title="original term"})]{.term-local-parenthetical-terms}]{#term:ondex}]{#term:ondex}
+[[Ondex [([ondex])]]]
 :   Ondex is "other index". Some indexed signature codes have two
     indices, so for those that do its the other one.
 
-[[Primitive [([primitive]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:primitive title="Externally defined as primitive"}]{#term:primitive .term-external original-term="primitive"}
+[[Primitive [([primitive])]]]
 
-:   
+:
 
-[[Quadlet [([quadlet]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:quadlet title="Externally defined as quadlet"}]{#term:quadlet .term-external original-term="quadlet"}
+[[Quadlet [([quadlet])]]]
 
-:   
+:
 
-[[Self-framing [([self-framing]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:self-framing title="Externally defined as self-framing"}]{#term:self-framing .term-external original-term="self-framing"}
+[[Self-framing [([self-framing])]]]
 
-:   
+:
 
-[[Stable [([stable]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:stable title="Externally defined as stable"}]{#term:stable .term-external original-term="stable"}
+[[Stable [([stable])]]]
 
-:   
+:
 
-[[Stream [([stream]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:stream title="Externally defined as stream"}]{#term:stream .term-external original-term="stream"}
+[[Stream [([stream])]]]
 
-:   
+:
 
-[[Tritet [([tritet]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:tritet title="Externally defined as tritet"}]{#term:tritet .term-external original-term="tritet"}
+[[Tritet [([tritet])]]]
 
-:   
+:
 
-[[Variable Length [([variable-length]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:variable-length title="Externally defined as variable-length"}]{#term:variable-length .term-external original-term="variable-length"}
+[[Variable Length [([variable-length])]]]
 
-:   
+:
 
-[[Version [([version]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:version title="Externally defined as version"}]{#term:version .term-external original-term="version"}
+[[Version [([version])]]]
 
-:   
+:
 
-[[Version String [([version-string]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:version-string title="Externally defined as version-string"}]{#term:version-string .term-external original-term="version-string"}
+[[Version String [([version-string])]]]
 
-:   
+:
 
-## [§](#composability-and-domain-representations){.toc-anchor .d-print-none} Composability and Domain Representations
+## [§](#composability-and-domain-representations) Composability and Domain Representations
 
-### [§](#composability){.toc-anchor .d-print-none} Composability
+### [§](#composability) Composability
 
 An encoding has Composability when any set of Self-Framing concatenated
 Primitives expressed in either the Text domain or Binary domain may be
@@ -398,7 +391,7 @@ Primitives or other compositions of Primitives and Count code groups
 MUST be Composable. All Count Code groups of Primitives or other
 compositions of Primitives and Count code groups MUST be self-framing.
 
-### [§](#abstract-domain-representations){.toc-anchor .d-print-none} Abstract Domain representations
+### [§](#abstract-domain-representations) Abstract Domain representations
 
 The Cryptographic Primitives defined in CESR inhabit three different
 Domains each with a different representation. The first Domain is called
@@ -430,7 +423,7 @@ domain is denoted with `b[k]`. Similarly, a given Primitive in the 'R'
 domain is denoted with `r`. A member of an indexed set of Primitives in
 the R' domain is denoted with `r[k]`.
 
-#### [§](#transformations-between-domains){.toc-anchor .d-print-none} Transformations between Domains
+#### [§](#transformations-between-domains) Transformations between Domains
 
 Although the Composability property mentioned in the previous section
 only applies to conversions back and forth between the 'T', and 'B',
@@ -464,9 +457,9 @@ over the other two Domains in either direction. All compliant
 implementations MUST support the transformations between all three
 domains.
 
-##### [§](#examples-of-circuits-of-transformations){.toc-anchor .d-print-none} Examples of circuits of transformations
+##### [§](#examples-of-circuits-of-transformations) Examples of circuits of transformations
 
-###### [§](#example-1){.toc-anchor .d-print-none} Example 1
+###### [§](#example-1) Example 1
 
 Starting in the 'R' domain, a circuit that crosses into the 'T' and 'B'
 domains can be traversed and then crossed back into the 'R' domain as
@@ -476,7 +469,7 @@ follows:
 R->T(R)->T->B(T)->B->R(B)->R
 ```
 
-##### [§](#example-2){.toc-anchor .d-print-none} Example 2
+##### [§](#example-2) Example 2
 
 Likewise, starting in the 'R' domain, a circuit that crosses into the
 'B' and 'T' domains and then crossed back into the 'R' domain as
@@ -486,7 +479,7 @@ follows:
 R->B(R)->B->T(B)->T->R(T)->R
 ```
 
-#### [§](#concatenation-composability-property){.toc-anchor .d-print-none} Concatenation composability property
+#### [§](#concatenation-composability-property) Concatenation composability property
 
 Let `+` represent concatenation. Concatenation is associative and may be
 applied to any two Primitives or any two groups or sets of concatenated
@@ -511,7 +504,7 @@ concatenated set of Primitives, `cat(t[k])` from the T domain to the B
 domain.
 
 The [Concatenation
-Composability](#term:concatenation-composability){.term-reference}
+Composability](#term:concatenation-composability)
 property or Composability for short, between T and B is expressed as
 follows:
 
@@ -529,7 +522,7 @@ transformation of a set (as a whole) of concatenated Primitives is equal
 to the concatenation of the set of individually transformed Primitives.
 Each and every Primitive or Count Code group of primitives MUST satisfy
 the [Concatenation
-Composability](#term:concatenation-composability){.term-reference}
+Composability](#term:concatenation-composability)
 property.
 
 For example, suppose there are two Primitives in the Text domain,
@@ -564,7 +557,7 @@ codes allow efficient conversion or off-loading for concurrent
 processing of composed (concatenated) groups of Primitives in a Stream
 without having to individually parse each Primitive before off-loading.
 
-### [§](#concrete-domain-representations){.toc-anchor .d-print-none} Concrete Domain representations
+### [§](#concrete-domain-representations) Concrete Domain representations
 
 The Text, 'T', domain representations in CESR MUST use only the
 characters from the URL/filename safe variant of the IETF RFC-4648
@@ -619,7 +612,7 @@ And finally, for `c` below:
 |c7:c6:c5:c4:c3:c2:c1:c0|c7:c6:c5:c4:c3:c2:c1:c0|c7:c6:c5:c4:c3:c2:c1:c0|
 ```
 
-#### [§](#conversions){.toc-anchor .d-print-none} Conversions
+#### [§](#conversions) Conversions
 
 Given that the constraint of alignment on 24-bit boundaries in either
 the Text domain or the Binary domain needs to be satisfied to reach
@@ -772,7 +765,7 @@ binary bytes. Likewise, this means that the length of any Primitive in
 the 'T' domain MUST be an integer multiple of four Base64 characters
 with a minimum length of four Base64 characters.
 
-#### [§](#stable-framing-codes-in-the-text-domain){.toc-anchor .d-print-none} Stable Framing Codes in the text domain
+#### [§](#stable-framing-codes-in-the-text-domain) Stable Framing Codes in the text domain
 
 There are many coding schemes that could satisfy the Composability
 constraint of alignment on 24-bit boundaries. A primary design goal of
@@ -786,11 +779,11 @@ prepended Framing Code and its postpended value are Stable, i.e.,
 MUST be stable in the Text domain. Stable type encoding is defined in
 the following section.
 
-##### [§](#stable-type-encoding){.toc-anchor .d-print-none} Stable type encoding
+##### [§](#stable-type-encoding) Stable type encoding
 
 Stable type coding makes it much easier to recognize Primitives of a
 given type when debugging source, reading
-[Messages](#term:messages){.term-reference}, or documents in the 'T'
+[Messages](#term:messages), or documents in the 'T'
 domain that include encoded Primitives. This is true even when those
 Primitives have different lengths or values. For Primitive types with
 fixed lengths, i.e., all Primitives of that type have the same length,
@@ -817,7 +810,7 @@ Therefore, the type portion MUST begin the Framing Code, and the type
 coding portion MUST consume a fixed integral number of characters in the
 'T' domain.
 
-##### [§](#stable-value-encoding){.toc-anchor .d-print-none} Stable value encoding
+##### [§](#stable-value-encoding) Stable value encoding
 
 A secondary usability constraint is recognizable or readable Stable
 value coding in the Text, 'T', domain. Stable value encoding means that
@@ -839,7 +832,7 @@ the Primitive, after the type code, but before the value.
 
 Therefore the value portion of any primitive MUST be right aligned.
 
-#### [§](#code-characters-and-lead-bytes){.toc-anchor .d-print-none} Code characters and lead bytes
+#### [§](#code-characters-and-lead-bytes) Code characters and lead bytes
 
 Two ways exist to provide the required alignment on 24-bit boundaries to
 satisfy the Composability property defined above. One is to post-pad
@@ -904,9 +897,9 @@ Text, 'T', or fully qualified Binary, 'B', domain representations, the
 second approach was chosen for CESR.
 
 Therefore all CESR primitives MUST employ
-[mid-padding](#term:mid-padding){.term-reference} as defined.
+[mid-padding](#term:mid-padding) as defined.
 
-#### [§](#multiple-code-table-approach){.toc-anchor .d-print-none} Multiple code table approach
+#### [§](#multiple-code-table-approach) Multiple code table approach
 
 The design goals for CESR Framing Codes include minimizing the Framing
 Code size for the most frequently used (most popular) codes while also
@@ -926,9 +919,9 @@ parse and convert the rest of the Primitive.
 Each code table MUST be uniquely indicated by the first character of the
 type code in the 'T' domain.
 
-## [§](#text-coding-scheme-design){.toc-anchor .d-print-none} Text Coding Scheme Design
+## [§](#text-coding-scheme-design) Text Coding Scheme Design
 
-### [§](#text-code-size){.toc-anchor .d-print-none} Text Code Size
+### [§](#text-code-size) Text Code Size
 
 Recall that the 'R' domain representation is a
 pair`(text code, raw binary)`. The text code is Stable and begins with
@@ -1029,23 +1022,21 @@ the length of the raw binary element, `N`. Thus, the size of the text
 code in Base64 characters MUST be a function of the equivalent pad size
 determined by the length `N mod 3` of the raw binary value.
 
-#### [§](#example-of-pad-size-computation){.toc-anchor .d-print-none} Example of pad size computation
+#### [§](#example-of-pad-size-computation) Example of pad size computation
 
 Let `M` be a non-negative integer-valued variable then:
 
-::: table-responsive-md
    Pad Size    Code Size
   ---------- -----------
       0              4•M
       1          4•M + 1
       2          4•M + 2
-:::
 
 The minimum code sizes are 4, 1, and 2 characters for pad sizes of 0, 1,
 and 2 characters with minimum `M` equaling 1, 0, and 0, respectively. By
 increasing `M`, there are larger code sizes for a given pad size.
 
-### [§](#pre-padding-before-conversion){.toc-anchor .d-print-none} Pre-padding before conversion
+### [§](#pre-padding-before-conversion) Pre-padding before conversion
 
 Returning to the examples above, observe what happens when the binary
 strings are pre-padded with zeroed leading pad bytes of the appropriate
@@ -1053,7 +1044,7 @@ length given by `ps = (3 - (N mod 3)) mod 3)` where `ps` is the number
 of leading pad bytes and `N` is the length of the raw binary string
 before padding is prepended.
 
-#### [§](#pre-padding-a-one-byte-value){.toc-anchor .d-print-none} Pre-padding a one-byte value
+#### [§](#pre-padding-a-one-byte-value) Pre-padding a one-byte value
 
 For the one-byte raw binary string `a`, `ps` is two. The pre-padded
 conversion results in the following:
@@ -1118,7 +1109,7 @@ after conversion. The code characters `S1S0` can be recovered as the
 first two characters that are obtained from simply converting `U1U0`
 only back to Base64.
 
-#### [§](#pre-padding-a-two-byte-value){.toc-anchor .d-print-none} Pre-padding a two-byte value
+#### [§](#pre-padding-a-two-byte-value) Pre-padding a two-byte value
 
 For the two-byte raw binary string `b`, `ps` is one. The resultant
 four-character Base64 encoded Primitive would be `S0T2T1T0`.
@@ -1144,7 +1135,7 @@ that the code character (only) is effectively left shifted 2 bits after
 conversion. The code character `S0` can be recovered as the first
 character obtained from simply converting `U0` only to Base64.
 
-#### [§](#pre-padding-a-three-byte-value){.toc-anchor .d-print-none} Pre-padding a three-byte value
+#### [§](#pre-padding-a-three-byte-value) Pre-padding a three-byte value
 
 For the three-byte raw binary string `c`, `ps` is zero. So pre-padding
 is not needed.
@@ -1173,7 +1164,7 @@ When `S3S2S1S0T3T2T1T0` is converted back to binary, there is no overlap
 or bit shifting because both the code and raw binary `c` are each
 separately aligned on twenty-four-bit boundaries.
 
-#### [§](#examples-of-pre-padding){.toc-anchor .d-print-none} Examples of pre-padding
+#### [§](#examples-of-pre-padding) Examples of pre-padding
 
 Suppose that two-byte raw binary numbers are to be encoded into CESR
 using the pre-pad approach described above. In order to achieve 24-bit
@@ -1186,13 +1177,11 @@ expressed by a tuple of (code, raw) where the code is Base64 text and
 the raw is the raw binary value without code. For readability, raw
 binary values are represented in hexadecimal notation.
 
-::: table-responsive-md
               Raw       Text     Binary
   --------------- ---------- ----------
     ("M", 0x0000)     "MAAA"   0x300000
     ("M", 0x0001)     "MAAB"   0x300001
     ("M", 0xffff)   "MP\_\_"   0x30ffff
-:::
 
 With this approach, both the Binary domain and Text domain
 representations are as compact as possible for a fully qualified
@@ -1207,7 +1196,7 @@ that value to get an index into a lookup table that it uses to find how
 many remaining characters/bytes to extract from the Stream. This makes
 the Primitive self-framing.
 
-### [§](#count-or-group-framing-codes){.toc-anchor .d-print-none} Count or Group Framing Codes
+### [§](#count-or-group-framing-codes) Count or Group Framing Codes
 
 As mentioned above, one of the primary advantages of composable encoding
 is that special Framing Codes can be specified to support groups of
@@ -1232,7 +1221,7 @@ serializations. Count Codes enable grouping any combination of
 Primitives, groups of Primitives, or non-native serializations to
 optimize pipelining and offloading.
 
-### [§](#interleaved-non-cesr-serializations){.toc-anchor .d-print-none} Interleaved non-CESR serializations
+### [§](#interleaved-non-cesr-serializations) Interleaved non-CESR serializations
 
 Many applications use JSON \[[RFC4627](#RFC4627)\], CBOR
 \[[RFC8949](#RFC8949)\], or MessagePack (MGPK) \[[3](#MGPK)\] to
@@ -1254,7 +1243,7 @@ When nesting inside CESR groups, a non-native CESR serializations MUST
 be encoded as a CESR primitive and then enclosed in a special count code
 for non-native messages.
 
-### [§](#cold-start-stream-parsing-problem){.toc-anchor .d-print-none} Cold start Stream parsing problem
+### [§](#cold-start-stream-parsing-problem) Cold start Stream parsing problem
 
 After a cold start, a Stream processor looks for framing information to
 know how to parse groups of elements in the Stream. If that framing
@@ -1281,7 +1270,7 @@ Special CESR Count Codes support re-synchronization at each boundary
 between interleaved CESR and other serializations (like JSON, CBOR, or
 MGPK).
 
-#### [§](#performant-resynchronization-with-unique-start-bits){.toc-anchor .d-print-none} Performant resynchronization with unique start bits
+#### [§](#performant-resynchronization-with-unique-start-bits) Performant resynchronization with unique start bits
 
 A CESR Stream parser MUST support three specific interleaved
 serializations, namely, JSON, CBOR, and MGPK. To make the parser more
@@ -1360,22 +1349,20 @@ The starting tritet of any cold start (restart) MUST begin with one of
 eight cases. These tritet start bit REQUIREMENTS are summarized in the
 following table:
 
-##### [§](#top-level-stream-starting-tritets){.toc-anchor .d-print-none} Top-level Stream Starting Tritets
+##### [§](#top-level-stream-starting-tritets) Top-level Stream Starting Tritets
 
-::: table-responsive-md
    Starting Tritet               Serialization               Character
   ----------------- --------------------------------------- -----------
-        0b000                Annotated 'T' domain           
+        0b000                Annotated 'T' domain
         0b001             CESR 'T' domain Count Code            `-`
         0b010               CESR 'T' domain Op Code             `_`
         0b011                        JSON                       `{`
-        0b100                    MGPK (FixMap)              
-        0b101              CBOR (Map "Major Type 5")        
-        0b110                 MGPK (Map16, Map32)           
-        0b111        CESR 'B' domain Count Code or Op Code  
-:::
+        0b100                    MGPK (FixMap)
+        0b101              CBOR (Map "Major Type 5")
+        0b110                 MGPK (Map16, Map32)
+        0b111        CESR 'B' domain Count Code or Op Code
 
-#### [§](#stream-parsing-rules){.toc-anchor .d-print-none} Stream parsing rules
+#### [§](#stream-parsing-rules) Stream parsing rules
 
 Given this set of Tritets (3 bits), a well-formed Stream start and
 restart requirement can be expressed.
@@ -1414,7 +1401,7 @@ that generalizes support not only for CESR Composability but also for
 interleaved CESR with three of the most popular field map
 serializations.
 
-### [§](#compact-fixed-size-codes){.toc-anchor .d-print-none} Compact fixed-size codes
+### [§](#compact-fixed-size-codes) Compact fixed-size codes
 
 Typically, modern cryptographic suites support limited sets of raw
 binary Primitives with fixed (not variable) sizes. The design aesthetic
@@ -1496,7 +1483,7 @@ always 64 bytes, so knowing that the type is `Ed25519 signature` implies
 the size of 64 bytes and a pad size of 2 characters that, therefore, may
 be encoded with a 2-character text code.
 
-### [§](#code-table-selectors){.toc-anchor .d-print-none} Code table selectors
+### [§](#code-table-selectors) Code table selectors
 
 To efficiently parse a Stream of Primitives with types from multiple
 text code tables, the first character in the text code MUST determine
@@ -1535,7 +1522,7 @@ as its selector. The single code character table MUST use the characters
 \[A-Z,a-z\]. The other 10 code tables MUST each use one the characters
 \[0-9\] as their selector.
 
-## [§](#table-types){.toc-anchor .d-print-none} Table types
+## [§](#table-types) Table types
 
 The tables in CESR consist of:
 
@@ -1561,9 +1548,9 @@ The sections below explain these table types, the code selectors that
 differentiate these types, and how to use these tables to decode a given
 CESR stream.
 
-### [§](#tables-of-codes-for-fixed-length-raw-sizes){.toc-anchor .d-print-none} Tables of Codes for Fixed-length Raw Sizes
+### [§](#tables-of-codes-for-fixed-length-raw-sizes) Tables of Codes for Fixed-length Raw Sizes
 
-#### [§](#small-fixed-length-raw-size-tables){.toc-anchor .d-print-none} Small fixed-length raw-size tables
+#### [§](#small-fixed-length-raw-size-tables) Small fixed-length raw-size tables
 
 There are two special tables that are dedicated to the most popular
 fixed-size raw binary Cryptographic Primitive types. These are the most
@@ -1571,21 +1558,21 @@ compact, so they optimize bandwidth but only provide a small number of
 total types. In both of these, the code-specific size equals the number
 of pad characters, i.e., the pad size.
 
-##### [§](#one-character-fixed-length-raw-size-table){.toc-anchor .d-print-none} One-character fixed-length raw-size table
+##### [§](#one-character-fixed-length-raw-size-table) One-character fixed-length raw-size table
 
 The one-character type code table does not have a selector character per
 se but uses as type codes the non-selector characters `A` - `Z` and
 `a` - `z`. This provides 52 unique type codes for fixed-size raw binary
 values with a pad size of 1.
 
-##### [§](#two-character-fixed-length-raw-size-table){.toc-anchor .d-print-none} Two-character fixed-length raw size table
+##### [§](#two-character-fixed-length-raw-size-table) Two-character fixed-length raw size table
 
 The two-character type code table uses the selector `0` as its first
 character. The second character is the type code. This provides 64
 unique type codes for fixed-size raw binary values that have a pad size
 of 2.
 
-#### [§](#large-fixed-length-raw-size-tables){.toc-anchor .d-print-none} Large fixed-length raw-size tables
+#### [§](#large-fixed-length-raw-size-tables) Large fixed-length raw-size tables
 
 The three tables in this group are for large fixed raw-size Primitives.
 These three tables use 0, 1, or 2 lead bytes as appropriate for a pad
@@ -1597,7 +1584,7 @@ providing 262,144 unique types. This should provide enough type codes to
 accommodate all fixed raw-size Primitive types for the foreseeable
 future.
 
-##### [§](#large-fixed-length-raw-size-table-with-0-lead-bytes){.toc-anchor .d-print-none} Large fixed-length raw-size table with 0 Lead Bytes
+##### [§](#large-fixed-length-raw-size-table-with-0-lead-bytes) Large fixed-length raw-size table with 0 Lead Bytes
 
 This table uses `1` as its first character or selector. The remaining 3
 characters provide the type of each code. Only fixed-size raw binaries
@@ -1606,7 +1593,7 @@ code provides a total of 262,144 unique type code values
 (`262144 = 64**3`) for fixed-size raw binary Primitives with a pad size
 of 0.
 
-##### [§](#large-fixed-length-raw-size-table-with-1-lead-byte){.toc-anchor .d-print-none} Large fixed-length raw-size table with 1 lead byte
+##### [§](#large-fixed-length-raw-size-table-with-1-lead-byte) Large fixed-length raw-size table with 1 lead byte
 
 This table uses `2` as its first character or selector. The remaining 3
 characters provide the type of each code. Only fixed-size raw binaries
@@ -1616,7 +1603,7 @@ code provides a total of 262,144 unique type code values
 code table above, there are 262,196 type codes for fixed-size raw binary
 Primitives with a pad size of 1.
 
-##### [§](#large-fixed-length-raw-size-table-with-2-lead-bytes){.toc-anchor .d-print-none} Large fixed-length raw-size table with 2 lead bytes
+##### [§](#large-fixed-length-raw-size-table-with-2-lead-bytes) Large fixed-length raw-size table with 2 lead bytes
 
 This table uses `3` as its first character or selector. The remaining 3
 characters provide the type of each code. Only fixed-size raw binaries
@@ -1626,9 +1613,9 @@ code provides a total of 262,144 unique type code values
 code table above (selector `0`), there are 262,208 type codes for
 fixed-size raw binary Primitives with a pad size of 2.
 
-### [§](#tables-for-codes-with-variable-length-raw-sizes){.toc-anchor .d-print-none} Tables for Codes with Variable-length Raw-sizes
+### [§](#tables-for-codes-with-variable-length-raw-sizes) Tables for Codes with Variable-length Raw-sizes
 
-#### [§](#small-variable-length-raw-size-tables){.toc-anchor .d-print-none} Small variable-length raw-size tables
+#### [§](#small-variable-length-raw-size-tables) Small variable-length raw-size tables
 
 Although many Primitives have fixed raw binary sizes, especially those
 for modern cryptographic suites such as keys, signatures, and digests,
@@ -1666,7 +1653,7 @@ Quadlets/triplets from 0 to 4095 (`64**2 -1`). This corresponds to value
 lengths of up to 16,380 characters (`4095 * 4`) or 12,285 bytes
 (`4095 * 3`).
 
-##### [§](#small-variable-length-raw-size-table-with-0-lead-bytes){.toc-anchor .d-print-none} Small variable-length raw-size table with 0 lead bytes
+##### [§](#small-variable-length-raw-size-table-with-0-lead-bytes) Small variable-length raw-size table with 0 lead bytes
 
 This table uses `4` as its first character or selector. The second
 character provides the type. The final two characters provide the size
@@ -1678,7 +1665,7 @@ The maximum length of the value provided by the 2 size characters is
 the 'B' domain. All are raw binary Primitives with a pad size of 0 that
 each includes 0 lead bytes.
 
-##### [§](#small-variable-length-raw-size-table-with-1-lead-byte){.toc-anchor .d-print-none} Small variable-length raw-size table with 1 lead byte
+##### [§](#small-variable-length-raw-size-table-with-1-lead-byte) Small variable-length raw-size table with 1 lead byte
 
 This table uses `5` as its first character or selector. The second
 character provides the type. The final two characters provide the size
@@ -1690,7 +1677,7 @@ The maximum length of the value provided by the 2 size characters is
 the 'B' domain. All are raw binary Primitives with a pad size of 1 that
 each includes 1 lead byte.
 
-##### [§](#small-variable-length-raw-size-table-with-2-lead-bytes){.toc-anchor .d-print-none} Small variable-length raw-size table with 2 lead bytes
+##### [§](#small-variable-length-raw-size-table-with-2-lead-bytes) Small variable-length raw-size table with 2 lead bytes
 
 This table uses `6` as its first character or selector. The second
 character provides the type. The final two characters provide the size
@@ -1702,7 +1689,7 @@ The maximum length of the value provided by the 2 size characters is
 the 'B' domain. All are raw binary Primitives with a pad size of 2 that
 each includes 2 lead bytes.
 
-#### [§](#large-variable-length-raw-size-tables){.toc-anchor .d-print-none} Large Variable-length Raw-size Tables
+#### [§](#large-variable-length-raw-size-tables) Large Variable-length Raw-size Tables
 
 Many legacy cryptographic libraries such as OpenSSL and GPG support any
 variable-sized Primitive for keys, signatures, and digests such as RSA.
@@ -1714,12 +1701,10 @@ accommodate all the legacy cryptographic libraries as well as all the
 variable-sized non-cryptographic raw Primitive types for the foreseeable
 future.
 
-::: {#issue-1 .notice .issue}
-[ISSUE](#issue-1){.notice-link}
+[ISSUE](#issue-1)
 
 [Post-quantum cryptographic
 operations](https://github.com/trustoverip/kswg-cesr-specification/issues/14)
-:::
 
 The three tables in this group are for large variable raw size
 Primitives. These three large variable raw size tables use 0, 1, or 2
@@ -1750,7 +1735,7 @@ provide value lengths in Quadlets/triplets from 0 to 16,777,215
 (`64**4 -1`). This corresponds to value lengths of up to 67,108,860
 characters (`16777215 * 4`) or 50,331,645 bytes (`16777215 * 3`).
 
-##### [§](#large-variable-length-raw-size-table-with-0-lead-bytes){.toc-anchor .d-print-none} Large variable-length raw-size table with 0 lead bytes
+##### [§](#large-variable-length-raw-size-table-with-0-lead-bytes) Large variable-length raw-size table with 0 lead bytes
 
 This table uses `7` as its first character or selector. The next three
 characters provide the type. The final four characters provide the size
@@ -1762,7 +1747,7 @@ characters is 16,777,215 Quadlets of characters in the 'T' domain and
 triplets of bytes in the 'B' domain. All are raw binary Primitives with
 pad size of 0 that each includes 0 lead bytes.
 
-##### [§](#large-variable-length-raw-size-table-with-1-lead-byte){.toc-anchor .d-print-none} Large variable-length raw-size table with 1 lead byte
+##### [§](#large-variable-length-raw-size-table-with-1-lead-byte) Large variable-length raw-size table with 1 lead byte
 
 This table uses `8` as its first character or selector. The next three
 characters provide the type. The final four characters provide the size
@@ -1774,7 +1759,7 @@ characters is 16,777,215 Quadlets of characters in the 'T' domain and
 triplets of bytes in the 'B' domain. All are raw binary Primitives with
 a pad size of 1 that each includes 1 lead byte.
 
-##### [§](#large-variable-length-raw-size-table-with-2-lead-bytes){.toc-anchor .d-print-none} Large variable-length raw-size table with 2 lead bytes
+##### [§](#large-variable-length-raw-size-table-with-2-lead-bytes) Large variable-length raw-size table with 2 lead bytes
 
 This table uses `9` as its first character or selector. The next three
 characters provide the type. The final four characters provide the size
@@ -1786,7 +1771,7 @@ characters is 16,777,215 Quadlets of characters in the 'T' domain and
 triplets of bytes in the 'B' domain. All are raw binary Primitives with
 a pad size of 2 that each includes 2 lead bytes.
 
-### [§](#count-code-tables){.toc-anchor .d-print-none} Count Code tables
+### [§](#count-code-tables) Count Code tables
 
 All Count Codes except the genus/version code table (see below) are
 pipelineable because they count the number of Quadlets/triplets in the
@@ -1834,7 +1819,7 @@ If at some time in the future, no more than the initial three count code
 tables are needed, then the number of single-character Count Codes could
 be expanded to include the unused selector codes.
 
-##### [§](#small-count-code-table){.toc-anchor .d-print-none} Small Count Code table
+##### [§](#small-count-code-table) Small Count Code table
 
 Codes in the small Count Code table MUST be each four characters long.
 The first character MUST be the selector `-`. The second character MUST
@@ -1847,7 +1832,7 @@ If the second character is not a letter but is a numeral `0` - `9` or
 `-` or `_`, then it MUST be either a selector for a different Count Code
 table or an error.
 
-##### [§](#large-count-code-table){.toc-anchor .d-print-none} Large Count Code table
+##### [§](#large-count-code-table) Large Count Code table
 
 Codes in the large Count Code table MUST be each 8 characters long. The
 first two characters MUST be the selectors `--`. The next character MUST
@@ -1858,7 +1843,7 @@ from 0 to 1,073,741,823 (`64**5 - 1`). These correspond to groups of
 size `1,073,741,823 * 4 = 4,294,967,292` characters or
 `1,073,741,823 * 3 = 3,221,225,469` bytes.
 
-### [§](#protocol-genusversion-table){.toc-anchor .d-print-none} Protocol genus/version table
+### [§](#protocol-genusversion-table) Protocol genus/version table
 
 The protocol genus/version table is special because its codes modify the
 Count Code groups that MAY appear at the top level of the stream or the
@@ -1885,7 +1870,7 @@ Secondly, for a given protocol genus, a protocol genus and version code
 MUST provide the Version of that given protocol's table set. This allows
 versioning of the CESR code tables for a given protocol.
 
-##### [§](#protocol-genusversion-codes){.toc-anchor .d-print-none} Protocol genus/version codes
+##### [§](#protocol-genusversion-codes) Protocol genus/version codes
 
 The format for a protocol genus/version code MUST be as follows:
 `-_GGGVVV` where `GGG` represents the protocol genus and `VVV`
@@ -1919,9 +1904,9 @@ changes, it is beneficial to have more room for minor vs. major
 versions. When a minor change occurs, the Minor version number MUST be
 incremented.
 
-### [§](#opcode-tables){.toc-anchor .d-print-none} OpCode tables
+### [§](#opcode-tables) OpCode tables
 
-##### [§](#op-code-table){.toc-anchor .d-print-none} Op Code table
+##### [§](#op-code-table) Op Code table
 
 The `_` selector MUST be reserved for the yet-to-be-defined opcode table
 or tables. Opcodes are designed to provide Stream processing
@@ -1931,9 +1916,9 @@ stack-based virtual machine could be executed using a set of opcodes
 that provide Primitive, groups of Primitives, or Stream processing
 instructions. This would enable highly customizable uses for CESR.
 
-### [§](#summary-of-selector-code-tables-and-encoding-scheme-design){.toc-anchor .d-print-none} Summary of Selector code tables and encoding scheme design
+### [§](#summary-of-selector-code-tables-and-encoding-scheme-design) Summary of Selector code tables and encoding scheme design
 
-#### [§](#encoding-scheme-table){.toc-anchor .d-print-none} Encoding scheme table
+#### [§](#encoding-scheme-table) Encoding scheme table
 
 A given CESR protocol genus MUST use the table encoding schemes defined
 above and summarized in the following table:
@@ -1941,12 +1926,11 @@ above and summarized in the following table:
 The following table summarizes the 'T' domain coding schemes by selector
 code for the 15 code tables defined in the sections above:
 
-##### [§](#encoding-scheme-table-2){.toc-anchor .d-print-none} Encoding Scheme Table {#encoding-scheme-table-2}
+##### [§](#encoding-scheme-table-2) Encoding Scheme Table
 
-::: table-responsive-md
   Table                           Universal Selector    Selector     Type Chars   Value Size Chars   Code Size   Lead Bytes   Pad Size            Format
   ------------------------------ -------------------- ------------- ------------ ------------------ ----------- ------------ ---------- ----------------
-                                                                                                                                        
+
   1-char fixed                       `[A-Z,a-z]`                        `1*`        0 or special         1           0           1                `$&&&`
   2-char fixed                           `0`                             1          0 or special         2           0           2                `*$&&`
   large fixed 0-char lead byte           `1`                             3          0 or special         4           0           0            `*$$$&&&&`
@@ -1963,7 +1947,6 @@ code for the 15 code tables defined in the sections above:
   proto + genus                          `-`               `_`           1               0               8           0           0            `**$$$###`
   other cnt codes                        `-`             `[0-9]`        TBD             TBD             TBD         TBD         TBD                 `**`
   op codes                               `_`                            TBD             TBD             TBD         TBD         TBD                  `*`
-:::
 
 Special fixed-size codes MAY convey values in the value size part of the
 code. This enables compact encoding of small special values like field
@@ -1973,26 +1956,24 @@ means the converted raw part MAY be empty. In that case, a fixed-sized
 code but with a non-empty Value Size, the value of the Value Size part
 MAY have special meaning.
 
-##### [§](#encoding-scheme-symbols){.toc-anchor .d-print-none} Encoding scheme symbols
+##### [§](#encoding-scheme-symbols) Encoding scheme symbols
 
 The following table defines the meaning of the symbols used in the
 encoding scheme table `Format` column above:
 
-##### [§](#encoding-scheme-symbols-table){.toc-anchor .d-print-none} Encoding Scheme Symbols Table
+##### [§](#encoding-scheme-symbols-table) Encoding Scheme Symbols Table
 
-::: table-responsive-md
    Symbol  Description
   -------- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-           
+
     `*`    selector-code character also provides the type
     `$`    type-code character from subset of Base64 `[A-Z, a-z,0-9,-,_]`
     `%`    lead byte where pre-converted binary includes the number of lead bytes shown
     `#`    Base64 digit as part of a base 64 integer. When part of Primitive determines the number of following Quadlets or triplets. When part of a Count Code determines the count of the following Primitives or groups of Primitives
     `&`    Base64 value characters that represent the converted raw binary value. The actual number of characters is determined by the prepended text code. Shown is the minimum number of value characters.
    `TBD`   to be determined, reserved for future use
-:::
 
-### [§](#special-context-specific-code-tables){.toc-anchor .d-print-none} Special context-specific code tables
+### [§](#special-context-specific-code-tables) Special context-specific code tables
 
 The set of tables above provides the basic or master encoding schemes.
 These coding schemes constitute the basic or master set of code tables.
@@ -2002,7 +1983,7 @@ additional implicit selector that is not part of the actual explicit
 text code. This allows context-specific coding schemes that would
 otherwise conflict with the basic or master encoding schemes and tables.
 
-#### [§](#indexed-codes){.toc-anchor .d-print-none} Indexed codes
+#### [§](#indexed-codes) Indexed codes
 
 Currently, only one context-specific coding scheme is defined. This is
 for indexed signatures. A given CESR Protocol Genus MAY define other
@@ -2048,38 +2029,34 @@ different values. A big Version code consumes eight characters with one
 character for the selector, one for the type, and three for each of the
 dual indices.
 
-##### [§](#indexed-code-table){.toc-anchor .d-print-none} Indexed code table
+##### [§](#indexed-code-table) Indexed code table
 
 The associated indexed schemes are provided in the following table:
 
-::: table-responsive-md
     Selector     Type Chars   Index Chars   Ondex Chars   Code Size   Lead Bytes   Pad Size            Format
   ------------- ------------ ------------- ------------- ----------- ------------ ---------- ----------------
-                                                                                             
+
    `[A-Z,a-z]`      `1*`           1             0            2           0           2                `$#&&`
        `0`           1             1             1            4           0           0            `0$##&&&&`
        `2`           1             2             2            6           0           2          `2$####&&&&`
        `3`           1             3             3            6           0           0        `3$######&&&&`
-:::
 
-##### [§](#encoding-scheme-format-symbol-table){.toc-anchor .d-print-none} Encoding scheme format symbol table
+##### [§](#encoding-scheme-format-symbol-table) Encoding scheme format symbol table
 
 The following table defines the meaning of the symbols used in the
 Indexed Code table:
 
-::: table-responsive-md
    Symbol                                                                                                          Description
   -------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-           
+
     `*`                                                                                          selector-code character also provides the type
     `$`                                                                                   type-code character from subset of Base64 `[A-Z,a-z,0-9,-,_]`
     `%`                                                                           lead byte where pre-converted binary includes the number of lead bytes shown
     `#`     Base64 digit as part of a base 64 integer. When part of Primitive determines the number of following Quadlets or triplets. When part of a Count Code determines the count of following Primitives or groups of Primitives
     `&`                 Base64 value characters that represent the converted raw binary value. The actual number of characters is determined by the prepended text code. Shown is the minimum number of value characters.
    `TBD`                                                                                              to be determined, reserved for future
-:::
 
-### [§](#parsing-via-table-design){.toc-anchor .d-print-none} Parsing via table design
+### [§](#parsing-via-table-design) Parsing via table design
 
 Text domain parsing can be simplified by using a parse size table. A
 Text domain parser uses the first character selector code to look up the
@@ -2095,50 +2072,44 @@ be calculated given the other 4 rows, so the table need only have 4
 entries in each row. Thus, all basic Primitives may be parsed with one
 parse size table.
 
-#### [§](#table-1){.toc-anchor .d-print-none} Table 1
+#### [§](#table-1) Table 1
 
 Selector code size table
 
-::: table-responsive-md
    selector   hs
   ---------- ----
-             
+
      `B`      1
      `0`      2
      `5`      2
-             
-:::
 
-#### [§](#table-2){.toc-anchor .d-print-none} Table 2
+
+#### [§](#table-2) Table 2
 
 Parse size table
 
 Below is a snippet from the parse size table for some example codes:
 
-::: table-responsive-md
    hard sized index   hs   ss    vs    fs   ls   ps
   ------------------ ---- ---- ------ ---- ---- -----
-                                                
+
          `B`          1    0    43\*   44   0     1
          `0B`         2    0    86\*   88   0    2\*
          `5A`         2    2     \#    \#   1    1\*
-                                                
-:::
 
-#### [§](#table-3){.toc-anchor .d-print-none} Table 3
+
+#### [§](#table-3) Table 3
 
 Parse table symbols
 
-::: table-responsive-md
    Symbol                                      Description
   -------- ------------------------------------------------------------------------------------
-           
+
     `*`                      entry's size may be calculated from other sizes
     `#`     entry's size may be calculated from extracted code characters given by other sizes
-           
-:::
 
-#### [§](#table-4){.toc-anchor .d-print-none} Table 4
+
+#### [§](#table-4) Table 4
 
 Parse part sizes
 
@@ -2146,7 +2117,6 @@ The following table includes both labels of parts shown in the columns
 in the parse size table as well as parts that may be derived from the
 parse table parts or from transformations,
 
-::: table-responsive-md
    Label                                            Description
   ------- -----------------------------------------------------------------------------------------------
    'hs'                            hard size in chars (fixed) part of code size
@@ -2160,11 +2130,10 @@ parse table parts or from transformations,
    'ps'                                  pad size in chars Base64 encoded
    'rs'             raw size in bytes (derived) of binary value where rs is derived from `R(T)`
    'bs'                          binary size in bytes (derived) where bs = ls + rs
-:::
 
-## [§](#annex-a){.toc-anchor .d-print-none} Annex A
+## [§](#annex-a) Annex A
 
-### [§](#code-table-entry-policy){.toc-anchor .d-print-none} Code table entry policy
+### [§](#code-table-entry-policy) Code table entry policy
 
 The policy for placing entries into the tables, in general, is in order
 of first needed first-entered basis. In addition, the compact code
@@ -2181,7 +2150,7 @@ appropriate post-quantum operations will be added. For example, Falcon
 appears to be among the leading candidates with open-source code already
 available.
 
-### [§](#table-format){.toc-anchor .d-print-none} Table format
+### [§](#table-format) Table format
 
 The tables below have the following format:
 
@@ -2195,30 +2164,26 @@ Each table has 5 columns. These are as follows:
     code and its appended material or the number of elements in the
     group. This is empty when variable length.
 
-### [§](#universal-code-tables){.toc-anchor .d-print-none} Universal Code tables
+### [§](#universal-code-tables) Universal Code tables
 
 All code tables for every protocol genus/version MUST implement the
 following tables:
 
-#### [§](#universal-code-table-genusversion-codes){.toc-anchor .d-print-none} Universal Code table genus/version codes
+#### [§](#universal-code-table-genusversion-codes) Universal Code table genus/version codes
 
-::: table-responsive-md
       Code     Description                                  Code Length   Count Length   Total Length
   ------------ ------------------------------------------- ------------- -------------- --------------
-               Universal Genus Version Codes                                            
+               Universal Genus Version Codes
    `-_AAA###`  KERI/ACDC stack code table at genus `AAA`         8            3\*             8
-:::
 
-::: {#count-length-of-genus/version-code .notice .note}
-[NOTE](#count-length-of-genus/version-code){.notice-link}
+[NOTE](#count-length-of-genus/version-code)
 
 \* This isn't a count of items on the stream like others in the count
 code tables below. Instead its the length of the characters wherein the
 total number of KERI/ACDC stack code genuses could exist (denoted by
 `###`).
-:::
 
-#### [§](#universal-code-table-genusversion-codes-that-allow-genusversion-override){.toc-anchor .d-print-none} Universal Code table genus/version codes that allow genus/version override
+#### [§](#universal-code-table-genusversion-codes-that-allow-genusversion-override) Universal Code table genus/version codes that allow genus/version override
 
 All genera MUST have the following codes in their Count Code table.
 Should the first Group Code embedded in each of these groups be a
@@ -2249,27 +2214,24 @@ meaning to the parser.
 
 All genera MUST have the following codes in their Count Code table.
 
-::: table-responsive-md
       Code     Description                                                                                   Code Length   Count Length   Total Length
   ------------ -------------------------------------------------------------------------------------------- ------------- -------------- --------------
-               Count Codes                                                                                                               
-               Universal Count Codes that allow genus/version override                                                                   
+               Count Codes
+               Universal Count Codes that allow genus/version override
      `-A##`    Generic pipeline group up to 4,095 quadlets/triplets                                               4             2              4
    `--A#####`  Generic pipeline group up to 1,073,741,823 quadlets/triplets                                       8             5              8
      `-B##`    Message + attachments group up to 4,095 quadlets/triplets                                          4             2              4
    `--B#####`  Message + attachments group up to 1,073,741,823 quadlets/triplets                                  8             5              8
-     `-C##`    [Attachments](#term:attachments){.term-reference} only group up to 4,095 quadlets/triplets         4             2              4
+     `-C##`    [Attachments](#term:attachments) only group up to 4,095 quadlets/triplets         4             2              4
    `--C#####`  Attachments only group up to 1,073,741,823 quadlets/triplets                                       8             5              8
-:::
 
-#### [§](#universal-code-table-genusversion-codes-that-do-not-allow-genusversion-override){.toc-anchor .d-print-none} Universal Code table genus/version codes that do not allow genus/version override
+#### [§](#universal-code-table-genusversion-codes-that-do-not-allow-genusversion-override) Universal Code table genus/version codes that do not allow genus/version override
 
 All genera MUST have the following codes in their Count Code table.
 
-::: table-responsive-md
       Code     Description                                                                                 Code Length   Count Length   Total Length
   ------------ ------------------------------------------------------------------------------------------ ------------- -------------- --------------
-               Universal Count Codes that do not allow genus/version override                                                          
+               Universal Count Codes that do not allow genus/version override
      `-D##`    Datagram Stream Segment up to 4,095 quadlets/triplets                                            4             2              4
    `--D#####`  Datagram Stream Segment up to 1,073,741,823 quadlets/triplets                                    8             5              8
      `-E##`    ESSR wrapper signable up to 4,095 quadlets/triplets                                              4             2              4
@@ -2284,32 +2246,27 @@ All genera MUST have the following codes in their Count Code table.
    `--I#####`  Generic field map mixed types up to 1,073,741,823 quadlets/triplets                              8             5              8
      `-J##`    Generic list mixed types up to 4,095 quadlets/triplets                                           4             2              4
    `--J#####`  Generic list mixed types up to 1,073,741,823 quadlets/triplets                                   8             5              8
-:::
 
-### [§](#keriacdc-protocol-stack-tables){.toc-anchor .d-print-none} KERI/ACDC Protocol Stack Tables
+### [§](#keriacdc-protocol-stack-tables) KERI/ACDC Protocol Stack Tables
 
 These tables are specific to the KERI/ACDC protocol genus. A compliant
 implementation of KERI/ACDC MUST support the following codes
 
-#### [§](#keriacdc-protocol-genus-version-table){.toc-anchor .d-print-none} KERI/ACDC protocol genus version table
+#### [§](#keriacdc-protocol-genus-version-table) KERI/ACDC protocol genus version table
 
-::: table-responsive-md
       Code     Description                                                              Code Length   Count Length   Total Length
   ------------ ----------------------------------------------------------------------- ------------- -------------- --------------
-               Universal Genus Version Codes                                                                        
+               Universal Genus Version Codes
    `-_AAABAA`  KERI/ACDC protocol stack code table at genus `AAA` and Version `1.00`         8                            8
    `-_AAACAA`  KERI/ACDC protocol stack code table at genus `AAA` and Version `2.00`         8                            8
-:::
 
-::: {#count-length-of-keri-protocol-genus/version-codes .notice .note}
-[NOTE](#count-length-of-keri-protocol-genus/version-codes){.notice-link}
+[NOTE](#count-length-of-keri-protocol-genus/version-codes)
 
 Unlike the code in the Universal Code Selector Table above, these
 represent *specific* instantiations of the protocol genus codes so their
 count lengths are 0.
-:::
 
-#### [§](#master-code-table-for-genusversion-_aaacaa-keriacdc-protocol-stack-version-200){.toc-anchor .d-print-none} Master code table for genus/version `-_AAACAA` (KERI/ACDC protocol stack Version 2.00) {#master-code-table-for-genusversion-_aaacaa-keriacdc-protocol-stack-version-200}
+#### [§](#master-code-table-for-genusversion-_aaacaa-keriacdc-protocol-stack-version-200) Master code table for genus/version `-_AAACAA` (KERI/ACDC protocol stack Version 2.00)
 
 This master table includes the REQUIRED Primitive and Count Code types
 for the KERI/ACDC protocol stack. This table only provides the codes for
@@ -2325,21 +2282,20 @@ types are separated by headers.
 A compliant KERI/ACDC genus MUST have the following codes in its
 Primitive and Count code tables.
 
-::: table-responsive-md
              Code             Description                                                                                                    Code Length   Count Length   Total Length
   --------------------------- ------------------------------------------------------------------------------------------------------------- ------------- -------------- --------------
-                              Count Codes                                                                                                                                
-                              Universal Genus Version Codes                                                                                                              
+                              Count Codes
+                              Universal Genus Version Codes
           `-_AAABAA`          KERI/ACDC protocol stack code table at genus `AAA` and Version `1.00`\*                                             8                            8
           `-_AAACAA`          KERI/ACDC protocol stack code table at genus `AAA` and Version `2.00`\*                                             8                            8
-                              Universal Count Codes that allow genus/version override                                                                                    
+                              Universal Count Codes that allow genus/version override
             `-A##`            Generic pipeline group up to 4,095 quadlets/triplets                                                                4             2              4
           `--A#####`          Generic pipeline group up to 1,073,741,823 quadlets/triplets                                                        8             5              8
             `-B##`            Message + attachments group up to 4,095 quadlets/triplets                                                           4             2              4
           `--B#####`          Message + attachments group up to 1,073,741,823 quadlets/triplets                                                   8             5              8
             `-C##`            Attachments only group up to 4,095 quadlets/triplets                                                                4             2              4
           `--C#####`          Attachments only group up to 1,073,741,823 quadlets/triplets                                                        8             5              8
-                              Universal Count Codes that do not allow genus/version override                                                                             
+                              Universal Count Codes that do not allow genus/version override
             `-D##`            Datagram Stream Segment up to 4,095 quadlets/triplets                                                               4             2              4
           `--D#####`          Datagram Stream Segment up to 1,073,741,823 quadlets/triplets                                                       8             5              8
             `-E##`            ESSR wrapper signable up to 4,095 quadlets/triplets                                                                 4             2              4
@@ -2354,7 +2310,7 @@ Primitive and Count code tables.
           `--I#####`          Generic field map mixed type up to 1,073,741,823 quadlets/triplets                                                  8             5              8
             `-J##`            Generic list mixed types up to 4,095 quadlets/triplets                                                              4             2              4
           `--J#####`          Generic list mixed types up to 1,073,741,823 quadlets/triplets                                                      8             5              8
-                              Genus Specific Count Codes                                                                                                                 
+                              Genus Specific Count Codes
             `-K##`            Indexed controller signature group up to 4,095 quadlets/triplets                                                    4             2              4
           `--K#####`          Indexed controller signature group up to 1,073,741,823 quadlets/triplets                                            8             5              8
             `-L##`            Indexed witness signature group up to 4,095 quadlets/triplets                                                       4             2              4
@@ -2393,10 +2349,10 @@ Primitive and Count code tables.
           `--b#####`          Big Bound Blinded State Sextuples blid+uuid+said+state+bsnu+bsaid up to 1,073,741,823 quadlets/triplets             8             5              8
             `-c##`            Typed and Blinded IANA media type quadruples blid+uuid+type+media up to 4,095 quadlets/triplets                     4             2              4
           `--c#####`          Big Typed and Blinded IANA media type quadruples blid+uuid+type+media up to 1,073,741,823 quadlets/triplets         8             5              8
-                              Operation Codes                                                                                                                            
-              `_`             Reserved TBD                                                                                                                               
-                              Primitive Matter Codes                                                                                                                     
-                              Basic One Character Codes                                                                                                                  
+                              Operation Codes
+              `_`             Reserved TBD
+                              Primitive Matter Codes
+                              Basic One Character Codes
               `A`             Seed of Ed25519 private key                                                                                         1                            44
               `B`             Ed25519 non-transferable prefix public verification key                                                             1                            44
               `C`             X25519 public encryption key, may be converted from Ed25519 public key                                              1                            44
@@ -2424,7 +2380,7 @@ Primitive and Count code tables.
               `Y`             Tag7 7 B64 encoded chars for special values                                                                         1             7              8
               `Z`             Tag11 11 B64 encoded chars for special values                                                                       1                            12
               `a`             Blinding factor 256 bits, Cryptographic strength deterministically generated from random salt                       1                            44
-   Basic Two Character Codes                                                                                                                                             
+   Basic Two Character Codes
              `0A`             Random salt, seed, nonce, private key, or sequence number of length 128 bits                                        2                            24
              `0B`             Ed25519 signature                                                                                                   2                            88
              `0C`             ECDSA secp256k1 signature                                                                                           2                            88
@@ -2444,7 +2400,7 @@ Primitive and Count code tables.
              `0Q`             Gram Head                                                                                                           2             22             28
              `0R`             Gram Head AID Neck                                                                                                  2             22             76
              `0S`             Gram Head AID                                                                                                       2             22             72
-                              Basic Four Character Codes                                                                                                                 
+                              Basic Four Character Codes
             `1AAA`            ECDSA secp256k1 non-transferable prefix public verification key                                                     4                            48
             `1AAB`            ECDSA secp256k1 public verification or encryption key                                                               4                            48
             `1AAC`            Ed448 non-transferable prefix public verification key                                                               4                            80
@@ -2459,55 +2415,53 @@ Primitive and Count code tables.
             `1AAL`            No falsey Boolean value                                                                                             4                            4
             `1AAM`            Yes truthy Boolean value                                                                                            4                            4
             `1AAN`            Tag8 8 B64 encoded chars for special values                                                                         4             8              12
-                              Variable Raw Size Codes                                                                                                                    
+                              Variable Raw Size Codes
             `1AAO`            Escape code for escaping special map field values                                                                   4                            4
             `1AAP`            Empty value for nonce or string                                                                                     4                            4
-             `4A`             String Base64 Only Lead Size 0                                                                                      4             2        
-             `5A`             String Base64 Only Lead Size 1                                                                                      4             2        
-             `6A`             String Base64 Only Lead Size 2                                                                                      4             2        
-            `7AAA`            String Big Base64 Only Lead Size 0                                                                                  8             4        
-            `8AAA`            String Big Base64 Only Lead Size 1                                                                                  8             4        
-            `9AAA`            String Big Base64 Only Lead Size 2                                                                                  8             4        
-             `4B`             Bytes Lead Size 0                                                                                                   4             2        
-             `5B`             Bytes Lead Size 1                                                                                                   4             2        
-             `6B`             Bytes Lead Size 2                                                                                                   4             2        
-            `7AAB`            Bytes Big Lead Size 0                                                                                               8             4        
-            `8AAB`            Bytes Big Lead Size 1                                                                                               8             4        
-            `9AAB`            Bytes Big Lead Size 2                                                                                               8             4        
-             `4C`             X25519 sealed box cipher bytes of sniffable plaintext lead size 0                                                   4             2        
-             `5C`             X25519 sealed box cipher bytes of sniffable plaintext lead size 1                                                   4             2        
-             `6C`             X25519 sealed box cipher bytes of sniffable plaintext lead size 2                                                   4             2        
-            `7AAC`            X25519 sealed box cipher bytes of sniffable plaintext big lead size 0                                               8             4        
-            `8AAC`            X25519 sealed box cipher bytes of sniffable plaintext big lead size 1                                               8             4        
-            `9AAC`            X25519 sealed box cipher bytes of sniffable plaintext big lead size 2                                               8             4        
-             `4D`             X25519 sealed box cipher bytes of QB64 plaintext lead size 0                                                        4             2        
-             `5D`             X25519 sealed box cipher bytes of QB64 plaintext lead size 1                                                        4             2        
-             `6D`             X25519 sealed box cipher bytes of QB64 plaintext lead size 2                                                        4             2        
-            `7AAD`            X25519 sealed box cipher bytes of QB64 plaintext big lead size 0                                                    8             4        
-            `8AAD`            X25519 sealed box cipher bytes of QB64 plaintext big lead size 1                                                    8             4        
-            `9AAD`            X25519 sealed box cipher bytes of QB64 plaintext big lead size 2                                                    8             4        
-             `4E`             X25519 sealed box cipher bytes of QB2 plaintext lead size 0                                                         4             2        
-             `5E`             X25519 sealed box cipher bytes of QB2 plaintext lead size 1                                                         4             2        
-             `6E`             X25519 sealed box cipher bytes of QB2 plaintext lead size 2                                                         4             2        
-            `7AAE`            X25519 sealed box cipher bytes of QB2 plaintext big lead size 0                                                     8             4        
-            `8AAE`            X25519 sealed box cipher bytes of QB2 plaintext big lead size 1                                                     8             4        
-            `9AAE`            X25519 sealed box cipher bytes of QB2 plaintext big lead size 2                                                     8             4        
-             `4F`             HPKE Base cipher bytes of QB2 plaintext lead size 0                                                                 4             2        
-             `5F`             HPKE Base cipher bytes of QB2 plaintext lead size 1                                                                 4             2        
-             `6F`             HPKE Base cipher bytes of QB2 plaintext lead size 2                                                                 4             2        
-            `7AAF`            HPKE Base cipher bytes of QB2 plaintext big lead size 0                                                             8             4        
-            `8AAF`            HPKE Base cipher bytes of QB2 plaintext big lead size 1                                                             8             4        
-            `9AAF`            HPKE Base cipher bytes of QB2 plaintext big lead size 2                                                             8             4        
-             `4H`             Decimal number string lead size 0                                                                                   4             2        
-             `5H`             Decimal number string lead size 1                                                                                   4             2        
-             `6H`             Decimal number string lead size 2                                                                                   4             2        
-            `7AAH`            Decimal number string big lead size 0                                                                               8             4        
-            `8AAH`            Decimal number string big lead size 1                                                                               8             4        
-            `9AAH`            Decimal number string big lead size 2                                                                               8             4        
-:::
+             `4A`             String Base64 Only Lead Size 0                                                                                      4             2
+             `5A`             String Base64 Only Lead Size 1                                                                                      4             2
+             `6A`             String Base64 Only Lead Size 2                                                                                      4             2
+            `7AAA`            String Big Base64 Only Lead Size 0                                                                                  8             4
+            `8AAA`            String Big Base64 Only Lead Size 1                                                                                  8             4
+            `9AAA`            String Big Base64 Only Lead Size 2                                                                                  8             4
+             `4B`             Bytes Lead Size 0                                                                                                   4             2
+             `5B`             Bytes Lead Size 1                                                                                                   4             2
+             `6B`             Bytes Lead Size 2                                                                                                   4             2
+            `7AAB`            Bytes Big Lead Size 0                                                                                               8             4
+            `8AAB`            Bytes Big Lead Size 1                                                                                               8             4
+            `9AAB`            Bytes Big Lead Size 2                                                                                               8             4
+             `4C`             X25519 sealed box cipher bytes of sniffable plaintext lead size 0                                                   4             2
+             `5C`             X25519 sealed box cipher bytes of sniffable plaintext lead size 1                                                   4             2
+             `6C`             X25519 sealed box cipher bytes of sniffable plaintext lead size 2                                                   4             2
+            `7AAC`            X25519 sealed box cipher bytes of sniffable plaintext big lead size 0                                               8             4
+            `8AAC`            X25519 sealed box cipher bytes of sniffable plaintext big lead size 1                                               8             4
+            `9AAC`            X25519 sealed box cipher bytes of sniffable plaintext big lead size 2                                               8             4
+             `4D`             X25519 sealed box cipher bytes of QB64 plaintext lead size 0                                                        4             2
+             `5D`             X25519 sealed box cipher bytes of QB64 plaintext lead size 1                                                        4             2
+             `6D`             X25519 sealed box cipher bytes of QB64 plaintext lead size 2                                                        4             2
+            `7AAD`            X25519 sealed box cipher bytes of QB64 plaintext big lead size 0                                                    8             4
+            `8AAD`            X25519 sealed box cipher bytes of QB64 plaintext big lead size 1                                                    8             4
+            `9AAD`            X25519 sealed box cipher bytes of QB64 plaintext big lead size 2                                                    8             4
+             `4E`             X25519 sealed box cipher bytes of QB2 plaintext lead size 0                                                         4             2
+             `5E`             X25519 sealed box cipher bytes of QB2 plaintext lead size 1                                                         4             2
+             `6E`             X25519 sealed box cipher bytes of QB2 plaintext lead size 2                                                         4             2
+            `7AAE`            X25519 sealed box cipher bytes of QB2 plaintext big lead size 0                                                     8             4
+            `8AAE`            X25519 sealed box cipher bytes of QB2 plaintext big lead size 1                                                     8             4
+            `9AAE`            X25519 sealed box cipher bytes of QB2 plaintext big lead size 2                                                     8             4
+             `4F`             HPKE Base cipher bytes of QB2 plaintext lead size 0                                                                 4             2
+             `5F`             HPKE Base cipher bytes of QB2 plaintext lead size 1                                                                 4             2
+             `6F`             HPKE Base cipher bytes of QB2 plaintext lead size 2                                                                 4             2
+            `7AAF`            HPKE Base cipher bytes of QB2 plaintext big lead size 0                                                             8             4
+            `8AAF`            HPKE Base cipher bytes of QB2 plaintext big lead size 1                                                             8             4
+            `9AAF`            HPKE Base cipher bytes of QB2 plaintext big lead size 2                                                             8             4
+             `4H`             Decimal number string lead size 0                                                                                   4             2
+             `5H`             Decimal number string lead size 1                                                                                   4             2
+             `6H`             Decimal number string lead size 2                                                                                   4             2
+            `7AAH`            Decimal number string big lead size 0                                                                               8             4
+            `8AAH`            Decimal number string big lead size 1                                                                               8             4
+            `9AAH`            Decimal number string big lead size 2                                                                               8             4
 
-::: {#count-length-of-keri-protocol-genus/version-codes-in---aaacaa .notice .note}
-[NOTE](#count-length-of-keri-protocol-genus/version-codes-in---aaacaa){.notice-link}
+[NOTE](#count-length-of-keri-protocol-genus/version-codes-in---aaacaa)
 
 \*Similar to the table above, these represent *specific* instantiations
 of the protocol genus codes so their count lengths are 0.
@@ -2515,37 +2469,33 @@ of the protocol genus codes so their count lengths are 0.
 \--AAACAA may recieve a \--AAABAA code on the stream but would have to
 parse with a table from the original reference implementation not
 included in this specification.
-:::
 
-#### [§](#indexed-code-table-for-genusversion-aaacaa-keriacdc-protocol-stack-version-200){.toc-anchor .d-print-none} Indexed code table for genus/version `--AAACAA` (KERI/ACDC protocol stack version 2.00) {#indexed-code-table-for-genusversion-aaacaa-keriacdc-protocol-stack-version-200}
+#### [§](#indexed-code-table-for-genusversion-aaacaa-keriacdc-protocol-stack-version-200) Indexed code table for genus/version `--AAACAA` (KERI/ACDC protocol stack version 2.00)
 
 A compliant KERI/ACDC genus MUST have the following codes in its
 contextual indexed code table.
 
-::: table-responsive-md
       Code     Description                                 Code Length   Index Length   Ondex Length   Total Length
   ------------ ------------------------------------------ ------------- -------------- -------------- --------------
-               Indexed Two Character Codes                                                            
+               Indexed Two Character Codes
       `A#`     Ed25519 indexed signature both same              2             1              0              88
       `B#`     Ed25519 indexed signature current only           2             1              0              88
       `C#`     ECDSA secp256k1 indexed sig both same            2             1              0              88
       `D#`     ECDSA secp256k1 indexed sig current only         2             1              0              88
-               Indexed Four Character Codes                                                           
+               Indexed Four Character Codes
      `0A##`    Ed448 indexed signature dual                     4             1              1             156
      `0B##`    Ed448 indexed signature current only             4             1              1             156
-               Indexed Six Character Codes                                                            
+               Indexed Six Character Codes
     `2A####`   Ed25519 indexed sig big dual                     6             2              2              92
     `2B####`   Ed25519 indexed sig big current only             6             2              2              92
     `2C####`   ECDSA secp256k1 indexed sig big dual             6             2              2              92
     `2D####`   ECDSA secp256k1 idx sig big current only         6             2              2              92
-               Indexed Eight Character Codes                                                          
+               Indexed Eight Character Codes
    `3A######`  Ed448 indexed signature big dual                 8             3              3             160
    `3B######`  Ed448 indexed signature big current only         8             3              3             160
-:::
 
 Legend:
 
-::: table-responsive-md
    Short name      Description
   ------------ -------------------
      `pre`           Prefix
@@ -2555,9 +2505,8 @@ Legend:
       `fn`      First seen number
      `idx`            Index
       `dt`          DateTime
-:::
 
-#### [§](#examples){.toc-anchor .d-print-none} Examples
+#### [§](#examples) Examples
 
 The tables above include complex groups that maybe composed of other
 groups. For example, consider the counter transferable indexed
@@ -2585,7 +2534,7 @@ example is annotated with comments, spaces, and line feeds for clarity.
         ACBcPS0C_QwGdJUZTKXvC_qCs6069pqV8rdQymrJTdcmJAEYJDJXuHUc6sjgdb0_VlPYIPtVZ9ypbRhkkuXJOykL  # signature 2
 ```
 
-### [§](#version-string-field){.toc-anchor .d-print-none} Version String field
+### [§](#version-string-field) Version String field
 
 Non-CESR serializations, namely, JSON, CBOR, and MGPK when interleaved
 in a CESR Stream MUST have a Version String as their first field with
@@ -2597,7 +2546,7 @@ how a stream parser detects when to perform a regular expression search
 for a version string in a JSON, CBOR, or MGPK serialization interleaved
 in a CESR stream.
 
-##### [§](#version-2xx-string-field-format){.toc-anchor .d-print-none} Version 2.XX string field format {#version-2xx-string-field-format}
+##### [§](#version-2xx-string-field-format) Version 2.XX string field format
 
 The Version String, `v` field MUST be the first field in any top-level
 field map of any interleaved JSON, CBOR, or MGPK serialization. It
@@ -2639,7 +2588,7 @@ versions with 4096 minor versions per major version.
 
 The next three characters, `Ggg`, provide in base 64 numerical notation
 the major and minor version numbers of the Version of the CESR genus
-table used in the [message](#term:message){.term-reference}. This
+table used in the [message](#term:message). This
 assumes that for a given Protocol, the CESR genus is fixed and is
 determinable by the protocol, so only the genus version is needed. The
 first `G` character provides the major version number, and the final two
@@ -2674,7 +2623,7 @@ uppercase. The four supported serialization kinds are `JSON`, `CBOR`,
 `MGPK`, and `CESR` for the JSON, CBOR, MessagePack, and CESR
 serialization standards, respectively \[[RFC4627](#RFC4627)\]
 \[[RFC8949](#RFC8949)\] \[[3](#MGPK)\]
-[CESR](#term:cesr){.term-reference}. The last one, CESR is special. A
+[CESR](#term:cesr). The last one, CESR is special. A
 CESR native serialization of a field map may use either the `-G##` or
 `--G#####` count codes to indicate both that it is a field map and its
 size. Moreover, because count codes have unique start bits (see the
@@ -2728,7 +2677,7 @@ Stream without first deserializing it. This enables performant Stream
 parsing and off-loading of Streams that include any or all of the
 supported serialization types.
 
-##### [§](#legacy-version-1xx-string-field-format){.toc-anchor .d-print-none} Legacy Version 1.XX string field format {#legacy-version-1xx-string-field-format}
+##### [§](#legacy-version-1xx-string-field-format) Legacy Version 1.XX string field format
 
 Compliant Version 2.XX implementations MUST support the old Version 1.XX
 Version String format to properly verify field maps created with 1.XX
@@ -2762,7 +2711,7 @@ uppercase. The four supported serialization kinds are `JSON`, `CBOR`,
 `MGPK`, and `CESR` for the JSON, CBOR, MessagePack, and CESR
 serialization standards, respectively \[[RFC4627](#RFC4627)\]
 \[[RFC8949](#RFC8949)\] \[[3](#MGPK)\]
-[CESR](#term:cesr){.term-reference}.
+[CESR](#term:cesr).
 
 The next six characters provide in lowercase hexadecimal notation the
 total length of the serialization, inclusive of the Version String and
@@ -2778,7 +2727,7 @@ changes to the composition of the fields in the Version String while
 preserving deterministic regular expression extractability of the
 Version String.
 
-### [§](#self-addressing-identifier-said){.toc-anchor .d-print-none} Self-addressing identifier (SAID)
+### [§](#self-addressing-identifier-said) Self-addressing identifier (SAID)
 
 A SAID (Self-Addressing Identifier) is a special type of
 content-addressable identifier based on an encoded cryptographic digest
@@ -2805,7 +2754,7 @@ Primitive's primary expression (alone or in combination) is textual
 using Base64 URL-safe characters. CESR Primitives may be round-tripped
 (alone or in combination) to a compact binary representation without
 loss. The CESR derivation code enables cryptographic digest algorithm
-[agility](#term:agility){.term-reference} in systems that use SAIDs as
+[agility](#term:agility) in systems that use SAIDs as
 content addresses. Each serialization may use a different cryptographic
 digest algorithm as indicated by its derivation code. This provides
 interoperable future-proofing. CESR was developed for the KERI protocol.
@@ -2841,7 +2790,7 @@ computed on the finished immutable contents, and therefore is not
 self-referential. In addition, a SAID MUST include a pre-pended
 derivation code that specifies the cryptographic algorithm used to
 generate the digest. This provides [Cryptographic
-agility](#term:cryptographic-agility){.term-reference}.
+agility](#term:cryptographic-agility).
 
 An authenticatable data serialization is defined to be a serialization
 that is digitally signed with a non-repudiable asymmetric key-pair based
@@ -2884,7 +2833,7 @@ representation of an authenticatable data serialization that includes
 other serializations by reference to their SAIDs instead of by embedded
 containment.
 
-#### [§](#generation-and-verification-protocols){.toc-anchor .d-print-none} Generation and Verification Protocols
+#### [§](#generation-and-verification-protocols) Generation and Verification Protocols
 
 The SAID verification protocol MUST be implemented as follows:
 
@@ -2903,7 +2852,7 @@ The SAID verification protocol MUST be implemented as follows:
   identical then the verification is successful; otherwise,
   unsuccessful.
 
-##### [§](#example-computation){.toc-anchor .d-print-none} Example Computation
+##### [§](#example-computation) Example Computation
 
 The CESR \[CESR\] encoding of a Blake3-256 (32 byte) binary digest has
 44 Base-64 URL-safe characters. The first character is `E` which
@@ -2952,9 +2901,9 @@ replace the SAID in the string with dummy characters of the same length,
 compute the [Blake3](#BLAKE3) digest as SAID of this dummied version,
 and then compare the SAIDs.
 
-##### [§](#serialization-generation){.toc-anchor .d-print-none} Serialization Generation
+##### [§](#serialization-generation) Serialization Generation
 
-###### [§](#order-preserving-data-structures){.toc-anchor .d-print-none} Order-Preserving Data Structures
+###### [§](#order-preserving-data-structures) Order-Preserving Data Structures
 
 The crucial consideration in SAID generation is reproducibility. This
 requires the ordering and sizing of fields in the serialization to be
@@ -3024,7 +2973,7 @@ Consequently, there is no need for any canonical serialization but
 natural insertion order preserving because one can always use
 lexicographic ordering to create the insertion order.
 
-##### [§](#example-python-dict-to-json-serialization-with-said){.toc-anchor .d-print-none} Example Python dict to JSON Serialization with SAID
+##### [§](#example-python-dict-to-json-serialization-with-said) Example Python dict to JSON Serialization with SAID
 
 Suppose the initial value of a Python `dict` is as follows:
 
@@ -3104,7 +3053,7 @@ fields in a mapping serialization such as JSON are ordered in Stable,
 round-trippable, reproducible order, i.e., canonical. The natural
 canonical ordering is called field insertion order.
 
-#### [§](#example-schema-immutability-using-json-schema-with-saids){.toc-anchor .d-print-none} Example Schema Immutability using JSON Schema with SAIDs
+#### [§](#example-schema-immutability-using-json-schema-with-saids) Example Schema Immutability using JSON Schema with SAIDs
 
 SAIDs make [JSON
 Schema](https://json-schema.org/draft/2020-12/json-schema-core.html)
@@ -3174,7 +3123,7 @@ value in the schema contents.
 When a SAID is used for some field map data structure the enclosing
 data-structure is called self-addressing data (SAD).
 
-##### [§](#discussion){.toc-anchor .d-print-none} Discussion
+##### [§](#discussion) Discussion
 
 As long as any verifier recognizes the derivation code of a SAID, the
 SAID is a cryptographically secure commitment to the contents in which
@@ -3194,17 +3143,15 @@ identifier is not included inside the contents it addresses. Moreover, a
 standard content-addressable identifier is computed on the finished
 immutable contents, and therefore is not self-referential.
 
-### [§](#self-addressing-data-sad-path-signatures){.toc-anchor .d-print-none} Self-addressing Data (SAD) Path Signatures
+### [§](#self-addressing-data-sad-path-signatures) Self-addressing Data (SAD) Path Signatures
 
 SAD Path signatures are an extension to CESR that provide transposable
 cryptographic signature
-[Attachments](#term:attachments){.term-reference} on self-addressing
+[Attachments](#term:attachments) on self-addressing
 data
-([SAD](https://trustoverip.github.io/kerisuite-glossary/#term:self-addressed-data){.x-term-reference
-.term-reference local-href="#term:kmg-1:self-addressed-data"}). Any SAD,
+([SAD](https://trustoverip.github.io/kerisuite-glossary/#term:self-addressed-data)). Any SAD,
 such as an Authentic Chained Data Container (ACDC) Verifiable Credential
-[ACDC](https://trustoverip.github.io/kerisuite-glossary/#term:acdc){.x-term-reference
-.term-reference local-href="#term:kmg-1:acdc"} for example, may be
+[ACDC](https://trustoverip.github.io/kerisuite-glossary/#term:acdc) for example, may be
 signed with a SAD Path Signature and streamed along with any other CESR
 content. In addition, a signed SAD can be embedded inside another SAD
 and the SAD Path signature attachment can be transposed across envelope
@@ -3227,7 +3174,7 @@ exact location of the nested content that they are signing. SAD Path
 Signatures provide this mechanism with the CESR SAD Path Language and
 new CESR attachment codes are detailed in this specification.
 
-#### [§](#streamable-sads){.toc-anchor .d-print-none} Streamable SADs
+#### [§](#streamable-sads) Streamable SADs
 
 A primary goal of SAD Path Signatures is to allow any signed SAD to be
 streamed inline with any other CESR content. In support of that goal,
@@ -3240,7 +3187,7 @@ Path Signatures can be streamed inline in either the Text (T) or Binary
 or UDP. In addition, signed SADs can be transported via HTTP as a CESR
 HTTP Request.
 
-#### [§](#nested-partial-signatures){.toc-anchor .d-print-none} Nested Partial Signatures
+#### [§](#nested-partial-signatures) Nested Partial Signatures
 
 SAD Path Signatures can be used to sign as many portions of a SAD as
 needed, including the entire SAD. The signed subsets are either SADs
@@ -3252,7 +3199,7 @@ for grouping signatures, the entire group of signatures can be
 transposed across envelope boundaries by changing only the root path of
 the group attachment code.
 
-#### [§](#transposable-signature-attachments){.toc-anchor .d-print-none} Transposable Signature Attachments
+#### [§](#transposable-signature-attachments) Transposable Signature Attachments
 
 There are several events in KERI that can contain context specific
 embedded SADs. Exchange events (`exn`) for peer-to-peer communication
@@ -3276,21 +3223,21 @@ SAD at and location in an enveloping `exn` Message as appropriate for
 the protocol without having to define a unique signature scheme for each
 protocol.
 
-### [§](#sad-path-language){.toc-anchor .d-print-none} SAD Path Language
+### [§](#sad-path-language) SAD Path Language
 
 SAD Path Signatures defines a SAD Path Language to be used in signature
 attachments for specifying the location of the SAD content within the
 signed SAD that a signature attachment is verifying. This path language
 has a more limited scope than alternatives like JSONPtr
 \[[RFC6901](#RFC6901)\] or JSONPath
-[JSONPath](#term:jsonpath){.term-reference} and is therefore simpler and
+[JSONPath](#term:jsonpath) and is therefore simpler and
 more compact when encoding in CESR signature attachments. SADs in CESR
 and therefore SAD Path Signatures require static field ordering of all
 maps. The SAD path language takes advantage of this feature to allow for
 a Base64 compatible syntax into SADs even when a SAD uses non-Base64
 compatible characters for field labels.
 
-#### [§](#description-and-usage){.toc-anchor .d-print-none} Description and Usage
+#### [§](#description-and-usage) Description and Usage
 
 The SAD path language contains a single reserved character, the `-`
 (dash) character. Similar to the `/` (forward slack) character in URLs,
@@ -3346,7 +3293,7 @@ or the `-` character. Any combination of integer and field label path
 components can be used when the current context is a map. All path
 components MUST be an integer when the current context is an array.
 
-#### [§](#cesr-encoding-for-sad-path-language){.toc-anchor .d-print-none} CESR Encoding for SAD Path Language
+#### [§](#cesr-encoding-for-sad-path-language) CESR Encoding for SAD Path Language
 
 SAD Paths are variable raw size Primitives that require CESR variable
 size codes. The `A` small variable size code for SAD Paths will be used
@@ -3365,7 +3312,7 @@ characters provide value lengths in quadlets/triplets from 0 to 4095
 (64\*\*2 -1). This corresponds to path lengths of up to 16,380
 characters (4095 \* 4) or 12,285 bytes (4095 \* 3).
 
-#### [§](#sad-path-examples){.toc-anchor .d-print-none} SAD Path Examples
+#### [§](#sad-path-examples) SAD Path Examples
 
 This section provides some more examples for SAD Path expressions. The
 examples are based on Authentic Chained Data Containers (ACDCs)
@@ -3415,7 +3362,6 @@ The examples in Table 1 represent all the features of the SAD Path
 language when referring to the SAD in Figure 1. along with the CESR text
 encoding.
 
-::: table-responsive-md
   SAD Path          CESR Encoding            Portion of SAD addressed by path
   ----------------- ------------------------ ------------------------------------------------------------------------
   `-`               `'6AABAAA-'`             whole SAD
@@ -3426,9 +3372,8 @@ encoding.
   `-a-p-1-0`        `'4AAC-a-p-1-0`          `{'name': 'Bob', 'i': 'ECWJZFBtllh99fESUOrBvT3EtBujWtDKCmyzDAXWhYmf'}`
   `-a-p-0-0-name`   `6AAEAAA-a-p-0-0-name`   `'Amy'`
   `-a-p-0-ref0-i`   `6AAEAAA-a-p-0-ref0-i`   `'ECmiMVHTfZIjhA_rovnfx73T3G_FJzIQtzDn1meBVLAz'`
-:::
 
-#### [§](#alternative-pathing-query-languages){.toc-anchor .d-print-none} Alternative Pathing / Query Languages
+#### [§](#alternative-pathing-query-languages) Alternative Pathing / Query Languages
 
 The SAD Path language was chosen over alternatives such as JSONPtr and
 JSONPath in order to create a more compact representation of a pathing
@@ -3443,10 +3388,9 @@ attachment as Base64. Alternative syntaxes would need to be Base64
 encoded to be used in a CESR attachment in the text domain, thus
 incurring the additional bandwidth cost of such an encoding.
 
-### [§](#post-quantum-security){.toc-anchor .d-print-none} Post-Quantum Security
+### [§](#post-quantum-security) Post-Quantum Security
 
-[Post-quantum](https://trustoverip.github.io/ctwg-general-glossary/#term:post-quantum){.x-term-reference
-.term-reference local-href="#term:toip2:post-quantum"} or quantum-safe
+[Post-quantum](https://trustoverip.github.io/ctwg-general-glossary/#term:post-quantum) or quantum-safe
 cryptography deals with techniques that maintain their cryptographic
 strength despite attacks from quantum computers. Because it is currently
 assumed that practical quantum computers do not yet exist, post-quantum
@@ -3488,94 +3432,93 @@ rotation operation. Hidden public keys may be compactly expressed as
 Base64 encoded qualified public keys' digests (hidden), where the digest
 function is indicated in the derivation code.
 
-## [§](#bibliography){.toc-anchor .d-print-none} Bibliography
+## [§](#bibliography) Bibliography
 
-### [§](#normative-section){.toc-anchor .d-print-none} Normative section
+### [§](#normative-section) Normative section
 
-[1]{#KERI}[]{#ref1}. [KERI
+[1][]. [KERI
 specification](https://trustoverip.github.io/kswg-keri-specification/)
 
-[2]{#RFC20}[]{#ref2}. ASCII, RFC20
+[2][]. ASCII, RFC20
 <https://www.rfc-editor.org/rfc/rfc20>
 
-[3]{#MGPK}[]{#ref3}. MGPK specification
+[3][]. MGPK specification
 [MGPK](https://github.com/msgpack/msgpack/blob/master/spec.md)
 
-[16]{#RAET}[]{#ref16}. Reliable Asynchronous Event Transport, RAET,
+[16][]. Reliable Asynchronous Event Transport, RAET,
 <https://github.com/RaetProtocol/raet>
 
-[18]{#RFC4627}[]{#ref18}. RFC4627 [The application/json Media Type for
+[18][]. RFC4627 [The application/json Media Type for
 JavaScript Object Notation
 (JSON)](https://www.rfc-editor.org/rfc/rfc4627). D. Crockford; 2006-07.
 Status: Informational.
 
-[19]{#RFC4648}[]{#ref19}. RFC4648 [The Base16, Base32, and Base64 Data
+[19][]. RFC4648 [The Base16, Base32, and Base64 Data
 Encodings](https://www.rfc-editor.org/rfc/rfc4648). S. Josefsson;
 2006-10. Status: Proposed Standard.
 
-[20]{#RFC6901}[]{#ref20}. RFC6901 [JavaScript Object Notation (JSON)
+[20][]. RFC6901 [JavaScript Object Notation (JSON)
 Pointer](https://www.rfc-editor.org/rfc/rfc6901). P. Bryan, Ed.; K. Zyp;
 M. Nottingham, Ed.; 2013-04. Status: Proposed Standard.
 
-[21]{#CBOR}[]{#ref21}. [RFC8949]{#RFC8949} [Concise Binary Object
+[21][]. [RFC8949] [Concise Binary Object
 Representation (CBOR)](https://www.rfc-editor.org/rfc/rfc8949). C.
 Bormann; P. Hoffman; 2020-12. Status: Internet Standard.
 
-[22]{#RFC2119}[]{#ref22}. IETF RFC-2119 [Key words for use in RFCs to
+[22][]. IETF RFC-2119 [Key words for use in RFCs to
 Indicate Requirement
 Levels](https://www.rfc-editor.org/rfc/rfc2119.txt). S. Bradner.
 1997-03. Status: Best Current Practice
 
-[23]{#JSON}[]{#ref23}. IETF [RFC-8259]{#RFC8259}
+[23][]. IETF [RFC-8259]
 [JSON](https://www.rfc-editor.org/rfc/rfc8259.txt). T. Bray, Ed.
 2017-12. Status: Standards Track
 
-[24]{#BLAKE3}[]{#ref24}. Blake3 Specification
+[24][]. Blake3 Specification
 [Blake3](https://github.com/BLAKE3-team/BLAKE3-specs). J. O'Connor; J-P.
 Aumasson; S. Neves ; Z. Wilcox-O'Hearn. Version 20211102173700.
 
-### [§](#informative-section){.toc-anchor .d-print-none} Informative section
+### [§](#informative-section) Informative section
 
-[4]{#BOM}[]{#ref4}. BOM, UTF Byte Order Mark,
+[4][]. BOM, UTF Byte Order Mark,
 <https://en.wikipedia.org/wiki/Byte_order_mark>
 
-[5]{#Dlog}[]{#ref5}. DLog, Discrete Logarithm Problem,
+[5][]. DLog, Discrete Logarithm Problem,
 <https://en.wikipedia.org/wiki/Discrete_logarithm>
 
-[6]{#BOM}[]{#ref6}. NaCL, <https://nacl.cr.yp.to>
+[6][]. NaCL, <https://nacl.cr.yp.to>
 
-[7]{#MCMFormat}[]{#ref7}. MultiCodec Multiformats Codecs,
+[7][]. MultiCodec Multiformats Codecs,
 [MultiCodec](https://github.com/multiformats/multicodec)
 
-[8]{#MCTable}[]{#ref8}. MultiCodec Table,
+[8][]. MultiCodec Table,
 [MCTable](https://github.com/multiformats/multicodec/blob/master/table.csv)
 
-[9]{#IPFS}[]{#ref9}. IPFS MultiFormats, IPFS
+[9][]. IPFS MultiFormats, IPFS
 <https://richardschneider.github.io/net-ipfs-core/api/Ipfs.Registry.HashingAlgorithm.html>
 
-[10]{#Base58Check}[]{#ref10}. Base58Check Encoding,
+[10][]. Base58Check Encoding,
 [Base58Check](https://en.bitcoin.it/wiki/Base58Check_encoding)
 
-[11]{#WIF}[]{#ref11}. Wallet Import Format ECDSA Base58Check, WIF,
+[11][]. Wallet Import Format ECDSA Base58Check, WIF,
 [Wallet Import Format](https://en.bitcoin.it/wiki/Wallet_import_format)
 
-[12]{#Bin2Txt}[]{#ref12}. Binary to Text Encoding, Bin2Txt [Binary to
+[12][]. Binary to Text Encoding, Bin2Txt [Binary to
 Text Encoding](https://en.wikipedia.org/wiki/Binary-to-text_encoding)
 
-[13]{#UTF8}[]{#ref13}. UTF8, [UTF-8
+[13][]. UTF8, [UTF-8
 Unicode](https://en.wikipedia.org/wiki/UTF-8)
 
-[14]{#Latin1}[]{#ref14}. Latin1
+[14][]. Latin1
 <https://en.wikipedia.org/wiki/ISO/IEC_8859-1>
 
-[15]{#STOMP}[]{#ref15}. Simple Text Oriented Messaging Protocol, STOMP,
+[15][]. Simple Text Oriented Messaging Protocol, STOMP,
 <https://stomp.github.io>
 
-[17]{#Nathan-NDM14}[]{#ref17}. Analysis of the Effect of Core Affinity
+[17][]. Analysis of the Effect of Core Affinity
 on High-Throughput Flows, Affinity,
 <https://crd.lbl.gov/assets/Uploads/Nathan-NDM14.pdf>
 
-[18]{#PQCollisonCost}[]{#ref18}. Cost analysis of hash collisions: Will
+[18][]. Cost analysis of hash collisions: Will
 quantum computers make SHARCS obsolete?, D.J. Berstein,
 <https://cr.yp.to/hash/collisioncost-20090517.pdf>
-::::::::::::::::::::::::::::

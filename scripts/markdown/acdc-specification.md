@@ -1,8 +1,4 @@
-:::::::::::::::::::::::::::::::::::::::: {.col-md-8 .ms-sm-auto .col-lg-9 .px-md-4 .pt-5 role="main"}
-::: {#terminology-section-utility-container .d-print-none .alert .alert-primary .p-3}
-:::
-
-# [§](#authentic-chained-data-containers-acdc){.toc-anchor .d-print-none} Authentic Chained Data Containers (ACDC)
+# [§](#authentic-chained-data-containers-acdc) Authentic Chained Data Containers (ACDC)
 
 **Specification Status**: v1.0
 
@@ -35,7 +31,7 @@
 :   [Commit
     history](https://github.com/trustoverip/kswg-acdc-specification/commits/main)
 
-## [§](#introduction){.toc-anchor .d-print-none} Introduction
+## [§](#introduction) Introduction
 
 One primary purpose of the ACDC protocol is to provide granular
 provenanced proof-of-authorship (authenticity) of their contained data
@@ -108,13 +104,13 @@ provisional authentication. A notable feature of ACDCs is support for
 Contractually Protected Disclosure that provides more comprehensive
 privacy protection than mere Selective Disclosure alone might provide.
 
-## [§](#status-of-this-memo){.toc-anchor .d-print-none} Status of This Memo
+## [§](#status-of-this-memo) Status of This Memo
 
 Information about the current status of this document, any errata, and
 how to provide feedback on it, may be obtained at
 <https://github.com/trustoverip/kswg-acdc-specification>.
 
-## [§](#copyright-notice){.toc-anchor .d-print-none} Copyright Notice
+## [§](#copyright-notice) Copyright Notice
 
 This specification is subject to the **OWF Contributor License Agreement
 1.0 - Copyright** available at
@@ -132,7 +128,7 @@ These terms are inherited from the Technical Stack Working Group at the
 Trust over IP Foundation. [Working Group
 Charter](https://trustoverip.org/wp-content/uploads/TSWG-2-Charter-Revision.pdf)
 
-## [§](#terms-of-use){.toc-anchor .d-print-none} Terms of Use
+## [§](#terms-of-use) Terms of Use
 
 These materials are made available under and are subject to the [OWF CLA
 1.0 - Copyright & Patent
@@ -156,7 +152,7 @@ THE ToIP GOVERNING AGREEMENT, WHETHER BASED ON BREACH OF CONTRACT, TORT
 (INCLUDING NEGLIGENCE), OR OTHERWISE, AND WHETHER OR NOT THE OTHER PARTY
 HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-## [§](#scope){.toc-anchor .d-print-none} Scope
+## [§](#scope) Scope
 
 Implementation design of a protocol-based data container specification
 that enables secure attribution of data within the container to a
@@ -168,7 +164,7 @@ reliance on trusted third parties. The application scope includes any
 electronically transmitted information. The implementation dependency
 scope assumes CESR and KERI.
 
-## [§](#normative-references){.toc-anchor .d-print-none} Normative references
+## [§](#normative-references) Normative references
 
 [The normative documents](#normative-section) are referred to in the
 text in such a way that some or all of their content constitutes
@@ -182,7 +178,7 @@ referenced document (including any amendments) applies.
 
 See [Bibliography - Normative Section](#normative-section)
 
-## [§](#terms-and-definitions){.toc-anchor .d-print-none} Terms and Definitions
+## [§](#terms-and-definitions) Terms and Definitions
 
 For the purposes of this document, the following terms and definitions
 apply.
@@ -193,168 +189,165 @@ at the following addresses:
 - ISO Online browsing platform: available at <https://www.iso.org/obp>
 - IEC Electropedia: available at <http://www.electropedia.org/>
 
-::: {#terminology-section-start}
-:::
+[[Attribute [([attribute])]]]
 
-[[Attribute [([attribute]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:attribute title="Externally defined as attribute"}]{#term:attribute .term-external original-term="attribute"}
+:
 
-:   
+[[[Authentic Chained Data Container [(ACDC, [authentic-chained-data-container])]]]]
 
-[[[Authentic Chained Data Container [(ACDC, [authentic-chained-data-container]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:authentic-chained-data-container title="Externally defined as authentic-chained-data-container"}]{#term:authentic-chained-data-container}]{#term:acdc .term-external original-term="authentic-chained-data-container"}
+:
 
-:   
+[[[Autonomic Identifier [(AID, [autonomic-identifier])]]]]
 
-[[[Autonomic Identifier [(AID, [autonomic-identifier]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:autonomic-identifier title="Externally defined as autonomic-identifier"}]{#term:autonomic-identifier}]{#term:aid .term-external original-term="autonomic-identifier"}
+:
 
-:   
+[[Chain-link Confidential Disclosure [([chain-link-confidential-disclosure])]]]
 
-[[Chain-link Confidential Disclosure [([chain-link-confidential-disclosure]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:chain-link-confidential-disclosure title="Externally defined as chain-link-confidential-disclosure"}]{#term:chain-link-confidential-disclosure .term-external original-term="chain-link-confidential-disclosure"}
+:
 
-:   
+[[Compact Disclosure [([compact-disclosure])]]]
 
-[[Compact Disclosure [([compact-disclosure]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:compact-disclosure title="Externally defined as compact-disclosure"}]{#term:compact-disclosure .term-external original-term="compact-disclosure"}
+:
 
-:   
+[[Contractually Protected Disclosure [([contractually-protected-disclosure])]]]
 
-[[Contractually Protected Disclosure [([contractually-protected-disclosure]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:contractually-protected-disclosure title="Externally defined as contractually-protected-disclosure"}]{#term:contractually-protected-disclosure .term-external original-term="contractually-protected-disclosure"}
+:
 
-:   
+[[Controller [([controller])]]]
 
-[[Controller [([controller]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:controller title="Externally defined as controller"}]{#term:controller .term-external original-term="controller"}
+:
 
-:   
+[[Disclosee [([disclosee])]]]
 
-[[Disclosee [([disclosee]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:disclosee title="Externally defined as disclosee"}]{#term:disclosee .term-external original-term="disclosee"}
+:
 
-:   
+[[Discloser [([discloser])]]]
 
-[[Discloser [([discloser]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:discloser title="Externally defined as discloser"}]{#term:discloser .term-external original-term="discloser"}
+:
 
-:   
+[[Duplicity [([duplicity])]]]
 
-[[Duplicity [([duplicity]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:duplicity title="Externally defined as duplicity"}]{#term:duplicity .term-external original-term="duplicity"}
+:
 
-:   
+[[Edge [([edge])]]]
 
-[[Edge [([edge]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:edge title="Externally defined as edge"}]{#term:edge .term-external original-term="edge"}
+:
 
-:   
+[[Framing Code [([framing-code])]]]
 
-[[Framing Code [([framing-code]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:framing-code title="Externally defined as framing-code"}]{#term:framing-code .term-external original-term="framing-code"}
+:
 
-:   
+[[Full Disclosure [([full-disclosure])]]]
 
-[[Full Disclosure [([full-disclosure]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:full-disclosure title="Externally defined as full-disclosure"}]{#term:full-disclosure .term-external original-term="full-disclosure"}
+:
 
-:   
+[[Graduated Disclosure [([graduated-disclosure])]]]
 
-[[Graduated Disclosure [([graduated-disclosure]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:graduated-disclosure title="Externally defined as graduated-disclosure"}]{#term:graduated-disclosure .term-external original-term="graduated-disclosure"}
+:
 
-:   
+[[Inception event [([inception-event])]]]
 
-[[Inception event [([inception-event]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:inception-event title="Externally defined as inception-event"}]{#term:inception-event .term-external original-term="inception-event"}
+:
 
-:   
+[[[Information theoretic security [(ITPS, [information-theoretic-security])]]]]
 
-[[[Information theoretic security [(ITPS, [information-theoretic-security]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:information-theoretic-security title="Externally defined as information-theoretic-security"}]{#term:information-theoretic-security}]{#term:itps .term-external original-term="information-theoretic-security"}
+:
 
-:   
+[[Interaction Event [([interaction-event])]]]
 
-[[Interaction Event [([interaction-event]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:interaction-event title="Externally defined as interaction-event"}]{#term:interaction-event .term-external original-term="interaction-event"}
+:
 
-:   
+[[Issuee [([issuee])]]]
 
-[[Issuee [([issuee]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:issuee title="Externally defined as issuee"}]{#term:issuee .term-external original-term="issuee"}
+:
 
-:   
+[[Issuer [([issuer])]]]
 
-[[Issuer [([issuer]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:issuer title="Externally defined as issuer"}]{#term:issuer .term-external original-term="issuer"}
+:
 
-:   
+[[Key-state [([key-state])]]]
 
-[[Key-state [([key-state]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:key-state title="Externally defined as key-state"}]{#term:key-state .term-external original-term="key-state"}
+:
 
-:   
+[[Operator [([operator])]]]
 
-[[Operator [([operator]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:operator title="Externally defined as operator"}]{#term:operator .term-external original-term="operator"}
+:
 
-:   
+[[Partial Disclosure [([partial-disclosure])]]]
 
-[[Partial Disclosure [([partial-disclosure]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:partial-disclosure title="Externally defined as partial-disclosure"}]{#term:partial-disclosure .term-external original-term="partial-disclosure"}
+:
 
-:   
+[[Percolated discovery [([percolated-discovery])]]]
 
-[[Percolated discovery [([percolated-discovery]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:percolated-discovery title="Externally defined as percolated-discovery"}]{#term:percolated-discovery .term-external original-term="percolated-discovery"}
+:
 
-:   
+[[Perfect security [([perfect-security])]]]
 
-[[Perfect security [([perfect-security]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:perfect-security title="Externally defined as perfect-security"}]{#term:perfect-security .term-external original-term="perfect-security"}
+:
 
-:   
+[[Primitive [([primitive])]]]
 
-[[Primitive [([primitive]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:primitive title="Externally defined as primitive"}]{#term:primitive .term-external original-term="primitive"}
+:
 
-:   
+[[Rotation event [([rotation-event])]]]
 
-[[Rotation event [([rotation-event]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:rotation-event title="Externally defined as rotation-event"}]{#term:rotation-event .term-external original-term="rotation-event"}
+:
 
-:   
+[[Rules [([rules])]]]
 
-[[Rules [([rules]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:rules title="Externally defined as rules"}]{#term:rules .term-external original-term="rules"}
+:
 
-:   
+[[Schema [([schema])]]]
 
-[[Schema [([schema]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:schema title="Externally defined as schema"}]{#term:schema .term-external original-term="schema"}
+:
 
-:   
+[[Selective Disclosure [([selective-disclosure])]]]
 
-[[Selective Disclosure [([selective-disclosure]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:selective-disclosure title="Externally defined as selective-disclosure"}]{#term:selective-disclosure .term-external original-term="selective-disclosure"}
+:
 
-:   
+[[[Self-addressing Identifier [(SAID, [self-addressing-identifier])]]]]
 
-[[[Self-addressing Identifier [(SAID, [self-addressing-identifier]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:self-addressing-identifier title="Externally defined as self-addressing-identifier"}]{#term:self-addressing-identifier}]{#term:said .term-external original-term="self-addressing-identifier"}
+:
 
-:   
+[[SEMVER [([semver])]]]
 
-[[SEMVER [([semver]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:semver title="Externally defined as semver"}]{#term:semver .term-external original-term="semver"}
+:
 
-:   
+[[Stream [([stream])]]]
 
-[[Stream [([stream]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:stream title="Externally defined as stream"}]{#term:stream .term-external original-term="stream"}
+:
 
-:   
+[[Targeted ACDC [([targeted-acdc])]]]
 
-[[Targeted ACDC [([targeted-acdc]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:targeted-acdc title="Externally defined as targeted-acdc"}]{#term:targeted-acdc .term-external original-term="targeted-acdc"}
+:
 
-:   
+[[Unpermissioned correlation [([unpermissioned-correlation])]]]
 
-[[Unpermissioned correlation [([unpermissioned-correlation]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:unpermissioned-correlation title="Externally defined as unpermissioned-correlation"}]{#term:unpermissioned-correlation .term-external original-term="unpermissioned-correlation"}
+:
 
-:   
+[[Untargeted ACDC [([untargeted-acdc])]]]
 
-[[Untargeted ACDC [([untargeted-acdc]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:untargeted-acdc title="Externally defined as untargeted-acdc"}]{#term:untargeted-acdc .term-external original-term="untargeted-acdc"}
+:
 
-:   
+[[Validator [([validator])]]]
 
-[[Validator [([validator]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:validator title="Externally defined as validator"}]{#term:validator .term-external original-term="validator"}
+:
 
-:   
+[[Verifiable data registry [([verifiable-data-registry])]]]
 
-[[Verifiable data registry [([verifiable-data-registry]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:verifiable-data-registry title="Externally defined as verifiable-data-registry"}]{#term:verifiable-data-registry .term-external original-term="verifiable-data-registry"}
+:
 
-:   
+[[verifier]]
 
-[[verifier]{.term-external-original-term .term-original-term title="original term"}]{#term:verifier .term-external original-term="verifier"}
+:
 
-:   
+[[weight]]
 
-[[weight]{.term-external-original-term .term-original-term title="original term"}]{#term:weight .term-external original-term="weight"}
+:
 
-:   
+## [§](#acdc-structure) ACDC Structure
 
-## [§](#acdc-structure){.toc-anchor .d-print-none} ACDC Structure
-
-### [§](#ordered-nested-field-maps){.toc-anchor .d-print-none} Ordered Nested Field Maps
+### [§](#ordered-nested-field-maps) Ordered Nested Field Maps
 
 An ACDC may be modeled abstractly as a nested `key: value` mapping. To
 avoid confusion with the cryptographic use of the term key, the term
@@ -367,7 +360,7 @@ itself a reference to another field map. A nested set of fields is
 called a nested field map or simply a nested map for short.
 
 A field may be represented by a [Framing
-Code](#term:framing-code){.term-reference} or block delimited
+Code](#term:framing-code) or block delimited
 serialization. In a block-delimited serialization, such as JSON, each
 field map is represented by an object block with block delimiters such
 as `{}` \[[8](#RFC8259)\] \[[7](#JSON)\] \[[9](#RFC4627)\]. Given this
@@ -393,52 +386,49 @@ JSON only will be used for examples \[[8](#RFC8259)\] \[[7](#JSON)\].
 The basic set of normative field labels in ACDC field maps is defined in
 the following table.
 
-### [§](#top-level-fields){.toc-anchor .d-print-none} Top-Level Fields
+### [§](#top-level-fields) Top-Level Fields
 
 The following table defines the top-level fields in an ACDC and their
 order of appearance. Some fields are OPTIONAL but all fields that appear
 MUST appear in a defined order. This section defines which fields are
 REQUIRED and which are OPTIONAL.
 
-::: table-responsive-md
    Label  Title                                            Description
   ------- ------------------------------------------------ --------------------------------------------------------------------------------------------------------------------------------------------
     `v`   Version String                                   Regexable format: `ACDCMmmGggKKKKSSSS.` that provides protocol type, version, CESR genus version, serialization type, size, and terminator
     `t`   Message Type                                     Three-character Message type
     `d`   Message Digest SAID (\[[3](#SAID)\])             Self-referential fully qualified cryptographic digest of enclosing map
     `u`   UUID                                             Random Universally Unique Identifier as fully qualified high entropy pseudo-random string, a salty nonce.
-    `i`   Issuer AID ([AID](#term:aid){.term-reference})   Autonomic Identifier whose control authority is established via KERI verifiable Key State.
+    `i`   Issuer AID ([AID](#term:aid))   Autonomic Identifier whose control authority is established via KERI verifiable Key State.
    `rd`   Registry Digest SAID (\[[3](#SAID)\])            Issuance and/or revocation, transfer, or retraction registry for ACDC
     `s`   Schema                                           Either the SAID \[[3](#SAID)\] of a JSON Schema block or the block itself.
     `a`   Attribute                                        Either the SAID \[[3](#SAID)\] of a block of Attributes or the block itself.
     `A`   Attribute Aggregate                              Either the Aggregate of a selectively disclosable block of attributes or the block itself.
     `e`   Edge                                             Either the SAID \[[3](#SAID)\] of a block of Edges or the block itself.
     `r`   Rule                                             Either the SAID \[[3](#SAID)\] a block of Rules or the block itself.
-:::
 
-#### [§](#field-ordering){.toc-anchor .d-print-none} Field Ordering
+#### [§](#field-ordering) Field Ordering
 
 When present, the top-level fields MUST appear in the following order:
 `[v, t, d, u, i, rd, s, a, A, e, r]`.
 
-#### [§](#required-fields){.toc-anchor .d-print-none} Required Fields
+#### [§](#required-fields) Required Fields
 
 The following fields are REQUIRED `[v, d, i, s]` i.e. they MUST appear
 in any ACDC (not to be confused with other message types in the ACDC
 protocol).
 
-### [§](#other-reserved-fields){.toc-anchor .d-print-none} Other Reserved Fields
+### [§](#other-reserved-fields) Other Reserved Fields
 
 The following table defines non-top-level fields whose labels MUST be
 reserved. These MAY appear at other levels besides the top-level of an
 ACDC.
 
-::: table-responsive-md
    Label  Title                                                Description
   ------- ---------------------------------------------------- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     `d`   Digest SAID (\[[3](#SAID)\])                         Self-referential fully qualified cryptographic digest of enclosing map.
     `u`   UUID                                                 Random Universally Unique Identifier as fully qualified high entropy pseudo-random string, a salty nonce.
-    `i`   Identifier AID ([AID](#term:aid){.term-reference})   Context-dependent AID as determined by its enclosing map such as Issuee identifier.
+    `i`   Identifier AID ([AID](#term:aid))   Context-dependent AID as determined by its enclosing map such as Issuee identifier.
    `rd`   Registry Digest SAID (\[[3](#SAID)\])                Issuance and/or revocation, transfer, retraction, or usage registry for ACDC when not at top-level
    `dt`   Datetime                                             Context-dependent ISO datetime string
     `n`   Node                                                 SAID \[[3](#SAID)\] of another ACDC as the terminating point (vertex) of a directed Edge that connects the encapsulating ACDC node to the specified ACDC node as a fragment of a distributed property graph (PG).
@@ -446,9 +436,8 @@ ACDC.
     `w`   Weight                                               Edge weight property that enables default property for directed weighted edges and operators on directed weighted edges.
     `l`   Legal Language                                       Text of Ricardian contract clause.
    `dt`   Datetime                                             Context-dependent ISO datetime string
-:::
 
-### [§](#compact-labels){.toc-anchor .d-print-none} Compact Labels
+### [§](#compact-labels) Compact Labels
 
 The primary field labels are compact in that they MUST use only one or
 at most two characters. ACDCs are meant to support resource-constrained
@@ -464,7 +453,7 @@ storage constraints on transmission while not precluding any later
 semantic post-processing. This is a well-known design pattern for
 resource-constrained applications.
 
-### [§](#version-string-field){.toc-anchor .d-print-none} Version String Field
+### [§](#version-string-field) Version String Field
 
 The Version String, `v`, field MUST be the first field in any top-level
 ACDC field map encoded in JSON, CBOR, or MGPK \[[RFC4627](#RFC4627)\]
@@ -484,7 +473,7 @@ the current major `M` and minor `mm` version of the ACDC protocol
 field `Ggg` MUST encode the major `G` and minor `gg` version of the CESR
 protocol used to encode the associated message \[[1](#CESR)\].
 
-##### [§](#legacy-version-string-field-format){.toc-anchor .d-print-none} Legacy Version String Field Format
+##### [§](#legacy-version-string-field-format) Legacy Version String Field Format
 
 Compliant ACDC version 2.XX implementations MUST support the old ACDC
 version 1.x Version String format to properly verify Message bodies
@@ -494,7 +483,7 @@ field, `PPPP` value in the version string MUST be `ACDC` for the ACDC
 protocol. The version field, `vv`, MUST encode the old version of the
 ACDC protocol \[[1](#CESR)\].
 
-#### [§](#message-type-field){.toc-anchor .d-print-none} Message Type Field
+#### [§](#message-type-field) Message Type Field
 
 The presence of the message type field, labeled `t`, is optional for
 messages of type `acm` with non-CESR-native serialization kinds. It MUST
@@ -511,7 +500,7 @@ appear in non-CESR-native serialization kinds of `acm` type messages.
 See the Annex [ACDC Protocol Message
 Types]()#acdc-protocol-message-types).
 
-### [§](#self-addressing-identifier-said-fields){.toc-anchor .d-print-none} Self-addressing Identifier (SAID) Fields
+### [§](#self-addressing-identifier-said-fields) Self-addressing Identifier (SAID) Fields
 
 Some fields in ACDCs MAY have for their value either a field map or a
 SAID. A SAID follows the SAID protocol \[[3](#SAID)\]. A SAID is a
@@ -554,7 +543,7 @@ This also supports the well-known bow-tie model of Ricardian Contracts
 top-level SAID, `d`, field, as well as reasoning about any of its
 special nested sections using the section SAIDs.
 
-### [§](#registry-said-field){.toc-anchor .d-print-none} Registry SAID Field
+### [§](#registry-said-field) Registry SAID Field
 
 When present at the top-level, the registry SAID, `rd` field value is
 the SAID of the initializing event for a given transaction event log
@@ -563,7 +552,7 @@ issuance and revocation state. Typically, this field appears at the top
 level, but in some applications, such as bulk-issued
 [bulk-issued](#bulk-issued-private-acdcs) ACDCs
 [bulk-issued](#bulk-issued-private-acdcs), it may appear nested inside
-the [Attribute](#term:attribute){.term-reference}, `a`, or aggregate,
+the [Attribute](#term:attribute), `a`, or aggregate,
 `A`, section field maps [attr](#attribute-section) and
 [aggr](#aggregate-section). This nested appearance better facilitates
 contractually protected disclosure of the registry SAID. When the
@@ -572,7 +561,7 @@ registry, a registry SAID, `rd` field that appears nested in the
 Attributed, `a`, or Aggregate, `A`, section MAY be used for some other
 registry, such as an application-specific or Issuer-specific registry.
 
-### [§](#universally-unique-identifier-uuid-fields){.toc-anchor .d-print-none} Universally Unique Identifier (UUID) Fields
+### [§](#universally-unique-identifier-uuid-fields) Universally Unique Identifier (UUID) Fields
 
 The purpose of the UUID, `u`, field in any block is to provide
 sufficient entropy to the SAID, `d`, field of the associated block to
@@ -581,7 +570,7 @@ that attempt to discover the block contents from the schema and the
 SAID. The UUID, `u`, field may be considered a salty nonce
 \[[29](#Salt)\]. Without the entropy provided by the UUID, `u`, field,
 an adversary may be able to reconstruct the block contents merely from
-the SAID of the block and the [Schema](#term:schema){.term-reference} of
+the SAID of the block and the [Schema](#term:schema) of
 the block using a rainbow or dictionary attack on the set of field
 values allowed by the Schema \[[30](#RB)\] \[[31](#DRB)\]. The resultant
 effective security level, entropy, or cryptographic strength of the
@@ -611,10 +600,10 @@ to the contents of the whole ACDC itself. Thus, the whole ACDC, not
 merely some block within the ACDC, MAY be disclosed in a
 correlation-minimizing (what some call privacy-preserving) manner.
 
-### [§](#autonomic-identifier-aid-fields){.toc-anchor .d-print-none} Autonomic IDentifier (AID) Fields
+### [§](#autonomic-identifier-aid-fields) Autonomic IDentifier (AID) Fields
 
 Some fields, such as the `i`, Issuer identifier field, MUST each have an
-[AID](#term:aid){.term-reference} as its value. An AID is a fully
+[AID](#term:aid) as its value. An AID is a fully
 qualified Self-certifying Identifier (SCID) that follows the KERI
 protocol \[[2](#KERI)\]. An AID MUST be derived from one or more
 `(public, private)` key pairs using asymmetric or public-key
@@ -630,7 +619,7 @@ KERI protocol \[[2](#KERI)\]. The use of AIDs enables ACDCs to be used
 in a portable but securely attributable, fully decentralized manner in
 an ecosystem that spans trust domains.
 
-##### [§](#datetime-dt-fields){.toc-anchor .d-print-none} Datetime, `dt` Fields
+##### [§](#datetime-dt-fields) Datetime, `dt` Fields
 
 The datetime, `dt` field value, if any, MUST be the ISO-8601 datetime
 string with microseconds and UTC offset as per IETF
@@ -644,7 +633,7 @@ An example datetime string in this format is as follows:
 
 `2020-08-22T17:50:09.988921+00:00`
 
-### [§](#partially-disclosable-attribute-section-field){.toc-anchor .d-print-none} Partially Disclosable Attribute Section Field
+### [§](#partially-disclosable-attribute-section-field) Partially Disclosable Attribute Section Field
 
 The top-level Attribute section `a`, field value MAY have as its value a
 nested field map. Each level of nesting MAY be fully expanded or
@@ -653,7 +642,7 @@ so-called payload data of the ACDC. The `a` field syntax is described in
 more detail below. An ACDC MUST not have both an `a` field and an `A`
 field (see next section) when it has either.
 
-### [§](#selectively-disclosable-aggregate-section-field){.toc-anchor .d-print-none} Selectively Disclosable Aggregate Section Field
+### [§](#selectively-disclosable-aggregate-section-field) Selectively Disclosable Aggregate Section Field
 
 The top-level selectively disclosable Aggregate section, `A`, field
 value is an aggregate of cryptographic commitments used to make a
@@ -672,20 +661,20 @@ field syntax is described in more detail below. An ACDC MUST not have
 both a non-empty `a` field value and a non-empty `A` field value (see
 next section) when it has either.
 
-### [§](#partially-disclosable-edge-section-field){.toc-anchor .d-print-none} Partially Disclosable Edge Section Field
+### [§](#partially-disclosable-edge-section-field) Partially Disclosable Edge Section Field
 
 The top-level Edge section `e` field value makes a cryptographically
 verifiable commitment to other ACDCs via references to their SAIDs. The
 `e` field syntax is described in more detail below.
 
-### [§](#partially-disclosable-rule-section-field){.toc-anchor .d-print-none} Partially Disclosable Rule Section field
+### [§](#partially-disclosable-rule-section-field) Partially Disclosable Rule Section field
 
 The top-level Rule section `r`, field value provides both human and
 machine readable legal language that MAY be associated with the ACDC.
 This is a type of Ricardian contract. The `r` field syntax is described
 in more detail below.
 
-## [§](#acdc-variants){.toc-anchor .d-print-none} ACDC Variants
+## [§](#acdc-variants) ACDC Variants
 
 There are several variants of ACDCs determined by the presence/absence
 of certain fields and/or the value of those fields when used in
@@ -696,7 +685,7 @@ All the variants have two alternate forms, compact and non-compact. In
 the compact form of any variant, the values of the top-level fields for
 the Schema, Attribute, Aggregate, Edge, and Rule sections are the SAIDs
 (digests) of the corresponding expanded (non-compact) form of each
-section [SAID](#term:said){.term-reference}. When in a non-compact form
+section [SAID](#term:said). When in a non-compact form
 then one or more of the section fields may be partially or fully
 expanded. Additional variants arise from the presence or absence of
 different fields inside the Attribute or Attribute aggregate section.
@@ -715,7 +704,7 @@ different sections appear in the ACDC.
 
 An overview of each variant is explained below.
 
-### [§](#most-compact-form-said){.toc-anchor .d-print-none} Most compact form SAID
+### [§](#most-compact-form-said) Most compact form SAID
 
 As defined in the Schema section below, each ACDC variant is defined by
 a composable JSON Schema. The primary Operator for such composition is
@@ -812,7 +801,7 @@ variants allowed by the `oneOf` compositions of any SAIDed subblocks.
 This "most compact form," SAID, is what is used to reference an ACDC as
 the node value of an Edge or to reference a section.
 
-### [§](#compact-acdc){.toc-anchor .d-print-none} Compact ACDC
+### [§](#compact-acdc) Compact ACDC
 
 The top-level section field values of a Compact ACDC are the SAIDs of
 each uncompacted top-level section. The section field labels are `s`,
@@ -825,7 +814,7 @@ clarify, an Aggregate section uses its own algorightm for compact and
 un-compact (expanded) forms. Its compact form is used in the compact
 form of is its enclosing ACDC.
 
-### [§](#public-acdc){.toc-anchor .d-print-none} Public ACDC
+### [§](#public-acdc) Public ACDC
 
 Given that there is no top-level UUID, `u`, field in an ACDC, then
 knowledge of both the schema of the ACDC and the top-level SAID, `d`,
@@ -840,7 +829,7 @@ themselves in spite of non-disclosure of those field values. Thus, an
 ACDC without a top-level UUID, `u`, field SHOULD be considered a public
 (non-confidential) ACDC.
 
-### [§](#private-acdc){.toc-anchor .d-print-none} Private ACDC
+### [§](#private-acdc) Private ACDC
 
 Given a top-level UUID, `u`, field, whose value has sufficient
 cryptographic entropy, then the top-level SAID, `d`, field of an ACDC
@@ -863,7 +852,7 @@ called Partial Disclosure. Furthermore, including a UUID, `u`, field in
 a block also enables Selective Disclosure mechanisms described later in
 the section on [Selective Disclosure](#selective-disclosure).
 
-### [§](#metadata-acdc){.toc-anchor .d-print-none} Metadata ACDC
+### [§](#metadata-acdc) Metadata ACDC
 
 An empty, top-level UUID, `u`, field appearing in an ACDC indicates that
 the ACDC is a metadata ACDC. The purpose of a metadata ACDC is to
@@ -911,21 +900,21 @@ Disclosee not agree to the terms of the disclosure expressed in the
 Rules section, then the Issuer's commitments are not leaked.
 
 In the case of a bulk-issued metadata ACDC
-[ACDC](#term:acdc){.term-reference}, the optional registry SAID, `rd`
+[ACDC](#term:acdc), the optional registry SAID, `rd`
 field at the top-level could be empty until after contractual protection
 is in place. Alternatively, the registry SAID could be provided by a
 nested registry SAID, `rd` field inside the Attribute `a`, or Aggregate
 `A` section. In this case, the top-level `rd` field would be missing or
 empty (when the message is a top-level fixed field type).
 
-## [§](#top-level-acdc-sections){.toc-anchor .d-print-none} Top-level ACDC Sections
+## [§](#top-level-acdc-sections) Top-level ACDC Sections
 
-### [§](#schema-section){.toc-anchor .d-print-none} Schema Section
+### [§](#schema-section) Schema Section
 
-#### [§](#type-is-schema){.toc-anchor .d-print-none} Type-is-schema
+#### [§](#type-is-schema) Type-is-schema
 
 Notably, no top-level field types exist in an ACDC. This is because the
-[Schema](#term:schema){.term-reference}, `s`, field itself is the type
+[Schema](#term:schema), `s`, field itself is the type
 field for the ACDC and its parts. ACDCs follow the design principle of
 separation of concerns between a data container's actual payload
 information and the type information of that container's payload. In
@@ -944,10 +933,10 @@ disclosure. ACDC's use of JSON Schema MUST be in accordance with the
 ACDC-defined profile as defined herein. The exceptions are defined
 below.
 
-#### [§](#schema-id-field-label){.toc-anchor .d-print-none} Schema ID Field Label
+#### [§](#schema-id-field-label) Schema ID Field Label
 
 The usual field label for SAID fields in ACDCs is `d`. In the case of
-the [Schema](#term:schema){.term-reference} section, however, the field
+the [Schema](#term:schema) section, however, the field
 label for the SAID of the Schema section is `$id`. This repurposes the
 Schema id field label, `$id` as defined by JSON Schema \[[41](#ref41)\]
 \[[42](#JSchCx)\]. The top-level id, `$id`, field value in a JSON Schema
@@ -966,7 +955,7 @@ detailed schema is either attached or cached and maybe discovered via
 its SAIDified id, `$id`, field value.
 
 The digest algorithm employed for generating
-[Schema](#term:schema){.term-reference} SAIDs MUST have an approximate
+[Schema](#term:schema) SAIDs MUST have an approximate
 cryptographic strength of 128 bits. The \[[3](#SAID)\] MUST be generated
 in compliance with the ToIP SAID internet draft specification and MUST
 be encoded using CESR. The CESR encoding indicates the type of
@@ -979,7 +968,7 @@ MUST include the SAID of that subschema using one of the formats
 described below. The subschema so bundled MUST be verifiable against its
 referenced and embedded SAID value. This ensures secure bundling.
 
-#### [§](#static-immutable-schema){.toc-anchor .d-print-none} Static (Immutable) Schema
+#### [§](#static-immutable-schema) Static (Immutable) Schema
 
 For security reasons, the full Schema of an ACDC MUST be completely
 self-contained and statically fixed (immutable) for that ACDC. This
@@ -1110,7 +1099,7 @@ end-verifiable (zero-trust) because a cryptographic commitment to the
 SAID of a SAIDified schema is equivalent to a commitment to the detailed
 associated schema itself (SAD).
 
-#### [§](#schema-dialect){.toc-anchor .d-print-none} Schema dialect
+#### [§](#schema-dialect) Schema dialect
 
 The Schema dialect for ACDC 1.0 MUST be JSON Schema 2020-12 and is
 indicated by the identifier
@@ -1128,7 +1117,7 @@ dialect to be processed by the Schema validation tool. When provided,
 the top-level `$schema` field value for ACDC version 1.0 MUST be
 "<https://json-schema.org/draft/2020-12/schema>".
 
-#### [§](#schema-versioning){.toc-anchor .d-print-none} Schema Versioning
+#### [§](#schema-versioning) Schema Versioning
 
 Each schema MUST have at the top level a version field with the field
 label `version`. The value of the `version` field MUST be a semantic
@@ -1138,7 +1127,7 @@ version string in the dotted decimal notation of the form
 informative. The `version` field value is not used in the JSON Schema
 validation against the ACDC. Therefore, a given ACDC SHOULD properly
 pass the JSON Schema validation process regardless of the value of its
-schema `version` field. [SEMVER](#term:semver){.term-reference}
+schema `version` field. [SEMVER](#term:semver)
 
 Recall that the value of the Schema ID, `$id` field in an ACDC Schema is
 a SAID that provides an encoded agile cryptographic digest of the
@@ -1201,7 +1190,7 @@ versions. In general, this would lead to extending that list of `oneOf`s
 in that Edge's schema field value to include an entry for each major
 version change.
 
-#### [§](#schema-availability){.toc-anchor .d-print-none} Schema Availability
+#### [§](#schema-availability) Schema Availability
 
 The composed, detailed (uncompacted) (bundled) static Schema for an ACDC
 MAY be cached or attached. But cached, and/or attached static Schema is
@@ -1218,7 +1207,7 @@ application of their associated ACDCs. The Issuer of an ACDC is REQUIRED
 to satisfy any availability constraints on its Schema that MAY be
 imposed by the application domain or ecosystem.
 
-#### [§](#composable-json-schema){.toc-anchor .d-print-none} Composable JSON Schema
+#### [§](#composable-json-schema) Composable JSON Schema
 
 A composable JSON Schema enables the use of any combination of
 compacted/uncompacted Attribute, Edge, and Rule sections in a provided
@@ -1310,14 +1299,13 @@ These features provide a mechanism for secure schema-validated
 contractually-bound Partial (and/or Selective) Disclosure of
 confidential data via ACDCs.
 
-### [§](#attribute-section){.toc-anchor .d-print-none} Attribute Section
+### [§](#attribute-section) Attribute Section
 
-#### [§](#reserved-field-labels){.toc-anchor .d-print-none} Reserved field labels
+#### [§](#reserved-field-labels) Reserved field labels
 
 The following field labels are reserved at all nested field map levels
 in the Attribute section of an ACDC.
 
-::: table-responsive-md
    Label  Title                              Description
   ------- ---------------------------------- -----------------------------------------------------------------------------------------------------------
     `d`   Digest (SAID)                      Self-referential fully qualified cryptographic digest of enclosing map.
@@ -1325,7 +1313,6 @@ in the Attribute section of an ACDC.
     `i`   Identifier (AID)                   Context-dependent AID as determined by its enclosing map such as Issuee identifier.
    `rd`   Registry Digest (\[[3](#SAID)\])   Issuance and/or revocation, transfer, or retraction registry for ACDC when not at top-level
    `dt`   Datetime                           Issuer's relative ISO datetime string
-:::
 
 The types of values for the `d`, `u`, `i`, and `dt` fields are described
 above for ACDC reserved field labels.
@@ -1333,15 +1320,13 @@ above for ACDC reserved field labels.
 The following field labels are reserved at the top-level only of the
 Attribute section of an ACDC.
 
-::: table-responsive-md
     Label   Title   Description
   --------- ------- -------------------------------------------
    `cargo`  Cargo   Field value is embedded encapsulated data
-:::
 
 The Cargo, `cargo` field is described below.
 
-##### [§](#cargo-cargo-field){.toc-anchor .d-print-none} Cargo, `cargo` field
+##### [§](#cargo-cargo-field) Cargo, `cargo` field
 
 The cargo, `cargo` field value, embedded, encapsulated data. The cargo
 field establishes a convention for encapsulating data using the ACDC as
@@ -1352,7 +1337,7 @@ or application-specific data types. These MUST be serializable using a
 serialization that is compatible with the serialization kind of the ACDC
 that conveys them.
 
-#### [§](#compact-attribute-section-schema){.toc-anchor .d-print-none} Compact Attribute Section Schema
+#### [§](#compact-attribute-section-schema) Compact Attribute Section Schema
 
 When the value of the Attribute section has been compacted into its
 SAID, its JSON Schema subschema is as follows:
@@ -1367,7 +1352,7 @@ SAID, its JSON Schema subschema is as follows:
 }
 ```
 
-#### [§](#attribute-section-variants){.toc-anchor .d-print-none} Attribute Section Variants
+#### [§](#attribute-section-variants) Attribute Section Variants
 
 Two variants, namely, Targeted (Untargeted), are defined respectively by
 the presence (absence) of an Issuee, `i` field at the top-level of the
@@ -1379,7 +1364,7 @@ uncompacted Attribute section block.
 
 These four variants MAY appear in combination.
 
-##### [§](#targeted-attribute-section){.toc-anchor .d-print-none} Targeted Attribute Section
+##### [§](#targeted-attribute-section) Targeted Attribute Section
 
 When present at the top level of the Attribute section, the Issuee, `i`,
 field value is the ACDC's Issuee AID. This Issuee AID is a provably
@@ -1453,7 +1438,7 @@ Contractual issuance and presentation exchanges are described later in
 the IPEX protocol section
 [IPEX](#issuance-and-presentation-exchange-ipex).
 
-##### [§](#untargeted-attribute-section){.toc-anchor .d-print-none} Untargeted Attribute Section
+##### [§](#untargeted-attribute-section) Untargeted Attribute Section
 
 Consider the case where the Issuee, `i`, field is absent at the top
 level of the Attribute section. In this case, the ACDC has an Issuer but
@@ -1484,7 +1469,7 @@ participants in a supply chain from impostors. Such data supply chains
 are also useful as a verifiable digital twin of a physical supply chain
 \[[54](#DigiTwin)\].
 
-#### [§](#targeted-private-attribute-section-example){.toc-anchor .d-print-none} Targeted private-attribute section example
+#### [§](#targeted-private-attribute-section-example) Targeted private-attribute section example
 
 As discussed above, the presence of the `i` field at the top level of
 the Attribute section block makes this a targeted Attribute section. The
@@ -1621,7 +1606,7 @@ by,
 "a": "EIMMcLl1w2KW2J3AD3twaESJO4u_fDFCdlMHjouojU8C"
 ```
 
-#### [§](#targeted-public-attribute-section-example){.toc-anchor .d-print-none} Targeted Public-attribute Section Example
+#### [§](#targeted-public-attribute-section-example) Targeted Public-attribute Section Example
 
 Consider the following JSON Schema subschema for targeted attribute
 section block with the subschema below,
@@ -1733,7 +1718,7 @@ Compact Attribute section. Thus, an ACDC without a UUID, `u` field in
 its Attributes block MUST be considered a Public-Attribute ACDC even
 when expressed in compact form.
 
-#### [§](#nested-partially-disclosable-attribute-section-example){.toc-anchor .d-print-none} Nested Partially Disclosable Attribute Section Example
+#### [§](#nested-partially-disclosable-attribute-section-example) Nested Partially Disclosable Attribute Section Example
 
 Suppose that the subschema for the Attribute section of an ACDC is as
 follows:
@@ -1902,7 +1887,7 @@ Notice that the compact form of the `a` block has as the field value of
 the `a` field the value of the SAID, `d` field in the expanded `a`
 section (see above).
 
-### [§](#aggregate-section){.toc-anchor .d-print-none} Aggregate Section
+### [§](#aggregate-section) Aggregate Section
 
 A selectively disclosable blinded Aggregate section appears at the top
 level using the field label `A`. This is distinct from the field label
@@ -1920,24 +1905,22 @@ The Uncompacted (Expanded) Aggregate section value is a list of
 blindable attribute blocks, where each attribute block represents a
 field map.
 
-#### [§](#reserved-field-labels-2){.toc-anchor .d-print-none} Reserved field labels {#reserved-field-labels-2}
+#### [§](#reserved-field-labels-2) Reserved field labels
 
 The following field labels are reserved at all nested field map levels
 in the Aggregate section of an ACDC.
 
-::: table-responsive-md
    Label  Title              Description
   ------- ------------------ -----------------------------------------------------------------------------------------------------------
     `d`   Digest (SAID)      Self-referential fully qualified cryptographic digest of enclosing map.
     `u`   UUID               Random Universally Unique Identifier as fully qualified high entropy pseudo-random string, a salty nonce.
     `i`   Identifier (AID)   Context-dependent AID as determined by its enclosing map such as Issuee identifier.
    `dt`   Datetime           Issuer's relative ISO datetime string
-:::
 
 The types of values for the `d`, `u`, `i`, and `dt` fields are described
 above for ACDC reserved field labels.
 
-#### [§](#basic-selective-disclosure-mechanism){.toc-anchor .d-print-none} Basic selective disclosure mechanism
+#### [§](#basic-selective-disclosure-mechanism) Basic selective disclosure mechanism
 
 The purpose of the Aggregate section is to provide what herein is called
 "selective disclosure". The verifiable credential community has defined
@@ -1994,7 +1977,7 @@ and/or the list of aggregated blinded commitments
 Disclosee or adversary would also need the actual value details, which
 include the blinding factor.
 
-#### [§](#selectively-disclosable-aggregate-of-attribute-blocks){.toc-anchor .d-print-none} Selectively disclosable Aggregate of attribute blocks
+#### [§](#selectively-disclosable-aggregate-of-attribute-blocks) Selectively disclosable Aggregate of attribute blocks
 
 The selectively disclosable aggregate section of an ACDC, provides an
 ordered set of Attributes as an list (array) of blinded blocks. In
@@ -2021,7 +2004,7 @@ own blinded attributed block with unique field labels. To clarify,
 knowledge of one variant via its disclosed block does not leak
 information about some other, so far undisclosed variant.
 
-##### [§](#blinded-attribute-array){.toc-anchor .d-print-none} Blinded attribute array
+##### [§](#blinded-attribute-array) Blinded attribute array
 
 Given that each blindable Attribute block's UUID, `u`, field has
 sufficient cryptographic entropy, then each blindable Attribute block's
@@ -2057,7 +2040,7 @@ The ordered set of a~i~ may also be expressed as a list, that is,
 
 \[a~0~, a~1~, ..., a~N~\].
 
-#### [§](#computation-of-the-agid-aggregate-id){.toc-anchor .d-print-none} Computation of the AGID (Aggregate ID)
+#### [§](#computation-of-the-agid-aggregate-id) Computation of the AGID (Aggregate ID)
 
 The zeroth entry in the blinded attribute list represents a cryptogrphic
 digest of a given type. The length of this string is defined by the type
@@ -2072,7 +2055,7 @@ is computer and qb64 value of that digest replaces the dummied values in
 the zeroth element. This digest value in CESR qb64 is the AGID. Working
 examples of AGID computation are provided below.
 
-#### [§](#inclusion-proof-via-aggregated-list-digest-agid){.toc-anchor .d-print-none} Inclusion proof via aggregated list digest (AGID)
+#### [§](#inclusion-proof-via-aggregated-list-digest-agid) Inclusion proof via aggregated list digest (AGID)
 
 All the a~i~ in the list are serialized and then aggregated into a
 single aggregate digest, denoted the AGID, by computing the digest of
@@ -2165,7 +2148,7 @@ correlate between presentations of a given private, selectively
 disclosable ACDC. Nonetheless, the malicious Disclosees are not able to
 discover any undisclosed Attributes.
 
-#### [§](#composed-schema-for-selectively-disclosable-aggregate-section){.toc-anchor .d-print-none} Composed Schema for selectively disclosable Aggregate section
+#### [§](#composed-schema-for-selectively-disclosable-aggregate-section) Composed Schema for selectively disclosable Aggregate section
 
 Because the Aggregate section's selectively disclosable blindable
 Attribute blocks are provided by an array (list), the uncompacted
@@ -2325,7 +2308,7 @@ the block SAID or the block detail.
     }
 ```
 
-##### [§](#json-serialization){.toc-anchor .d-print-none} JSON Serialization
+##### [§](#json-serialization) JSON Serialization
 
 Consider the following Aggregate section in uncompacted, fully disclosed
 form computed using JSON serialization as follows:
@@ -2414,7 +2397,7 @@ From this disclosure, the block SAIDS can be computed, and then the
 compact list form with only AGID and block SAIDs can be constructed, and
 then the AGID can be computed to verify the disclosure.
 
-##### [§](#cesr-native-serialization){.toc-anchor .d-print-none} CESR Native Serialization
+##### [§](#cesr-native-serialization) CESR Native Serialization
 
 If instead, CESR native serialization is used, the fully uncompacted
 Aggregate section is as follows:
@@ -2492,7 +2475,7 @@ From this disclosure, the block SAIDS can be computed, and then the
 compact list form with only AGID and block SAIDs can be constructed, and
 then the AGID can be computed to verify the disclosure.
 
-### [§](#edge-section){.toc-anchor .d-print-none} Edge Section
+### [§](#edge-section) Edge Section
 
 The Edge Section, `e` field MAY appear as a top-level block within the
 ACDC and denotes the start of subsequent Edge-groups. The Edge Section
@@ -2503,7 +2486,7 @@ The Edge Section itself MUST have a "oneOf" composition with only its
 SAID so that the Edge Section MUST be expressable in the most compact
 form as merely its SAID.
 
-#### [§](#block-types){.toc-anchor .d-print-none} Block Types
+#### [§](#block-types) Block Types
 
 There are two types of field maps or blocks that MAY appear as values of
 fields within the Edge Section, `e` field either at the top level of the
@@ -2524,7 +2507,7 @@ of a node, `n` field in the non-compact variant of its subschema. An
 Edge MUST contain a node, `n` field. An Edge-group MUST NOT have a node,
 `n` field.
 
-#### [§](#acdcs-as-secure-graph-fragments-of-a-globally-distributed-property-graph-pg){.toc-anchor .d-print-none} ACDCs as secure graph fragments of a globally distributed property graph (PG)
+#### [§](#acdcs-as-secure-graph-fragments-of-a-globally-distributed-property-graph-pg) ACDCs as secure graph fragments of a globally distributed property graph (PG)
 
 A set of ACDCs as nodes connected by edges forms a labeled property
 graph (LPG) or property graph (PG) for short \[[56](#PGM)\]
@@ -2590,32 +2573,30 @@ will then have everything it needs to make a successful disclosure to
 some other Disclosee. This is the essence of Percolated Discovery
 \[[4](#OOBI)\].
 
-#### [§](#edge-group){.toc-anchor .d-print-none} Edge-group
+#### [§](#edge-group) Edge-group
 
 The reserved field labels for an Edge-group are detailed in the table
 below.
 
-::: table-responsive-md
    Label  Title           Description
   ------- --------------- --------------------------------------------------------------------------------------------------------------------------------------------------------------
     `d`   Digest (SAID)   Optional, self-referential fully qualified cryptographic digest of enclosing Edge-group block.
     `u`   UUID            Optional random Universally Unique Identifier as fully qualified high entropy pseudo-random string, a salty nonce.
     `o`   Operator        Optional as an m-ary operator on the Edges in the Edge-group. Enables expression of the edge logic on edge subgraph.
     `w`   Weight          Optional property for nested Edges or Edge-groups for weighted average `WAVG` operator. Enables expression weighted average on Edge or Edge-group sub-graph.
-:::
 
 When present, the order of appearance of these fields is as follows:
 \`\[d, u, o, w\]\'.
 
 An Edge-group MUST NOT have a node, `n`, field.
 
-##### [§](#said-d-field){.toc-anchor .d-print-none} SAID, `d` field
+##### [§](#said-d-field) SAID, `d` field
 
 The SAID, `d` field is optional but when it appears it MUST appear as
 the first field in the Edge-group block. The value of this field MUST be
 the SAID of its enclosing block.
 
-##### [§](#uuid-u-field){.toc-anchor .d-print-none} UUID, `u` field
+##### [§](#uuid-u-field) UUID, `u` field
 
 The UUID, `u` field is optional, but when it appears, it MUST appear as
 the second field in the Edge-group block following the SAID, `d`, field.
@@ -2633,7 +2614,7 @@ block's SAID, `d` field does not provide a fixed point of correlation to
 the block's field values themselves unless and until there has been a
 disclosure of those field values.
 
-##### [§](#operator-o-field){.toc-anchor .d-print-none} Operator, `o` field
+##### [§](#operator-o-field) Operator, `o` field
 
 The Operator, `o` field MUST appear immediately following the SAID, `d`
 field, and UUID, `u` field (when present) in the Edge-group block. The
@@ -2643,7 +2624,6 @@ This differs from the Operator, `o` field in an Edge block (see below).
 
 The m-ary operators are defined in the table below:
 
-::: table-responsive-md
    M-ary Operator  Description                                                                                                                                               Default
   ---------------- --------------------------------------------------------------------------------------------------------------------------------------------------------- ---------
        `AND`       Logical AND of the validity of the Edge-group members. Edge-group is valid only if all members are valid.                                                 Yes
@@ -2652,7 +2632,6 @@ The m-ary operators are defined in the table below:
        `NOR`       Logical NOR of the validity of the Edge-group members. Edge-group is valid only if all members are invalid.                                               No
        `AVG`       Arithmetic average of a given Edge-group member property. Averaged property is defined by the schema or EGF.                                              No
        `WAVG`      Weighted arithmetic average of a given Edge-group member property. Weight is given by the `w` field. Averaged property is defined by the Schema or EGF.   No
-:::
 
 When the Operator, `o`, field is missing in an Edge-group block, the
 default value for the Operator, `o`, field MUST be the `AND` Operator.
@@ -2696,7 +2675,7 @@ Operators (defined below), allow modulation of the validation
 aggregation logic of groups of Edges/nodes at each branch in a tree of
 ACDCs.
 
-##### [§](#weight-w-field){.toc-anchor .d-print-none} Weight, `w` field
+##### [§](#weight-w-field) Weight, `w` field
 
 The Weight, `w` field, is OPTIONAL but when present, it MUST appear
 immediately following all of the SAID, `d` field, UUID, `u` field (when
@@ -2721,7 +2700,7 @@ properties) MAY provide other types of weights, but having a default
 label, namely `w`, simplifies the default definitions of weighted
 Operators.
 
-##### [§](#labeled-nested-edge-and-edge-group-fields){.toc-anchor .d-print-none} Labeled nested edge and edge-group fields
+##### [§](#labeled-nested-edge-and-edge-group-fields) Labeled nested edge and edge-group fields
 
 Edge-groups and Edges nested within a given Edge-group MAY appear as
 labeled fields whose labels are not any of the reserved field labels for
@@ -2760,7 +2739,7 @@ MAY be inferred from the properties of an enclosing Edge-group's block.
 Each labeled Edge and Edge-group type MUST be defined by the subschema
 designated by its label.
 
-#### [§](#edge){.toc-anchor .d-print-none} Edge
+#### [§](#edge) Edge
 
 An Edge MUST be represented as a block (field map) with two exceptions.
 These are: compact Edge form and simple compact Edge form. These are
@@ -2770,7 +2749,6 @@ compact forms from the block form.
 The reserved field labels within an Edge block are defined in the table
 below.
 
-::: table-responsive-md
    Label  Title           Description
   ------- --------------- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     `d`   Digest (SAID)   Optional, self-referential fully qualified cryptographic digest of enclosing Edge map.
@@ -2779,7 +2757,6 @@ below.
     `s`   Schema          Optional SAID of the JSON Schema block of the far node ACDC.
     `o`   Operator        Optional as either a unary operator on the Edge itself or an m-ary operator on the Edge-group in Edge section. Enables expression of the Edge logic on Edge subgraph.
     `w`   Weight          Optional edge weight property that enables default property for directed weighted edges and operators that use weights.
-:::
 
 An Edge block MUST have a node, `n`, field. This differentiates an Edge
 block from an Edge-group block. The SAID, `d`, UUID, `u`, schema, `s`,
@@ -2789,13 +2766,13 @@ SAID, `d`, UUID, `u`, schema, `s`, operator, `o`, or weight, `w` fields.
 When present the order of appearance of these fields MUST be as follows:
 \`\[d, u, n, s, o, w\]\'.
 
-##### [§](#said-d-field-2){.toc-anchor .d-print-none} SAID, `d` field {#said-d-field-2}
+##### [§](#said-d-field-2) SAID, `d` field
 
 The SAID, `d` field is optional but, when present, MUST appear as the
 first field in the Edge block. The value of this field MUST be the SAID
 of its enclosing block.
 
-###### [§](#compact-edge){.toc-anchor .d-print-none} Compact edge
+###### [§](#compact-edge) Compact edge
 
 Given that an individual edge's property block includes a SAID, `d`,
 field, a compact representation of the edge's property block is provided
@@ -2809,7 +2786,7 @@ properties for later disclosure. A compact edge without a UUID, `u`
 field, is defined to be a public compact edge. A compact edge with a
 UUID, `u` field, is defined to be a private compact edge.
 
-##### [§](#uuid-u-field-2){.toc-anchor .d-print-none} UUID, `u` field {#uuid-u-field-2}
+##### [§](#uuid-u-field-2) UUID, `u` field
 
 The UUID, `u` field is optional, but when it appears, it MUST appear as
 the second field in the Edge block following the SAID, `d`, field. The
@@ -2837,7 +2814,7 @@ disclosing any details of that ACDC, including the ACDC's SAID. Private
 ACDCs (nodes) and Private Edges MAY be combined to better protect the
 privacy of the information in a distributed property graph.
 
-##### [§](#node-n-field){.toc-anchor .d-print-none} Node, `n` field
+##### [§](#node-n-field) Node, `n` field
 
 When an Edge block does not include a SAID, `d` field, then the node,
 `n` field MUST appear as the first field in the block.
@@ -2858,7 +2835,7 @@ the (near node) Edge block's schema, `s` field is present (see below),
 then the far node MUST also validate against the Schema indicated by the
 near node Edge block's Schema, `s` field value.
 
-##### [§](#schema-s-field){.toc-anchor .d-print-none} Schema, `s` field
+##### [§](#schema-s-field) Schema, `s` field
 
 When present, the Schema `s` field MUST appear immediately following the
 node `n` field in the Edge sub-block. The schema, `s` field provides an
@@ -2892,7 +2869,7 @@ composition that includes the old major versions. Refer to the
 discussion under the Schema section for information on Schema
 versioning.
 
-##### [§](#operator-o-field-2){.toc-anchor .d-print-none} Operator, `o` field {#operator-o-field-2}
+##### [§](#operator-o-field-2) Operator, `o` field
 
 The Operator, `o` field MUST appear immediately following the SAID, `d`
 field, UUID, `u` field, node, `n` field, or schema, `s` field (when
@@ -2907,14 +2884,12 @@ block (see above).
 
 The unary operators are defined in the table below:
 
-::: table-responsive-md
    Unary Operator  Description                                                                                                                                                   Default
   ---------------- ------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------
        `I2I`       Issuer-To-Issuee, The Issuer AID of this ACDC MUST be the Issuee AID of the node this Edge points to.                                                         Yes
        `NI2I`      Not-Issuer-To-Issuee, The Issuer AID of this ACDC MAY or MAY not be the Issuee AID of the node that this Edge points to.                                      No
        `DI2I`      Delegated-Issuer-To-Issuee, The Issuer AID of this ACDC MUST be either the Issuee AID or a delegated AID of the Issuee AID of the node this Edge points to.   No
        `NOT`       Logical NOT. The validity of the node this Edge points to is inverted. If valid, then not valid. If invalid, then valid.                                      No
-:::
 
 When the Operator, `o`, field is missing or empty or is present but does
 not include any of the `I2I`, `NI2I` or `DI2I` Operators then:
@@ -2962,7 +2937,7 @@ ACDC is invalid, then the presence of the `NOT` operator makes this Edge
 valid. Conversely, if this Edge's far node ACDC is valid, then the
 presence of the `NOT` Operator makes this Edge invalid.
 
-###### [§](#weight-w-field-2){.toc-anchor .d-print-none} Weight, `w` field. {#weight-w-field-2}
+###### [§](#weight-w-field-2) Weight, `w` field.
 
 The Weight, `w` field MUST appear immediately following the SAID, `d`
 field, UUID, `u` field, Node, `n` field, Schema, `s` field, or Operator,
@@ -2983,14 +2958,14 @@ weighting. Other fields with other labels (labeled Edge properties)
 could provide other types of weights, but having a default label, namely
 `w` simplifies the default definitions of weighted Operators.
 
-##### [§](#labeled-property-fields){.toc-anchor .d-print-none} Labeled property fields
+##### [§](#labeled-property-fields) Labeled property fields
 
 Edge property fields appear as labeled fields whose labels are not any
 of the reserved field labels for either Edge-groups or Edges, namely,
 \`\[d, u, n, s, o, w\].' Labeled property fields MUST appear after all
 of any fields with a reserved field label.
 
-###### [§](#simple-compact-edge){.toc-anchor .d-print-none} Simple compact edge
+###### [§](#simple-compact-edge) Simple compact edge
 
 When an Edge sub-block has only one field, that is, its node, `n` field,
 i.e., it has no other properties, then the Edge block MAY use an
@@ -3000,7 +2975,7 @@ enables the very compact expression of simple public Edges. The Schema
 for that Edge's label MUST indicate in its description that the Edge
 value is a Far Node SAID, not the Edge block SAID.
 
-#### [§](#summary){.toc-anchor .d-print-none} Summary
+#### [§](#summary) Summary
 
 The Edge Section syntax enables the composable and extensible but
 efficient expression of aggregating (m-ary) and unary Operators, both
@@ -3012,14 +2987,14 @@ m-ary Operators and `I2I` for unary Operators for targeted ACDCs and
 sufficiently general in scope to satisfy the contemplated use cases,
 including those with more advanced business logic.
 
-#### [§](#examples){.toc-anchor .d-print-none} Examples
+#### [§](#examples) Examples
 
 The Edge section examples are included in the full ACDC examples in the
 Annex. This is because Edges refer to other ACDCs. To fully set up the
 Edge examples, it is necessary to understand the complete format of an
 ACDC.
 
-### [§](#rule-section){.toc-anchor .d-print-none} Rule Section
+### [§](#rule-section) Rule Section
 
 The Rule Section, `r` field appears as a top-level block within the ACDC
 and denotes the start of subsequent Rule-groups. The purpose of the
@@ -3043,7 +3018,7 @@ The Rule Section itself MUST have a "oneOf" composition with only its
 SAID so that the Rule Section MUST be expressable in the most compact
 form as merely its SAID.
 
-#### [§](#block-types-2){.toc-anchor .d-print-none} Block Types {#block-types-2}
+#### [§](#block-types-2) Block Types
 
 There are two types of field maps or blocks that MAY appear as values of
 fields within the Rule Section, `r` field either at the top level of the
@@ -3062,7 +3037,7 @@ the Rules Section subschema. A Rule-group is indicated by the presence
 of one or more non-reserved labeled fields whose value represents a
 nested Rule or Rule-Groups.
 
-#### [§](#rule-discovery){.toc-anchor .d-print-none} Rule Discovery
+#### [§](#rule-discovery) Rule Discovery
 
 In compact form, the discovery of either the Rules section as a whole or
 a given Rule or Rule-group begins with the provided SAID. Because the
@@ -3081,18 +3056,16 @@ in whole or in part of all ACDCs so issued. That Issuee will then have
 everything subsequently needed to make a successful presentation or
 disclosure to a Disclosee. This is the essence of Percolated Discovery.
 
-#### [§](#rule-group){.toc-anchor .d-print-none} Rule-group
+#### [§](#rule-group) Rule-group
 
 The reserved field labels for Rule-groups are detailed in the table
 below.
 
-::: table-responsive-md
    Label  Title            Description
   ------- ---------------- --------------------------------------------------------------------------------------------------------------------
     `d`   Digest (SAID)    Optional Self-referential fully qualified cryptographic digest of enclosing block.
     `u`   UUID             Optional random Universally Unique Identifier as fully qualified high entropy pseudo-random string, a salty nonce.
     `l`   Legal Language   Optional legal language for the Rule-group.
-:::
 
 When present, the order of appearance of these fields is as follows:
 `[d, u, l]`.
@@ -3104,7 +3077,7 @@ whose values represent nested Rules or Rule-groups. In this sense, a
 Rule-group is an intermediate node in a sub-graph of Rule-groups and
 Rules.
 
-##### [§](#said-d-field-3){.toc-anchor .d-print-none} SAID, `d` field {#said-d-field-3}
+##### [§](#said-d-field-3) SAID, `d` field
 
 The SAID, `d` field is optional but when it appears it MUST appear as
 the first field in the Rule-group block. The value of this field MUST be
@@ -3116,7 +3089,7 @@ Rule-group's SAID, `d` field enables a verifiable globally unique
 reference to that nested Rule-group, not merely the whole contract as
 given by the Rule section's top-level SAID, `d`, field.
 
-##### [§](#uuid-u-field-3){.toc-anchor .d-print-none} UUID, `u` field {#uuid-u-field-3}
+##### [§](#uuid-u-field-3) UUID, `u` field
 
 The UUID, `u` field is optional, but when it appears, it MUST appear as
 the second field in the Rule-group block following the SAID, `d`, field.
@@ -3134,7 +3107,7 @@ block's SAID, `d` field does not provide a fixed point of correlation to
 the block's field values themselves unless and until there has been a
 disclosure of those field values.
 
-##### [§](#labeled-nested-rule-and-rule-group-fields){.toc-anchor .d-print-none} Labeled nested rule and rule-group fields
+##### [§](#labeled-nested-rule-and-rule-group-fields) Labeled nested rule and rule-group fields
 
 Rules and Rule-group nested within a Rule-group appear as labeled fields
 whose labels are not any of the reserved field labels for a Rule-group,
@@ -3165,18 +3138,16 @@ fields. Additional properties MAY be inferred from the properties of an
 enclosing Rule-group block. Each labeled Rule type MUST be defined by
 the subschema designated by its label.
 
-#### [§](#rule){.toc-anchor .d-print-none} Rule
+#### [§](#rule) Rule
 
 The reserved field labels for a Rule block are detailed in the table
 below.
 
-::: table-responsive-md
    Label  Title            Description
   ------- ---------------- --------------------------------------------------------------------------------------------------------------------
     `d`   Digest (SAID)    Optional self-referential fully qualified cryptographic digest of enclosing block.
     `u`   UUID             Optional random Universally Unique Identifier as fully qualified high entropy pseudo-random string, a salty nonce.
     `l`   Legal Language   The actual legal language for the clause.
-:::
 
 When present, the order of appearance of these fields is as follows:
 `[d, u, l]`.
@@ -3186,7 +3157,7 @@ When the Rule has a SAID, `d` field, it MAY also have a UUID, `u` field.
 A Rule MUST NOT have any other fields. In this sense, a Rule is a
 terminal node in a sub-graph of Rule-groups and Rules.
 
-##### [§](#said-d-field-4){.toc-anchor .d-print-none} SAID, `d` field {#said-d-field-4}
+##### [§](#said-d-field-4) SAID, `d` field
 
 The SAID, `d` field is optional, but when it appears, it MUST appear as
 the first field in the Clause block. The value of this field MUST be the
@@ -3194,7 +3165,7 @@ SAID of its enclosing block. A Rule's SAID enables a verifiable globally
 unique reference to that rule, not merely the whole contract as given by
 the Rule section's top-level SAID, `d`, field.
 
-##### [§](#compact-rule){.toc-anchor .d-print-none} Compact Rule
+##### [§](#compact-rule) Compact Rule
 
 Given that an individual Rule block includes a SAID, `d` field, a
 compact representation of the Rule's block is provided by replacing it
@@ -3208,7 +3179,7 @@ later disclosure. A compact clause without a UUID, `u` field is defined
 to be a public compact clause. A compact clause with a UUID, `u` field
 is defined to be a private compact clause.
 
-##### [§](#uuid-u-field-4){.toc-anchor .d-print-none} UUID, `u` field {#uuid-u-field-4}
+##### [§](#uuid-u-field-4) UUID, `u` field
 
 The UUID, `u` field is optional, but when it appears, it MUST appear as
 the second field in the Rule Section block following the SAID, `d`
@@ -3241,12 +3212,12 @@ When there is no benefit to a nested private (partially disclosable)
 rules or rule groups then the rule's or rule group's UUID field is not
 needed.
 
-##### [§](#legal-l-field){.toc-anchor .d-print-none} Legal, `l` Field
+##### [§](#legal-l-field) Legal, `l` Field
 
 The legal language, `l`, field in each clause block provides the
 associated legal language as a string.
 
-##### [§](#simple-compact-rule){.toc-anchor .d-print-none} Simple Compact Rule
+##### [§](#simple-compact-rule) Simple Compact Rule
 
 When a Rule block has only one field, that is, its legal, `l` field,
 i.e., it has no other properties, then the rule block MAY use an
@@ -3258,7 +3229,7 @@ the very compact expression of simple public Rules. The Schema for that
 Rule's label MUST indicate in its description that the Rule value is
 Legal Language, not a SAID.
 
-#### [§](#rule-examples){.toc-anchor .d-print-none} Rule Examples
+#### [§](#rule-examples) Rule Examples
 
 Consider the following sub-schema for a partially disclosable Rule
 section:
@@ -3608,7 +3579,7 @@ is its SAID shown as follows:
 "r": "EF9f-pCPJcgQclUu1OzzAfgyURW7iLPF2nwhuKYHFBlV"
 ```
 
-## [§](#disclosure-mechanisms-and-exploitation-protection){.toc-anchor .d-print-none} Disclosure Mechanisms and Exploitation Protection
+## [§](#disclosure-mechanisms-and-exploitation-protection) Disclosure Mechanisms and Exploitation Protection
 
 An important design goal of ACDCs is to support the sharing of provably
 authentic data while also protecting against the exploitation of that
@@ -3621,7 +3592,7 @@ a given privacy protection mechanism may be employed to help protect
 against data exploitation, but only when it serves a more general
 purpose and not as an end in and of itself.
 
-### [§](#binding-to-key-state-at-time-of-acdc-state-change){.toc-anchor .d-print-none} Binding to Key State at Time of ACDC State Change
+### [§](#binding-to-key-state-at-time-of-acdc-state-change) Binding to Key State at Time of ACDC State Change
 
 To protect against later forgery in the event of a future compromise of
 the Issuer's signing keys, the Issuer must anchor an *issuance* proof
@@ -3692,7 +3663,7 @@ makes the forgery attempt both detectable and recoverable. In any event,
 the ACDC state proof seal ensures the detectability of any attempt at
 forgery using compromised keys for any ACDC state.
 
-### [§](#tel-registrars-and-tel-observers){.toc-anchor .d-print-none} TEL Registrars and TEL Observers
+### [§](#tel-registrars-and-tel-observers) TEL Registrars and TEL Observers
 
 The use of a Transaction Event Log (TEL) to manage the state of an ACDC
 may require two infrastructure components, namely, Registrars and
@@ -3729,7 +3700,7 @@ in advance of PoV requests.
 
 **Figure:** *Registrar Observer Components*
 
-### [§](#data-privacy){.toc-anchor .d-print-none} Data Privacy
+### [§](#data-privacy) Data Privacy
 
 Information or data privacy is defined as the relationship between the
 collection and dissemination of data, technology, the public expectation
@@ -3751,7 +3722,7 @@ the usage of shared information be honored by the other parties?
 [Trust over IP (ToIP) Technology Architecture
 Specification](https://github.com/trustoverip/TechArch/blob/main/spec.md#61-design-goals)
 
-### [§](#three-party-exploitation-model){.toc-anchor .d-print-none} Three-party Exploitation Model
+### [§](#three-party-exploitation-model) Three-party Exploitation Model
 
 Sustainable privacy is based on a three-party exploitation model
 [Sustainable
@@ -3808,15 +3779,13 @@ privacy rights of disclosed data are as follows: • Exploitive use of
 1st-party (Discloser) data by 2nd parties (Disclosees) with 3rd parties
 (Observers) either overtly (collusive) or inadvertently (leakage).
 
-::: {#issue-1 .notice .issue}
-[ISSUE](#issue-1){.notice-link}
+[ISSUE](#issue-1)
 
 This model is diagrammed below. Need diagram here
-:::
 
-## [§](#exploitation-protection-mechanisms){.toc-anchor .d-print-none} Exploitation Protection Mechanisms
+## [§](#exploitation-protection-mechanisms) Exploitation Protection Mechanisms
 
-### [§](#least-disclosure){.toc-anchor .d-print-none} Least Disclosure
+### [§](#least-disclosure) Least Disclosure
 
 ACDCs provide several mechanisms designed to help protect against the
 exploitation of disclosed data. These are based on the principle of
@@ -3826,7 +3795,7 @@ The system should disclose only the minimum amount of information about
 a given party needed to facilitate a transaction, and no more.
 \[[47](#IDSys)\]
 
-### [§](#graduated-disclosure){.toc-anchor .d-print-none} Graduated Disclosure
+### [§](#graduated-disclosure) Graduated Disclosure
 
 Any given transaction may entail several disclosures that are iterative
 and incremental, such that one least disclosure facilitates another
@@ -3941,7 +3910,7 @@ fields in the branch that extends down to the nested block and at least
 the disclosure of the labels of all the fields in the enclosing blocks
 of that branch.
 
-### [§](#contractually-protected-disclosure){.toc-anchor .d-print-none} Contractually Protected Disclosure
+### [§](#contractually-protected-disclosure) Contractually Protected Disclosure
 
 Graduated Disclosure enables a comprehensive protection mechanism called
 Contractually Protected Disclosure. There are two contractually
@@ -4005,13 +3974,13 @@ PII is latent in the Contingent Disclosure but never realized
 minimizes inadvertent leakage while protecting both the Discloser and
 the Disclosee.
 
-## [§](#issuance-and-presentation-exchange-ipex){.toc-anchor .d-print-none} Issuance and Presentation Exchange (IPEX)
+## [§](#issuance-and-presentation-exchange-ipex) Issuance and Presentation Exchange (IPEX)
 
 This section is non-normative. This merely outlines the Issuance and
 Presentation Exchange (IPEX) Protocol. A separate more detailed
 specification is being developed to more fully explicate this prototol.
 The IPEX protocol provides a uniform mechanism for the issuance and
-presentation of ACDCs [ACDC](#term:acdc){.term-reference} in a securely
+presentation of ACDCs [ACDC](#term:acdc) in a securely
 attributable manner. A single protocol is able to work for both types of
 exchanges by recognizing that all exchanges (both issuance and
 presentation) MAY be modeled as the disclosure of information by a
@@ -4041,21 +4010,18 @@ implement, support, update, understand, and adopt. The tooling is more
 consistent.
 
 This IPEX
-[IPEX](https://trustoverip.github.io/kerisuite-glossary/#term:ipex){.x-term-reference
-.term-reference local-href="#term:kmg-1:ipex"} protocol leverages
+[IPEX](https://trustoverip.github.io/kerisuite-glossary/#term:ipex) protocol leverages
 important features of ACDCs and ancillary protocols such as CESR
 \[[1](#CESR)\], SAIDs \[[3](#SAID)\], and
-[CESR-Path](https://trustoverip.github.io/kerisuite-glossary/#term:cesr-path){.x-term-reference
-.term-reference local-href="#term:kmg-1:cesr-path"} proofs
-([Proof-ID](https://trustoverip.github.io/kerisuite-glossary/#term:proof-id){.x-term-reference
-.term-reference local-href="#term:kmg-1:proof-id"}) as well as Ricardian
-Contracts [ACDC](#term:acdc){.term-reference}\[\[43\] and Graduated
+[CESR-Path](https://trustoverip.github.io/kerisuite-glossary/#term:cesr-path) proofs
+([Proof-ID](https://trustoverip.github.io/kerisuite-glossary/#term:proof-id)) as well as Ricardian
+Contracts [ACDC](#term:acdc)\[\[43\] and Graduated
 Disclosure (Metadata, Partial, Selective, Full) to enable Contractually
 Protected Disclosure. Contractually Protected Disclosure includes both
 Chain-Link Confidentialand Contingent Disclosure \[\[44\]\]
-[ACDC](#term:acdc){.term-reference}.
+[ACDC](#term:acdc).
 
-### [§](#ipex-protocol-messages){.toc-anchor .d-print-none} IPEX Protocol Messages
+### [§](#ipex-protocol-messages) IPEX Protocol Messages
 
 The baseline exchange protocol is composed of a standard set of routed
 KERI exchange, `exn` messages. The REQUIRED routes MUST appear as values
@@ -4063,7 +4029,6 @@ of the route, `r` field in the enclosing exchange message. The notional
 semantics of each route indicate how the message SHOULD be used in an
 exchange. The routes and semantics are delimited in the following table:
 
-::: table-responsive-md
    Discloser   Disclosee   Initiate  Contents                                                                                                                            Description
   ----------- ----------- ---------- ----------------------------------------------------------------------------------------------------------------------------------- --------------------------------------
                 `apply`       Y      Schema or its SAID, Attribute field label list, Aggregate element label list, signature on `apply` or its SAID                      defines wanted disclosure
@@ -4074,9 +4039,8 @@ exchange. The routes and semantics are delimited in the following table:
     `spurn`                   N                                                                                                                                          rejects `agree`
     `grant`                   Y      Full or Selective Disclosure ACDC, signature on `grant` or its SAID                                                                 discloses agreed to `offer`
                 `admit`       N      signature and/or anchored seal on `grant` or its SAID                                                                               confirms received `grant` disclosure
-:::
 
-#### [§](#commitments-via-said){.toc-anchor .d-print-none} Commitments via SAID
+#### [§](#commitments-via-said) Commitments via SAID
 
 All variants of an ACDC have various degrees of expansion compared to
 the compact variant. Therefore, an Issuer commitment via a signature
@@ -4149,7 +4113,7 @@ variant. In the latter, the Discloser discloses the Issuer-enabled (via
 Schema composition) variant that the Discloser offered to disclose as
 part of the Graduated Disclosure process.
 
-#### [§](#ipex-validation){.toc-anchor .d-print-none} IPEX Validation
+#### [§](#ipex-validation) IPEX Validation
 
 The goal is to define a validation process (set of rules) that works for
 all variants of an ACDC and for all types of Graduated Disclosure of
@@ -4167,7 +4131,7 @@ about the ACDC. Issuer signing or sealing of the SAID, not the SAD, also
 has the benefit of minimizing the computation of large numbers of
 bulk-issued commitments.
 
-##### [§](#issuer-commitment-rules){.toc-anchor .d-print-none} Issuer Commitment Rules
+##### [§](#issuer-commitment-rules) Issuer Commitment Rules
 
 The Issuer MUST provide a signature or seal on the SAID of the most
 compact form variant defined by the Schema of the ACDC (see the "most
@@ -4202,7 +4166,7 @@ Thus, for any disclosed variant of an ACDC, the Disclosee MAY need only
 verify one PoI as defined above, and MAY need to verify a specific PoD
 for a given disclosed variant as defined above.
 
-### [§](#disclosure-specific-bespoke-issued-acdcs){.toc-anchor .d-print-none} Disclosure-specific (Bespoke) Issued ACDCs
+### [§](#disclosure-specific-bespoke-issued-acdcs) Disclosure-specific (Bespoke) Issued ACDCs
 
 Chaining two or more ACDCs via edges enables disclosure-specific
 issuance of bespoke issued ACDCs. A given Discloser of an ACDC issued by
@@ -4215,11 +4179,9 @@ validation logic and tooling for a chained ACDC can be applied without
 complicating the presentation exchange logic. Furthermore, Attributes in
 other ACDCs pointed to by Edges in the bespoke ACDC MAY be addressed by
 Attributes in the bespoke ACDC using JSON Pointer or
-[CESR-SAD-Path](https://trustoverip.github.io/kerisuite-glossary/#term:cesr-sad-path){.x-term-reference
-.term-reference local-href="#term:kmg-1:cesr-sad-path"} proof references
+[CESR-SAD-Path](https://trustoverip.github.io/kerisuite-glossary/#term:cesr-sad-path) proof references
 that are relative to the node SAID in the Edge \[[6](#RFC6901)\]
-[Proof-ID](https://trustoverip.github.io/kerisuite-glossary/#term:proof-id){.x-term-reference
-.term-reference local-href="#term:kmg-1:proof-id"}.
+[Proof-ID](https://trustoverip.github.io/kerisuite-glossary/#term:proof-id).
 
 For example, this approach enables the bespoke ACDC to identify (name)
 the Disclosee directly as the Issuee of the bespoke ACDC. This enables
@@ -4242,7 +4204,7 @@ effective set of Attributes referenced in the bespoke ACDC. The bespoke
 ACDC enables the equivalent of a rich presentation without requiring any
 new tooling \[[59](#AbuseAlice)\].
 
-#### [§](#example-of-a-bespoke-issued-acdc){.toc-anchor .d-print-none} Example of a Bespoke Issued ACDC
+#### [§](#example-of-a-bespoke-issued-acdc) Example of a Bespoke Issued ACDC
 
 Consider the following disclosure-specific ACDC. The Issuer is the
 Discloser, the Issuee is the Disclosee. The Rules section includes a
@@ -4294,9 +4256,9 @@ section includes the date and place of admittance.
 Informative examples of fully-featured variants of ACDCs can be found in
 Annex C.
 
-## [§](#transaction-event-logs-tels-as-acdc-state-registries){.toc-anchor .d-print-none} Transaction event logs (TELs) as ACDC state registries
+## [§](#transaction-event-logs-tels-as-acdc-state-registries) Transaction event logs (TELs) as ACDC state registries
 
-### [§](#overview){.toc-anchor .d-print-none} Overview
+### [§](#overview) Overview
 
 A Transaction Event Log (TEL) is a hash-chained data structure of sealed
 transaction events that can be used to track the transaction states
@@ -4347,7 +4309,7 @@ transaction event seals, whose JSON representation MUST be as follows.
 The CESR representation of the seal couple is given by the Count Code
 `-T##` or `--T#####`
 
-### [§](#validating-transaction-events){.toc-anchor .d-print-none} Validating transaction events
+### [§](#validating-transaction-events) Validating transaction events
 
 As described above, a KEL can control a TEL by sealing (anchoring)
 transaction-specific events from the TEL inside key events in the KEL.
@@ -4382,7 +4344,7 @@ the SAID of the ACDC associated with the transaction event. Given a key
 event seal reference for a given transaction event, a Validator can then
 look up and verify the presence of the seal in the KEL.
 
-### [§](#verifiable-containercredential-registry){.toc-anchor .d-print-none} Verifiable Container/Credential Registry
+### [§](#verifiable-containercredential-registry) Verifiable Container/Credential Registry
 
 ACDCs may be rightly generically referred to as Verifiable Containers
 (VCs). Often, ACDCs are used as entitlements or credentials and,
@@ -4396,18 +4358,16 @@ a TEL serving the purpose of a VCR may be simply denoted as a Registry.
 A Registry that tracks the dynamic issuance and revocation state of an
 ACDC is called a Revocation Registry.
 
-### [§](#registry-message-types-and-fields){.toc-anchor .d-print-none} Registry Message Types and Fields
+### [§](#registry-message-types-and-fields) Registry Message Types and Fields
 
 ACDC state registries (TELs) have three types of events. These types are
 shown in the following table:
 
-::: table-responsive-md
   Ilk     Name                 Description
   ------- -------------------- ----------------------------------------------
   `rip`   Registry Inception   registry initialization
   `bup`   Blindable Update     blindable transaction event state update
   `upd`   Update               non-blindable transaction event state update
-:::
 
 A Registry MAY be used in either a blinded or unblinded fashion or both,
 depending on the type of state update used. Even when a blindable state
@@ -4420,12 +4380,11 @@ using blindable and unblindable update messages as its state evolves.
 Consequently, a State-Registry is generic. It MAY be used in either a
 private (blinded) or public (unblinded) manner.
 
-#### [§](#top-level-fields-2){.toc-anchor .d-print-none} Top-level fields {#top-level-fields-2}
+#### [§](#top-level-fields-2) Top-level fields
 
 The reserved field labels for the top level of a state registry (both
 blindable and unblindable) transaction event are as follows:
 
-::: table-responsive-md
   Label   Description
   ------- --------------------------------------
   `v`     Version String
@@ -4440,9 +4399,8 @@ blindable and unblindable) transaction event are as follows:
   `b`     blinded attribute block SAID
   `ta`    transaction target ACDC SAID
   `ts`    transaction state
-:::
 
-#### [§](#registry-inception-event-fields){.toc-anchor .d-print-none} Registry Inception event fields
+#### [§](#registry-inception-event-fields) Registry Inception event fields
 
 The fields for the Registry-Inception, `rip` event , given by their
 labels, MUST appear in the following order, `[v, t, d, u, i, n, dt]`.
@@ -4450,41 +4408,41 @@ All are required. The value of the Message type, `t` field MUST be
 `rip`. The value of the sequence number field, `s` MUST be the hex
 encoded string for the integer 0.
 
-#### [§](#blindable-update-event-fields){.toc-anchor .d-print-none} Blindable Update event fields
+#### [§](#blindable-update-event-fields) Blindable Update event fields
 
 The fields for the Blindable-Update, `bup` event , given by their
 labels, MUST appear in the following order,
 `[v, t, d, rd, n, p, dt, b]`. All are required. The value of the Message
 type, `t` field MUST be `bup`.
 
-#### [§](#update-event-fields){.toc-anchor .d-print-none} Update event fields
+#### [§](#update-event-fields) Update event fields
 
 The fields for the Update, `upd` event , given by their labels, MUST
 appear in the following order, `[v, t, d, rd, n, p, dt, ta, ts]`. All
 are required. The value of the Message type, `t` field MUST be `upd`.
 
-#### [§](#field-descriptions){.toc-anchor .d-print-none} Field descriptions
+#### [§](#field-descriptions) Field descriptions
 
-##### [§](#version-string-v-field){.toc-anchor .d-print-none} Version String, `v` field
+##### [§](#version-string-v-field) Version String, `v` field
 
 The Version String, `v` field value uses the same format as a top-level
 ACDC message [Version String](#version-string-field). The protocol type
 MUST be `ACDC`.
 
-##### [§](#message-type-t-field){.toc-anchor .d-print-none} Message type, `t` field
+##### [§](#message-type-t-field) Message type, `t` field
 
 The Message type, `t` field value MUST be one of the Message types in
 the table above. The Message types do not leak any state information.
 The first Message in some types of Registries such as an
 issuance/revocation Registry.
 
-##### [§](#said-d-field-5){.toc-anchor .d-print-none} SAID, `d` field {#said-d-field-5}
+##### [§](#said-d-field-5) SAID, `d` field
 
 The SAID, `d` field value MUST be the SAID of its enclosing block. A
 transaction event's SAID enables a verifiable globally unique reference
 to that event.
 
-##### [§](#uuid-u-field-5){.toc-anchor .d-print-none} UUID, `u` field {#uuid-u-field-5}
+##### [§](#uuid-u-field-5) UUID, `u` field
 
 The UUID, `u` field value MUST be a cryptographic strength salty nonce
 with approximately 128 bits of entropy (nominally). The UUID, `u` field
@@ -4501,7 +4459,7 @@ SAID, `d` field does not provide a fixed point of correlation to the
 block's state unless and until there has been a disclosure of that
 state.
 
-##### [§](#issuer-i-field){.toc-anchor .d-print-none} Issuer, `i` field
+##### [§](#issuer-i-field) Issuer, `i` field
 
 The Issuer, `i` field value MUST be the AID of the Issuer. This removes
 any ambiguity about the semantics of a seal of a transaction event that
@@ -4522,7 +4480,7 @@ commitment and may thereby be subject to a DDoS attack without the
 presence of the Issuer, `i` field in the Registy initialization event's
 public top-level fields.
 
-##### [§](#registry-said-rd-field){.toc-anchor .d-print-none} Registry SAID, `rd` field
+##### [§](#registry-said-rd-field) Registry SAID, `rd` field
 
 The Registry SAID, `rd` field value MUST be the value of the SAID, `d`
 field of the Registry Inception, `rip` event. Because the Issuer `i`
@@ -4543,20 +4501,20 @@ of the Registry SAID, `rd` field in the associated ACDC is set to the
 same value as the corresponding Registry SAID, `rd` field value of the
 associated Registry events (TEL).
 
-##### [§](#sequence-number-n-field){.toc-anchor .d-print-none} Sequence number, `n` field
+##### [§](#sequence-number-n-field) Sequence number, `n` field
 
 The sequence number, `n` field value MUST be a hex-encoded string with
 no leading zeros of a zero-based strictly monotonically increasing
 integer. The first (zeroth) transaction event in a given Registry (TEL)
 MUST have a sequence number of 0 or `0` hex.
 
-##### [§](#prior-event-said-p-field){.toc-anchor .d-print-none} Prior event SAID, `p` field
+##### [§](#prior-event-said-p-field) Prior event SAID, `p` field
 
 The prior event SAID, `p` field value MUST be the SAID, `d` field value
 of the immediately prior event in the TEL. The prior, `p` field backward
 chains together the events in a given TEL.
 
-##### [§](#datetime-dt-field){.toc-anchor .d-print-none} Datetime, `dt` field
+##### [§](#datetime-dt-field) Datetime, `dt` field
 
 The datetime, `dt` field value MUST be the ISO-8601 datetime string with
 microseconds and UTC offset as per IETF [RFC-3339](#RFC3339). This MUST
@@ -4566,7 +4524,7 @@ follows:
 
 `2020-08-22T17:50:09.988921+00:00`
 
-##### [§](#transaction-acdc-said-td-field){.toc-anchor .d-print-none} Transaction ACDC SAID, `td` field
+##### [§](#transaction-acdc-said-td-field) Transaction ACDC SAID, `td` field
 
 The transaction ACDC SAID, `td` field value is the SAID of the ACDC
 itself. It is the value of the top-level `d` field in the ACDC. This
@@ -4577,33 +4535,31 @@ of the issuer to the TEL, which in turn is bound to the ACDC itself.
 This binding is a verifiable commitment by the issuer to its issuance of
 the ACDC that survives changes in the keystate of the Issuer.
 
-##### [§](#transaction-state-ts-field){.toc-anchor .d-print-none} Transaction state, `ts` field
+##### [§](#transaction-state-ts-field) Transaction state, `ts` field
 
 The transaction state, `ts` field value MUST be a string from a small
 finite set of strings that delimit the possible values of the
 transaction state for the Registry. For example, the state values for an
 issuance/revocation registry may be `issued` or `revoked`.
 
-##### [§](#blinded-attribute-b-field){.toc-anchor .d-print-none} Blinded attribute, `b` field
+##### [§](#blinded-attribute-b-field) Blinded attribute, `b` field
 
 The blinded attribute, `b` field value MUST be the SAID of the blinded
 attribute block. This SAID of the blinded attribute block is also known
 as the BLID for blinding SAID. See below for a description of the
 blinded attribute block.
 
-#### [§](#blinded-attribute-block){.toc-anchor .d-print-none} Blinded Attribute Block
+#### [§](#blinded-attribute-block) Blinded Attribute Block
 
 The blinded attribute block corresponding to the blinded attribute `b`
 field value has the following fields:
 
-::: table-responsive-md
   Virtual Label   Description
   --------------- --------------------------------------------------------------------------------------
   `d`             BLID blinding SAID
   `u`             UUID salty nonce blinding factor, random or HD generated
   `td`            Transaction ACDC SAID field this is the value of the top-level `d` field in the ACDC
   `ts`            Transaction state value string
-:::
 
 The fields MUST appear in the following order: `[d, u, td, ts]`.
 
@@ -4628,7 +4584,7 @@ CESR primitives that are appropriate for the BLID, UUID, ACDC SAID, and
 transaction state string fields in that block. An example of an
 attachment serialization with group code is provided below.
 
-##### [§](#blid-d-field){.toc-anchor .d-print-none} BLID, `d` field
+##### [§](#blid-d-field) BLID, `d` field
 
 The blinding SAID, BLID, `b` field value MUST be calculated as a
 cryptographic strength digest on the CESR serialization of the
@@ -4647,7 +4603,7 @@ in the qb64 Text domain MAY be used. When the `td` field value is the
 empty placeholder, it uses the CESR `Empty` primitive code with value
 `1AAP`.
 
-##### [§](#uuid-u-field-6){.toc-anchor .d-print-none} UUID, `u` field {#uuid-u-field-6}
+##### [§](#uuid-u-field-6) UUID, `u` field
 
 When not empty, the UUID `u` field value MUST be a cryptographic
 strength salty nonce with approximately 128 bits of entropy (nominally).
@@ -4690,7 +4646,7 @@ derivation algorithm, the Issuer and Issuee may need to interact for
 each transaction event update in order to exchange the shared secret
 salt.
 
-##### [§](#transaction-acdc-said-td-field-2){.toc-anchor .d-print-none} Transaction ACDC SAID, `td` field {#transaction-acdc-said-td-field-2}
+##### [§](#transaction-acdc-said-td-field-2) Transaction ACDC SAID, `td` field
 
 The transaction ACDC SAID, `td` field value is the SAID of the
 associated ACDC itself. It is the value of the top-level `d` field in
@@ -4706,7 +4662,7 @@ When the transaction ACDC SAID, `ts`, field value is a placeholder, it
 is indicated by the empty string, i.e., "", which MUST be CESR encoded
 as the CESR `Empty` primitive code with value `1AAP`.
 
-##### [§](#transaction-state-ts-field-2){.toc-anchor .d-print-none} Transaction state, `ts` field {#transaction-state-ts-field-2}
+##### [§](#transaction-state-ts-field-2) Transaction state, `ts` field
 
 The transaction state, `ts` field value MUST be a string from a small
 finite set of strings that delimit the possible values of the
@@ -4749,7 +4705,7 @@ Bytes_Big_L1: str = '8AAB'  # Byte String big lead size 1
 Bytes_Big_L2: str = '9AAB'  # Byte String big lead size 2
 ```
 
-#### [§](#blinded-state-disclosure){.toc-anchor .d-print-none} Blinded State Disclosure
+#### [§](#blinded-state-disclosure) Blinded State Disclosure
 
 In some applications, it is desirable that the current state of an ACDC
 be hidden or blinded such that the only way for a potential Validator of
@@ -4807,7 +4763,7 @@ Registry can be hidden by continuing to update the blind to the state
 without changing the final state value for some time after the ACDC has
 been revoked or abandoned.
 
-##### [§](#calculating-the-said-of-the-serialized-blinded-attribute-block){.toc-anchor .d-print-none} Calculating the SAID of the serialized Blinded Attribute block
+##### [§](#calculating-the-said-of-the-serialized-blinded-attribute-block) Calculating the SAID of the serialized Blinded Attribute block
 
 As mentioned above, the expanded attributed block is serialized as a
 concatenation of the CESR serializations of each of its field values.
@@ -4834,7 +4790,7 @@ be provided by attaching its serialization via one of the CESR count
 (group) count codes labeled `BlindedStateQuadruples` with code format
 `-a##` or `BigBlindedStateQuadruples` with code format `--a######`.
 
-##### [§](#blinded-attribute-block-placeholder-calculation-example){.toc-anchor .d-print-none} Blinded Attribute Block Placeholder Calculation Example
+##### [§](#blinded-attribute-block-placeholder-calculation-example) Blinded Attribute Block Placeholder Calculation Example
 
 Suppose the UUID, `u` field value is encoded as
 `aG1lSjdJSNl7TiroPl67Uqzd5eFvzmr6bPlL7Lh4ukv8`, the empty placeholder
@@ -4847,14 +4803,12 @@ characters. The resulting length of the group content is 96 characters.
 
 For the sake of clarity, the field values are shown in the table below:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `############################################`   Dummied BLID (Blinding SAID)
   `u`             `aG1lSjdJSNl7TiroPl67Uqzd5eFvzmr6bPlL7Lh4ukv8`   UUID salty nonce blinding factor, HD generated
   `td`            `1AAP`                                           Transaction ACDC SAID field value, top-level `d`
   `ts`            `1AAP`                                           Transaction state value string
-:::
 
 The 96-character dummied serialization is as follows:
 
@@ -4869,14 +4823,12 @@ serialized expanded attribute block as follows:
 
 Broken out into fields, the values are provided in the table below:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `ECVr7QWEp_aqVQuz4yprRFXVxJ-9uWLx_d6oDinlHU6J`   BLID (Blinding SAID)
   `u`             `aG1lSjdJSNl7TiroPl67Uqzd5eFvzmr6bPlL7Lh4ukv8`   UUID salty nonce blinding factor, HD generated
   `td`            `1AAP`                                           Transaction ACDC SAID field value, top-level `d`
   `ts`            `1AAP`                                           Transaction state value string
-:::
 
 In a presentation of the associated ACDC and/or TEL to a Disclosee, a
 discloser could attach this to verifiably unblind the blinded attribute
@@ -4888,7 +4840,7 @@ prefixed with the appropriate CESR count code, i.e.,
 
     -aAYECVr7QWEp_aqVQuz4yprRFXVxJ-9uWLx_d6oDinlHU6JaG1lSjdJSNl7TiroPl67Uqzd5eFvzmr6bPlL7Lh4ukv81AAP1AAP
 
-##### [§](#blinded-attribute-block-acdc-state-calculation-example){.toc-anchor .d-print-none} Blinded Attribute Block ACDC State Calculation Example
+##### [§](#blinded-attribute-block-acdc-state-calculation-example) Blinded Attribute Block ACDC State Calculation Example
 
 For example, suppose the UUID, `u` field value is encoded as
 `aLfCdNAnc-0P2SiruarZSajXiUWu5iU2VfQahvpNCyzB` the transaction ACDC
@@ -4902,14 +4854,12 @@ content is 140 characters.
 
 For the sake of clarity, the field values are shown in the table below:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `############################################`   Dummied BLID (Blinding SAID)
   `u`             `aLfCdNAnc-0P2SiruarZSajXiUWu5iU2VfQahvpNCyzB`   UUID salty nonce blinding factor, HD generated
   `td`            `EMLjZLIMlfUOoKox_sDwQaJO-0wdoGW0uNbmI28Wwc4M`   Transaction ACDC SAID field value, top-level `d`
   `ts`            `0Missued`                                       Transaction state value string
-:::
 
 The 140-character dummied serialization is as follows:
 
@@ -4924,14 +4874,12 @@ serialized expanded attribute block as follows:
 
 Broken out into fields, the values are provided in the table below:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `EOtWw6X_aoOJlkzNaLj23IC6MXHl7ZSYSWVulFW_Hr_t`   Dummied BLID (Blinding SAID)
   `u`             `aLfCdNAnc-0P2SiruarZSajXiUWu5iU2VfQahvpNCyzB`   UUID salty nonce blinding factor, HD generated
   `td`            `EMLjZLIMlfUOoKox_sDwQaJO-0wdoGW0uNbmI28Wwc4M`   Transaction ACDC SAID field value, top-level `d`
   `ts`            `0Missued`                                       Transaction state value string
-:::
 
 In a presentation of the associated ACDC and/or TEL to a Disclosee, a
 discloser could attach this to verifiably unblind the blinded attribute
@@ -4943,7 +4891,7 @@ format `-a##`, as follows:
 
     -aAjEOtWw6X_aoOJlkzNaLj23IC6MXHl7ZSYSWVulFW_Hr_taLfCdNAnc-0P2SiruarZSajXiUWu5iU2VfQahvpNCyzBEMLjZLIMlfUOoKox_sDwQaJO-0wdoGW0uNbmI28Wwc4M0Missued
 
-#### [§](#blinded-state-registry-example){.toc-anchor .d-print-none} Blinded State Registry Example
+#### [§](#blinded-state-registry-example) Blinded State Registry Example
 
 Consider a blindable state revocation registry for ACDCs operated in
 blinded (private) mode. The transaction state can be one of two values,
@@ -5009,14 +4957,12 @@ matches the value of the SAID, `d` field in the Registry Inception,
 taken from the placeholder blinded attribute block above. Repeated here
 as follows:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `ECVr7QWEp_aqVQuz4yprRFXVxJ-9uWLx_d6oDinlHU6J`   BLID (Blinding SAID)
   `u`             `aG1lSjdJSNl7TiroPl67Uqzd5eFvzmr6bPlL7Lh4ukv8`   UUID salty nonce blinding factor, HD generated
   `td`            `1AAP`                                           Transaction ACDC SAID field value, top-level `d`
   `ts`            `1AAP`                                           Transaction state value string
-:::
 
 Notice that the value of the BLID blinded attribute, `b` field in the
 transaction event, matches the value of the BLID `d` field in the
@@ -5106,14 +5052,12 @@ published blindable update transaction event is as follows:
 The value of the blinded attribute block BLID, `b` field, is taken from
 the issued blinded attribute block above. Repeated here as follows:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `EOtWw6X_aoOJlkzNaLj23IC6MXHl7ZSYSWVulFW_Hr_t`   Dummied BLID (Blinding SAID)
   `u`             `aLfCdNAnc-0P2SiruarZSajXiUWu5iU2VfQahvpNCyzB`   UUID salty nonce blinding factor HD generated
   `td`            `EMLjZLIMlfUOoKox_sDwQaJO-0wdoGW0uNbmI28Wwc4M`   Transaction ACDC SAID field value, top-level `d`
   `ts`            `0Missued`                                       Transaction state value string
-:::
 
 Notice that the value of the blinded attribute, BLID, `b` field in the
 transaction event, matches the value of the BLID (Blinding SAID), `d`
@@ -5191,14 +5135,12 @@ The serialized expanded attribute block as follows:
 
 Broken out into a table, the fields are as follows:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `EPj3sZj8OOWTkTgAN5vzVYdANeoj3zxgEn5APb8fCRRN`   Dummied BLID (Blinding SAID)
   `u`             `aGx7b16vGHVPT56tX30kYOEzTwiVY4aabc4k9AawYyZG`   UUID salty nonce blinding factor HD generated
   `td`            `EMLjZLIMlfUOoKox_sDwQaJO-0wdoGW0uNbmI28Wwc4M`   Transaction ACDC SAID field value, top-level `d`
   `ts`            `Yrevoked`                                       Transaction state value string
-:::
 
 To unblind the Discloser would compute the attribute black and then
 prefix the appropriate CESR group code an attach the encoded group given
@@ -5208,7 +5150,7 @@ below:
 -aAjEPj3sZj8OOWTkTgAN5vzVYdANeoj3zxgEn5APb8fCRRNaGx7b16vGHVPT56tX30kYOEzTwiVY4aabc4k9AawYyZGEMLjZLIMlfUOoKox_sDwQaJO-0wdoGW0uNbmI28Wwc4MYrevoked
 ```
 
-#### [§](#public-unblinded-blindable-example){.toc-anchor .d-print-none} Public Unblinded Blindable Example
+#### [§](#public-unblinded-blindable-example) Public Unblinded Blindable Example
 
 In this case, the issuer attaches the associated expanded blinded
 attribute block to any publication of a Blindable-Update `bup` event. As
@@ -5216,7 +5158,7 @@ explained above, this uses either of the count codes `BlindedStateGroup`
 with code format `-a##` or `BigBlindedStateGroup` with code format
 `--a######` to attach one or more expanded blinded attribute blocks.
 
-#### [§](#public-non-blindable-state-update-registry-example){.toc-anchor .d-print-none} Public Non-Blindable State Update Registry Example
+#### [§](#public-non-blindable-state-update-registry-example) Public Non-Blindable State Update Registry Example
 
 Consider a unblindable state revocation Registry for ACDCs operated in
 an unblinded (public) mode. The transaction state can be one of two
@@ -5300,7 +5242,7 @@ of the following event:
 
 Notice that this event is chain-linked to the prior update event.
 
-#### [§](#bound-blinded-attribute-block){.toc-anchor .d-print-none} Bound Blinded Attribute Block
+#### [§](#bound-blinded-attribute-block) Bound Blinded Attribute Block
 
 The bound blinded attribute block is a variant of the blinded attribute
 block described above. The bound blinded attribute block differs in that
@@ -5330,7 +5272,6 @@ ACDC states may be bound to the Issuee key state.
 
 The bound blinded attribute block has the following fields:
 
-::: table-responsive-md
   Virtual Label   Description
   --------------- ---------------------------------------------------------------------------------------
   `d`             BLID blinding SAID
@@ -5339,7 +5280,6 @@ The bound blinded attribute block has the following fields:
   `ts`            Transaction state value string
   `bn`            Bound Issuee key event sequence number field
   `bd`            Bound Issuee key event SAID field
-:::
 
 The fields MUST appear in the following order `[d, u, td, ts, bn, bd]`.
 
@@ -5363,7 +5303,7 @@ transaction state string, Issuee key state sequence number, and Issuee
 key state SAID fields in that block. An example of an attachment
 serialization with group code is provided below.
 
-##### [§](#bound-issuee-key-event-sequence-number-bn-field){.toc-anchor .d-print-none} Bound Issuee Key Event Sequence Number, `bn` Field
+##### [§](#bound-issuee-key-event-sequence-number-bn-field) Bound Issuee Key Event Sequence Number, `bn` Field
 
 The bound Issuee key event sequence number, `tn`, field value MUST be a
 CESR encoded non-negative integer. When not a placeholder, it MUST be
@@ -5393,7 +5333,7 @@ Huge:    str = '0A'  # Huge 16 byte b2 number (same as Salt_128)
 Vast:    str = 'U'  # Vast 17 byte b2 number
 ```
 
-##### [§](#bound-issuee-key-event-said-bd-field){.toc-anchor .d-print-none} Bound Issuee Key Event SAID, `bd` Field
+##### [§](#bound-issuee-key-event-said-bd-field) Bound Issuee Key Event SAID, `bd` Field
 
 When not a placeholder, the bound Issuee key event SAID, `bd`, field
 value MUST be the value of the `d` field in the current key event in the
@@ -5407,7 +5347,7 @@ When the bound Issuee key event SAID, `bd`, field value is a placeholder
 as indicated by the empty string, i.e., "", it MUST be CESR encoded as
 the CESR `Empty` primitive code with value `1AAP`.
 
-##### [§](#bound-blinded-attribute-block-placeholder-calculation-example){.toc-anchor .d-print-none} Bound Blinded Attribute Block Placeholder Calculation Example
+##### [§](#bound-blinded-attribute-block-placeholder-calculation-example) Bound Blinded Attribute Block Placeholder Calculation Example
 
 Suppose the UUID, `u` field value is encoded as
 `aJxtoz6qVeJxPCZvP-qBJifRfIxP3itQBVAAu7JJHxMa`, the empty placeholder
@@ -5425,7 +5365,6 @@ resulting length of the group content is 104 characters.
 
 For the sake of clarity, the field values are shown in the table below:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `############################################`   Dummied BLID (Blinding SAID)
@@ -5434,7 +5373,6 @@ For the sake of clarity, the field values are shown in the table below:
   `ts`            `1AAP`                                           Transaction state value string
   `bn`            `MAAA`                                           Bound Issuee key event sequence number field
   `bd`            `1AAP`                                           Bound Issuee key event SAID field
-:::
 
 The 104-character dummied serialization is as follows:
 
@@ -5449,7 +5387,6 @@ serialized expanded attribute block as follows:
 
 Broken out into fields, the values are provided in the table below:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `EFaQ00QW-ZeoMxE9baWcpJbAFXrs5h0ya-wpKnHvMQ0c`   BLID (Blinding SAID)
@@ -5458,7 +5395,6 @@ Broken out into fields, the values are provided in the table below:
   `ts`            `1AAP`                                           Transaction state value string
   `bn`            `MAAA`                                           Bound Issuee key event sequence number field
   `bd`            `1AAP`                                           Bound Issuee key event SAID field
-:::
 
 In a presentation of the associated ACDC and/or TEL to a Disclosee, a
 discloser could attach this to verifiably unblind the blinded attribute
@@ -5470,7 +5406,7 @@ prefixed with the appropriate CESR count code, i.e.,
 
     -bAaEFaQ00QW-ZeoMxE9baWcpJbAFXrs5h0ya-wpKnHvMQ0caJxtoz6qVeJxPCZvP-qBJifRfIxP3itQBVAAu7JJHxMa1AAP1AAPMAAA1AAP
 
-##### [§](#blinded-attribute-block-acdc-state-calculation-example-2){.toc-anchor .d-print-none} Blinded Attribute Block ACDC State Calculation Example {#blinded-attribute-block-acdc-state-calculation-example-2}
+##### [§](#blinded-attribute-block-acdc-state-calculation-example-2) Blinded Attribute Block ACDC State Calculation Example
 
 For example, suppose the UUID, `u` field value is encoded as
 `aKNPEY4_60x6vUx2g5_5kAoJTn0RDspR04Ql8ecNyTkO` the transaction ACDC
@@ -5487,7 +5423,6 @@ content is 188 characters.
 
 For the sake of clarity, the field values are shown in the table below:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `############################################`   Dummied BLID (Blinding SAID)
@@ -5496,7 +5431,6 @@ For the sake of clarity, the field values are shown in the table below:
   `ts`            `0Missued`                                       Transaction state value string
   `bn`            `MAAB`                                           Bound Issuee key event sequence number field
   `bd`            `EJOnAKXGaSyJ_43kit0V806NNeGWS07lfjybB1UcfWsv`   Bound Issuee key event SAID field
-:::
 
 The 188-character dummied serialization is as follows:
 
@@ -5511,7 +5445,6 @@ serialized expanded attribute block as follows:
 
 Broken out into fields, the values are provided in the table below:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `EJAeKLEtVtMtt28IdAKJShyZHodEIZTHJHzaP21A_ZU4`   BLID (Blinding SAID)
@@ -5520,7 +5453,6 @@ Broken out into fields, the values are provided in the table below:
   `ts`            `0Missued`                                       Transaction state value string
   `bn`            `MAAB`                                           Bound Issuee key event sequence number field
   `bd`            `EJOnAKXGaSyJ_43kit0V806NNeGWS07lfjybB1UcfWsv`   Bound Issuee key event SAID field
-:::
 
 In a presentation of the associated ACDC and/or TEL to a Disclosee, a
 discloser could attach this to verifiably unblind the blinded attribute
@@ -5532,7 +5464,7 @@ format `-b##`, as follows:
 
     -bAvEJAeKLEtVtMtt28IdAKJShyZHodEIZTHJHzaP21A_ZU4aKNPEY4_60x6vUx2g5_5kAoJTn0RDspR04Ql8ecNyTkOEMLjZLIMlfUOoKox_sDwQaJO-0wdoGW0uNbmI28Wwc4M0MissuedMAABEJOnAKXGaSyJ_43kit0V806NNeGWS07lfjybB1UcfWsv
 
-#### [§](#bound-blinded-state-registry-example){.toc-anchor .d-print-none} Bound Blinded State Registry Example
+#### [§](#bound-blinded-state-registry-example) Bound Blinded State Registry Example
 
 Consider a bound blindable state revocation registry for ACDCs operated
 in blinded (private) mode. This is identical to the blindable state
@@ -5585,7 +5517,6 @@ matches the value of the SAID, `d` field in the Registry Inception,
 taken from the placeholder bound blinded attribute block above. Repeated
 here as follows:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `EFaQ00QW-ZeoMxE9baWcpJbAFXrs5h0ya-wpKnHvMQ0c`   BLID (Blinding SAID)
@@ -5594,7 +5525,6 @@ here as follows:
   `ts`            `1AAP`                                           Transaction state value string
   `bn`            `MAAA`                                           Bound Issuee key event sequence number field
   `bd`            `1AAP`                                           Bound Issuee key event SAID field
-:::
 
 Notice that the value of the BLID bound blinded attribute, `b` field in
 the transaction event, matches the value of the BLID, `d`, field in the
@@ -5653,7 +5583,6 @@ The value of the bound blinded attribute block BLID, `b` field, is taken
 from the issued bound blinded attribute block above. Repeated here as
 follows:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `EJAeKLEtVtMtt28IdAKJShyZHodEIZTHJHzaP21A_ZU4`   BLID (Blinding SAID)
@@ -5662,7 +5591,6 @@ follows:
   `ts`            `0Missued`                                       Transaction state value string
   `bn`            `MAAB`                                           Bound Issuee key event sequence number field
   `bd`            `EJOnAKXGaSyJ_43kit0V806NNeGWS07lfjybB1UcfWsv`   Bound Issuee key event SAID field
-:::
 
 Notice that the value of the bound blinded attribute, BLID, `b` field in
 the transaction event, matches the value of the BLID (Blinding SAID),
@@ -5711,7 +5639,6 @@ The serialized expanded attribute block is as follows:
 
 Broken out into a table, the fields are as follows:
 
-::: table-responsive-md
   Virtual Label   Value                                            Description
   --------------- ------------------------------------------------ --------------------------------------------------
   `d`             `EIBNZ3t5rA_-PbBNmhtvtf0VgHBjVrE0fc-DO67f-wGv`   BLID (Blinding SAID)
@@ -5720,7 +5647,6 @@ Broken out into a table, the fields are as follows:
   `ts`            `Yrevoked`                                       Transaction state value string
   `bn`            `MAAI`                                           Bound Issuee key event sequence number field
   `bd`            `EDeCPBTHAt75Acgi9PfEciHFnc1r2DKAno3s9_QIYrXk`   Bound Issuee key event SAID field
-:::
 
 To unblind the Discloser would compute the attribute black and then
 prefix the appropriate CESR group code, i.e., `BoundStateSextuples` with
@@ -5730,9 +5656,9 @@ code format `-b##`, and attach the encoded group given below:
 -bAvEIBNZ3t5rA_-PbBNmhtvtf0VgHBjVrE0fc-DO67f-wGvaFudXE-d0b2owzZNBjd78sx4kCTJx-RTP_Zd19HRUcVDEMLjZLIMlfUOoKox_sDwQaJO-0wdoGW0uNbmI28Wwc4MYrevokedMAAIEDeCPBTHAt75Acgi9PfEciHFnc1r2DKAno3s9_QIYrXk
 ```
 
-## [§](#annex){.toc-anchor .d-print-none} Annex
+## [§](#annex) Annex
 
-### [§](#performance-and-scalability){.toc-anchor .d-print-none} Performance and Scalability
+### [§](#performance-and-scalability) Performance and Scalability
 
 The Compact Disclosure and distribute property graph fragment mechanisms
 in ACDC can be leveraged to enable high performance at scale. Simply
@@ -5762,9 +5688,9 @@ the bow-tie model popularized by Ricardian Contracts, not merely for
 contracts, but for all data authenticated, authorized, referenced, or
 conveyed by ACDCs.
 
-### [§](#cryptographic-strength-and-security){.toc-anchor .d-print-none} Cryptographic Strength and Security
+### [§](#cryptographic-strength-and-security) Cryptographic Strength and Security
 
-#### [§](#cryptographic-strength){.toc-anchor .d-print-none} Cryptographic Strength
+#### [§](#cryptographic-strength) Cryptographic Strength
 
 For crypto-systems with Perfect Security, the critical design parameter
 is the number of bits of entropy needed to resist any practical brute
@@ -5819,25 +5745,25 @@ worth the expense of that much computing power. Consequently, a
 cryptosystem with perfect-security and 128 bits of cryptographic
 strength is computationally infeasible to break via brute force attack.
 
-#### [§](#information-theoretic-security-and-perfect-security){.toc-anchor .d-print-none} Information Theoretic Security and Perfect Security
+#### [§](#information-theoretic-security-and-perfect-security) Information Theoretic Security and Perfect Security
 
 The highest level of cryptographic security with respect to a
 cryptographic secret (seed, salt, or private key) is called Information
-Theoretic Security [ITPS](#term:itps){.term-reference}\[[19](#ITPS)\]. A
+Theoretic Security [ITPS](#term:itps)\[[19](#ITPS)\]. A
 cryptosystem that has this level of security cannot be broken
 algorithmically even if the adversary has nearly unlimited computing
 power including quantum computing. The system must be broken by brute
 force if at all. Brute force means that in order to guarantee success,
 the adversary must search for every combination of key or seed. A
 special case of Information Theoretic Security is called Perfect
-Security [ITPS](#term:itps){.term-reference}. Perfect Security means
+Security [ITPS](#term:itps). Perfect Security means
 that the ciphertext provides no information about the key. There are two
 well-known cryptosystems that exhibit Perfect Security. The first is a
 One-time-pad \[[20](#OTP)\] or Vernum Cipher \[[21](#VCphr)\], and the
 other is Secret splitting \[[22](#SSplt)\], a type of secret sharing
 \[[23](#SShr)\] that uses the same technique as an OTP.
 
-### [§](#selective-disclosure){.toc-anchor .d-print-none} Selective Disclosure
+### [§](#selective-disclosure) Selective Disclosure
 
 The verifiable credential community has defined "selective disclosure"
 with respect to verifiable credentials to mean disclosing some
@@ -5911,7 +5837,7 @@ mechanisms as described herein but all ACDC implementations MUST support
 any instance of an ACDC that employs the minimal Selective Disclosure
 mechanisms as described above.
 
-#### [§](#tiered-selective-disclosure-mechanisms){.toc-anchor .d-print-none} Tiered selective disclosure mechanisms
+#### [§](#tiered-selective-disclosure-mechanisms) Tiered selective disclosure mechanisms
 
 The ACDC chaining mechanism reduces the need for Selective Disclosure in
 some applications. Many non-ACDC verifiable credentials provide bundled
@@ -5938,7 +5864,7 @@ while protecting from the malicious correlation between 2nd parties and
 other 2nd and/or 3rd parties as to who (Issuee) is involved in a
 presentation.
 
-#### [§](#inclusion-proof-via-merkle-tree-root-digest){.toc-anchor .d-print-none} Inclusion proof via Merkle tree root digest
+#### [§](#inclusion-proof-via-merkle-tree-root-digest) Inclusion proof via Merkle tree root digest
 
 The inclusion proof via aggregated list may be somewhat verbose when
 there are a large number of attribute blocks in the selectively
@@ -5957,7 +5883,7 @@ digest, 'A. For ACDCs with a small number of attributes, the added
 complexity of the Merkle tree approach may not be worth the savings in
 verbosity.
 
-#### [§](#hierarchical-derivation-at-issuance-of-selectively-disclosable-attribute-acdcs){.toc-anchor .d-print-none} Hierarchical derivation at issuance of selectively disclosable attribute ACDCs
+#### [§](#hierarchical-derivation-at-issuance-of-selectively-disclosable-attribute-acdcs) Hierarchical derivation at issuance of selectively disclosable attribute ACDCs
 
 The amount of data transferred between the Issuer and Issuee (or
 recipient in the case of an Untargeted ACDC) at issuance of a
@@ -6010,7 +5936,7 @@ proof seals. Everything else an Issuee (or recipient) needs to make a
 verifiable presentation/disclosure can be computed at the time of
 presentation/disclosure by the Issuee.
 
-### [§](#bulk-issued-private-acdcs){.toc-anchor .d-print-none} Bulk-issued Private ACDCs
+### [§](#bulk-issued-private-acdcs) Bulk-issued Private ACDCs
 
 The purpose of bulk issuance is to enable the Issuee to use ACDCs with
 unique SAIDs more efficiently to isolate and minimize correlation across
@@ -6133,7 +6059,7 @@ cryptographic unlinkability, may render the complexity of using advanced
 cryptographic mechanisms to provide so-called cryptographic
 *unlinkability* an exercise in diminishing returns.
 
-#### [§](#basic-bulk-issuance-procedure){.toc-anchor .d-print-none} Basic Bulk Issuance Procedure
+#### [§](#basic-bulk-issuance-procedure) Basic Bulk Issuance Procedure
 
 The amount of data transferred between the Issuer and Issuee (or
 recipient of an untargeted ACDC) at issuance of a set of bulk issued
@@ -6468,7 +6394,7 @@ any KEL that has changed its Key state. In any event, the issuance proof
 seal makes any later attempt at forgery using compromised keys
 detectable.
 
-#### [§](#inclusion-proof-via-merkle-tree){.toc-anchor .d-print-none} Inclusion proof via Merkle tree
+#### [§](#inclusion-proof-via-merkle-tree) Inclusion proof via Merkle tree
 
 The inclusion proof above of the concatenated aggregate value `B` may be
 somewhat verbose when there are a very large number of bulk-issued ACDCs
@@ -6491,7 +6417,7 @@ tree root digest. For a small-numbered bulk-issued set of ACDCs, the
 added complexity of the Merkle tree approach may not be worth the
 savings in verbosity.
 
-#### [§](#independent-aid-bulk-issued-acdcs){.toc-anchor .d-print-none} Independent AID Bulk Issued ACDCs
+#### [§](#independent-aid-bulk-issued-acdcs) Independent AID Bulk Issued ACDCs
 
 One potential point of provable but unpermissioned correlation among any
 group of colluding malicious Disclosees (2nd party Verifiers) may arise
@@ -6521,7 +6447,7 @@ would use as a prefix the following concatenated elements: a bulk-issued
 path index `k/j`, where `k` is the bulk ACDC index and `j` is the key
 index, the bulk-issued shared secret salt, and a non-shared secret salt.
 
-### [§](#independent-registry-bulk-issued-acdcs){.toc-anchor .d-print-none} Independent Registry Bulk-Issued ACDCs
+### [§](#independent-registry-bulk-issued-acdcs) Independent Registry Bulk-Issued ACDCs
 
 Recall that the purpose of using the aggregate `B` for a bulk-issued set
 from which the Registry identifier is derived is to enable a set of
@@ -6601,7 +6527,7 @@ around any such protections against unprovable correlation (i.e.,
 unlinkability), including independent Registry bulk-issued ACDCs, the
 added benefit may not be worth the added complexity and effort.
 
-#### [§](#independent-registry-transaction-event-seals-using-merkle-tree-roots){.toc-anchor .d-print-none} Independent Registry Transaction Event Seals Using Merkle Tree Roots
+#### [§](#independent-registry-transaction-event-seals-using-merkle-tree-roots) Independent Registry Transaction Event Seals Using Merkle Tree Roots
 
 When using a TEL as an ACDC state Registry for a bulk-issued set, each
 event in the TEL MUST be bound with an anchoring seal in the Issuer's
@@ -6704,7 +6630,7 @@ The Discloser then only needs to provide a subset of digests from the
 Merkle tree to prove that a given digest, b~k~ contributed to the Merkle
 tree root digest.
 
-### [§](#extensibility){.toc-anchor .d-print-none} Extensibility
+### [§](#extensibility) Extensibility
 
 The ACDC design leverages append-only verifiable data structures, named
 KELs and TELs, that have strong security properties that simplify
@@ -6739,7 +6665,7 @@ by ecosystem participants to their desired level of interoperability.
 Versioning is also simplified because Edges are still verifiable as long
 as the new Schema version is backward compatible.
 
-### [§](#acdc-protocol-message-types){.toc-anchor .d-print-none} ACDC Protocol Message Types
+### [§](#acdc-protocol-message-types) ACDC Protocol Message Types
 
 CESR support for the ACDC protocol includes conveying sections of an
 ACDC as CESR-compatible messages (packets) with their own message types
@@ -6758,9 +6684,8 @@ the rules for the presence of fields and field labels.
 The following section details the ACDC message types, including section
 message types.
 
-#### [§](#message-type-table){.toc-anchor .d-print-none} Message Type Table
+#### [§](#message-type-table) Message Type Table
 
-::: table-responsive-md
   Ilk   Name                 Description
   ----- -------------------- ----------------------------------------------------------------------------------
                              **Registry TEL Message Types**
@@ -6777,9 +6702,8 @@ message types.
   agg   Aggregate            Aggregate attribute section Message
   edg   Edge                 Edge section Message
   rul   Rule                 Rules section Message
-:::
 
-#### [§](#message-type-field-2){.toc-anchor .d-print-none} Message Type Field {#message-type-field-2}
+#### [§](#message-type-field-2) Message Type Field
 
 The presence of the message type field, labeled `t`, is optional for
 messages of type `acm` with non-CESR-native serialization kinds. It MUST
@@ -6794,7 +6718,7 @@ native CESR serialization kind MUST be `ACDC`. To elaborate, the message
 type field MUST appear in all native CESR messages; it MAY only not
 appear in non-CESR-native serialization kinds of `acm` type messages.
 
-#### [§](#acdc-as-a-top-level-field-map-in-cesr-native-format){.toc-anchor .d-print-none} ACDC as a top-level field map in CESR native format
+#### [§](#acdc-as-a-top-level-field-map-in-cesr-native-format) ACDC as a top-level field map in CESR native format
 
 When an ACDC message of type `acm` in CESR native format, i.e. the
 serialization kind is `CESR`, appears as a top-level field map, it MUST
@@ -6813,7 +6737,7 @@ serialization kind is `CESR`, i.e. is in a native CESR message format
 then the appearance of top levels fields with optional fields is as
 described above for those specific messages.
 
-#### [§](#acdc-as-a-top-level-set-of-fixed-fields-in-cesr-native-format){.toc-anchor .d-print-none} ACDC as a top-level set of fixed fields in CESR native format
+#### [§](#acdc-as-a-top-level-set-of-fixed-fields-in-cesr-native-format) ACDC as a top-level set of fixed fields in CESR native format
 
 When an ACDC message of type `acm` in CESR native format, i.e. the
 serialization kind is `CESR`, appears as a top-level set of fixed
@@ -6843,14 +6767,14 @@ count code as a value is indicated by a generic list count code with
 zero-length contents. Emptiness for field values that require a CESR
 primitive is indicated by the `Null` CESR primitive code, `1AAK`.
 
-#### [§](#acdc-message-fields){.toc-anchor .d-print-none} ACDC Message Fields
+#### [§](#acdc-message-fields) ACDC Message Fields
 
 An ACDC can be represented internally, in computer memory, as a
 dictionary or hash map or equivalent data structure with labeled fields.
 We call this abstractly, a field map. One important feature of the
 fields maps used by ACDC is that they all MUST include a field with a
 SAID (self-addressing ID) using the SAID protocol
-[SAID](#term:said){.term-reference}. We call a field map with a SAID
+[SAID](#term:said). We call a field map with a SAID
 field a self-addressed data structure or self-addressed dict. This is
 abbreviated with the acronym, SAD. To clarify, the SAD of an ACDC is a
 labeled field map which includes whose value is the SAID of that SAD.
@@ -6865,7 +6789,6 @@ order of appearance. For some message types, some fields are optional,
 but all fields that appear MUST appear in this order,
 `[v, t, d, u, i, s, a, A, e, r]`.
 
-::: table-responsive-md
    Label  Title                   Description
   ------- ----------------------- ---------------------------------------------------------------------------------------------------------------------------------------------
     `v`   Version String          Regexable format: `ACDCMmmGggKKKKSSSS.` that provides protocol type, version, CESR genus version, serialization type, size, and terminator.
@@ -6879,9 +6802,8 @@ but all fields that appear MUST appear in this order,
     `A`   Attribute Aggregate     Either the Aggregate of a selectively disclosable block of Attributes or the block itself.
     `e`   Edge                    Either the SAID of a block of Edges or the block itself.
     `r`   Rule                    Either the SAID a block of Rules or the block itself.
-:::
 
-#### [§](#message-type-field-3){.toc-anchor .d-print-none} Message Type Field {#message-type-field-3}
+#### [§](#message-type-field-3) Message Type Field
 
 The presence of the message type field, labeled `t`, is optional for
 messages of type `acm` with non-CESR-native serialization kinds. It MUST
@@ -6896,7 +6818,7 @@ native CESR serialization kind MUST be `ACDC`. To elaborate, the message
 type field MUST appear in all native CESR messages; it MAY only not
 appear in non-CESR-native serialization kinds of `acm` type messages.
 
-#### [§](#acdc-of-type-acm-as-a-top-level-field-map-in-cesr-native-format){.toc-anchor .d-print-none} ACDC of type `acm` as a top-level field map in CESR native format
+#### [§](#acdc-of-type-acm-as-a-top-level-field-map-in-cesr-native-format) ACDC of type `acm` as a top-level field map in CESR native format
 
 When an ACDC message of type `acm` appears in CESR native format, i.e.,
 the serialization kind is `CESR`. It MUST appear as a top-level field
@@ -6917,7 +6839,7 @@ Whenever the message type field does not appear in the field map for a
 message whose protocol type is `ACDC`, the message type `acm` is
 inferred.
 
-#### [§](#acdc-of-type-act-as-a-top-level-set-of-fixed-fields-in-cesr-native-format){.toc-anchor .d-print-none} ACDC of type `act` as a top-level set of fixed fields in CESR native format
+#### [§](#acdc-of-type-act-as-a-top-level-set-of-fixed-fields-in-cesr-native-format) ACDC of type `act` as a top-level set of fixed fields in CESR native format
 
 An ACDC message of message type `act` in CESR native format, i.e., the
 serialization kind is `CESR`, MUST appear as a top-level set of fixed
@@ -6940,7 +6862,7 @@ type and the version. It does not provide a serialization kind or
 length. This is already indicated by the count codes, `-F##` or
 `--F#####`.
 
-#### [§](#acdc-of-type-acg-as-a-top-level-set-of-fixed-fields-in-cesr-native-format){.toc-anchor .d-print-none} ACDC of type `acg` as a top-level set of fixed fields in CESR native format
+#### [§](#acdc-of-type-acg-as-a-top-level-set-of-fixed-fields-in-cesr-native-format) ACDC of type `acg` as a top-level set of fixed fields in CESR native format
 
 An ACDC message of message type `acg` in CESR native format, i.e. the
 serialization kind is `CESR`, MUST appear as a top-level set of fixed
@@ -6966,7 +6888,7 @@ type and the version. It does not provide a serialization kind or
 length. This is already indicated by the count codes, `-F##` or
 `--F#####`.
 
-##### [§](#compact-private-acdc-with-top-level-field-map-of-type-act-in-cesr-native-format){.toc-anchor .d-print-none} Compact Private ACDC with top-level field map of type `act` in CESR native format
+##### [§](#compact-private-acdc-with-top-level-field-map-of-type-act-in-cesr-native-format) Compact Private ACDC with top-level field map of type `act` in CESR native format
 
 Shown below is the labeled SAD as a Python dict as the internal
 representation (not over-the-wire).
@@ -7001,13 +6923,12 @@ Python dict of compact ACDC with message type, `t` field.
 }
 ```
 
-##### [§](#compact-private-acdc-with-top-level-field-map-in-cesr-native-format){.toc-anchor .d-print-none} Compact Private ACDC with top-level field map in CESR native format
+##### [§](#compact-private-acdc-with-top-level-field-map-in-cesr-native-format) Compact Private ACDC with top-level field map in CESR native format
 
 For clarity, the first column provides the equivalent label value for
 the other serialization kinds (JSON, CBOR, MGPK). The actual label is
 the CESR-encoded label in the second column.
 
-::: table-responsive-md
    Field Label   Label Value  Field or Count Value                             Description
   ------------- ------------- ------------------------------------------------ -------------------------------------------------------------------
        NA            NA       `-F##` or `-0F#####`                             Count code for CESR native top-level fixed field signable message
@@ -7021,9 +6942,8 @@ the CESR-encoded label in the second column.
        `a`         `0J_a`     `EC4NQq-hiGgbiglDXNB5xhHKXBxkiojgBabiu_JCkE0G`   SAID of attribute section of ACDC packet
        `e`         `0J_e`     `EFXBxkiojgBabiu_JCkE0GC4NQq-hiGgbiglDXNB5xhH`   SAID of edge section of ACDC packet
        `r`         `0J_r`     `EMiGgbiglDXNB5xhHFXBxkiojgBabiu_JCkE0GC4NQq-`   SAID of rule section of ACDC packet
-:::
 
-#### [§](#section-message-types){.toc-anchor .d-print-none} Section Message Types
+#### [§](#section-message-types) Section Message Types
 
 The section messages are meant to provide a way to send the exposed
 sections independently of the associated ACDC message. To elaborate, an
@@ -7047,9 +6967,8 @@ group code `-IAA`. Emptiness for field values that MAY accept a list is
 indicated by an empty list. In CESR, an empty list is encoded as a
 generic list group with empty contents given by the group code `-JAA`.
 
-#### [§](#section-message-top-level-fields){.toc-anchor .d-print-none} Section Message top-level fields
+#### [§](#section-message-top-level-fields) Section Message top-level fields
 
-::: table-responsive-md
    Label  Title                 Description
   ------- --------------------- --------------------------------------------------------------------------------------------------------------------------------------------
     `v`   Version String        Regexable format: `ACDCMmmGggKKKKSSSS.` that provides protocol type, version, CESR genus version, serialization type, size, and terminator
@@ -7060,7 +6979,6 @@ generic list group with empty contents given by the group code `-JAA`.
     `A`   Attribute Aggregate   Either the aggregate (effective SAID) of a selectively disclosable block of Attributes or the block itself.
     `e`   Edge                  Either the SAID of a block of Edges or the block itself.
     `r`   Rule                  Either the SAID a block of Rules or the block itself.
-:::
 
 Each section Message MUST have Version String, `v`, Message type, `t`,
 and SAID, `d` fields in that order. The value of the SAID, `d` field is
@@ -7075,7 +6993,7 @@ section field for the Message type, as follows:
 - Attribute aggregate, `A` field for the aggregate, `agg` Message
 - Edge, `e` field for the Edge, `edg` Message
 - Rule, `r` field for the Rule, `rul` Message
-- 
+-
 
 The embedded section block's SAID, `d` field in the respective section
 top-level field MUST match the section field value in the associated
@@ -7125,7 +7043,7 @@ Compact form with Attribute aggregate section:
 }
 ```
 
-#### [§](#schema-section-message){.toc-anchor .d-print-none} Schema section Message
+#### [§](#schema-section-message) Schema section Message
 
 In a Schema Section Message, the Schema, `s` field value is the expanded
 Schema section from the associated ACDC. Notice that the value of the
@@ -7206,7 +7124,7 @@ Schema section from the associated ACDC. Notice that the value of the
 }
 ```
 
-#### [§](#attribute-section-message){.toc-anchor .d-print-none} Attribute Section Message
+#### [§](#attribute-section-message) Attribute Section Message
 
 In a Attribute Section Message, the Attribute, `a` field value is the
 expanded Attribute section from the associated ACDC. Notice that the
@@ -7229,7 +7147,7 @@ of the Attribute, `a` field in the associated ACDC above.
 }
 ```
 
-#### [§](#aggregated-attribute-section-message){.toc-anchor .d-print-none} Aggregated Attribute Section Message
+#### [§](#aggregated-attribute-section-message) Aggregated Attribute Section Message
 
 In an Aggregate Section Message, the Aggregate, `A` field value is the
 expanded attribute aggregate section from the associated ACDC. Notice
@@ -7264,7 +7182,7 @@ Disclosure).
 }
 ```
 
-#### [§](#edge-section-message){.toc-anchor .d-print-none} Edge Section Message
+#### [§](#edge-section-message) Edge Section Message
 
 In an Edge Section Message, the Edge, `e` field value is the expanded
 Edge section from the associated ACDC. Notice that the value of the `d`
@@ -7290,7 +7208,7 @@ in the associated ACDC above.
 }
 ```
 
-#### [§](#rule-section-message){.toc-anchor .d-print-none} Rule Section Message
+#### [§](#rule-section-message) Rule Section Message
 
 In a Rule Section Message, the Rule, `r` field value is the expanded
 Rules section from the associated ACDC. Notice that the value of the `d`
@@ -7316,9 +7234,9 @@ in the associated ACDC above.
 }
 ```
 
-### [§](#working-acdc-examples){.toc-anchor .d-print-none} Working ACDC Examples
+### [§](#working-acdc-examples) Working ACDC Examples
 
-#### [§](#working-examples-setup){.toc-anchor .d-print-none} Working Examples Setup
+#### [§](#working-examples-setup) Working Examples Setup
 
 The examples were created with the keripy library. The code to generate
 the examples is provided via unit tests. These may be found in
@@ -7327,7 +7245,7 @@ tests/spec/acdc.
 A brief explanation of the setup code is provided here to help
 implementers who wish to reproduce the examples from scratch.
 
-##### [§](#aids){.toc-anchor .d-print-none} AIDs
+##### [§](#aids) AIDs
 
 The examples require an Issuer AID. This AID is created in accordance
 with the KERI protocol. This requires creating digital signing key-pairs
@@ -7592,7 +7510,7 @@ cal = "ECsGDKWAYtHBCkiDrzajkxs3Iw2g-dls3bLUsRP4yVdT"
 deb = "EEDGM_DvZ9qFEAPf_FX08J3HX49ycrVvYVXe9isaP5SW"
 ```
 
-##### [§](#registry-saids){.toc-anchor .d-print-none} Registry SAIDs
+##### [§](#registry-saids) Registry SAIDs
 
 ACDCs typically would reference a TEL that manages the
 issuance/revocation state of the ACDC. This requires a TEL registry
@@ -7674,7 +7592,7 @@ regCal = "EPtolmh_NE2vC02oFc7FOiWkPcEiKUPWm5uu_Gv1JZDw"
 regDeb = "EJl5EUxL23p_pqgN3IyM-pzru89Nb7NzOM8ijH644xSU"
 ```
 
-##### [§](#uuids){.toc-anchor .d-print-none} UUIDs
+##### [§](#uuids) UUIDs
 
 Many of the examples include UUID, `u` fields with salty nonce values.
 For ease of reproducibility deterministic UUIDs are used. These come
@@ -7713,7 +7631,7 @@ The Noncer class may be found in keri.core.coring.Noncer. Essentially, a
 Noncer instance can encode a byte string as a salty nonce in CESR
 format.
 
-#### [§](#complete-acdc-example-private-partially-disclosable-acdc-with-edges){.toc-anchor .d-print-none} Complete ACDC Example: Private (partially disclosable) ACDC with Edges
+#### [§](#complete-acdc-example-private-partially-disclosable-acdc-with-edges) Complete ACDC Example: Private (partially disclosable) ACDC with Edges
 
 Suppose for this example that Sunspot College issues a grade transcript
 via an ACDC to a student named Zoe Doe. This transcript has three edges.
@@ -7747,7 +7665,7 @@ deb = "EEDGM_DvZ9qFEAPf_FX08J3HX49ycrVvYVXe9isaP5SW"
 Several other issuances must be created and issued before the transcript
 ACDC can be created and issued. These will be stepped through in turn.
 
-##### [§](#accreditation-acdc){.toc-anchor .d-print-none} Accreditation ACDC
+##### [§](#accreditation-acdc) Accreditation ACDC
 
 Cal (a euphemism for the accreditation agency) creates a placeholder
 registry in order to issue a revokable ACDC to Amy (a euphemism for
@@ -7915,7 +7833,7 @@ The schema for this ACDC is as follows:
 Note that the SAID of the schema is provided by the `$id` field. Its
 field value matches the value of the `s` field in the ACDC itself.
 
-##### [§](#research-report-acdc){.toc-anchor .d-print-none} Research Report ACDC
+##### [§](#research-report-acdc) Research Report ACDC
 
 Deb (a euphemism for the department) creates a placeholder registry to
 issue a revocable ACDC that endorses a report authored by Bob. The
@@ -8081,7 +7999,7 @@ The schema for this ACDC is as follows:
 Note that the SAID of the schema is provided by the `$id` field. Its
 field value matches the value of the `s` field in the ACDC itself.
 
-##### [§](#project-report-acdc){.toc-anchor .d-print-none} Project Report ACDC
+##### [§](#project-report-acdc) Project Report ACDC
 
 Bob (a euphemism for the student) creates a placeholder registry to
 issue a revocable ACDC that asserts a report authored by Bob. The
@@ -8163,7 +8081,7 @@ and compact variants.
 This project report ACDC uses the same schema as the research report
 ACDC.
 
-##### [§](#transcript-acdc-with-private-edges){.toc-anchor .d-print-none} Transcript ACDC with Private Edges
+##### [§](#transcript-acdc-with-private-edges) Transcript ACDC with Private Edges
 
 Now that the dependent ACDCs have been issued, Amy (a euphemism for the
 Sunspot College) can issue the transcript ACDC to Bob.
@@ -8518,7 +8436,7 @@ The schema for this ACDC is as follows:
 }
 ```
 
-##### [§](#transcript-acdc-with-public-edges){.toc-anchor .d-print-none} Transcript ACDC with Public Edges
+##### [§](#transcript-acdc-with-public-edges) Transcript ACDC with Public Edges
 
 Suppose there is no advantage to hidding the edges in the transcript
 ACDC. As a consequence, the Edge section can be greatly simplified.
@@ -8729,246 +8647,245 @@ The ACDC's schema is as follows:
 }
 ```
 
-## [§](#bibliography){.toc-anchor .d-print-none} Bibliography
+## [§](#bibliography) Bibliography
 
-### [§](#normative-section){.toc-anchor .d-print-none} Normative section
+### [§](#normative-section) Normative section
 
-[1]{#CESR}[]{#ref1}. Composable Event Streaming Representation, CESR,
+[1][]. Composable Event Streaming Representation, CESR,
 <https://github.com/trustoverip/kswg-acdc-specification>
 
-[2]{#KERI}[]{#ref2}. Key Event Receipt Infrastructure, KERI,
+[2][]. Key Event Receipt Infrastructure, KERI,
 <https://github.com/trustoverip/kswg-keri-specification>
 
-[3]{#SAID}[]{#ref3}. Self-Addressing IDentifier, SAID,
+[3][]. Self-Addressing IDentifier, SAID,
 <https://github.com/trustoverip/kswg-cesr-specification>
 
-[4]{#OOBI}[]{#ref4}. Out-Of-Band-Introduction, OOBI,
+[4][]. Out-Of-Band-Introduction, OOBI,
 <https://github.com/trustoverip/kswg-keri-specification>
 
-[5]{#DID-KERI}[]{#ref5}. DIDK_ID, IETF DID-KERI Internet Draft,
+[5][]. DIDK_ID, IETF DID-KERI Internet Draft,
 <https://github.com/WebOfTrust/ietf-did-keri>
 
-[8]{#RFC8259}[]{#ref8}. RFC8259, JSON (JavaScript Object Notation),
+[8][]. RFC8259, JSON (JavaScript Object Notation),
 <https://datatracker.ietf.org/doc/html/rfc8259>
 
-[28]{#W3C_DID}[]{#ref28}. W3C_DID, W3C Decentralized Identifiers (DIDs)
+[28][]. W3C_DID, W3C Decentralized Identifiers (DIDs)
 v1.0, <https://w3c-ccg.github.io/did-spec/>
 
-[61]{#did-webs}[]{#ref71}. ToIP did:webs Method Specification,
+[61][]. ToIP did:webs Method Specification,
 <https://trustoverip.github.io/tswg-did-method-webs-specification/>
 
-[9]{#RFC4627}[]{#ref9}. RFC4627, The application/json Media Type for
+[9][]. RFC4627, The application/json Media Type for
 JavaScript Object Notation (JSON), D. Crockford; 2006-07. Status:
 Informational.<https://datatracker.ietf.org/doc/rfc4627/>
 
-[71]{#RFC3339}[]{#ref71}. IETF RFC-3339 Date and Time on the Internet:
+[71][]. IETF RFC-3339 Date and Time on the Internet:
 Timestamps [DateTime](https://www.rfc-editor.org/rfc/rfc3339.txt). G.
 Klyne. 2002-07. Status: Standards Track
 
-[72]{#RFC4648}[]{#ref72}. RFC4648 [The Base16, Base32, and Base64 Data
+[72][]. RFC4648 [The Base16, Base32, and Base64 Data
 Encodings](https://www.rfc-editor.org/rfc/rfc4648). S. Josefsson;
 2006-10. Status: Proposed Standard.
 
-[73]{#RFC2119}[]{#ref73}. IETF RFC-2119 [Key words for use in RFCs to
+[73][]. IETF RFC-2119 [Key words for use in RFCs to
 Indicate Requirement
 Levels](https://www.rfc-editor.org/rfc/rfc2119.txt). S. Bradner.
 1997-03. Status: Best Current Practice
 
-[74]{#IT7498}[]{#ref74}. ISO/IEC 7498-1:1994 Information technology ---
+[74][]. ISO/IEC 7498-1:1994 Information technology ---
 Open Systems Interconnection --- Basic Reference Model: The Basic Model.
 June 1999. Introduction. Retrieved 26 August 2022.
 
-### [§](#informative-section){.toc-anchor .d-print-none} Informative section
+### [§](#informative-section) Informative section
 
-[6]{#RFC6901}[]{#ref6}. RFC6901, JavaScript Object Notation (JSON)
+[6][]. RFC6901, JavaScript Object Notation (JSON)
 Pointer, <https://datatracker.ietf.org/doc/html/rfc6901>
 
-[7]{#JSON}[]{#ref7}. JSON, JavaScript Object Notation Delimeters,
+[7][]. JSON, JavaScript Object Notation Delimeters,
 <https://www.json.org/json-en.html>
 
-[10]{#JSch}[]{#ref10}. JSch, JSON Schema, <https://json-schema.org>
+[10][]. JSch, JSON Schema, <https://json-schema.org>
 
-[11]{#JSch_202012}[]{#ref11}. JSch_202012, JSON Schema 2020-12,
+[11][]. JSch_202012, JSON Schema 2020-12,
 <https://json-schema.org/draft/2020-12/release-notes.html>
 
-[12]{#CBOR}[]{#ref12}. CBOR, CBOR Mapping Object Codes,
+[12][]. CBOR, CBOR Mapping Object Codes,
 <https://en.wikipedia.org/wiki/CBOR>
 
-[13]{#RFC8949}[]{#ref13}. RFC8949, Concise Binary Object Representation
+[13][]. RFC8949, Concise Binary Object Representation
 (CBOR), <https://datatracker.ietf.org/doc/rfc8949/>
 
-[14]{#MGPK}[]{#ref14}. MGPK, Msgpack Mapping Object Codes,
+[14][]. MGPK, Msgpack Mapping Object Codes,
 <https://github.com/msgpack/msgpack/blob/master/spec.md>
 
-[15]{#RFC3986}[]{#ref10}. RFC3986, Uniform Resource Identifier (URI):
+[15][]. RFC3986, Uniform Resource Identifier (URI):
 Generic Syntax, <https://datatracker.ietf.org/doc/html/rfc3986>
 
-[16]{#RFC8820}[]{#ref16}. RFC8820, URI Design and Ownership,
+[16][]. RFC8820, URI Design and Ownership,
 <https://datatracker.ietf.org/doc/html/rfc8820>
 
-[17]{#ACDC_TF}[]{#ref17}. ACDC_TF, ACDC (Authentic Chained Data
+[17][]. ACDC_TF, ACDC (Authentic Chained Data
 Container) Task Force,
 [https://wiki.trustoverip.org/display/HOME/ACDC+(Authentic+Chained+Data+Container)+Task+Force](https://wiki.trustoverip.org/display/HOME/ACDC+%28Authentic+Chained+Data+Container%29+Task+Force)
 
-[18]{#TOIP}[]{#ref18}. TOIP, Trust Over IP (ToIP) Foundation,
+[18][]. TOIP, Trust Over IP (ToIP) Foundation,
 <https://trustoverip.org>
 
-[19]{#ITPS}[]{#ref19}. ITPS, Information-Theoretic and Perfect Security,
+[19][]. ITPS, Information-Theoretic and Perfect Security,
 <https://en.wikipedia.org/wiki/Information-theoretic_security>
 
-[20]{#OTP}[]{#ref20}. OTP, One-Time-Pad,
+[20][]. OTP, One-Time-Pad,
 <https://en.wikipedia.org/wiki/One-time_pad>
 
-[21]{#VCphr}[]{#ref21}.VCphr, Vernom Cipher (OTP)
+[21][].VCphr, Vernom Cipher (OTP)
 <https://www.ciphermachinesandcryptology.com/en/onetimepad.htm>
 
-[22]{#SSplt}[]{#ref22}. SSplt, Secret Splitting,
+[22][]. SSplt, Secret Splitting,
 <https://www.ciphermachinesandcryptology.com/en/secretsplitting.htm>
 
-[23]{#SShr}[]{#ref23}. SShr, Secret Sharing,
+[23][]. SShr, Secret Sharing,
 <https://en.wikipedia.org/wiki/Secret_sharing>
 
-[24]{#GLEIF}[]{#ref24}. GLEIF, GLEIF (Global Legal Entity Identifier
+[24][]. GLEIF, GLEIF (Global Legal Entity Identifier
 Foundation), <https://www.gleif.org/en/>
 
-[25]{#VLEI}[]{#ref25}. vLEI, vLEI (verifiable Legal Entity Identifier)
+[25][]. vLEI, vLEI (verifiable Legal Entity Identifier)
 Definition, <https://github.com/WebOfTrust/vLEI>
 
-[26]{#GLEIF_vLEI}[]{#ref26}. GLEIF_vLEI, GLEIF vLEI (verifiable Legal
+[26][]. GLEIF_vLEI, GLEIF vLEI (verifiable Legal
 Entity Identifier),
 <https://www.gleif.org/en/lei-solutions/gleifs-digital-strategy-for-the-lei/introducing-the-verifiable-lei-vlei>
 
-[27]{#GLEIF_KERI}[]{#ref27}. GLEIF_KERI, GLEIF with KERI Architecture,
+[27][]. GLEIF_KERI, GLEIF with KERI Architecture,
 <https://github.com/WebOfTrust/vLEI>
 
-[29]{#Salt}[]{#ref29}. Salt, Salts, Nonces, and Initial Values,
+[29][]. Salt, Salts, Nonces, and Initial Values,
 <https://medium.com/@fridakahsas/salt-nonces-and-ivs-whats-the-difference-d7a44724a447>
 
-[30]{#RB}[]{#ref30}. RB, Rainbow Table,
+[30][]. RB, Rainbow Table,
 <https://en.wikipedia.org/wiki/Rainbow_table>
 
-[31]{#DRB}[]{#ref31}. DRB, Dictionary Attacks, Rainbow Table Attacks and
+[31][]. DRB, Dictionary Attacks, Rainbow Table Attacks and
 how Password Salting defends against them,
 <https://www.commonlounge.com/discussion/2ee3f431a19e4deabe4aa30b43710aa7>
 
-[32]{#BDay}[]{#ref32}. BDay, Birthday Attack,
+[32][]. BDay, Birthday Attack,
 <https://en.wikipedia.org/wiki/Birthday_attack>
 
-[33]{#BDC}[]{#ref33}. BDC, Birthday Attacks, Collisions, And Password
+[33][]. BDC, Birthday Attacks, Collisions, And Password
 Strength,
 <https://auth0.com/blog/birthday-attacks-collisions-and-password-strength/>
 
-[34]{#HCR}[]{#ref34}. HCR, Hash Collision Resistance,
+[34][]. HCR, Hash Collision Resistance,
 <https://en.wikipedia.org/wiki/Collision_resistance>
 
-[35]{#QCHC}[]{#ref35}. QCHC, Cost analysis of hash collisions: Will
+[35][]. QCHC, Cost analysis of hash collisions: Will
 quantum computers make SHARCS obsolete?,
 <https://cr.yp.to/hash/collisioncost-20090823.pdf>
 
-[36]{#EdSC}[]{#ref36}. EdSC, The Provable Security of Ed25519: Theory
+[36][]. EdSC, The Provable Security of Ed25519: Theory
 and Practice Report, <https://eprint.iacr.org/2020/823>
 
-[37]{#PSEd}[]{#ref37}. PSEd, The Provable Security of Ed25519: Theory
+[37][]. PSEd, The Provable Security of Ed25519: Theory
 and Practice, <https://ieeexplore.ieee.org/document/9519456?denied=>
 
-[38]{#TMEd}[]{#ref38}. TMEd, Taming the many EdDSAs,
+[38][]. TMEd, Taming the many EdDSAs,
 <https://eprint.iacr.org/2020/1244.pdf>
 
-[39]{#JSchCp}[]{#ref39}. JSchCp, Schema Composition in JSON Schema,
+[39][]. JSchCp, Schema Composition in JSON Schema,
 <https://json-schema.org/understanding-json-schema/reference/combining.html>
 
-[40]{#JSchRE}[]{#ref40}. JSchRE, Regular Expressions in JSON Schema,
+[40][]. JSchRE, Regular Expressions in JSON Schema,
 <https://json-schema.org/understanding-json-schema/reference/regular_expressions.html>
 
-[41/a\>]{#JSchId}[]{#ref41}. JSchId, JSON Schema Identification,
+[41/a\>][]. JSchId, JSON Schema Identification,
 <https://json-schema.org/understanding-json-schema/structuring.html#schema-identification>
 
-[42]{#JSchCx}[]{#ref42}. JSchCx, Complex JSON Schema Structuring,
+[42][]. JSchCx, Complex JSON Schema Structuring,
 <https://json-schema.org/understanding-json-schema/structuring.html#base-uri>
 
-[43]{#RicCon}[]{#ref43}. RC, Ricardian Contract,
+[43][]. RC, Ricardian Contract,
 <https://en.wikipedia.org/wiki/Ricardian_contract>
 
-[44]{#CLC}[]{#ref44}. CLC, Chain-Link Confidentiality,
+[44][]. CLC, Chain-Link Confidentiality,
 <https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2045818>
 
-[45]{#DHKE}[]{#ref45}. DHKE, Diffie-Hellman Key Exchange,
+[45][]. DHKE, Diffie-Hellman Key Exchange,
 <https://www.infoworld.com/article/3647751/understand-diffie-hellman-key-exchange.html>
 
-[46]{#KeyEx}[]{#ref46}. KeyEx, Key Exchange,
+[46][]. KeyEx, Key Exchange,
 <https://libsodium.gitbook.io/doc/key_exchange>
 
-[47]{#IDSys}[]{#ref47}. IDSys, Identity System Essentials,
+[47][]. IDSys, Identity System Essentials,
 <https://github.com/SmithSamuelM/Papers/blob/master/whitepapers/Identity-System-Essentials.pdf>
 
-[48]{#Hash}[]{#ref48}. Hash, Cryptographic Hash Function,
+[48][]. Hash, Cryptographic Hash Function,
 <https://en.wikipedia.org/wiki/Cryptographic_hash_function>
 
-[49]{#Mrkl}[]{#ref49}. Mrkl, Merkle Tree,
+[49][]. Mrkl, Merkle Tree,
 <https://en.wikipedia.org/wiki/Merkle_tree>
 
-[50]{#TwoPI}[]{#ref50}. TwoPI, Second Pre-image Attack on Merkle Trees,
+[50][]. TwoPI, Second Pre-image Attack on Merkle Trees,
 <https://flawed.net.nz/2018/02/21/attacking-merkle-trees-with-a-second-preimage-attack/>
 
-[51]{#MTSec}[]{#ref51}. MTSec, Merkle Tree Security,
+[51][]. MTSec, Merkle Tree Security,
 <https://blog.enuma.io/update/2019/06/10/merkle-trees-not-that-simple.html>
 
-[52]{#DSig}[]{#ref52}. DSig, Digital Signature,
+[52][]. DSig, Digital Signature,
 <https://en.wikipedia.org/wiki/Digital_signature>
 
-[53]{#SecLev}[]{#ref53}. Level, Security Level,
+[53][]. Level, Security Level,
 <https://en.wikipedia.org/wiki/Security_level>
 
-[54]{#DigiTwin}[]{#ref54}. Twin, Digital Twin,
+[54][]. Twin, Digital Twin,
 <https://en.wikipedia.org/wiki/Digital_twin>
 
-[55]{#TMal}[]{#ref55}. TMal, Transaction Malleability,
+[55][]. TMal, Transaction Malleability,
 <https://en.wikipedia.org/wiki/Transaction_malleability_problem>
 
-[56]{#PGM}[]{#ref56}. PGM, The Property Graph Database Model,
+[56][]. PGM, The Property Graph Database Model,
 <http://ceur-ws.org/Vol-2100/paper26.pdf>
 
-[57]{#Dots}[]{#ref57}. Dots, Constructions from Dots and Lines,
+[57][]. Dots, Constructions from Dots and Lines,
 <https://arxiv.org/pdf/1006.2361.pdf>
 
-[58]{#KG}[]{#ref58}. KG, Knowledge Graphs,
+[58][]. KG, Knowledge Graphs,
 <https://arxiv.org/pdf/2003.02320.pdf>
 
-[59]{#AbuseAlice}[]{#ref59}. Abuse, Alice Attempts to Abuse a Verifiable
+[59][]. Abuse, Alice Attempts to Abuse a Verifiable
 Credential,
 <https://github.com/WebOfTrustInfo/rwot9-prague/blob/master/final-documents/alice-attempts-abuse-verifiable-credential.md>
 
-[60]{#SKEM}[]{#ref60}. SKEM, On using the same key pair for Ed25519 and
+[60][]. SKEM, On using the same key pair for Ed25519 and
 an X25519 based KEM, <https://eprint.iacr.org/2021/509>
 
-[61]{#VDS}[]{#ref61}. Verifiable Data Structures, Sparse Merkle Tree,
+[61][]. Verifiable Data Structures, Sparse Merkle Tree,
 <https://github.com/google/trillian/blob/master/docs/papers/VerifiableDataStructures.pdf>
 
-[62]{#CT}[]{#ref62}. Certificate Transparency, Append Only Logs,
+[62][]. Certificate Transparency, Append Only Logs,
 <https://www.researchgate.net/publication/274056469_Certificate_Transparency>
 
-[63]{#RFC9162}[]{#ref63}. IETF RFC-9162, Certificate Transparency,
+[63][]. IETF RFC-9162, Certificate Transparency,
 <https://datatracker.ietf.org/doc/rfc9162/>
 
-[64]{#CTC}[]{#ref64}. Certificate Transparency Community,
+[64][]. Certificate Transparency Community,
 <https://certificate.transparency.dev/community/>
 
-[65]{#Trillion}[]{#ref65}. Trillion Sparse Merkle Tree,
+[65][]. Trillion Sparse Merkle Tree,
 <https://github.com/google/trillian?tab=readme-ov-file>
 
-[66]{#Tessera}[]{#ref66}. Trillian Tessera, Tiled Transparency Logs,
+[66][]. Trillian Tessera, Tiled Transparency Logs,
 <https://github.com/transparency-dev/tessera>
 
-[67]{#ESMT}[]{#ref67}. Efficient Sparse Merkle Tree,
+[67][]. Efficient Sparse Merkle Tree,
 <https://eprint.iacr.org/2016/683.pdf>
 
-[68]{#OCSMT}[]{#ref68}. Optimized Compact Sparse Merkle Tree,
+[68][]. Optimized Compact Sparse Merkle Tree,
 <https://github.com/nervosnetwork/sparse-merkle-tree/blob/master/SMT.md>
 
-[69]{#TSP}[]{#ref69}. ToIP Trust Spanning Protocol (TSP),
+[69][]. ToIP Trust Spanning Protocol (TSP),
 <https://trustoverip.github.io/tswg-tsp-specification/>
 
-[70]{#SPAC}[]{#ref70}. Secure Privacy, Authenticity, Confidentiality
+[70][]. Secure Privacy, Authenticity, Confidentiality
 (SPAC),
 <https://github.com/SmithSamuelM/Papers/blob/master/whitepapers/>
-::::::::::::::::::::::::::::::::::::::::

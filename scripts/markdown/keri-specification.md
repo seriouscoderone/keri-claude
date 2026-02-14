@@ -1,8 +1,4 @@
-::::::::::::::::: {.col-md-8 .ms-sm-auto .col-lg-9 .px-md-4 .pt-5 role="main"}
-::: {#terminology-section-utility-container .d-print-none .alert .alert-primary .p-3}
-:::
-
-# [§](#key-event-receipt-infrastructure-keri){.toc-anchor .d-print-none} Key Event Receipt Infrastructure (KERI)
+# [§](#key-event-receipt-infrastructure-keri) Key Event Receipt Infrastructure (KERI)
 
 **Specification Status**: v1.0
 
@@ -33,7 +29,7 @@
 :   [Commit
     history](https://github.com/trustoverip/kswg-keri-specification/commits/main)
 
-## [§](#introduction){.toc-anchor .d-print-none} Introduction
+## [§](#introduction) Introduction
 
 The original design of the Internet Protocol (IP) has no security
 layer(s) \[[RFC0791](#RFC0791)\], providing no built-in mechanism for
@@ -42,13 +38,13 @@ packet, and a recipient may not be able to ascertain when or if the
 packet was sent by an imposter. This means that secure attribution
 mechanisms for the Internet must be overlaid. This documents presents an
 identifier system security overlay, called the Key Event Receipt
-Infrastructure ([KERI](#term:keri){.term-reference}) protocol, that
+Infrastructure ([KERI](#term:keri)) protocol, that
 serves as a trust spanning layer for the Internet. This overlay includes
 a primary root-of-trust in a Self-certifying identifier
-([SCID](#term:scid){.term-reference}) that provides a formalism for
-Autonomic identifiers ([AID](#term:aid){.term-reference}s), Autonomic
-namespaces ([AN](#term:an){.term-reference}s), and the basis for a
-universal Autonomic identity system ([AIS](#term:ais){.term-reference}).
+([SCID](#term:scid)) that provides a formalism for
+Autonomic identifiers ([AID](#term:aid)s), Autonomic
+namespaces ([AN](#term:an)s), and the basis for a
+universal Autonomic identity system ([AIS](#term:ais)).
 
 The KERI protocol provides verifiable authorship (authenticity) of any
 message or data item via secure cryptographically verifiable attribution
@@ -79,8 +75,7 @@ re-established by rotating to a one-time use set of unexposed but
 pre-committed rotation keypairs. This approach fixes the foundational
 flaw in traditional Public key infrastructure (PKI), which is insecure
 key rotation. KERI enables decentralized public key infrastructure
-([DPKI](https://trustoverip.github.io/ctwg-main-glossary/#term:public-key-infrastructure){.x-term-reference
-.term-reference local-href="#term:toip1:public-key-infrastructure"})
+([DPKI](https://trustoverip.github.io/ctwg-main-glossary/#term:public-key-infrastructure))
 that is more secure and portable. KERI may be viewed as a viable reboot
 of the Web-of-Trust concept for DPKI because KERI fixes the hard problem
 of DPKI, which is key rotation.
@@ -90,18 +85,18 @@ namely a direct (one-to-one) mode and an indirect (one-to-any) mode. In
 the direct mode, two entities establish trust over AIDs via a direct
 exchange of their counterparts' verified signatures. In the indirect
 mode, trust over AIDs depends on witnessed Key event receipt logs
-([KERL](#term:kerl){.term-reference}s, [Key event
-receipt](#term:key-event-receipt){.term-reference}) as a secondary
+([KERL](#term:kerl)s, [Key event
+receipt](#term:key-event-receipt)) as a secondary
 root-of-trust for validating key events. The security and accountability
 guarantees of indirect mode are provided by KERI's Algorithm for Witness
-Agreement ([KAWA](#term:kawa){.term-reference}) among a set of key event
+Agreement ([KAWA](#term:kawa)) among a set of key event
 Witnesses. The KAWA approach may be much more performant and scalable
 than more complex approaches that depend on a total ordering distributed
 consensus ledger. Nevertheless, KERI may employ a distributed consensus
 ledger when other considerations make it the best choice.
 
 The KERI approach to Decentralized key management infrastructure
-([DKMI](#term:dkmi){.term-reference}) allows for more granular
+([DKMI](#term:dkmi)) allows for more granular
 composition. Moreover, because KERI is event streamed, it enables DKMI
 to operate in-stride with data events streaming applications such as web
 3.0, IoT, and others where performance and scalability are more
@@ -112,7 +107,7 @@ levels of security, performance, and adoptability to be a viable
 candidate as the DKMI that underpins a trust-spanning layer for the
 Internet.
 
-## [§](#scope){.toc-anchor .d-print-none} Scope
+## [§](#scope) Scope
 
 Implementation design of a protocol-based decentralized key management
 infrastructure that enables secure attribution of data to a
@@ -134,9 +129,9 @@ includes any electronically transmitted information. The implementation
 dependency scope assumes no more than cryptographic libraries that
 provide cryptographic strength pseudo-random number generators,
 cryptographic strength digest algorithms, and cryptographic strength
-digital [Signature](#term:signature){.term-reference} algorithms.
+digital [Signature](#term:signature) algorithms.
 
-## [§](#normative-references){.toc-anchor .d-print-none} Normative references
+## [§](#normative-references) Normative references
 
 [The normative documents](#normative-section) are referred to in the
 text in such a way that some or all of their content constitutes
@@ -150,7 +145,7 @@ referenced document (including any amendments) applies.
 
 See [Bibliography - Normative Section](#normative-section)
 
-## [§](#terms-and-definitions){.toc-anchor .d-print-none} Terms and Definitions
+## [§](#terms-and-definitions) Terms and Definitions
 
 For the purposes of this document, the following terms and definitions
 apply.
@@ -161,234 +156,231 @@ at the following addresses:
 - ISO Online browsing platform: available at <https://www.iso.org/obp>
 - IEC Electropedia: available at <http://www.electropedia.org/>
 
-::: {#terminology-section-start}
-:::
+[[. Indexed signature [([indexed-signature])]]]
 
-[[. Indexed signature [([indexed-signature]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:indexed-signature title="Externally defined as indexed-signature"}]{#term:.-indexed-signature .term-external original-term="indexed-signature"}
+:
 
-:   
+[[[Authentic Chained Data Container [(ACDC, [authentic-chained-data-container])]]]]
 
-[[[Authentic Chained Data Container [(ACDC, [authentic-chained-data-container]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:authentic-chained-data-container title="Externally defined as authentic-chained-data-container"}]{#term:authentic-chained-data-container}]{#term:acdc .term-external original-term="authentic-chained-data-container"}
+:
 
-:   
+[[[Autonomic identifier [(AID, [autonomic-identifier])]]]]
 
-[[[Autonomic identifier [(AID, [autonomic-identifier]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:autonomic-identifier title="Externally defined as autonomic-identifier"}]{#term:autonomic-identifier}]{#term:aid .term-external original-term="autonomic-identifier"}
+:
 
-:   
+[[[Autonomic identity system [(AIS, [autonomic-identity-system])]]]]
 
-[[[Autonomic identity system [(AIS, [autonomic-identity-system]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:autonomic-identity-system title="Externally defined as autonomic-identity-system"}]{#term:autonomic-identity-system}]{#term:ais .term-external original-term="autonomic-identity-system"}
+:
 
-:   
+[[[Autonomic namespace [(AN, [autonomic-namespace])]]]]
 
-[[[Autonomic namespace [(AN, [autonomic-namespace]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:autonomic-namespace title="Externally defined as autonomic-namespace"}]{#term:autonomic-namespace}]{#term:an .term-external original-term="autonomic-namespace"}
+:
 
-:   
+[[Backer [([backer])]]]
 
-[[Backer [([backer]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:backer title="Externally defined as backer"}]{#term:backer .term-external original-term="backer"}
+:
 
-:   
+[[[Concise Binary Object Representation [(CBOR, [concise-binary-object-representation])]]]]
 
-[[[Concise Binary Object Representation [(CBOR, [concise-binary-object-representation]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:concise-binary-object-representation title="Externally defined as concise-binary-object-representation"}]{#term:concise-binary-object-representation}]{#term:cbor .term-external original-term="concise-binary-object-representation"}
+:
 
-:   
-
-[[[Configuration traits [(Modes, [configuration-traits]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:configuration-traits title="Externally defined as configuration-traits"}]{#term:configuration-traits}]{#term:modes .term-external original-term="configuration-traits"}
+[[[Configuration traits [(Modes, [configuration-traits])]]]]
 :   See also: [Configuration traits field](#configuration-traits-field).
 
-[[Controller [([controller]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:controller title="Externally defined as controller"}]{#term:controller .term-external original-term="controller"}
+[[Controller [([controller])]]]
 
-:   
+:
 
-[[[Cryptographic primitive [(Cryptographic primitives, [cryptographic-primitive]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:cryptographic-primitive title="Externally defined as cryptographic-primitive"}]{#term:cryptographic-primitive}]{#term:cryptographic-primitives .term-external original-term="cryptographic-primitive"}
+[[[Cryptographic primitive [(Cryptographic primitives, [cryptographic-primitive])]]]]
 
-:   
+:
 
-[[[Cryptonym [(Cryptonymous, [cryptonym]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:cryptonym title="Externally defined as cryptonym"}]{#term:cryptonym}]{#term:cryptonymous .term-external original-term="cryptonym"}
+[[[Cryptonym [(Cryptonymous, [cryptonym])]]]]
 
-:   
+:
 
-[[Current threshold [([current-threshold]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:current-threshold title="Externally defined as current-threshold"}]{#term:current-threshold .term-external original-term="current-threshold"}
+[[Current threshold [([current-threshold])]]]
 
-:   
+:
 
-[[Dead-attack [([dead-attack]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:dead-attack title="Externally defined as dead-attack"}]{#term:dead-attack .term-external original-term="dead-attack"}
+[[Dead-attack [([dead-attack])]]]
 
-:   
+:
 
-[[[Decentralized Key Management Infrastructure [(DKMI, [decentralized-key-management-infrastructure]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:decentralized-key-management-infrastructure title="Externally defined as decentralized-key-management-infrastructure"}]{#term:decentralized-key-management-infrastructure}]{#term:dkmi .term-external original-term="decentralized-key-management-infrastructure"}
+[[[Decentralized Key Management Infrastructure [(DKMI, [decentralized-key-management-infrastructure])]]]]
 
-:   
+:
 
-[[Duplicity [([duplicity]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:duplicity title="Externally defined as duplicity"}]{#term:duplicity .term-external original-term="duplicity"}
+[[Duplicity [([duplicity])]]]
 
-:   
+:
 
-[[End-verifiability [([end-verifiability]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:end-verifiability title="Externally defined as end-verifiability"}]{#term:end-verifiability .term-external original-term="end-verifiability"}
+[[End-verifiability [([end-verifiability])]]]
 
-:   
+:
 
-[[Establishment event [([establishment-event]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:establishment-event title="Externally defined as establishment-event"}]{#term:establishment-event .term-external original-term="establishment-event"}
+[[Establishment event [([establishment-event])]]]
 
-:   
+:
 
-[[Exchange identifier [([exchange-identifier]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:exchange-identifier title="Externally defined as exchange-identifier"}]{#term:exchange-identifier .term-external original-term="exchange-identifier"}
+[[Exchange identifier [([exchange-identifier])]]]
 
-:   
+:
 
-[[[First-seen [(First seen, [first-seen]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:first-seen title="Externally defined as first-seen"}]{#term:first-seen}]{#term:first-seen .term-external original-term="first-seen"}
+[[[First-seen [(First seen, [first-seen])]]]]
 
-:   
+:
 
-[[Inception [([inception]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:inception title="Externally defined as inception"}]{#term:inception .term-external original-term="inception"}
+[[Inception [([inception])]]]
 
-:   
+:
 
-[[Inception event [([inception-event]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:inception-event title="Externally defined as inception-event"}]{#term:inception-event .term-external original-term="inception-event"}
+[[Inception event [([inception-event])]]]
 
-:   
+:
 
-[[Interaction event [([interaction-event]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:interaction-event title="Externally defined as interaction-event"}]{#term:interaction-event .term-external original-term="interaction-event"}
+[[Interaction event [([interaction-event])]]]
 
-:   
+:
 
-[[[KERI's Algorithm for Witness Agreement [(KAWA, [keris-algorithm-for-witness-agreement]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:keris-algorithm-for-witness-agreement title="Externally defined as keris-algorithm-for-witness-agreement"}]{#term:keri’s-algorithm-for-witness-agreement}]{#term:kawa .term-external original-term="keris-algorithm-for-witness-agreement"}
+[[[KERI's Algorithm for Witness Agreement [(KAWA, [keris-algorithm-for-witness-agreement])]]]]
 
-:   
+:
 
-[[Key event [([key-event]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:key-event title="Externally defined as key-event"}]{#term:key-event .term-external original-term="key-event"}
+[[Key event [([key-event])]]]
 
-:   
+:
 
-[[[[Key event log [(KEL, kel, [key-event-log]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:key-event-log title="Externally defined as key-event-log"}]{#term:key-event-log}]{#term:kel}]{#term:kel .term-external original-term="key-event-log"}
+[[[[Key event log [(KEL, kel, [key-event-log])]]]]]
 
-:   
+:
 
-[[Key event message [([key-event-message]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:key-event-message title="Externally defined as key-event-message"}]{#term:key-event-message .term-external original-term="key-event-message"}
+[[Key event message [([key-event-message])]]]
 
-:   
+:
 
-[[Key event receipt [([key-event-receipt]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:key-event-receipt title="Externally defined as key-event-receipt"}]{#term:key-event-receipt .term-external original-term="key-event-receipt"}
+[[Key event receipt [([key-event-receipt])]]]
 
-:   
+:
 
-[[[Key event receipt infrastructure [(KERI, [key-event-receipt-infrastructure]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:key-event-receipt-infrastructure title="Externally defined as key-event-receipt-infrastructure"}]{#term:key-event-receipt-infrastructure}]{#term:keri .term-external original-term="key-event-receipt-infrastructure"}
+[[[Key event receipt infrastructure [(KERI, [key-event-receipt-infrastructure])]]]]
 
-:   
+:
 
-[[[Key event receipt log [(KERL, [key-event-receipt-log]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:key-event-receipt-log title="Externally defined as key-event-receipt-log"}]{#term:key-event-receipt-log}]{#term:kerl .term-external original-term="key-event-receipt-log"}
+[[[Key event receipt log [(KERL, [key-event-receipt-log])]]]]
 :   See annex [Key event receipt log](#key-event-receipt-log).
 
-[[Key-state [([key-state]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:key-state title="Externally defined as key-state"}]{#term:key-state .term-external original-term="key-state"}
+[[Key-state [([key-state])]]]
 
-:   
+:
 
-[[[Live-attack [(Live-attacks, [live-attack]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:live-attack title="Externally defined as live-attack"}]{#term:live-attack}]{#term:live-attacks .term-external original-term="live-attack"}
+[[[Live-attack [(Live-attacks, [live-attack])]]]]
 :   See [Security Properties of Prerotation](#live-attacks).
 
-[[Message [([message]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:message title="Externally defined as message"}]{#term:message .term-external original-term="message"}
+[[Message [([message])]]]
 
-:   
+:
 
-[[[MsgPack [(MGPK, [messagepack]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:messagepack title="Externally defined as messagepack"}]{#term:msgpack}]{#term:mgpk .term-external original-term="messagepack"}
+[[[MsgPack [(MGPK, [messagepack])]]]]
 
-:   
+:
 
-[[Next threshold [([next-threshold]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:next-threshold title="Externally defined as next-threshold"}]{#term:next-threshold .term-external original-term="next-threshold"}
+[[Next threshold [([next-threshold])]]]
 
-:   
+:
 
-[[Non-establishment event [([non-establishment-event]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:non-establishment-event title="Externally defined as non-establishment-event"}]{#term:non-establishment-event .term-external original-term="non-establishment-event"}
+[[Non-establishment event [([non-establishment-event])]]]
 
-:   
+:
 
-[[[Out-of-band introduction [(OOBI, [out-of-band-introduction]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:out-of-band-introduction title="Externally defined as out-of-band-introduction"}]{#term:out-of-band-introduction}]{#term:oobi .term-external original-term="out-of-band-introduction"}
+[[[Out-of-band introduction [(OOBI, [out-of-band-introduction])]]]]
 
-:   
+:
 
-[[Primitive [([primitive]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:primitive title="Externally defined as primitive"}]{#term:primitive .term-external original-term="primitive"}
+[[Primitive [([primitive])]]]
 
-:   
+:
 
-[[[Python dict [(Python dictionary, [python-dict]{.term-local-original-term .term-original-term title="original term"})]{.term-local-parenthetical-terms}]{#term:python-dict}]{#term:python-dict}]{#term:python-dictionary}
+[[[Python dict [(Python dictionary, [python-dict])]]]]
 :   A Python dict (short for dictionary) is a built-in data type for an
     associative array or hash table that stores key--value pairs: you
     look up a key and get its value.
 
-[[Receipt [([receipt]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:receipt title="Externally defined as receipt"}]{#term:receipt .term-external original-term="receipt"}
+[[Receipt [([receipt])]]]
 
-:   
+:
 
-[[Receiver [([receiver]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:receiver title="Externally defined as receiver"}]{#term:receiver .term-external original-term="receiver"}
+[[Receiver [([receiver])]]]
 
-:   
+:
 
-[[Rotation [([rotation]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:rotation title="Externally defined as rotation"}]{#term:rotation .term-external original-term="rotation"}
+[[Rotation [([rotation])]]]
 
-:   
+:
 
-[[Rotation event [([rotation-event]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:rotation-event title="Externally defined as rotation-event"}]{#term:rotation-event .term-external original-term="rotation-event"}
+[[Rotation event [([rotation-event])]]]
 
-:   
+:
 
-[[Routed exchange message [([routed-exchange-message]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:routed-exchange-message title="Externally defined as routed-exchange-message"}]{#term:routed-exchange-message .term-external original-term="routed-exchange-message"}
+[[Routed exchange message [([routed-exchange-message])]]]
 
-:   
+:
 
-[[SAIDive [([saidive]{.term-local-original-term .term-original-term title="original term"})]{.term-local-parenthetical-terms}]{#term:saidive}]{#term:saidive}
+[[SAIDive [([saidive])]]]
 :   any fields that are derived from digest of the message body using
     the SAID protocol.
 
-[[Salt [([salt]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:salt title="Externally defined as salt"}]{#term:salt .term-external original-term="salt"}
+[[Salt [([salt])]]]
 
-:   
+:
 
-[[Seal [([seal]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:seal title="Externally defined as seal"}]{#term:seal .term-external original-term="seal"}
+[[Seal [([seal])]]]
 
-:   
+:
 
-[[[Self-addressed data [(SAD, [self-addressed-data]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:self-addressed-data title="Externally defined as self-addressed-data"}]{#term:self-addressed-data}]{#term:sad .term-external original-term="self-addressed-data"}
+[[[Self-addressed data [(SAD, [self-addressed-data])]]]]
 
-:   
+:
 
-[[[Self-addressing identifier [(SAID, [self-addressing-identifier]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:self-addressing-identifier title="Externally defined as self-addressing-identifier"}]{#term:self-addressing-identifier}]{#term:said .term-external original-term="self-addressing-identifier"}
+[[[Self-addressing identifier [(SAID, [self-addressing-identifier])]]]]
 
-:   
+:
 
-[[[Self-certifying identifier [(SCID, [self-certifying-identifier]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:self-certifying-identifier title="Externally defined as self-certifying-identifier"}]{#term:self-certifying-identifier}]{#term:scid .term-external original-term="self-certifying-identifier"}
+[[[Self-certifying identifier [(SCID, [self-certifying-identifier])]]]]
 
-:   
+:
 
-[[[Signature [(Signatures, [digital-signature]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:digital-signature title="Externally defined as digital-signature"}]{#term:signature}]{#term:signatures .term-external original-term="digital-signature"}
+[[[Signature [(Signatures, [digital-signature])]]]]
 
-:   
+:
 
-[[Validator [([validator]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:validator title="Externally defined as validator"}]{#term:validator .term-external original-term="validator"}
+[[Validator [([validator])]]]
 
-:   
+:
 
-[[Verifiable [([verifiable]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:verifiable title="Externally defined as verifiable"}]{#term:verifiable .term-external original-term="verifiable"}
+[[Verifiable [([verifiable])]]]
 
-:   
+:
 
-[[Verifier [([verifier]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:verifier title="Externally defined as verifier"}]{#term:verifier .term-external original-term="verifier"}
+[[Verifier [([verifier])]]]
 
-:   
+:
 
-[[Version [([version]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:version title="Externally defined as version"}]{#term:version .term-external original-term="version"}
+[[Version [([version])]]]
 
-:   
+:
 
-[[Watcher [([watcher]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:watcher title="Externally defined as watcher"}]{#term:watcher .term-external original-term="watcher"}
+[[Watcher [([watcher])]]]
 
-:   
+:
 
-[[Witness [([witness]{.term-external-original-term .term-original-term title="original term"})]{.term-external-parenthetical-terms}]{#term:witness title="Externally defined as witness"}]{#term:witness .term-external original-term="witness"}
+[[Witness [([witness])]]]
 
-:   
+:
 
-## [§](#keri-foundational-overview){.toc-anchor .d-print-none} KERI foundational overview
+## [§](#keri-foundational-overview) KERI foundational overview
 
-### [§](#infrastructure-and-ecosystem-overview){.toc-anchor .d-print-none} Infrastructure and ecosystem overview
+### [§](#infrastructure-and-ecosystem-overview) Infrastructure and ecosystem overview
 
 This section provides a high-level overview of the infrastructure
 components of a live KERI ecosystem and how they interact. It does not
@@ -396,12 +388,12 @@ provide any low-level details and only describes the components
 superficially. However, it should help understand how all the parts fit
 together as one reads through the more detailed sections.
 
-#### [§](#controller-application){.toc-anchor .d-print-none} Controller Application
+#### [§](#controller-application) Controller Application
 
 Each KERI AID is controlled by an entity (or entities when multi-sig)
 that holds the digital signing private keys belonging to the current
 authoritative key state of the AID. This set of entities is called the
-AID controller, or [Controller](#term:controller){.term-reference} for
+AID controller, or [Controller](#term:controller) for
 short. Each controller has an application or suite or applications
 called the controller application or application for short. The
 controller application provides five functions with respect to the
@@ -415,11 +407,11 @@ functions are:
 - key event signing, and
 - key event validation.
 
-[Key event](#term:key-event){.term-reference} validation includes
+[Key event](#term:key-event) validation includes
 everything needed to validate events, including structure validation,
 chaining digest verification,
-[Signature](#term:signature){.term-reference} verification, and
-[Witness](#term:witness){.term-reference} receipt verification. The
+[Signature](#term:signature) verification, and
+[Witness](#term:witness) receipt verification. The
 execution of these functions, including the associated code and data,
 SHOULD be protected by the controller using best practices. For example,
 this might be accomplished by securely installing the controller
@@ -428,8 +420,7 @@ such as a mobile phone with appropriate secure storage and trusted code
 execution environments. Alternatively, the functions might be split
 between devices where a remote software agent that runs on behalf of the
 controller MAY host encrypted
-[keypair](https://trustoverip.github.io/ctwg-general-glossary/#term:keypair){.x-term-reference
-.term-reference local-href="#term:toip2:keypair"} storage and highly
+[keypair](https://trustoverip.github.io/ctwg-general-glossary/#term:keypair) storage and highly
 available key event validation functions while the more critical keypair
 generation, key event generation, and key event signing functions are on
 a device in the user's possession. The latter might be called a key
@@ -449,27 +440,27 @@ Agent](https://raw.githubusercontent.com/trustoverip/tswg-keri-specification/rev
 
 **Figure:** *Controller Application with Agent*
 
-#### [§](#direct-exchange){.toc-anchor .d-print-none} Direct exchange
+#### [§](#direct-exchange) Direct exchange
 
 The simplest mode of operation is that of a pair of controllers, each
 with their own AID, use their respective applications (including agents
 when applicable) to directly exchange [Key event
-message](#term:key-event-message){.term-reference}s that verifiably
+message](#term:key-event-message)s that verifiably
 establish the current key state of their own AID with the other
 controller. For each exchange of key events, the destination controller
-acts as a [Validator](#term:validator){.term-reference} of events
+acts as a [Validator](#term:validator) of events
 received from the source controller. Therefore, given any key event, a
 given entity is either the event's controller or a validator of some
 other controller's event.
 
 The set of key event messages forms an append-only, cryptographically
-[Verifiable](#term:verifiable){.term-reference} data structure called a
-[Key event log](#term:key-event-log){.term-reference} or KEL. The events
+[Verifiable](#term:verifiable) data structure called a
+[Key event log](#term:key-event-log) or KEL. The events
 in a KEL are signed and are both forward and backward-chained. The
 backward chaining commitments are cryptographic digests of the previous
 event. The forward chaining commitments are cryptographic digests of the
 next set of public keys that will constitute the key state after a key
-[Rotation](#term:rotation){.term-reference}. The commitments are
+[Rotation](#term:rotation). The commitments are
 nonrepudiably signed with the private keys of the current key state.
 Each KEL is somewhat like a "blockchain" that manages the key state for
 one and only one AID. In addition to key states, each KEL also manages
@@ -491,14 +482,14 @@ Exchange](https://raw.githubusercontent.com/trustoverip/tswg-keri-specification/
 
 **Figure:** *Direct Exchange*
 
-#### [§](#indirect-exchange-via-witnesses-and-watchers){.toc-anchor .d-print-none} Indirect exchange via witnesses and watchers
+#### [§](#indirect-exchange-via-witnesses-and-watchers) Indirect exchange via witnesses and watchers
 
 For many if not most use cases, the direct exchange of key event
 messages between controller applications (including agents when
 applicable) may not provide sufficient availability, scalability, or
 even security. KERI includes two other components for those use cases.
 These components are witnesses and
-[Watcher](#term:watcher){.term-reference}s.
+[Watcher](#term:watcher)s.
 
 Each controller of an AID MAY create or choose to use a set or pool of
 witnesses for that AID. The controller chooses how the witnesses are
@@ -508,10 +499,10 @@ combination of the two. Regardless, the composition of the Witness pool
 is under the ultimate control of the AID's controller, which means the
 controller MAY change the witness infrastructure at will. Witnesses for
 the AID are managed by the key events in the AID's KEL. Each witness
-creates a signed [Receipt](#term:receipt){.term-reference} of each event
+creates a signed [Receipt](#term:receipt) of each event
 it witnesses, which is exchanged with the other witnesses (directly or
 indirectly). Based on those receipts, the witness pool uses an agreement
-algorithm called [KAWA](#term:kawa){.term-reference} that provides high
+algorithm called [KAWA](#term:kawa) that provides high
 availability, fault tolerance, and security guarantees. Thereby, an
 AID's witness pool constitutes a highly available and secure
 promulgation network for that AID.
@@ -546,13 +537,13 @@ any AIDs from other controllers it chooses to watch.
 Watchers have a strong incentive to share all the KELs they watch. This
 is because Watchers follow a "first seen" policy (described in more
 detail below). Simply put, "first seen" means that only the first
-[Version](#term:version){.term-reference} of an event that a watcher
+[Version](#term:version) of an event that a watcher
 receives is deemed by the watcher to be the one and only true version of
 the event. Any other versions received later are deemed invalid by that
 watcher, i.e., "first seen, always seen, never unseen." Thus, any later
 compromise of the authoritative key state for the associated AID cannot
 produce an alternate version of the event that could supplant the
-[First-seen](#term:first-seen){.term-reference} version for a given
+[First-seen](#term:first-seen) version for a given
 watcher. Therefore, it is in the best interests of every honest AID
 controller to have its original version be accepted as first-seen as
 widely and as quickly as possible in order to nullify any future
@@ -573,7 +564,7 @@ fully signed and witnessed is if the keys of the event's controller have
 been compromised by an attacker or the controller itself acted
 duplicitously. The two cases could be indistinguishable to a watcher.
 However, both exhibit provable
-[Duplicity](#term:duplicity){.term-reference} with regard to the key
+[Duplicity](#term:duplicity) with regard to the key
 state. A watcher who records and provides such evidence of duplicity to
 other watchers is called a Juror. A Juror MAY be a member of a highly
 available, fault-tolerant pool of Jurors, called a Jury. A watcher who
@@ -595,7 +586,7 @@ Exchange](https://raw.githubusercontent.com/trustoverip/tswg-keri-specification/
 
 **Figure:** *Indirect Exchange*
 
-#### [§](#ecosystem){.toc-anchor .d-print-none} Ecosystem
+#### [§](#ecosystem) Ecosystem
 
 The KERI protocol fosters an open, competitive ecosystem of service
 providers for the various infrastructure components such as controller
@@ -609,7 +600,7 @@ infrastructure can be leveraged at comparable performance and price
 levels. KERI fosters the development of a global watcher network that
 will eventually result in universal duplicity detectability and ambient
 verifiability with the goal of providing a universal
-[DKMI](#term:dkmi){.term-reference} in support of a trust-spanning layer
+[DKMI](#term:dkmi) in support of a trust-spanning layer
 for the internet.
 
 ![KERI
@@ -617,12 +608,12 @@ Ecosystem](https://raw.githubusercontent.com/trustoverip/tswg-keri-specification
 
 **Figure:** *KERI Ecosystem*
 
-### [§](#keris-identifier-system-security-overlay){.toc-anchor .d-print-none} KERI's identifier system security overlay
+### [§](#keris-identifier-system-security-overlay) KERI's identifier system security overlay
 
 The function of KERI's identifier-system security overlay is to
 establish the authenticity of the message payload in an IP Packet by
 verifiably attributing it to a
-[Cryptonymous](#term:cryptonymous){.term-reference} SCID (an AID) via an
+[Cryptonymous](#term:cryptonymous) SCID (an AID) via an
 attached set of one or more asymmetric keypair-based nonrepudiable
 digital signatures. The current valid set of associated asymmetric
 keypair(s) is proven via a Verifiable data structure called the KEL. The
@@ -634,7 +625,7 @@ An authenticatable (Verifiable) internet message (packet) or data item
 includes the identifier and data in its payload. Attached to the payload
 is a digital signature(s) made with the private key(s) from the
 controlling keypair(s). Given the identifier in a Message, any
-[Verifier](#term:verifier){.term-reference} of a Message (data item) can
+[Verifier](#term:verifier) of a Message (data item) can
 use the identifier system mapping to look up the public key(s) belonging
 to the controlling keypair(s). The Verifier can then verify the attached
 signature(s) using that public key(s). Because the payload includes the
@@ -646,7 +637,7 @@ Message](https://raw.githubusercontent.com/trustoverip/tswg-keri-specification/r
 
 **Figure:** *Authenticatable Message*
 
-### [§](#overcoming-existing-security-overlay-flaws){.toc-anchor .d-print-none} Overcoming existing security overlay flaws
+### [§](#overcoming-existing-security-overlay-flaws) Overcoming existing security overlay flaws
 
 KERI overcomes two major system security overlay flaws.
 
@@ -708,14 +699,14 @@ via nonrepudiable cryptographic proofs of Duplicity, not merely the
 detection of inconsistency in the Key state that MAY or MAY NOT be
 duplicitous.
 
-### [§](#end-verifiable){.toc-anchor .d-print-none} End-verifiable
+### [§](#end-verifiable) End-verifiable
 
 A data item or statement is end-to-end-verifiable, or end-verifiable for
 short, when that data item could be cryptographically securely
 attributable to its source (party at the source end) by any recipient
 verifier (party at the destination end) without reliance on any
 infrastructure not under the verifier's ultimate control. KERI's
-[End-verifiability](#term:end-verifiability){.term-reference} is
+[End-verifiability](#term:end-verifiability) is
 pervasive. It means that everything in KERI or that depends on KERI is
 also end-verifiable; therefore, KERI has no security dependency on any
 other infrastructure, including conventional PKI. It also does not rely
@@ -723,7 +714,7 @@ on security guarantees that may or may not be provided by web or
 internet infrastructure. KERI's identifier system-based security overlay
 for the Internet provides each identifier with a primary root-of-trust
 based on self-certifying, self-administering, self-governing
-[AID](#term:aid){.term-reference}s and [AN](#term:an){.term-reference}s
+[AID](#term:aid)s and [AN](#term:an)s
 that provides the trust basis for a universal AIS \[[4](#KERI-WP)\]
 \[[16](#CPK)\] \[[18](#SCFS)\] \[[19](#EscEvils)\] \[[17](#SFS-HTTP)\].
 This root-of-trust is cryptographic, i.e. not administrative, because it
@@ -795,7 +786,7 @@ no-shared-secret approach to authentication. Shared governance also
 usually comes with security, portability, cost, and performance
 limitations, which limit its more universal adoptability.
 
-### [§](#self-certifying-identifier-scid){.toc-anchor .d-print-none} Self-certifying identifier (SCID)
+### [§](#self-certifying-identifier-scid) Self-certifying identifier (SCID)
 
 The KERI identifier system overlay leverages the properties of
 cryptonymous SCIDs which are based on asymmetric PKI to provide
@@ -815,14 +806,14 @@ the controlling private key becomes weakened or compromised from
 exposure. The class of identifiers that generalize SCIDs with enhanced
 properties such as persistence is called AIDs.
 
-### [§](#autonomic-identifier-aid){.toc-anchor .d-print-none} Autonomic identifier (AID)
+### [§](#autonomic-identifier-aid) Autonomic identifier (AID)
 
-The use of a [KEL](#term:kel){.term-reference} gives rise to an enhanced
+The use of a [KEL](#term:kel) gives rise to an enhanced
 class of SCIDs that are persistent, i.e. not ephemeral, because the
 SCID's keys could be refreshed or updated via Rotation, allowing secure
 control over the identifier in spite of key weakness or even compromise.
 Members of this family of generalized enhanced SCIDs are called
-[AID](#term:aid){.term-reference}s. Autonomic means self-governing,
+[AID](#term:aid)s. Autonomic means self-governing,
 self-regulating, or self-managing and is evocative of the
 self-certifying, self-managing, and self-administering properties of
 this class of identifier. An AID could exhibit other self-managing
@@ -831,7 +822,7 @@ enables control over such an AID to persist in spite of key weakness or
 compromise due to exposure. Authoritative control over the identifier
 persists in spite of the evolution of the Key state.
 
-### [§](#key-rotationpre-rotation){.toc-anchor .d-print-none} Key rotation/pre-rotation
+### [§](#key-rotationpre-rotation) Key rotation/pre-rotation
 
 An important innovation of KERI is that it solves the key Rotation
 problem of PKI (including that of simple SCIDs) via a novel but elegant
@@ -852,22 +843,20 @@ mapping between the identifier (domain name) and the controlling
 keypair(s). Without this verifiability, the detection of potential
 ambiguity requires yet another bolt-on security overlay, such as the
 [Certificate
-transparency](https://trustoverip.github.io/ctwg-general-glossary/#term:certificate-transparency){.x-term-reference
-.term-reference local-href="#term:toip2:certificate-transparency"}
+transparency](https://trustoverip.github.io/ctwg-general-glossary/#term:certificate-transparency)
 system.
 
-### [§](#qualified-cryptographic-primitives){.toc-anchor .d-print-none} Qualified Cryptographic Primitives
+### [§](#qualified-cryptographic-primitives) Qualified Cryptographic Primitives
 
 A [Cryptographic
-primitive](#term:cryptographic-primitive){.term-reference} is a
+primitive](#term:cryptographic-primitive) is a
 serialization of a value associated with a cryptographic operation,
 including but not limited to a digest (hash), a
-[Salt](#term:salt){.term-reference}, a seed, a private key, a public
+[Salt](#term:salt), a seed, a private key, a public
 key, or a signature. Furthermore, a Qualified cryptographic
-[Primitive](#term:primitive){.term-reference} includes a prepended
+[Primitive](#term:primitive) includes a prepended
 [derivation
-code](https://trustoverip.github.io/kerisuite-glossary/#term:derivation-code){.x-term-reference
-.term-reference local-href="#term:keri1:derivation-code"} (as a proem)
+code](https://trustoverip.github.io/kerisuite-glossary/#term:derivation-code) (as a proem)
 that indicates the cryptographic algorithm or suite used for that
 derivation; e.g. `EL1L56LyoKrIofnn0oPChS4EyzMHEEk75INJohDS_Bug`. This
 simplifies and compactifies the essential information needed to use that
@@ -879,7 +868,7 @@ by construction. Indeed, cryptographic primitive qualification is an
 essential property of CESR which makes a uniquely beneficial encoding
 for a cryptographic primitive heavy protocol like KERI.
 
-### [§](#cesr-encoding){.toc-anchor .d-print-none} CESR Encoding
+### [§](#cesr-encoding) CESR Encoding
 
 As stated previously, KERI represents all cryptographic primitives with
 \[[1](#CESR)\]. CESR supports round-trip lossless conversion between its
@@ -891,7 +880,7 @@ equivalent of that group because all CESR Primitives are aligned on
 serializations suitable for transmission over the wire. The Text domain
 representation is also suitable to be embedded as a field or array
 element string value as part of a field map serialization such as JSON,
-[CBOR](#term:cbor){.term-reference}, or MsgPack. The Text domain uses
+[CBOR](#term:cbor), or MsgPack. The Text domain uses
 the set of characters from the URL-safe variant of [Base64](#RFC4648),
 which in turn is a subset of the ASCII character set. For the sake of
 readability, all examples in this specification are expressed in CESR's
@@ -909,7 +898,7 @@ otherwise indicated, all Cryptographic primitives used in this
 specification are qualified Primitives expressed in CESR's Text domain.
 This includes serializations that are signed, hashed, or encrypted.
 
-### [§](#keris-secure-bindings){.toc-anchor .d-print-none} KERI's secure bindings
+### [§](#keris-secure-bindings) KERI's secure bindings
 
 In simple form, an identifier-system security overlay binds together a
 triad consisting of the identifier, keypairs, and Controllers, the set
@@ -951,7 +940,7 @@ Because the private key material MUST be kept secret (by definition),
 typically in a secure data store, the management of those secrets could
 be an important consideration. One approach to minimize the size of
 secrets is to create private keys or seeds from a secret
-[salt](#term:salt){.term-reference}. The salt must have an entropy of
+[salt](#term:salt). The salt must have an entropy of
 approximately 128 bits. Then, the salt could be stretched to meet the
 length requirements for the crypto suite's private key size. In
 addition, a hierarchical deterministic derivation function could be used
@@ -1039,9 +1028,9 @@ Triad](https://raw.githubusercontent.com/trustoverip/tswg-keri-specification/rev
 
 **Figure:** *Self-certifying Identifier Issuance Triad*
 
-#### [§](#tetrad-bindings){.toc-anchor .d-print-none} Tetrad bindings
+#### [§](#tetrad-bindings) Tetrad bindings
 
-At [Inception](#term:inception){.term-reference}, the triad of an
+At [Inception](#term:inception), the triad of an
 identifier, a set of keypairs, and a set of Controllers are strongly
 bound together. But in order for those bindings to persist after a key
 Rotation, another mechanism is required. That mechanism is the KEL, a
@@ -1055,7 +1044,7 @@ For persistent (transferable) identifiers, this additional mechanism can
 be bound to the triad to form a tetrad consisting of the KEL, the
 identifier, the set of keypairs, and the set of Controllers. The first
 entry in the KEL is called the [Inception
-event](#term:inception-event){.term-reference}, a serialization of the
+event](#term:inception-event), a serialization of the
 incepting information associated with the previously mentioned
 identifier.
 
@@ -1076,7 +1065,7 @@ Inception event but with a null set (empty list) of pre-rotated public
 keys.
 
 A Rotation is performed by appending a [Rotation
-event](#term:rotation-event){.term-reference} to the KEL. A Rotation
+event](#term:rotation-event) to the KEL. A Rotation
 event MUST include a list of the set of pre-rotated public keys (not
 their digests), thereby exposing them, and be signed by a set of private
 keys from these newly exposed newly controlling but pre-rotated keypairs
@@ -1109,7 +1098,7 @@ Because the signatures on each event are nonrepudiable, the existence of
 an alternate but Verifiable KEL for an identifier is provable evidence
 of Duplicity. In KERI, there MUST be at most one valid KEL for any
 identifier or none at all. Any
-[Validator](#term:validator){.term-reference} of a KEL can enforce this
+[Validator](#term:validator) of a KEL can enforce this
 one valid KEL rule that protects the Validator before relying on the KEL
 as proof of the current key state for the identifier. Any irreconcilable
 evidence of Duplicity means the Validator does not trust (rely on) any
@@ -1143,7 +1132,7 @@ Tetrad](https://raw.githubusercontent.com/trustoverip/tswg-keri-specification/re
 
 **Figure:** *Autonomic Identifier Issuance Tetrad*
 
-### [§](#autonomic-namespaces-ans){.toc-anchor .d-print-none} Autonomic Namespaces (ANs)
+### [§](#autonomic-namespaces-ans) Autonomic Namespaces (ANs)
 
 A namespace groups symbols or identifiers for a set of related objects
 \[[23](#NameSpace)\]. In an identity system, an identifier can be
@@ -1171,7 +1160,7 @@ where each prefix location has been replaced with the actual value of
 the element of the address. Namespaces provide a systematic way of
 organizing related elements and are widely used in computing.
 
-An [Autonomic namespace](#term:autonomic-namespace){.term-reference},
+An [Autonomic namespace](#term:autonomic-namespace),
 AN, is defined as a namespace with an AID as a prefix, i.e., a fully
 qualified CESR-encoded cryptographic primitive. As defined above, AIDs
 are uniquely (strongly) cryptographically bound to their incepting
@@ -1225,9 +1214,9 @@ trust facilitates the transfer of other types of value, a portable
 decentralized identity meta-system, e.g., an AID system, enables an
 identity meta-platform for commerce.
 
-## [§](#keri-data-structures-and-labels){.toc-anchor .d-print-none} KERI data structures and labels
+## [§](#keri-data-structures-and-labels) KERI data structures and labels
 
-### [§](#keri-data-structure-format){.toc-anchor .d-print-none} KERI data structure format
+### [§](#keri-data-structure-format) KERI data structure format
 
 A KERI data structure, such as a Key event message body, can be
 abstractly modeled as a nested key:value mapping. To avoid confusion
@@ -1259,17 +1248,16 @@ creation order. This enables reproducible round-trip
 serialization/deserialization of field maps. Serialized KERI data
 structures depend on insertion-ordered field maps for their canonical
 serialization/deserialization. KERI data structures support multiple
-serialization types, namely JSON, [CBOR](#term:cbor){.term-reference},
-[MGPK](#term:mgpk){.term-reference}, and CESR but for the sake of
+serialization types, namely JSON, [CBOR](#term:cbor),
+[MGPK](#term:mgpk), and CESR but for the sake of
 simplicity, JSON only will be used for examples. The basic set of
 normative field labels in KERI field maps is defined by the table below
 (see the next section).
 
-#### [§](#keri-field-labels-for-data-structures){.toc-anchor .d-print-none} KERI field labels for data structures
+#### [§](#keri-field-labels-for-data-structures) KERI field labels for data structures
 
 Reserved field labels in Keri messages:
 
-::: table-responsive-md
   Label   Title                                                    Description
   ------- -------------------------------------------------------- ----------------------------------------------------------
   `v`     Version String                                           enables regex parsing of field map in CESR stream
@@ -1289,7 +1277,6 @@ Reserved field labels in Keri messages:
   `c`     List of Configuration Traits/Modes                       list of strings
   `a`     List of Anchors (seals)                                  list of field maps
   `di`    Delegator Identifier Prefix (AID)                        fully qualified primitive, Delegator AID
-:::
 
 A field label MAY have different values in different contexts but MUST
 NOT have a different field value type. This REQUIREMENT makes it easier
@@ -1303,7 +1290,7 @@ Message), the message in which a label appears MUST provide the
 necessary context to determine the meaning of that field fully and hence
 the field value type and associated semantics.
 
-#### [§](#compact-keri-field-labels){.toc-anchor .d-print-none} Compact KERI field labels
+#### [§](#compact-keri-field-labels) Compact KERI field labels
 
 The primary field labels are compact in that they use only one or two
 characters. KERI is meant to support resource-constrained applications
@@ -1318,14 +1305,14 @@ better supports bandwidth and storage constraints on transmission while
 not precluding any later semantic post-processing. This is a well-known
 design pattern for resource-constrained applications.
 
-#### [§](#special-label-ordering-requirements){.toc-anchor .d-print-none} Special label ordering requirements
+#### [§](#special-label-ordering-requirements) Special label ordering requirements
 
 The top-level fields of each message type MUST appear in a specific
 order. All top-level fields are REQUIRED. This enables compact top-level
 fixed field CESR native messages. These top-level fields are defined for
 each message type below.
 
-##### [§](#version-string-field){.toc-anchor .d-print-none} Version string field
+##### [§](#version-string-field) Version string field
 
 The version string, `v`, field MUST be the first field in any top-level
 KERI field map encoded in JSON, CBOR, or MGPK as a message body
@@ -1354,7 +1341,7 @@ use a different serialization type. A more detailed format specification
 for the version string field value is found in the CESR specification
 \[[1](#CESR)\].
 
-##### [§](#legacy-version-string-field-format){.toc-anchor .d-print-none} Legacy version string field format
+##### [§](#legacy-version-string-field-format) Legacy version string field format
 
 Compliant KERI version 2.XX implementations MUST support the old KERI
 version 1.x version string format to properly verify message bodies
@@ -1364,13 +1351,13 @@ field, `PPPP` value in the version string MUST be `KERI` for the KERI
 protocol. The version field, `vv`, MUST encode the old version of the
 KERI protocol \[[1](#CESR)\].
 
-##### [§](#message-type-field){.toc-anchor .d-print-none} Message type field
+##### [§](#message-type-field) Message type field
 
 The message type, `t` field value MUST be a three-character string that
 provides the message type. There are three classes of message types in
 KERI. The first class consists of key event messages. These are part of
 the KEL for an AID. A subclass of key event messages are [Establishment
-event](#term:establishment-event){.term-reference} messages, these
+event](#term:establishment-event) messages, these
 determine the current key state. Non-establishment event messages are
 key event messages that do not change the key state. The second class of
 messages consists of Receipt messages. These are not themselves part of
@@ -1381,34 +1368,32 @@ with an AID.
 
 The message types in KERI are detailed in the table below:
 
-::: table-responsive-md
   Type    Title                    Class                         Description
   ------- ------------------------ ----------------------------- -------------------------------------------------------------------------------------------------
-          **Key Event Messages**                                 
+          **Key Event Messages**
   `icp`   Inception                Establishment Key Event       Incepts an AID and initializes its keystate
   `rot`   Rotation                 Establishment Key Event       Rotates the AID's key state
   `ixn`   Interaction              Non-Establishment Key Event   Seals interaction data to the current key state
   `dip`   Delegated Inception      Establishment Event           Incepts a Delegated AID and initializes its keystate
   `drt`   Delegated Rotation       Establishment Key Event       Rotates the Delegated AID's key state
-          **Receipt Messages**                                   
+          **Receipt Messages**
   `rct`   Receipt                  Receipt Message               Associates a proof such as signature or seal to a key event
-          **Routed Messages**                                    
+          **Routed Messages**
   `qry`   Query                    Other Message                 Query information associated with an AID
   `rpy`   Reply                    Other Message                 Reply with information associated with an AID either solicited by Query or unsolicited
   `pro`   Prod                     Other Message                 Prod (request) information associated with a Seal
   `bar`   Bare                     Other Event                   Bare (response) with information associated with a Seal either solicited by Prod or unsolicited
   `xip`   Exchange Inception       Other Message                 Incepts multi-exchange message transaction, the first exchange message in a transaction set
   `exn`   Exchange                 Other Message                 Generic exchange of information, MAY be a member of a multi-message transaction set
-:::
 
-##### [§](#said-fields){.toc-anchor .d-print-none} SAID fields
+##### [§](#said-fields) SAID fields
 
 Some fields in KERI data structures can have a SAID (self-referential
 content addressable), as a field value. In this context, `d` is short
 for digest, which is short for SAID. A SAID follows the SAID protocol. A
 SAID is a special type of cryptographic digest of its encapsulating
 field map (block). The encapsulating block of a SAID is called a
-[SAD](#term:sad){.term-reference} (Self-Addressed Data). Using a SAID as
+[SAD](#term:sad) (Self-Addressed Data). Using a SAID as
 a field value enables a more compact but secure representation of the
 associated block (SAD) from which the SAID is derived. Any nested field
 map that includes a SAID field (i.e., is, therefore, a SAD) MAY be
@@ -1424,7 +1409,7 @@ digest) on a given digest with sufficient cryptographic strength
 including collision resistance is equivalent to a commitment to the
 block from which the given digest was derived. Specifically, a digital
 signature on a SAID makes a
-[Verifiable](#term:verifiable){.term-reference} cryptographic
+[Verifiable](#term:verifiable) cryptographic
 nonrepudiable commitment that is equivalent to a commitment on the full
 serialization of the associated block from which the SAID was derived.
 This enables reasoning about KERI data structures in whole or in part
@@ -1448,11 +1433,11 @@ messages have sequence numbers. Routed messages do not. When the prior,
 SAID of the prior exchange message in the associated exchange
 transaction.
 
-##### [§](#aid-fields){.toc-anchor .d-print-none} AID fields
+##### [§](#aid-fields) AID fields
 
 Some fields, such as the `i` and `di` fields, MUST each have an AID as
 its value. An AID is a fully qualified primitive as described above
-([KERI](#term:keri){.term-reference}) \[[4](#KERI-WP)\].
+([KERI](#term:keri)) \[[4](#KERI-WP)\].
 
 In this context, `i` is short for `ai`, which is short for the Autonomic
 identifier (AID). The AID given by the `i` field can also be thought of
@@ -1476,7 +1461,7 @@ meaning SHOULD be determined by the context of its appearance. The value
 of the di (Delegator identifier AID ) field in a Delegated Inception dip
 event is the AID of the Delegator.
 
-##### [§](#sequence-number-field){.toc-anchor .d-print-none} Sequence number field
+##### [§](#sequence-number-field) Sequence number field
 
 The Sequence Number, `s` field value is a hex encoded (no leading zeros)
 non-negative strictly monotonically increasing integer. The Sequence
@@ -1489,7 +1474,7 @@ event. The maximum value of a sequence number MUST be
 enough to be deemed computationally infeasible for a KEL ever to reach
 the maximum.
 
-##### [§](#key-and-key-digest-threshold-fields){.toc-anchor .d-print-none} Key and key digest threshold fields
+##### [§](#key-and-key-digest-threshold-fields) Key and key digest threshold fields
 
 The Key Threshold, `kt` and Next Key Digest Threshold, `nt` field values
 each provide signing and rotation thresholds, respectively, for the key
@@ -1510,13 +1495,13 @@ applications. The exact syntax and satisfaction properties of
 fractionally weighted threshold values are described below in the
 section on Partial, Reserve, and Custodial rotations.
 
-##### [§](#key-list-field){.toc-anchor .d-print-none} Key list field
+##### [§](#key-list-field) Key list field
 
 The Key, `k` field value is a list of strings that are each a fully
 qualified public key. These provide the current signing keys for the AID
 associated with a KEL. The Key, `k` field value MUST NOT be empty.
 
-##### [§](#next-key-digest-list-field){.toc-anchor .d-print-none} Next key digest list field
+##### [§](#next-key-digest-list-field) Next key digest list field
 
 The Next Key Digest, `n` field value is a list of strings that are each
 a fully qualified digest of a public key. These provide the next
@@ -1528,9 +1513,9 @@ value in a Rotation or Delegated Rotation Event event is an empty list,
 then the associated AID MUST be deemed abandoned, and no more key events
 MUST be allowed in its KEL.
 
-##### [§](#backer-threshold-field){.toc-anchor .d-print-none} Backer threshold field
+##### [§](#backer-threshold-field) Backer threshold field
 
-The [Backer](#term:backer){.term-reference} threshold, `bt` field value
+The [Backer](#term:backer) threshold, `bt` field value
 is a hex-encoded non-negative integer. This is the number of backers in
 the backer list that MUST support a key event for it to be valid.
 Witness Backers express support via a signature (endorsement) of the key
@@ -1549,7 +1534,7 @@ number of `F` faulty backers.
 When the Backer, `b` field value is an empty list, then the Backer
 Threshold, bt, field value MUST be `0` (hex-encoded 0).
 
-##### [§](#backer-list){.toc-anchor .d-print-none} Backer list
+##### [§](#backer-list) Backer list
 
 The Backer, `b` field value is a list of strings that each is the fully
 qualified AID of a Backer. A given AID MUST NOT appear more than once in
@@ -1562,7 +1547,7 @@ key state is fixed and is given by its AID. Although a Witness does not
 need a KEL, it MAY have one that consists of a trivial Inception event
 with an empty Next, `n` field list (making it non-transferable).
 
-##### [§](#backer-remove-list){.toc-anchor .d-print-none} Backer remove list
+##### [§](#backer-remove-list) Backer remove list
 
 The Backer Remove, `br` field value is a list of strings that each is
 the fully qualified AID of a Backer to be removed from the current
@@ -1574,7 +1559,7 @@ by removing the AIDs in the Backer Remove, `br` list. The AIDs in the
 Backer Remove, `br` list MUST be removed before any AIDs in the Backer
 Add, `ba` list are appended.
 
-##### [§](#backer-add-list){.toc-anchor .d-print-none} Backer add list
+##### [§](#backer-add-list) Backer add list
 
 The Backer Add, ba field value is a list of strings, each representing
 the fully qualified AID of a Backer to be appended to the current Backer
@@ -1587,11 +1572,11 @@ already appear in the current Backer list. The AIDs in the Backer Add,
 `ba` list MUST NOT be appended until all AIDs in the Backer Remove, `br`
 list have been removed.
 
-##### [§](#configuration-traits-field){.toc-anchor .d-print-none} Configuration traits field
+##### [§](#configuration-traits-field) Configuration traits field
 
 The Configuration Traits, `c` field value is a list of strings. These
 are specially defined strings. Each string represents a configuration
-trait for the [KEL](#term:kel){.term-reference}. The following table
+trait for the [KEL](#term:kel). The following table
 defines the configuration traits. Some configuration traits MUST only
 appear in the Inception (delegated or not) for the KEL. Others MAY
 appear in either the inception event or rotation events (delegated or
@@ -1601,7 +1586,6 @@ constraints imposed by their configuration traits. If two conflicting
 configuration traits appear in the same list, the latter trait
 supersedes the earlier one.
 
-::: table-responsive-md
    Trait  Title                    Inception Only  Description
   ------- ----------------------- ---------------- --------------------------------------------------------
    `EO`   Establishment-Only            True       Only establishment events MUST appear in this KEL
@@ -1609,14 +1593,13 @@ supersedes the earlier one.
    `DID`  Delegate-Is-Delegator         True       Treat a delegated AID the same as its Delegator AID
    `RB`   Registrar-Backers            False       The backer list MUST provide registrar backer AIDs
    `NRB`  No-Registrar-Backers         False       Registrar backers are no longer allowed
-:::
 
 The `Establishment-Only`, `EO` config trait enables the Controller to
 increase its KELs security by not allowing interaction
 (non-establishment) events. This means all events MUST be signed by
 first-time, one-time pre-rotated keys. Key compromise is not possible
 due to repeated exposure of signing keys on [Interaction
-event](#term:interaction-event){.term-reference}s. A Validator MUST
+event](#term:interaction-event)s. A Validator MUST
 invalidate, i.e., drop any non-establishment events.
 
 The `Do-Not-Delegate`, `DND` config trait enables the Controller to
@@ -1625,8 +1608,7 @@ delegate. This prevents spurious delegations. A delegation seal MAY
 appear in an Interaction event. Interaction events are less secure than
 rotation events so this configuration trait prevents delegations. In
 addition, a Delegatee holds its own private keys. Therefore, a given
-[Delegatee](https://trustoverip.github.io/ctwg-main-glossary/#term:delegatee){.x-term-reference
-.term-reference local-href="#term:toip1:delegatee"} could delegate other
+[Delegatee](https://trustoverip.github.io/ctwg-main-glossary/#term:delegatee) could delegate other
 AIDS via interaction events that do not require the approval of its
 delegate. A Validator MUST invalidate, i.e., drop any delegated events
 whose Delegator has this configuration trait.
@@ -1637,7 +1619,7 @@ treated as equivalent to the Delegator. This enables horizontal scaling
 of a Delegator's signing infrastructure.
 
 The `Registrar-Backer`, `RB` config trait indicates that the
-[Backer](#term:backer){.term-reference} (witness) list in the
+[Backer](#term:backer) (witness) list in the
 establishment event in which this trait appears provides the AIDs of
 ledger registrar backers. The event MUST also include Registrar Backer
 Seal for each registrar backer in the list. This config trait enables a
@@ -1658,12 +1640,12 @@ configuration traits in its configuration trait list, then the one that
 appears last in the configuration trait list is enforced, i.e.,
 activated, and any earlier appearances are ignored.
 
-##### [§](#seal-list-field){.toc-anchor .d-print-none} Seal list field
+##### [§](#seal-list-field) Seal list field
 
 The Seal, `a` (anchor) field value is a list of field maps representing
 Seals. These are defined in detail in the Seals Section below.
 
-### [§](#seals){.toc-anchor .d-print-none} Seals
+### [§](#seals) Seals
 
 The dictionary definition of the seal is "evidence of authenticity".
 Seals make a verifiable, nonrepudiable commitment to an external
@@ -1716,9 +1698,8 @@ by its order of appearance in the set of fields for that seal. The field
 values appear sequentially in a CESR serialization of that seal. The
 field ordering is provided in the tables below.
 
-#### [§](#seal-count-codes){.toc-anchor .d-print-none} Seal Count Codes
+#### [§](#seal-count-codes) Seal Count Codes
 
-::: table-responsive-md
    Code   Name                            Type          Field Labels  Description
   ------- ------------------------------- ------------ -------------- ------------------------------------------------------------------
    `-Q`   DigestSealSingles               SealDigest       `[d]`      Cryptographic digest as seal
@@ -1735,9 +1716,8 @@ field ordering is provided in the tables below.
    `--V`  BigBackerRegistrarSealCouples   SealBack       `[bi, d]`    Backer AID metadata digest as seal
    `-W`   TypedDigestSealCouples          SealBack        `[t, d]`    Typed digest as seal
    `--W`  BigTypedDigestSealCouples       SealBack        `[t, d]`    Typed digest as seal
-:::
 
-#### [§](#digest-seal){.toc-anchor .d-print-none} Digest seal
+#### [§](#digest-seal) Digest seal
 
 The value of this seal's `d` field is an undifferentiated digest of some
 external data item. If the data is a SAD, then the value is its SAID.
@@ -1750,7 +1730,7 @@ The JSON version is shown. There is also a native CESR version.
 }
 ```
 
-#### [§](#merkle-tree-root-digest-seal){.toc-anchor .d-print-none} Merkle Tree root digest seal
+#### [§](#merkle-tree-root-digest-seal) Merkle Tree root digest seal
 
 The value of this seal's `rd` field is the root of a Merkle tree of
 digests of external data. This enables a compact commitment to a large
@@ -1767,7 +1747,7 @@ seal.
 }
 ```
 
-#### [§](#source-event-seal){.toc-anchor .d-print-none} Source Event seal
+#### [§](#source-event-seal) Source Event seal
 
 Source event seals bind to an event that implies what AID is associated
 with the seal from the context in which that seal appears. This provides
@@ -1794,7 +1774,7 @@ seal.
 }
 ```
 
-#### [§](#key-event-seal){.toc-anchor .d-print-none} Key Event seal
+#### [§](#key-event-seal) Key Event seal
 
 Key Event seals bind an event from some other (external) KEL or other
 type of event log to the event in the KEL where the seal appears. This
@@ -1818,7 +1798,7 @@ There is also a CESR native version of the seal.
 }
 ```
 
-#### [§](#latest-establishment-event-seal){.toc-anchor .d-print-none} Latest establishment event seal
+#### [§](#latest-establishment-event-seal) Latest establishment event seal
 
 The latest establishment event seal's function is similar to the key
 event seal above except that it does not designate a specific key event
@@ -1836,11 +1816,11 @@ seal.
 }
 ```
 
-#### [§](#registrar-backer-seal){.toc-anchor .d-print-none} Registrar Backer seal
+#### [§](#registrar-backer-seal) Registrar Backer seal
 
-When a ledger backer or [Backer](#term:backer){.term-reference}s are
+When a ledger backer or [Backer](#term:backer)s are
 used as a secondary root-of-trust instead of a
-[Witness](#term:witness){.term-reference} pool, then a backer seal is
+[Witness](#term:witness) pool, then a backer seal is
 REQUIRED. The backer registrar is responsible for anchoring key events
 as transactions on the ledger. In addition to the backer seal, the
 establishment event that designates the backer MUST also include a
@@ -1856,8 +1836,8 @@ registrar backer identifier is the authoritative one for that registrar
 value).
 
 The `d` field value in the seal MUST be the SAID of the associated
-metadata [SAD](#term:sad){.term-reference} that provides the backer
-registrar metadata. The [SAD](#term:sad){.term-reference} MAY appear as
+metadata [SAD](#term:sad) that provides the backer
+registrar metadata. The [SAD](#term:sad) MAY appear as
 the value of the seal data, `sd` field in an associated bare, `bar`
 message (defined later). The nested `d` SAID of this `sd` block in the
 bare message MUST be the `d` field in the associated seal. This metadata
@@ -1879,7 +1859,7 @@ seal.
 }
 ```
 
-#### [§](#typed-seal){.toc-anchor .d-print-none} Typed seal
+#### [§](#typed-seal) Typed seal
 
 Typed seals bind some data via a digest of that data to whatever context
 in which the seal appears. This provides an implicit approval or
@@ -1899,7 +1879,7 @@ inclusion and exclusion, however, may differ based on the type of Merkle
 tree, such as a Sparse Merkle tree versus a non-sparse tree.
 
 The value of the type `t` field is a CESR encoded
-[Primitive](#term:primitive){.term-reference} in the Text domain (qb64).
+[Primitive](#term:primitive) in the Text domain (qb64).
 It has 4 characters for the seal digest type, and 3 Base64 characters
 for version. The first version character is the major version, and the
 last two characters are the minor version. This provides for a total of
@@ -1918,11 +1898,9 @@ The fields in a typed MUST appear in the following order `[ t, d]`.
 The JSON version is shown. There is also a CESR native version of the
 seal.
 
-::: {#note-1 .notice .note}
-[NOTE](#note-1){.notice-link}
+[NOTE](#note-1)
 
 Examples in this section are not cryptographically verifiable
-:::
 
 ``` language-json
 {
@@ -1931,9 +1909,9 @@ Examples in this section are not cryptographically verifiable
 }
 ```
 
-### [§](#key-event-messages){.toc-anchor .d-print-none} Key event messages
+### [§](#key-event-messages) Key event messages
 
-A [Key event message](#term:key-event-message){.term-reference} types
+A [Key event message](#term:key-event-message) types
 MUST be one of the following `[icp, rot, ixn, dip, drt]`.
 
 The convention for field ordering within a message is to put the fields
@@ -1941,7 +1919,7 @@ that are common to all Message types first followed by fields that are
 not common. The common fields are `v`, `t`, and `d` in that order. A
 Validator MAY drop any provided key event message body that does not
 have at least one attached signature from the current controlling key
-state of the AID of the associated [KEL](#term:kel){.term-reference}.
+state of the AID of the associated [KEL](#term:kel).
 
 In the following examples, for each of the Key event message types, the
 serialization kind used is JSON. This is JSON without whitespace, which
@@ -1961,7 +1939,7 @@ the SAID (digest) of a given message.
 The Annex titled "Working Examples Setup" provides more detail on how to
 replicate the working examples.
 
-#### [§](#inception-event-message-body){.toc-anchor .d-print-none} Inception Event Message Body
+#### [§](#inception-event-message-body) Inception Event Message Body
 
 The top-level fields of an Inception, `icp`, event message body MUST
 appear in the following order:
@@ -1970,12 +1948,12 @@ other top-level fields are allowed (MUST NOT appear). Signatures and
 other information, when attached, MUST be attached to the Message body
 using CESR attachment codes.
 
-##### [§](#inception-event-example){.toc-anchor .d-print-none} Inception Event Example
+##### [§](#inception-event-example) Inception Event Example
 
 The message body is provided as a [Python
-dict](#term:python-dict){.term-reference}. This dict is then serialized
+dict](#term:python-dict). This dict is then serialized
 using the SAID protocol to generate the
-[SAIDive](#term:saidive){.term-reference} values in the `d` and `i`
+[SAIDive](#term:saidive) values in the `d` and `i`
 fields. The serialization kind is JSON.
 
 ``` language-python
@@ -2045,7 +2023,7 @@ purposes of the examples, let this be given the user-friendly alias
 config trait `DID` for `Delegate-Is-Delegator` which means that
 Validators may treat Delegates (Delegatees) of Ean as if they were Ean.
 
-#### [§](#delegated-inception-event-message-body){.toc-anchor .d-print-none} Delegated Inception Event Message Body
+#### [§](#delegated-inception-event-message-body) Delegated Inception Event Message Body
 
 The top-level fields of a Delegated Inception, `dip` event message body
 MUST appear in the following order:
@@ -2054,7 +2032,7 @@ other top-level fields are allowed (MUST NOT appear). Signatures and
 other information, when attached, MUST be attached to the Message body
 using CESR attachment codes.
 
-#### [§](#interaction-event-message-body){.toc-anchor .d-print-none} Interaction Event Message Body
+#### [§](#interaction-event-message-body) Interaction Event Message Body
 
 The top-level fields of an Interaction, `ixn` event message body MUST
 appear in the following order: `[ v, t, d, i, s, p, a]`. All are
@@ -2062,7 +2040,7 @@ REQUIRED. No other top-level fields are allowed (MUST NOT appear).
 Signatures and other information, when attached, MUST be attached to the
 Message body using CESR attachment codes.
 
-##### [§](#interaction-event-example){.toc-anchor .d-print-none} Interaction Event Example
+##### [§](#interaction-event-example) Interaction Event Example
 
 The message body is provided as a Python dict. This dict is then
 serialized using the SAID protocol to generate the SAIDive value in the
@@ -2110,7 +2088,7 @@ Ean's AID as the Delegator in that KEL's Inception event provides a
 cryptographically verifiable two-way binding (sometimes called a two-way
 peg) between the delegating and delegated events.
 
-#### [§](#rotation-event-message-body){.toc-anchor .d-print-none} Rotation Event Message Body
+#### [§](#rotation-event-message-body) Rotation Event Message Body
 
 The top-level fields of a Rotation, `rot` event message body MUST appear
 in the following order:
@@ -2119,7 +2097,7 @@ No other top-level fields are allowed (MUST NOT appear). Signatures and
 other information, when attached, MUST be attached to the Message body
 using CESR attachment codes.
 
-##### [§](#rotation-event-example){.toc-anchor .d-print-none} Rotation Event Example
+##### [§](#rotation-event-example) Rotation Event Example
 
 The message body is provided as a Python dict. This dict is then
 serialized using the SAID protocol to generate the SAIDive value in the
@@ -2199,7 +2177,7 @@ set of next keys:
 
 Notice that in this example, the Issuer is Ean and uses Ean's AID for
 the `i` field value. This [Rotation
-event](#term:rotation-event){.term-reference} is sealing the delegation
+event](#term:rotation-event) is sealing the delegation
 of Fay's Rotation event by virtue of a SealEvent dict in the data
 attribute field list. In the event seal, the `i` field value is Fay's
 AID. The `s` field value is the hex encoded sequence number of Fay's
@@ -2211,7 +2189,7 @@ that KEL's Inception event provides a cryptographically verifiable
 two-way binding (sometimes called a two-way peg) between the delegating
 and delegated events.
 
-#### [§](#delegated-inception-event-message-body-2){.toc-anchor .d-print-none} Delegated Inception Event Message Body {#delegated-inception-event-message-body-2}
+#### [§](#delegated-inception-event-message-body-2) Delegated Inception Event Message Body
 
 The top-level fields of a Delegated Inception, `dip` event message body
 MUST appear in the following order:
@@ -2220,7 +2198,7 @@ other top-level fields are allowed (MUST NOT appear). Signatures and
 other information, when attached, MUST be attached to the Message body
 using CESR attachment codes.
 
-##### [§](#delegated-inception-event-example){.toc-anchor .d-print-none} Delegated Inception Event Example
+##### [§](#delegated-inception-event-example) Delegated Inception Event Example
 
 The message body is provided as a Python dict. This dict is then
 serialized using the SAID protocol to generate the SAIDive values in the
@@ -2297,7 +2275,7 @@ Delegatee. Also, notice that the thresholds for the signing keys and
 next rotation keys use the syntax of a fractionally weighted threshold
 instead of a simple numeric threshold.
 
-#### [§](#delegated-rotation-event-message-body){.toc-anchor .d-print-none} Delegated Rotation Event Message Body
+#### [§](#delegated-rotation-event-message-body) Delegated Rotation Event Message Body
 
 The top-level fields of a Delegated Rotation, `drt` event message body
 MUST appear in the following order:
@@ -2312,7 +2290,7 @@ Delegated Rotation events, the message body type of `drt` signals to
 Validators that the event must be validated using the rules for
 delegated events.
 
-##### [§](#delegated-rotation-event-example){.toc-anchor .d-print-none} Delegated Rotation Event Example
+##### [§](#delegated-rotation-event-example) Delegated Rotation Event Example
 
 The message body is provided as a Python dict. This dict is then
 serialized using the SAID protocol to generate the SAIDive value in the
@@ -2377,9 +2355,9 @@ set of next keys:
 Notice that in addition to rotating the signing keys, this event also
 rotates out one of the witnesses and replaces it with a new witness.
 
-### [§](#receipt-messages){.toc-anchor .d-print-none} Receipt Messages
+### [§](#receipt-messages) Receipt Messages
 
-#### [§](#receipt-message-body){.toc-anchor .d-print-none} Receipt Message Body
+#### [§](#receipt-message-body) Receipt Message Body
 
 The Receipt Message types MUST be as follows `[rct]`.
 
@@ -2388,7 +2366,7 @@ following order: `[ v, t, d, i, s]`. All are REQUIRED. No other
 top-level fields are allowed (MUST NOT appear). Signatures and Seals
 MUST be attached to the Message body using CESR attachment codes. The
 Signatures or Seals are on the [Key
-event](#term:key-event){.term-reference} indicated by the top-level
+event](#term:key-event) indicated by the top-level
 fields of the Receipt, not the Receipt message body itself.
 
 The SAID, `d` field value is the SAID of a key event from a KEL, i.e.,
@@ -2400,14 +2378,14 @@ the key event being receipted.
 The Sequence Number, `s` field value is the Sequence Number
 (hex-encoded) of the key event being receipted.
 
-##### [§](#receipt-example){.toc-anchor .d-print-none} Receipt example:
+##### [§](#receipt-example) Receipt example:
 
 The message body is provided as a Python dict. This dict is then
 serialized. The serialization kind is JSON. Note that unlike the other
 message bodies a reciept does not have a field that is the SAID of its
-serialization. A [Receipt](#term:receipt){.term-reference} message body
+serialization. A [Receipt](#term:receipt) message body
 merely holds a reference to the SAID of some [Key event
-message](#term:key-event-message){.term-reference} body.
+message](#term:key-event-message) body.
 
 ``` language-python
 {
@@ -2429,22 +2407,22 @@ b'ybB1UcfWsv","i":"EPR7FWsN3tOM8PqfMap2FRfF4MFQ4v3ZXjBUcMVtvhmB","s":"2"}')
 
 Notice that this is a receipt for Ean's Rotation Event message above.
 
-### [§](#routed-messages){.toc-anchor .d-print-none} Routed Messages
+### [§](#routed-messages) Routed Messages
 
 The Routed Messages MUST include a route, `r` field, and MAY include a
 return route, `rr` field. The value of the route and return route fields
 are hierarchical. The Routed Message types MUST be as follows
 `[qry, rpy, pro, bar, xip, exn]`.
 
-#### [§](#routed-services){.toc-anchor .d-print-none} Routed Services
+#### [§](#routed-services) Routed Services
 
 Routed messages enable a backend to employ routed services in support of
-KELs, [KERL](#term:kerl){.term-reference}s, service endpoints, and
+KELs, [KERL](#term:kerl)s, service endpoints, and
 supporting data for KERI. Using hierarchical routes to manage services
 is a powerful paradigm for both externally and internally facing APIs.
 By abstracting the route concept so that it is not tied to the narrow
 confines of ReST URL-based APIs and combining that abstraction with
-[OOBI](#term:oobi){.term-reference}s that map transport schemes to AIDs,
+[OOBI](#term:oobi)s that map transport schemes to AIDs,
 a KERI implementation can use routing across its distributed
 infrastructure as a unifying architectural property.
 
@@ -2465,11 +2443,11 @@ inter-protocol, and inter-database.
 A given implementation could have multiple types of routers, each with
 different properties, including security properties.
 
-#### [§](#routing-security){.toc-anchor .d-print-none} Routing Security
+#### [§](#routing-security) Routing Security
 
 Suppose that some information needs to be protected as
 sealed-confidential where sealed means the information is bound to the
-[KEL](#term:kel){.term-reference} via a Seal and confidential means that
+[KEL](#term:kel) via a Seal and confidential means that
 the information is sensitive and needs to be protected. A KEL conveys
 two types of information:
 
@@ -2546,11 +2524,10 @@ to that data. Those commitments use cryptographic digests that maintain
 confidentiality. Later disclosure of the information can be facilitated
 with a prod-bare pair.
 
-#### [§](#reserved-field-labels-in-routed-messages){.toc-anchor .d-print-none} Reserved field labels in routed messages
+#### [§](#reserved-field-labels-in-routed-messages) Reserved field labels in routed messages
 
 Reserved field labels in other KERI message body types:
 
-::: table-responsive-md
   Label   Title                                  Description
   ------- -------------------------------------- ----------------------------------------------------------------------
   `v`     Version String                         enables regex parsing of field map in CESR stream
@@ -2561,18 +2538,17 @@ Reserved field labels in other KERI message body types:
   `ri`    Receiver Identifier Prefix (AID)       fully qualified primitive of the message Receiver (recipient) AID
   `x`     Exchange SAID                          fully qualified unique digest for an exchange transaction
   `p`     Prior SAID                             fully qualified digest, prior message SAID
-  `dt`    Issuer relative ISO date/time string   
+  `dt`    Issuer relative ISO date/time string
   `r`     Route                                  delimited path string for routing message
   `rr`    Return Route                           delimited path string for routing a response (reply or bare) message
   `q`     Query Map                              field map of query parameters
   `a`     Attribute Map                          field map of message attributes
-:::
 
 Unless otherwise clarified below, the definitions of the \`\[v, t, d,
 i\]' field values are the same as found above in the Key Event message
 body section.
 
-##### [§](#uuid-salty-nonce-field){.toc-anchor .d-print-none} UUID Salty Nonce field
+##### [§](#uuid-salty-nonce-field) UUID Salty Nonce field
 
 The UUID `u` field value is a cryptographic strength salty nonce, i.e.,
 a random number with approximately 128 bits of entropy. This ensures
@@ -2583,7 +2559,7 @@ message, but a different UUID field value. This field appears in
 exchange transaction inception messages to ensure that the associated
 transaction ID is also universally unique.
 
-##### [§](#controller-aid-field){.toc-anchor .d-print-none} Controller AID field
+##### [§](#controller-aid-field) Controller AID field
 
 The Controller AID, `i` field value is an AID that controls its
 associated KEL. When the Controller Identifier AID, `i` field appears at
@@ -2592,17 +2568,17 @@ the sender of that message. A Controller AID, `i` field MAY appear in
 other places in messages (not at the top level). In those cases, its
 meaning SHOULD be determined by the context of its appearance.
 
-##### [§](#receiver-aid-field){.toc-anchor .d-print-none} Receiver AID field
+##### [§](#receiver-aid-field) Receiver AID field
 
-The [Receiver](#term:receiver){.term-reference} AID, `ri` field value is
+The [Receiver](#term:receiver) AID, `ri` field value is
 an AID of the receiver (recipient) of an exchange message. The receiver
 is a controller on its associated KEL but is not the sender of the
 exchange message. The Reciever Identifier AID, `ri` field appears at the
 top-level of a [Routed Exchange
-Message](#term:routed-exchange-message){.term-reference}, it refers to
+Message](#term:routed-exchange-message), it refers to
 the AID of the receiver (recipient) of that message.
 
-##### [§](#prior-event-said-field){.toc-anchor .d-print-none} Prior event SAID field
+##### [§](#prior-event-said-field) Prior event SAID field
 
 The prior, `p` field is the SAID of the prior exchange message in a
 transaction. When the prior `p` field appears in an exchange message,
@@ -2610,9 +2586,9 @@ its value MUST be the SAID of the immediately preceding exchange message
 in that transaction. When an exchange message is not part of a
 transaction, then the prior `p` field value MUST be the empty string.
 
-##### [§](#exchange-identifier-field){.toc-anchor .d-print-none} Exchange identifier field
+##### [§](#exchange-identifier-field) Exchange identifier field
 
-The [Exchange Identifier](#term:exchange-identifier){.term-reference}
+The [Exchange Identifier](#term:exchange-identifier)
 SAID, `x` field value MUST be the SAID, `d` field value of the first
 message in the set of exchange messages that constitute a transaction.
 The first message MUST be an Exchange Inception message with type `xip`.
@@ -2627,21 +2603,21 @@ in a duplicity-evident way. When an exchange message is not part of a
 transaction, the Exchange Identifier, `x` field value, MUST be the empty
 string.
 
-##### [§](#datetime-dt-field){.toc-anchor .d-print-none} Datetime, `dt` field
+##### [§](#datetime-dt-field) Datetime, `dt` field
 
 The datetime, `dt` field value, if any, MUST be the ISO-8601 datetime
 string with microseconds and UTC offset as per IETF
 [RFC-3339](#RFC3339). In a given field map (block) the primary datetime
 will use the label, `dt`. The usage context of the message and the block
 where a given DateTime, `dt` field appears determines which clock
-(sender or [Receiver](#term:receiver){.term-reference}) the datetime is
+(sender or [Receiver](#term:receiver)) the datetime is
 relative to.
 
 An example datetime string in this format is as follows:
 
 `2020-08-22T17:50:09.988921+00:00`
 
-##### [§](#route-field){.toc-anchor .d-print-none} Route field
+##### [§](#route-field) Route field
 
 The Route, `r` field value is a '/' delimited string that forms a path.
 This indicates the target of a given message that includes this field.
@@ -2654,7 +2630,7 @@ transaction type is an issuance and presentation exchange transaction
 and the full route path value, `/ipex/offer` means that the message is
 the `offer` step in such a transaction.
 
-##### [§](#return-route-field){.toc-anchor .d-print-none} Return Route field
+##### [§](#return-route-field) Return Route field
 
 The Return Route, `rr` field value is a '/' delimited string that forms
 a path. This allows a message to indicate how to target the associated
@@ -2662,24 +2638,24 @@ response to the message. This enables messages on asynchronous
 transports to associate a given response with the message that triggered
 the response.
 
-##### [§](#query-field){.toc-anchor .d-print-none} Query field
+##### [§](#query-field) Query field
 
 The Query, `q` field value is a field map (block). Its fields provide
 the equivalent of query parameters in a ReST resource.
 
-##### [§](#attribute-field){.toc-anchor .d-print-none} Attribute field
+##### [§](#attribute-field) Attribute field
 
 The Attribute, `a` field value is a field map (block). Its fields
 provide the attributes conveyed by the message.
 
-#### [§](#query-message-body){.toc-anchor .d-print-none} Query Message Body
+#### [§](#query-message-body) Query Message Body
 
 The top-level fields of a Query, `qry` message body MUST appear in the
 following order: `[ v, t, d, dt, r, rr, q]`. All are REQUIRED. No other
 top-level fields are allowed (MUST NOT appear). Signatures and Seals
 MUST be attached to the Message body using CESR attachment codes.
 
-##### [§](#example-query-message){.toc-anchor .d-print-none} Example Query Message
+##### [§](#example-query-message) Example Query Message
 
 The message body is provided as a Python dict. This dict is then
 serialized using the SAID protocol to generate the SAIDive value in the
@@ -2717,14 +2693,14 @@ the top-level `i` field. The query could be to fetch a witness OOBI for
 Ean. This is determined by the route and the appearance of Ean's AID in
 the `i` field of the query `q` block and the role being "witness".
 
-#### [§](#reply-message-body){.toc-anchor .d-print-none} Reply Message Body
+#### [§](#reply-message-body) Reply Message Body
 
 The top-level fields of a Reply, `rpy` message body MUST appear in the
 following order: `[ v, t, d, dt, r, a]`. All are REQUIRED. No other
 top-level fields are allowed (MUST NOT appear). Signatures and Seals
 MUST be attached to the Message body using CESR attachment codes.
 
-##### [§](#example-reply-message){.toc-anchor .d-print-none} Example Reply Message
+##### [§](#example-reply-message) Example Reply Message
 
 The message body is provided as a Python dict. This dict is then
 serialized using the SAID protocol to generate the SAIDive value in the
@@ -2761,7 +2737,7 @@ Ean is the issuer/sender of this reply whose data attribute block
 includes the url of a service endpoint (aka url OOBI) for one of Ean's
 witnesses.
 
-#### [§](#prod-message-body){.toc-anchor .d-print-none} Prod Message Body
+#### [§](#prod-message-body) Prod Message Body
 
 The top-level fields of a Prod, `pro` message body MUST appear in the
 following order: `[ v, t, d, dt, r, rr, q]`. All are REQUIRED. No other
@@ -2774,7 +2750,7 @@ of the data item, as a SAD (self-addressed data), is anchored with a
 seal in the KEL of the data source. Whereas the data targeted by Query,
 `qry` messages, is unconstrained.
 
-##### [§](#example-prod-message){.toc-anchor .d-print-none} Example Prod Message
+##### [§](#example-prod-message) Example Prod Message
 
 The message body is provided as a Python dict. This dict is then
 serialized using the SAID protocol to generate the SAIDive value in the
@@ -2809,7 +2785,7 @@ b'"q":{"i":"EPR7FWsN3tOM8PqfMap2FRfF4MFQ4v3ZXjBUcMVtvhmB","name":true}}')
 
 In this example, Fay is prodding Ean for his name.
 
-#### [§](#bare-message-body){.toc-anchor .d-print-none} Bare Message Body
+#### [§](#bare-message-body) Bare Message Body
 
 The top-level fields of a Reply, `bar` message body MUST appear in the
 following order: `[ v, t, d, dt, r, a]`. All are REQUIRED. No other
@@ -2822,7 +2798,7 @@ data item, as a SAD (self-addressed data), is anchored with a seal in
 the KEL of the data source... Whereas the data returned by Reply, `rpy`
 messages, is unconstrained.
 
-##### [§](#example-bare-message){.toc-anchor .d-print-none} Example Bare Message
+##### [§](#example-bare-message) Example Bare Message
 
 The message body is provided as a Python dict. This dict is then
 serialized using the SAID protocol to generate the SAIDive value in the
@@ -2856,7 +2832,7 @@ b'M8PqfMap2FRfF4MFQ4v3ZXjBUcMVtvhmB","name":"Ean"}}')
 
 This message has Ean exposing his name.
 
-#### [§](#exchange-transaction-inception-message-body){.toc-anchor .d-print-none} Exchange Transaction Inception Message Body
+#### [§](#exchange-transaction-inception-message-body) Exchange Transaction Inception Message Body
 
 The top-level fields of an Exchange Transaction Incept, `xip` message
 body MUST appear in the following order:
@@ -2864,7 +2840,7 @@ body MUST appear in the following order:
 top-level fields are allowed (MUST NOT appear). Signatures and Seals
 MUST be attached to the Message body using CESR attachment codes.
 
-##### [§](#example-exchange-transaction-inception-message){.toc-anchor .d-print-none} Example Exchange Transaction Inception Message
+##### [§](#example-exchange-transaction-inception-message) Example Exchange Transaction Inception Message
 
 The message body is provided as a Python dict. This dict is then
 serialized using the SAID protocol to generate the SAIDive value in the
@@ -2907,7 +2883,7 @@ b'":{"action":"sell","item":"Rembrant","price":300000.0}}')
 This message is an offer (ask) from Fay (sender) to sell a painting to
 Ean (receiver).
 
-#### [§](#exchange-message-body){.toc-anchor .d-print-none} Exchange Message Body
+#### [§](#exchange-message-body) Exchange Message Body
 
 The top-level fields of an Exchange, `exn` message body MUST appear in
 the following order: `[ v, t, d, i, ri, x, p, dt, r, q, a]`. All are
@@ -2915,7 +2891,7 @@ REQUIRED. No other top-level fields are allowed (MUST NOT appear).
 Signatures and Seals MUST be attached to the Message body using CESR
 attachment codes.
 
-##### [§](#example-exchange-transaction-message){.toc-anchor .d-print-none} Example Exchange Transaction Message
+##### [§](#example-exchange-transaction-message) Example Exchange Transaction Message
 
 The message body is provided as a Python dict. This dict is then
 serialized using the SAID protocol to generate the SAIDive value in the
@@ -2961,11 +2937,11 @@ This message is an agreement (bid) from Ean (sender) to buy the painting
 from Fay (receiver). Notice that the `x` and `p` field values bind this
 message to the `xip` message from Fay.
 
-### [§](#signing-and-sealing-keri-data-structures){.toc-anchor .d-print-none} Signing and sealing KERI data structures
+### [§](#signing-and-sealing-keri-data-structures) Signing and sealing KERI data structures
 
-#### [§](#indexed-signatures){.toc-anchor .d-print-none} Indexed Signatures
+#### [§](#indexed-signatures) Indexed Signatures
 
-Cryptographic [Signatures](#term:signatures){.term-reference} are
+Cryptographic [Signatures](#term:signatures) are
 computed on the serialization of a KERI data structure. The
 serializations use CESR. The signatures are also encoded in CESR and can
 be attached to the KERI data structure as part of a CESR stream.
@@ -2974,7 +2950,7 @@ Message body using CESR attachment codes.
 
 CESR provides special indexed signature codes for signatures that index
 the signature to the public key inside a key list inside a KERI
-[Establishment event](#term:establishment-event){.term-reference}
+[Establishment event](#term:establishment-event)
 message data structure. This way, only the indexed signature MUST be
 attached, not the public key needed to verify the signature. The public
 key is looked up from the index into the key list in the appropriate
@@ -3004,12 +2980,12 @@ lists are strictly ordered so that only the index is needed to determine
 the public key. Depending on the event and the key lists, a
 controller-indexed signature MAY REQUIRE one or two indices.
 Controller-indexed signatures attached to [Interaction
-event](#term:interaction-event){.term-reference}s and non-key-event
+event](#term:interaction-event)s and non-key-event
 messages need only one index into the current signing key list from the
 most recent prior establishment event. Controller-indexed signatures
 attached to Inception events (delegated or not) need only one index into
 the current signing key list in the [Inception
-event](#term:inception-event){.term-reference}. Controller-indexed
+event](#term:inception-event). Controller-indexed
 signatures attached to Rotation events (delegated or not) MAY REQUIRE
 two indices, one into the signing key list of the rotation event itself
 and the other into the rotation key digest list from the immediately
@@ -3017,7 +2993,7 @@ prior Establishment Event (Inception or Rotation), i.e., the prior next
 key digest list.
 
 Witness-indexed signatures index into the effective
-[Witness](#term:witness){.term-reference} list as established by the
+[Witness](#term:witness) list as established by the
 latest Establishment event (interaction or rotation). To clarify,
 witness-indexed signatures attached to any type of key event (inception,
 rotation, interaction, delegated inception, delegated rotation) need
@@ -3074,9 +3050,9 @@ duplicity) for that event to be accepted as valid.
 Events that have a non-empty set of attached signatures which set does
 not satisfy the REQUIRED thresholds SHOULD escrow the event while
 waiting for other signatures to arrive either as attachments to the same
-[Version](#term:version){.term-reference} of the event or to a receipt
+[Version](#term:version) of the event or to a receipt
 of that event (see next section). A
-[Validator](#term:validator){.term-reference} that receives a key event
+[Validator](#term:validator) that receives a key event
 or non-key-event message that does not have attached at least one
 verifiable Controller signature MUST drop that message (i.e., not escrow
 or otherwise accept it). This protects the Validator from a DDoS attack
@@ -3087,23 +3063,23 @@ indexed signatures codes are provided in the CESR code table for indexed
 signatures \[[1](#CESR)\]. Given an indexed signature, a Validator looks
 up the associate public key from the index into the appropriate table.
 
-#### [§](#non-indexed-signatures){.toc-anchor .d-print-none} Non-indexed signatures
+#### [§](#non-indexed-signatures) Non-indexed signatures
 
 CESR also supports codes for
-[Signatures](#term:signatures){.term-reference} that are not indexed. In
+[Signatures](#term:signatures) that are not indexed. In
 this case, additional information MUST be attached, such as the
 associated public key, in order for a validator to verify the signature.
 This additional information MUST be in the form of a CESR group defined
 by a CESR group code. \[[1](#CESR)\]
 
-#### [§](#endorsements){.toc-anchor .d-print-none} Endorsements
+#### [§](#endorsements) Endorsements
 
 Other entities, as identified by their AIDs, can decide to attach
-signatures on key events for a [KEL](#term:kel){.term-reference} where
+signatures on key events for a [KEL](#term:kel) where
 the signer's AID is neither the controlling AID of that KEL nor a
 witness AID of that event in that KEL. These non-controller, non-witness
 signatures can be called Endorsements. For example, a
-[Watcher](#term:watcher){.term-reference}, when replaying events from a
+[Watcher](#term:watcher), when replaying events from a
 KEL its watches could choose to attach its own signature to the event in
 order to endorse or otherwise commit to that version of the event as the
 one the Watcher has seen. In this case, the attachment MUST include at
@@ -3113,7 +3089,7 @@ state. CESR provides group codes for attaching signature Endorsements
 for both transferable and non-transferable AIDs with indexed and
 non-indexed signatures as applicable (see CESR table).
 
-#### [§](#sealing){.toc-anchor .d-print-none} Sealing
+#### [§](#sealing) Sealing
 
 Any serialized data can be sealed in a KEL and thereby bound to the
 associated key state by including the associated seal in a key event.
@@ -3155,7 +3131,7 @@ the seal in order to look up the seal and verify its presence. CESR
 provides codes for attached event seal references as well as codes for
 event seals.
 
-#### [§](#receipt-signatures){.toc-anchor .d-print-none} Receipt Signatures
+#### [§](#receipt-signatures) Receipt Signatures
 
 Receipt message data structures are not key events but merely reference
 key events (see below). A signature attached to a Receipt is not a
@@ -3172,23 +3148,22 @@ not yet received can escrow the Receipt and its attached signatures.
 This escrow, however, could be vulnerable to a DDoS attack due to
 spurious event references.
 
-#### [§](#receipt-seals){.toc-anchor .d-print-none} Receipt Seals
+#### [§](#receipt-seals) Receipt Seals
 
 Similar to attached signatures, a
-[Receipt](#term:receipt){.term-reference} message can convey an attached
+[Receipt](#term:receipt) message can convey an attached
 seal reference that allows a validator to associate the sealing event in
 the sealer's KEL with the reference to the sealed event given by the
 Receipt body. CESR provides codes for attached seal source references to
 receipts. \[[1](#CESR)\]
 
-## [§](#keri-key-management){.toc-anchor .d-print-none} KERI key management
+## [§](#keri-key-management) KERI key management
 
-### [§](#keri-keypair-labeling-convention){.toc-anchor .d-print-none} KERI keypair labeling convention
+### [§](#keri-keypair-labeling-convention) KERI keypair labeling convention
 
 In order to make key event expressions both clearer and more concise, a
-[keypair](https://trustoverip.github.io/ctwg-general-glossary/#term:keypair){.x-term-reference
-.term-reference local-href="#term:toip2:keypair"} labeling convention is
-used. When an AID's [Key state](#term:key-state){.term-reference} is
+[keypair](https://trustoverip.github.io/ctwg-general-glossary/#term:keypair) labeling convention is
+used. When an AID's [Key state](#term:key-state) is
 dynamic, i.e., the set of controlling keypairs is transferable, then the
 keypair labels are indexed in order to represent the successive sets of
 keypairs that constitute the Key state at any position in the KEL.
@@ -3236,7 +3211,7 @@ set of keypairs used at any time for a given Key state includes more
 than one member, then `i != j` for every keypair, and both indices are
 needed.
 
-#### [§](#case-in-which-only-one-index-is-needed){.toc-anchor .d-print-none} Case in which only one index is needed
+#### [§](#case-in-which-only-one-index-is-needed) Case in which only one index is needed
 
 Because `i = j`, the indexed keypair for AID, A, is denoted by A^i^ or
 in tuple form by (A^i^, a^i^) where the keypair that is indexed uses the
@@ -3250,7 +3225,7 @@ Expressed as the list, \[A^0^, A^1^, A^2^, ...\]
 Where: A^0^ is the zero element in this sequence; (A^0^, a^0^) is the
 tuple form.
 
-#### [§](#case-in-which-both-indexes-are-needed){.toc-anchor .d-print-none} Case in which both indexes are needed
+#### [§](#case-in-which-both-indexes-are-needed) Case in which both indexes are needed
 
 Because `i != j`, the indexed keypair for AID, `A`, is denoted by A^i,j^
 or in tuple form by (A^i,j^, a^i,j^) where the keypair that is indexed
@@ -3266,7 +3241,7 @@ A^5,1^\].
 Where: the first two Key states will consume the first six keypairs of
 the list.
 
-#### [§](#labelling-the-digest-of-the-public-key){.toc-anchor .d-print-none} Labelling the digest of the public key
+#### [§](#labelling-the-digest-of-the-public-key) Labelling the digest of the public key
 
 With pre-rotation, each public key from the set of pre-rotated keypairs
 MUST be hidden as a qualified cryptographic digest of that public key.
@@ -3297,14 +3272,13 @@ MAY change when it is actually rotated in, if ever.
 Example of public key and the pre-rotated digest of the next public
 key - \[A^0,0^\], \[H(A^1,1^)\]
 
-#### [§](#labelling-key-events-in-a-kel){.toc-anchor .d-print-none} Labelling key events in a KEL
+#### [§](#labelling-key-events-in-a-kel) Labelling key events in a KEL
 
-Finally, each Key event in a [KEL](#term:kel){.term-reference} MUST have
+Finally, each Key event in a [KEL](#term:kel) MUST have
 a zero-based integer-valued, strictly increasing by one, sequence number
 represented by the variable `k`. Abstractly, the variable `k` can be
 used as an index on any
-[keypair](https://trustoverip.github.io/ctwg-general-glossary/#term:keypair){.x-term-reference
-.term-reference local-href="#term:toip2:keypair"} label to denote the
+[keypair](https://trustoverip.github.io/ctwg-general-glossary/#term:keypair) label to denote the
 sequence number of an event for which that keypair is authoritative.
 Usually, this appears as a subscript. Thus any given keypair label could
 have three indices, namely, `i,j,k`. A public key would appear as A
@@ -3333,14 +3307,13 @@ is omitted because `j = k`:
 
 \[A^0^~0~, A^1^~0~\], \[A^2^~1~, A^3^~1~\]
 
-### [§](#pre-rotation){.toc-anchor .d-print-none} Pre-rotation
+### [§](#pre-rotation) Pre-rotation
 
-Each [Establishment event](#term:establishment-event){.term-reference}
+Each [Establishment event](#term:establishment-event)
 involves two sets of keys that each play a role that together establish
 complete control authority over the AID associated with the location of
 that event in the KEL. To clarify, control authority is split between
-[keypair](https://trustoverip.github.io/ctwg-general-glossary/#term:key-pair){.x-term-reference
-.term-reference local-href="#term:toip2:key-pair"}s that hold signing
+[keypair](https://trustoverip.github.io/ctwg-general-glossary/#term:key-pair)s that hold signing
 authority and keypairs that hold rotation authority. A Rotation revokes
 and replaces the keypairs that hold signing authority, as well as
 replacing the keypairs that hold rotation authority. The two sets of
@@ -3359,10 +3332,10 @@ use to rotate.
 
 In addition, each Establishment event designates two threshold
 expressions, one for each set of keypairs (current and next). The
-[Current threshold](#term:current-threshold){.term-reference} determines
+[Current threshold](#term:current-threshold) determines
 the needed satisficing subset of signatures from the associated current
 set of keypairs for signing authority to be considered valid. The [Next
-threshold](#term:next-threshold){.term-reference} determines the needed
+threshold](#term:next-threshold) determines the needed
 satisficing subset of signatures from the associated next set of hidden
 keypairs for rotation authority to be considered valid. The simplest
 type of threshold expression for either threshold is an integer that is
@@ -3389,10 +3362,10 @@ recent Establishment event. The following sections detail the
 requirements for a valid set of signatures for each type of
 Establishment event.
 
-### [§](#inception-event-pre-rotation){.toc-anchor .d-print-none} Inception event pre-rotation
+### [§](#inception-event-pre-rotation) Inception event pre-rotation
 
 The creator of the [Inception
-event](#term:inception-event){.term-reference} MUST create two sets of
+event](#term:inception-event) MUST create two sets of
 keypairs, the current (initial) set and the next set. The private keys
 from the current set are kept as secrets. The public keys from the
 current set are exposed via inclusion in the Inception event. Both the
@@ -3404,7 +3377,7 @@ thresholds are exposed via inclusion in the event.
 
 Upon emittance of the Inception event, the current (initial) set of
 keypairs becomes the current set of
-[Verifiable](#term:verifiable){.term-reference} authoritative signing
+[Verifiable](#term:verifiable) authoritative signing
 keypairs for the AID. Emittance of the Inception event also issues the
 identifier. Moreover, to be verifiably authoritative, the Inception
 event MUST be signed by a threshold-satisficing subset of the current
@@ -3412,7 +3385,7 @@ event MUST be signed by a threshold-satisficing subset of the current
 against the attached signatures using the included current (initial)
 list of public keys. When self-addressing, a digest of the serialization
 of the Inception event provides the AID itself as derived by the SAID
-protocol [SAID](#term:said){.term-reference}.
+protocol [SAID](#term:said).
 
 There MUST be only one Establishment event that is an Inception event.
 All subsequent Establishment events MUST be Rotation events.
@@ -3420,8 +3393,7 @@ All subsequent Establishment events MUST be Rotation events.
 When the AID in the `i` field is a SAID, the new Inception event has two
 qualified digest fields. In this case, both the `d` and `i` fields MUST
 have the same value. This means the digest suite's [derivation
-code](https://trustoverip.github.io/kerisuite-glossary/#term:derivation-code){.x-term-reference
-.term-reference local-href="#term:keri1:derivation-code"}, used for the
+code](https://trustoverip.github.io/kerisuite-glossary/#term:derivation-code), used for the
 `i` field MUST be the same for the `d` field. The derivation of the `d`
 and `i` fields is special. Both the `d` and `i` fields are replaced with
 dummy `#` characters of the length of the digest to be used. The digest
@@ -3436,9 +3408,9 @@ is not a digest, then the `i` is given its value and the `d` field is
 replaced with dummy characters `#` of the correct length and then the
 digest is computed, which is the standard SAID algorithm.
 
-### [§](#rotation-using-pre-rotation){.toc-anchor .d-print-none} Rotation using pre-rotation
+### [§](#rotation-using-pre-rotation) Rotation using pre-rotation
 
-Unlike [Inception](#term:inception){.term-reference}, the creator of a
+Unlike [Inception](#term:inception), the creator of a
 Rotation event MUST create only one set of keypairs, the newly next set.
 Both the public and private keys from the newly created next set are
 kept as secrets and only the cryptographic digests of the public keys
@@ -3480,8 +3452,7 @@ i.e., used to sign), an attacker cannot forge and sign a Verifiable
 Rotation operation without first unblinding the pre-rotated keys.
 Therefore, given sufficient cryptographic strength of the digests, the
 only attack surface available to the adversary is a [side-channel
-attack](https://trustoverip.github.io/ctwg-general-glossary/#term:side-channel-attack){.x-term-reference
-.term-reference local-href="#term:toip2:side-channel-attack"} on the
+attack](https://trustoverip.github.io/ctwg-general-glossary/#term:side-channel-attack) on the
 private key store itself and not on signing infrastructure. But the
 Controller, as the creator of the pre-rotated private keys is free to
 make that key store as arbitrarily secure as needed because the
@@ -3490,7 +3461,7 @@ other words, as long as the creator keeps secret the pre-rotated public
 keys themselves, an attacker must attack the key storage infrastructure
 because side-channel attacks on signing infrastructure are obviated.
 
-As explained in the [First seen](#term:first-seen){.term-reference}
+As explained in the [First seen](#term:first-seen)
 policy section, for a Validator, the first seen rule applies, that is,
 the first seen Version of an event is the authoritative one for that
 Validator. The first seen wins. In other words, the first published
@@ -3538,19 +3509,17 @@ Inception followed by two Rotations. The initial number of authoritative
 keypairs is three and then changes to two and then changes back to
 three.
 
-::: table-responsive-md
    Event              Current Keypairs   CT                         Next Keypairs   NT
   ------- ---------------------------- ---- ------------------------------------- ----
      0      \[A^0,0^, A^1,0^, A^2,0^\]    2              \[H(A^3,1^), H(A^4,1^)\]    1
      1              \[A^3,1^, A^4,1^\]    1   \[H(A^5,2^), H(A^6,2^), H(A^7,2^)\]    2
      2      \[A^5,2^, A^6,2^, A^7,2^\]    2   \[H(A^8,3^), H(A^9,3^), H(A^10,3^\]    2
-:::
 
 Where:
 
 CT means Current threshold. NT means Next threshold.
 
-### [§](#fractionally-weighted-threshold){.toc-anchor .d-print-none} Fractionally weighted threshold
+### [§](#fractionally-weighted-threshold) Fractionally weighted threshold
 
 A simple fractionally weighted threshold consists of a list of one or
 more clauses where each clause is a list of rational fractions (i.e.,
@@ -3558,7 +3527,7 @@ ratios of non-negative integers expressed as fractions, where zero is
 not allowed in the denominator). Each entry in each clause in the
 fractional weight list corresponds one-to-one to a public key appearing
 in a key list in an [Establishment
-event](#term:establishment-event){.term-reference}. Key lists order a
+event](#term:establishment-event). Key lists order a
 key set. A list of clauses acts to order the set of rational fraction
 weights that appear in the list of clauses. Satisfaction of a
 fractionally weighted threshold requires satisfaction of every clause in
@@ -3678,7 +3647,7 @@ weight from the given contributor needs to be normalized to a single
 weight, but the satisfaction of its contribution is itself a
 fractionally weighted threshold across that contributor's devices.
 
-### [§](#general-pre-rotation){.toc-anchor .d-print-none} General Pre-rotation
+### [§](#general-pre-rotation) General Pre-rotation
 
 The KERI protocol includes support for something called Partial
 rotation, where not all pre-rotated keys become signing keys. A Partial
@@ -3694,7 +3663,7 @@ rotation, custodial rotation, and surprise quantum attack recovery.
 As described above, a valid Rotation operation requires the satisfaction
 of two different thresholds:
 
-1.  The [Next threshold](#term:next-threshold){.term-reference} from the
+1.  The [Next threshold](#term:next-threshold) from the
     given Rotation event's most recent prior Establishment event
     concerning its associated blinded next key digest list. For short,
     the next threshold from the most recent prior Establishment event is
@@ -3715,8 +3684,7 @@ of two different thresholds:
 More precisely, any Rotation event's current public key list MUST
 include both a satisfiable subset of the *prior-next* key list
 concerning the [prior next
-threshold](https://trustoverip.github.io/kerisuite-glossary/#term:prio-next-threshold){.x-term-reference
-.term-reference local-href="#term:keri1:prio-next-threshold"} and a
+threshold](https://trustoverip.github.io/kerisuite-glossary/#term:prio-next-threshold) and a
 satisfiable set of public keys concerning its current threshold.
 
 In other words, the current public key list MUST be satisfiable
@@ -3757,15 +3725,13 @@ Recall that the public key's appearance order in a given key list and
 its associated threshold weight list MUST be the same. The order of
 appearance, however, of any public keys that appear in both the current
 and [prior next key
-list](https://trustoverip.github.io/kerisuite-glossary/#term:prior-next-key-list){.x-term-reference
-.term-reference local-href="#term:keri1:prior-next-key-list"}s may be
+list](https://trustoverip.github.io/kerisuite-glossary/#term:prior-next-key-list)s may be
 different between the two key lists and, hence, the two associated
 threshold weight lists. A Validator, therefore, MUST confirm that the
 set of keys in the current key list truly includes a satisfiable subset
 of the prior next key list and that the current key list is satisfiable
 with respect to both the current and [prior next
-threshold](https://trustoverip.github.io/kerisuite-glossary/#term:prio-next-threshold){.x-term-reference
-.term-reference local-href="#term:keri1:prio-next-threshold"}s. Actual
+threshold](https://trustoverip.github.io/kerisuite-glossary/#term:prio-next-threshold)s. Actual
 satisfaction means that the set of attached signatures MUST satisfy both
 prior-next and current thresholds as applied to their respective key
 lists.
@@ -3785,12 +3751,11 @@ Rotation may also be an Augmented rotation when it adds new keys to the
 current key list and/or changes the current threshold with respect to
 the prior next key list and threshold.
 
-#### [§](#reserve-rotation){.toc-anchor .d-print-none} Reserve Rotation
+#### [§](#reserve-rotation) Reserve Rotation
 
 As described above, the pre-rotation mechanism supports partial
 pre-rotation or, more exactly, partial Rotation of pre-rotated
-[keypair](https://trustoverip.github.io/ctwg-general-glossary/#term:keypair){.x-term-reference
-.term-reference local-href="#term:toip2:keypair"}s. One important use
+[keypair](https://trustoverip.github.io/ctwg-general-glossary/#term:keypair)s. One important use
 case for partial Rotation is to enable pre-rotated keypairs designated
 in one Establishment event to be held in reserve and not exposed at the
 next (immediately subsequent) Establishment event. This reserve feature
@@ -3819,7 +3784,6 @@ Provided here is an illustrative example to help clarify the
 pre-rotation protocol, especially with regard to threshold satisfaction
 for Reserve rotation.
 
-::: table-responsive-md
    SN   Role                                                   Keys                     Threshold
   ---- ------ ----------------------------------------------------- -----------------------------
    0    Crnt                       \[A^0^, A^1^, A^2^, A^3^, A^4^\]   \[1/2, 1/2, 1/2, 1/4, 1/4\]
@@ -3834,7 +3798,6 @@ for Reserve rotation.
    4    Next    \[H(A^22^), H(A^23^), H(A^24^), H(A^16^),H(A^17^)\]   \[1/2, 1/2, 1/2, 1/4, 1/4\]
    5    Crnt                  \[A^22^, A^25^, A^26^, A^16^, A^17^\]       \[1/2, 1/2, 1/2, 0, 0\]
    5    Next    \[H(A^27^), H(A^28^), H(A^29^), H(A^30^),H(A^31^)\]   \[1/2, 1/2, 1/2, 1/4, 1/4\]
-:::
 
 Where, in the column labels:
 
@@ -3881,7 +3844,7 @@ are unavailable. Two new keypairs, A^25^, A^26^, are added to the
 current signing key list. The current signing authority of A^16^, and
 A^17^ is none because they are assigned a weight of 0 in the new current
 signing threshold. For the [Rotation
-event](#term:rotation-event){.term-reference} to be valid, it MUST be
+event](#term:rotation-event) to be valid, it MUST be
 signed by A^22^, A^16^, and A^17^ in order to satisfy the prior next
 threshold for rotation authority and also MUST be signed by any two of
 A^22^, A^25^, and A^26^ in order to satisfy the new current signing
@@ -3889,7 +3852,7 @@ authority for the event itself. This illustrates how reserved keypairs
 may be used exclusively for rotation authority and not for signing
 authority.
 
-#### [§](#custodial-rotation){.toc-anchor .d-print-none} Custodial Rotation
+#### [§](#custodial-rotation) Custodial Rotation
 
 Partial rotation combined with Augmented rotation supports another
 important use case, that of Custodial key rotation. Because control
@@ -3908,7 +3871,6 @@ Provided here is an illustrative example to help to clarify the
 pre-rotation protocol, especially about threshold satisfaction for
 Custodial rotation.
 
-::: table-responsive-md
    SN   Role                                           Keys                    Threshold
   ---- ------ --------------------------------------------- ----------------------------
    0    Crnt                           \[A^0^, A^1^, A^2^\]            \[1/2, 1/2, 1/2\]
@@ -3917,7 +3879,6 @@ Custodial rotation.
    1    Next                \[H(A^9^), H(A^10^), H(A^11^)\]            \[1/2, 1/2, 1/2\]
    2    Crnt    \[A^9^, A^10^, A^11^, A^12^, A^13^, A^14^\]   \[0, 0, 0, 1/2, 1/2, 1/2\]
    2    Next               \[H(A^15^), H(A^16^), H(A^17^)\]            \[1/2, 1/2, 1/2\]
-:::
 
 Where for the column labels:
 
@@ -3967,7 +3928,7 @@ retain exclusive rotation authority.
 \(2\) Rotation: Change to yet another custodian following the same
 pattern as event #1.
 
-#### [§](#surprise-quantum-attack-recovery-sqar){.toc-anchor .d-print-none} Surprise Quantum Attack Recovery (SQAR)
+#### [§](#surprise-quantum-attack-recovery-sqar) Surprise Quantum Attack Recovery (SQAR)
 
 Partial rotation, together with Augmented rotation, supports another
 important use case, that of Surprise Quantum Attack Recovery (SQAR). In
@@ -3994,14 +3955,12 @@ Provided here is an illustrative example to help clarify the
 pre-rotation protocol, especially regarding threshold satisfaction for
 the SQAR rotation.
 
-::: table-responsive-md
    SN   Role                                      Keys                    Threshold
   ---- ------ ---------------------------------------- ----------------------------
    0    Crnt                      \[A^0^, A^1^, A^2^\]            \[1/2, 1/2, 1/2\]
    0    Next             \[H(A^3^), H(A^4^), H(A^5^)\]            \[1/2, 1/2, 1/2\]
    1    Crnt    \[A^3^, A^4^, A^5^, A^6^, A^7^, A^8^\]   \[0, 0, 0, 1/2, 1/2, 1/2\]
    1    Next           \[H(A^9^), H(A^10^), H(A^11^)\]            \[1/2, 1/2, 1/2\]
-:::
 
 Where for the column labels:
 
@@ -4038,7 +3997,7 @@ is because the next key digests are post-quantum safe commitments to the
 next rotation keys. In an SQAR rotation, none of the rotation keys is
 given any current signing authority, all weights are zero.
 
-### [§](#cooperative-delegation){.toc-anchor .d-print-none} Cooperative Delegation
+### [§](#cooperative-delegation) Cooperative Delegation
 
 A delegation or identifier delegation operation is provided by a pair of
 events. One event is the delegating event in the KEL of the Delegator
@@ -4057,7 +4016,7 @@ the Delegator.
 Likewise, the inception event of the Delegatee's KEL includes the
 delegator's AID. This binds the inception and any later establishment
 events in the Delegatee's KEL to a unique delegator. A
-[Validator](#term:validator){.term-reference} MUST be given or find the
+[Validator](#term:validator) MUST be given or find the
 delegating seal in the delegator's KEL before the event may be accepted
 as valid. The pair of bindings (delegation seal in delegator's KEL and
 delegator's AID in Delegatee's inception event) makes the delegation
@@ -4110,7 +4069,7 @@ delegation. Likewise, as explained later, this cooperative feature also
 enables recovery of a joint compromise of a delegation at any set of
 delegation levels by a recovery at the next higher delegation level.
 
-### [§](#security-properties-of-pre-rotation){.toc-anchor .d-print-none} Security Properties of Pre-rotation
+### [§](#security-properties-of-pre-rotation) Security Properties of Pre-rotation
 
 For many exploits, the likelihood of success is a function of exposure
 to continued monitoring or probing. Narrowly restricting the exposure
@@ -4151,9 +4110,9 @@ security over those keys is more critical. As a result, in this
 protocol, administrative (establishment operation) keys are first-time,
 one-time, and only-time use as administrative keys.
 
-#### [§](#dead-attacks){.toc-anchor .d-print-none} Dead-Attacks
+#### [§](#dead-attacks) Dead-Attacks
 
-By definition, a [Dead-attack](#term:dead-attack){.term-reference} on a
+By definition, a [Dead-attack](#term:dead-attack) on a
 given establishment event occurs after the Key state for that event has
 become stale because a later establishment event has rotated the sets of
 signing and pre-rotated keys to new sets. There are two types of
@@ -4165,7 +4124,7 @@ from a stale establishment event needed to sign a subsequent
 establishment event, such as a rotation event. This is denoted as an
 establishment Dead-attack.
 
-##### [§](#non-establishment-dead-attack){.toc-anchor .d-print-none} Non-establishment Dead-attack
+##### [§](#non-establishment-dead-attack) Non-establishment Dead-attack
 
 A successful non-establishment Dead-Attack first must compromise the set
 of signing keys for some past but stale interaction (non-establishment)
@@ -4173,7 +4132,7 @@ event; second, create an alternate verifiable version of that stale
 interaction event; and third, propagate this alternate event to a given
 validator before the original event has had time to propagate to that
 validator or any other component the validator may access as
-[First-seen](#term:first-seen){.term-reference}. This looks like what is
+[First-seen](#term:first-seen). This looks like what is
 commonly known as an \[[24](#EclipsAttack)\] on a validator. To protect
 against such an attack, a controller MUST propagate the event
 sufficiently widely enough that the attacker cannot eclipse all
@@ -4206,7 +4165,7 @@ establishment Dead-attack as long as the original event has had time to
 propagate as First-seen to any component, such as a watcher the
 Validator chooses to consult.
 
-##### [§](#establishment-dead-attack){.toc-anchor .d-print-none} Establishment Dead-attack
+##### [§](#establishment-dead-attack) Establishment Dead-attack
 
 A successful establishment Dead-attack must first compromise the set of
 current signing keys for some past stale rotation event, second, create
@@ -4309,18 +4268,18 @@ Dead-Attack](https://raw.githubusercontent.com/trustoverip/tswg-keri-specificati
 
 **Figure:** *Establishment Dead-Attack*
 
-#### [§](#live-attacks){.toc-anchor .d-print-none} Live-Attacks
+#### [§](#live-attacks) Live-Attacks
 
 There are two types of
-[Live-attacks](#term:live-attacks){.term-reference}. The first is a
+[Live-attacks](#term:live-attacks). The first is a
 compromise of the current signing keys used to sign non-establishment
 events, such as an interaction event. This is denoted as a
 non-establishment Live-attack. The second is a compromise of the current
 pre-rotated keys needed to sign a subsequent establishment event, such
-as a [Rotation event](#term:rotation-event){.term-reference}. This is
+as a [Rotation event](#term:rotation-event). This is
 denoted as an establishment Live-attack.
 
-##### [§](#non-establishment-live-attack){.toc-anchor .d-print-none} Non-establishment Live-attack
+##### [§](#non-establishment-live-attack) Non-establishment Live-attack
 
 A successful non-establishment Live-attack means that the attacker is
 able to verifiably sign and propagate a new interaction event. When the
@@ -4344,7 +4303,7 @@ non-establishment Live-attack succeeds, control over the identifier can
 be recovered using a recovery rotation. For more detail see the Annex or
 Recovery and Reconciliation.
 
-#### [§](#establishment-live-attack){.toc-anchor .d-print-none} Establishment Live-attack
+#### [§](#establishment-live-attack) Establishment Live-attack
 
 A successful establishment Live-attack means that the attacker somehow
 compromises the unexposed next (pre-rotated) set of keys from the latest
@@ -4382,8 +4341,7 @@ come either by brute force inversion of the one-way digest function
 protecting the public keys and then by brute force inversion of the
 one-way scalar multiplication function that generates the public key
 from the private keys or by a [side-channel
-attack](https://trustoverip.github.io/ctwg-general-glossary/#term:side-channel-attack){.x-term-reference
-.term-reference local-href="#term:toip2:side-channel-attack"} at the
+attack](https://trustoverip.github.io/ctwg-general-glossary/#term:side-channel-attack) at the
 first-use of the private keys to sign the rotation event. By
 construction, no earlier signing side-channel attack is possible. This
 makes successful Live-attack exploits from such side-channel attacks
@@ -4408,17 +4366,16 @@ Live-attack](https://raw.githubusercontent.com/trustoverip/tswg-keri-specificati
 
 **Figure:** *Establishment Live-attack*
 
-#### [§](#delegated-event-live-attacks){.toc-anchor .d-print-none} Delegated Event Live-attacks
+#### [§](#delegated-event-live-attacks) Delegated Event Live-attacks
 
 Notwithstanding the foregoing section, delegated events are provided
 with an additional layer of protection against and an additional means
 of recovery from establishment Live-attack exploits. As described
 previously, a delegated event is only valid if the validator finds an
 anchored delegation seal of the delegated establishment event in the
-delegator's [KEL](#term:kel){.term-reference}. This means that
+delegator's [KEL](#term:kel). This means that
 notwithstanding a successful compromise of the
-[Delegatee](https://trustoverip.github.io/ctwg-main-glossary/#term:delegatee){.x-term-reference
-.term-reference local-href="#term:toip1:delegatee"}\'s current set of
+[Delegatee](https://trustoverip.github.io/ctwg-main-glossary/#term:delegatee)\'s current set of
 pre-rotated keys, the attacker is not able to issue a valid compromised
 rotation event. The attacker must also issue a delegation seal of the
 compromised rotation event in the delegator's KEL. This means the
@@ -4433,11 +4390,11 @@ Delegatee's KEL and thereby recover from the establishment Live-attack.
 This is not possible with an establishment Live-attack on a
 non-delegated event.
 
-## [§](#annex-a){.toc-anchor .d-print-none} Annex A
+## [§](#annex-a) Annex A
 
-### [§](#cryptographic-strength-and-security){.toc-anchor .d-print-none} Cryptographic strength and security
+### [§](#cryptographic-strength-and-security) Cryptographic strength and security
 
-#### [§](#cryptographic-strength){.toc-anchor .d-print-none} Cryptographic strength
+#### [§](#cryptographic-strength) Cryptographic strength
 
 For crypto-systems with perfect-security, the critical design parameter
 is the number of bits of entropy needed to resist any practical brute
@@ -4493,7 +4450,7 @@ worth the expense of that much computing power. Consequently, a
 cryptosystem with perfect-security and 128 bits of cryptographic
 strength is computationally infeasible to break via brute force attack.
 
-#### [§](#information-theoretic-security-and-perfect-security){.toc-anchor .d-print-none} Information theoretic security and perfect-security
+#### [§](#information-theoretic-security-and-perfect-security) Information theoretic security and perfect-security
 
 The highest level of cryptographic security with respect to a
 cryptographic secret (seed, salt, or private key) is called
@@ -4509,7 +4466,7 @@ exhibit perfect-security. The first is a one-time-pad (OTP) or Vernum
 Cipher; the other is secret splitting, a type of secret sharing that
 uses the same technique as a one-time-pad.
 
-#### [§](#post-quantum-security){.toc-anchor .d-print-none} Post-Quantum Security
+#### [§](#post-quantum-security) Post-Quantum Security
 
 Post-quantum or quantum-safe cryptography deals with techniques that
 maintain their cryptographic strength despite attacks from quantum
@@ -4550,7 +4507,7 @@ rotation operation. Hidden public keys may be compactly expressed as
 [Base64](#RFC4648) encoded qualified public keys digests (hidden) where
 the digest function is indicated in the derivation code.
 
-#### [§](#keri-security-properties){.toc-anchor .d-print-none} KERI Security Properties
+#### [§](#keri-security-properties) KERI Security Properties
 
 Every operation in this protocol is expressed via cryptographically
 verifiable events. Successful exploitation, therefore, must attack and
@@ -4568,8 +4525,8 @@ availability of current events as well as ensuring their consistency
 (non-duplicity). A dead exploit, in contrast, involves attacks on past
 events. Protection from dead exploits is primarily provided by duplicity
 detection (consistency). One verifiable copy of a
-[KEL](#term:kel){.term-reference} (more specificly a
-[KERL](#term:kerl){.term-reference}) is enough to detect duplicity in
+[KEL](#term:kel) (more specificly a
+[KERL](#term:kerl)) is enough to detect duplicity in
 any other verifiable but inconsistent copy. Attacks on the availability
 of past events are relatively easily mitigated by archiving redundant
 copies. The eventuality of dead exploits of compromised signing keys
@@ -4624,9 +4581,9 @@ and duplicity detection on the behavior of designated supporting
 components. The primary protection mechanism for the validator is
 duplicity detection on the behavior of supporting components.
 
-### [§](#validation){.toc-anchor .d-print-none} Validation
+### [§](#validation) Validation
 
-#### [§](#verifier){.toc-anchor .d-print-none} Verifier
+#### [§](#verifier) Verifier
 
 A verifier is an entity or component that cryptographically verifies an
 event message's structure and its signature(s). Structure verification
@@ -4648,9 +4605,9 @@ loss of generality, any reference to the verification of an event or
 verification of an event's signatures refers to the complete process
 described above.
 
-#### [§](#validator){.toc-anchor .d-print-none} Validator
+#### [§](#validator) Validator
 
-In contrast, a [Validator](#term:validator){.term-reference} is an
+In contrast, a [Validator](#term:validator) is an
 entity or component that determines that a given signed event associated
 with an AID was valid at the time of its issuance. Validation first
 requires that the event itself is verifiable; that is, it has verifiable
@@ -4667,7 +4624,7 @@ given location in the key event sequence is different or inconsistent
 with some other event at the same location if any of its content differs
 or is inconsistent with that other event.
 
-#### [§](#duplicity){.toc-anchor .d-print-none} Duplicity
+#### [§](#duplicity) Duplicity
 
 A duplicitous event is defined as a verified but different version of an
 event at the same location. The possession of a KEL for any AID enables
@@ -4682,7 +4639,7 @@ controller may perform a recovery operation that enables a validator to
 reconcile that duplicity and allow the validator to once again trust the
 controller.
 
-#### [§](#event-types-and-classes){.toc-anchor .d-print-none} Event Types and Classes
+#### [§](#event-types-and-classes) Event Types and Classes
 
 In validation, in addition to the version, the type and/or class of
 event may matter. There are five types of events, inception, `icp`,
@@ -4698,7 +4655,7 @@ There are two main classes of events these are:
 There is one sub-class, delegated establishment, which consists of the
 types of delegated inception and delegated rotation.
 
-#### [§](#validator-roles-and-event-locality){.toc-anchor .d-print-none} Validator Roles and Event Locality
+#### [§](#validator-roles-and-event-locality) Validator Roles and Event Locality
 
 Each controller MUST accept its own events into its own copy of its KEL.
 In this sense, every controller MUST also be a validator for its own
@@ -4761,7 +4718,7 @@ factor on each of a threshold number of witnesses and the unique
 tertiary factor for the delegator. This layered set of multifactor
 authentication mechanisms can make exploit practically infeasible.
 
-#### [§](#validation-rules){.toc-anchor .d-print-none} Validation Rules
+#### [§](#validation-rules) Validation Rules
 
 The validation rules are as follows:
 
@@ -4822,15 +4779,15 @@ The validation rules are as follows:
   the witness signatures or delegator seals attached to that receipt and
   then can attach those signatures or seals to its copy of the event.
 
-### [§](#superseding-recovery-and-reconciliation){.toc-anchor .d-print-none} Superseding Recovery and Reconciliation
+### [§](#superseding-recovery-and-reconciliation) Superseding Recovery and Reconciliation
 
-#### [§](#first-seen-policy){.toc-anchor .d-print-none} First Seen Policy
+#### [§](#first-seen-policy) First Seen Policy
 
-Once a given [Version](#term:version){.term-reference} of an event at a
+Once a given [Version](#term:version) of an event at a
 location has been accepted, it is considered "first seen" for that KEL.
 Once an event has been first seen, it is always seen and can't be
 unseen. This rule is succinctly expressed as "first seen, always seen,
-never unseen." This [First-seen](#term:first-seen){.term-reference}
+never unseen." This [First-seen](#term:first-seen)
 property enables duplicity detection of different versions of an event.
 Although an event can never be unseen, in some special cases, it may be
 superseded by a different version of an event at the same location.
@@ -4849,7 +4806,7 @@ branch in the DAG is created. There may be only one undisputed path
 through the DAG called the trunk. All the superseded branches are
 considered disputed.
 
-#### [§](#reconciliation){.toc-anchor .d-print-none} Reconciliation
+#### [§](#reconciliation) Reconciliation
 
 Reconciliation is the process of determining the undisputed path, i.e.,
 the trunk. If every validator of a KEL cannot universally find the same
@@ -4874,7 +4831,7 @@ location may involve some combination of the location, version, type,
 and class of the event as well as the role of the validator, such as
 controller, witness, delegator, Delegatee, or none of the above.
 
-#### [§](#superseding-recovery){.toc-anchor .d-print-none} Superseding Recovery
+#### [§](#superseding-recovery) Superseding Recovery
 
 To supersede an event means that after an event has already been
 accepted as first seen into a KEL, a different event at the same
@@ -4905,12 +4862,12 @@ below, another event at the same location cannot be first seen at all by
 that KEL. This effectively protects the KEL from later compromise for
 any downstream recipients of that KEL.
 
-#### [§](#superseding-rules-for-recovery-at-a-given-location-sn-sequence-number){.toc-anchor .d-print-none} Superseding Rules for Recovery at a given location, SN (sequence number). {#superseding-rules-for-recovery-at-a-given-location-sn-sequence-number}
+#### [§](#superseding-rules-for-recovery-at-a-given-location-sn-sequence-number) Superseding Rules for Recovery at a given location, SN (sequence number).
 
 A.
 
 A0. Any rotation event may supersede an [Interaction
-event](#term:interaction-event){.term-reference} at the same `sn` where
+event](#term:interaction-event) at the same `sn` where
 that interaction event is not before any other rotation event.
 
 A1. A non-delegated rotation may not supersede another rotation.
@@ -4980,28 +4937,28 @@ recovery process forks off a disputed branch from the recovered trunk.
 This disputed branch has the compromised events, and the main trunk has
 the recovered events.
 
-### [§](#keris-algorithm-for-witness-agreement-kawa){.toc-anchor .d-print-none} KERI's Algorithm for Witness Agreement (KAWA)
+### [§](#keris-algorithm-for-witness-agreement-kawa) KERI's Algorithm for Witness Agreement (KAWA)
 
-#### [§](#introduction-2){.toc-anchor .d-print-none} Introduction {#introduction-2}
+#### [§](#introduction-2) Introduction
 
 A controller may provide a highly available promulgation service for its
 events via a set or pool of N designated witnesses. This
-[Witness](#term:witness){.term-reference} pool may also provide enhanced
+[Witness](#term:witness) pool may also provide enhanced
 security for the controller over its events. Even though the witnesses
 are explicitly designated by the controller, they may or may not be
 under the control of the controller. The designation is a cryptographic
 commitment to the witnesses via a verifiable statement included in an
-[Establishment event](#term:establishment-event){.term-reference}. The
+[Establishment event](#term:establishment-event). The
 purpose of the witness set is to better protect the service from faults
 including Byzantine faults. Thus, the service employs a type of
 Byzantine Fault Tolerant (BFT) algorithm called [KERI's Algorithm for
 Witness
-Agreement](#term:keri’s-algorithm-for-witness-agreement){.term-reference}
+Agreement](#term:keri’s-algorithm-for-witness-agreement)
 (KAWA). The primary purpose of KAWA is to protect the controller's
 ability to promulgate the authoritative copy of its key event history
 despite external attacks. This includes maintaining a sufficient degree
 of availability such that any
-[Validator](#term:validator){.term-reference} may obtain an
+[Validator](#term:validator) may obtain an
 authoritative copy on demand.
 
 The critical insight is that because the controller is the sole source
@@ -5027,7 +4984,7 @@ key events. As a result, the algorithm is designed to enable a
 controller to provide itself with any degree of protection it deems
 necessary given this accountability.
 
-#### [§](#advantages){.toc-anchor .d-print-none} Advantages
+#### [§](#advantages) Advantages
 
 The reliance on a designated set of witnesses provides several
 advantages. The first is that the identifier's trust basis is not locked
@@ -5099,16 +5056,16 @@ accepts accountability for an event when any subset M of the N witnesses
 confirms that event. The threshold M indicates the minimum number of
 confirming witnesses the controller deems sufficient given some number F
 of potentially faulty witnesses. The objective of the service is to
-provide a [Verifiable](#term:verifiable){.term-reference} KERL to any
+provide a [Verifiable](#term:verifiable) KERL to any
 validator on demand. Unlike direct mode where a validator may be viewed
 as an implicit witness, with indirect mode, a validator may not be one
 of the N explicitly designated witnesses that provide the service.
 
-#### [§](#witness-designation){.toc-anchor .d-print-none} Witness Designation
+#### [§](#witness-designation) Witness Designation
 
 The controller designates both the witness tally number and the initial
 set of witnesses in the [Inception
-event](#term:inception-event){.term-reference} configuration. The
+event](#term:inception-event) configuration. The
 purpose of the tally is to provide a threshold of accountability for the
 number of witnesses confirming an event. Subsequent rotation operations
 may amend the set of witnesses and change the tally number. This enables
@@ -5117,7 +5074,7 @@ of accountability of the witness set. When a rotation amends the
 witnesses it includes the new tally, the set of pruned (removed)
 witnesses and the set of newly grafted (added) witnesses.
 
-#### [§](#witnessing-policy){.toc-anchor .d-print-none} Witnessing Policy
+#### [§](#witnessing-policy) Witnessing Policy
 
 In this approach, the controller of a given identifier creates and
 disseminates associated key event messages to the set of N witnesses.
@@ -5177,7 +5134,7 @@ protocol but with higher bandwidth usage. Gossip protocols scale with N
 acyclic graph or other data structure can be used to determine what
 needs to be gossiped.
 
-#### [§](#immunity-and-availability){.toc-anchor .d-print-none} Immunity and Availability
+#### [§](#immunity-and-availability) Immunity and Availability
 
 It can be [shown](#KERI-WP) that for any set of N witnesses, there is a
 threshold M \< N that guarantees that at most one sufficient agreement
@@ -5200,7 +5157,7 @@ tantamount to the availability of a proper log (KERL) of all prior
 events consistent with that event at that witness, and thereby, high
 availability of the service is assured.
 
-#### [§](#security-properties){.toc-anchor .d-print-none} Security Properties
+#### [§](#security-properties) Security Properties
 
 The continuing promulgation of key events assumes a sufficiently
 responsive controller. Lack of responsiveness is primarily a threat to
@@ -5252,7 +5209,7 @@ of witnesses may not invalidate any of the events in a pre-existent
 proper KERL.
 
 Therefore, in order to fool a validator into accepting an erroneous or
-compromised divergent [Key event](#term:key-event){.term-reference}
+compromised divergent [Key event](#term:key-event)
 history, a successful exploiter must forge a proper KERL but with a
 different sequence of key events. To do this the exploiter must not only
 exploit the controller's signing keys that were authoritative at some
@@ -5320,7 +5277,7 @@ may secure their archives with post-quantum cryptography. Thus, any
 post-quantum attack may be detectable merely by appeal to one or more of
 these archives.
 
-### [§](#working-examples-setup){.toc-anchor .d-print-none} Working Examples Setup
+### [§](#working-examples-setup) Working Examples Setup
 
 The code to generate the working examples in this specification is
 provided via unit tests found in tests/spec/keri in the keripy library.
@@ -5328,7 +5285,7 @@ provided via unit tests found in tests/spec/keri in the keripy library.
 A brief explanation of the setup code is provided here to help
 implementers who wish to reproduce the examples from scratch.
 
-#### [§](#aids){.toc-anchor .d-print-none} AIDs
+#### [§](#aids) AIDs
 
 The examples require an Issuer AID. This AID is created in accordance
 with the KERI protocol. This requires creating digital signing key-pairs
@@ -5336,7 +5293,7 @@ whose public keys are used in an inception event to create the AID. The
 keripy library has a utility class Salter (found in
 keri.core.signing.Salter) that facilitates the creation of signing key
 pairs. For the examples, any needed signing key pairs can be recreated
-using a known non-random [Salt](#term:salt){.term-reference}. The known
+using a known non-random [Salt](#term:salt). The known
 non-random salt is merely for reproducibility. In a real-world
 application, the salt should be a high entropy secret. The salt used for
 the examples is the python byte string as follows:
@@ -5420,8 +5377,8 @@ encoded qualified Base64 `Text` domain representation is as follows:
 ```
 
 From these three [Cryptographic
-primitives](#term:cryptographic-primitives){.term-reference}, we can
-create a [Python dictionary](#term:python-dictionary){.term-reference}
+primitives](#term:cryptographic-primitives), we can
+create a [Python dictionary](#term:python-dictionary)
 with all the data needed to generate the inception event for the Issuer
 as follows:
 
@@ -5464,7 +5421,7 @@ b'oAMc8WOHBDIfIKYnOlxWH8eOe8"],"c":[],"a":[]}')
 ```
 
 The calculation of the SAIDed fields in the inception event requires
-knowledge of the [SAID](#term:said){.term-reference} protocol for
+knowledge of the [SAID](#term:said) protocol for
 generating SAIDs on the serialization of the associated field map. A
 utility function for generating an inception event may be found in
 keri.core.eventing.incept. The raw above was generated as follows:
@@ -5505,7 +5462,7 @@ It can be used in an example. This AID may be given the user friendly
 alias `amy` has in Amy's AID. Likewise, the same process can be followed
 to created other AID's used in examples.
 
-#### [§](#uuids){.toc-anchor .d-print-none} UUIDs
+#### [§](#uuids) UUIDs
 
 Many of the examples include UUID, `u` fields with salty nonce values.
 For ease of reproducibility, deterministic UUIDs are used. These may be
@@ -5541,7 +5498,7 @@ The Noncer class may be found in keri.core.coring.Noncer. Essentially, a
 Noncer instance can encode a byte string as a salty nonce in CESR
 format.
 
-### [§](#native-cesr-encodings-of-keri-messages){.toc-anchor .d-print-none} Native CESR Encodings of KERI Messages
+### [§](#native-cesr-encodings-of-keri-messages) Native CESR Encodings of KERI Messages
 
 A native CESR encoding of the field map of a KERI message body is
 represented using pure CESR instead of JSON, CBOR, or MGPK. Because the
@@ -5566,14 +5523,14 @@ Similarly, lists may appear as values of top-level fields. For example,
 the current signing keys are expressed as a key list. In that case, the
 CESR count code for a generic list is used.
 
-#### [§](#cesr-field-encodings){.toc-anchor .d-print-none} CESR Field Encodings
+#### [§](#cesr-field-encodings) CESR Field Encodings
 
 Some field values in KERI messages that include non-Base64 characters
 have custom CESR Text domain encodings (Base64). These encodings are
 more compact than the case given the direct conversion of a binary
 string with non-Base64 characters into [Base64](#RFC4648).
 
-##### [§](#protocol-and-genus-version){.toc-anchor .d-print-none} Protocol and Genus Version
+##### [§](#protocol-and-genus-version) Protocol and Genus Version
 
 In a CESR-encoded message, the count code for the message includes the
 message size. This means that the version field in the messages does not
@@ -5611,7 +5568,7 @@ and genus version 2.0 is as follows:
 
 `0OKERICAACAA`
 
-##### [§](#datetime){.toc-anchor .d-print-none} DateTime
+##### [§](#datetime) DateTime
 
 As described above, the datetime, `dt` field value, if any, MUST be the
 ISO-8601 datetime string with microseconds and UTC offset as per IETF
@@ -5625,13 +5582,11 @@ conversion to Base64 would increase the size of the value. Instead, the
 non-Base64 characters are converted to unique Base-64 characters using
 the following conversion table:
 
-::: table-responsive-md
    Non-Base64   Base64  Description
   ------------ -------- -------------
       `:`        `c`    colon
       `.`        `d`    dot
       `+`        `p`    plus
-:::
 
 Using this conversion, the base CESR encoding of the DateTime example
 above becomes:
@@ -5642,7 +5597,7 @@ The CESR code for DateTime is prepended to this string to produce the
 fully qualified CESR encoding. This encodes the datetime compactly into
 Base64 without doing a direct Base64 conversion of a binary string.
 
-##### [§](#threshold){.toc-anchor .d-print-none} Threshold
+##### [§](#threshold) Threshold
 
 As described above, the fractionally weighted threshold field value may
 be represented as a list of lists of fractional weights. Those
@@ -5668,7 +5623,6 @@ recursive nesting. This is not a problem because only one layer of
 nesting is supported. The following table provides the infix operators
 in order of priority. Higher in the table is a higher priority.
 
-::: table-responsive-md
    Non-Base64 Operation   Base64 Infix Operator  Description
   ---------------------- ----------------------- -----------------------------------------
            `/`                     `s`           slash
@@ -5676,7 +5630,6 @@ in order of priority. Higher in the table is a higher priority.
          `{:[,]}`                  `v`           nested weight list element of map value
           `[,]`                    `c`           simple weight list element
         `[[],[]]`                  `a`           ANDed weight list \]
-:::
 
 Using this infix conversion, the CESR encoding of the JSON fractionally
 weighted threshold example above becomes:
@@ -5688,7 +5641,7 @@ CESR code for Base64 only variable-length strings is prepended to the
 threshold. This encodes the threshold compactly into Base64 without
 doing a direct Base64 conversion of a binary string.
 
-##### [§](#route-or-return-route){.toc-anchor .d-print-none} Route or Return Route
+##### [§](#route-or-return-route) Route or Return Route
 
 As described above, the value of a Route or Return Route field is a
 slash, `/` delimited path. Because the slash, `/`, is a non-Base64
@@ -5715,7 +5668,7 @@ binary string and is converted to Base64. In that case, the appropriate
 CESR code for variable-length binary strings is prepended to the
 converted route to provide the Text Domain encoding.
 
-#### [§](#key-event-messages-2){.toc-anchor .d-print-none} Key Event Messages {#key-event-messages-2}
+#### [§](#key-event-messages-2) Key Event Messages
 
 These have the following packet types: `[icp, rot, ixn, dip, drt]`.
 
@@ -5729,7 +5682,7 @@ expression of a message body. This is because the size and serialization
 kind both appear in the version string and both of these are affected by
 the serialization kind.
 
-##### [§](#inception-icp){.toc-anchor .d-print-none} Inception `icp`
+##### [§](#inception-icp) Inception `icp`
 
 Field order by label: `v`, `t`, `d`, `i`, `s`, `kt`, `k`, `nt`, `n`,
 `bt`, `b`, `c`, `a`.
@@ -5783,7 +5736,7 @@ b'V-zmDEn2SPCoVFx3H20alWsNZKgsS1vtBAPv2MnoiCsgOnklmFyfU07QDK_93NeH9iKfOy8V22aH'
 b'BA4PSatfQMw1lYhQoZkSSvOCrE0Sdw1hmmniDL-yDtrB-JABXDID-JAA')
 ```
 
-##### [§](#interaction-ixn){.toc-anchor .d-print-none} Interaction `ixn`
+##### [§](#interaction-ixn) Interaction `ixn`
 
 Field order by label: `v`, `t`, `d`, `i`, `s`, `p`, `a`.
 
@@ -5817,7 +5770,7 @@ b'rTYs-JAY-TAXEF-jViYoBr8p3vkpZuHlkvxAAY5GZkmQ0QaaHfiE0kg3MAAAEF-jViYoBr8p3vkp'
 b'ZuHlkvxAAY5GZkmQ0QaaHfiE0kg3')
 ```
 
-##### [§](#delegated-inception-dip){.toc-anchor .d-print-none} Delegated Inception `dip`
+##### [§](#delegated-inception-dip) Delegated Inception `dip`
 
 Field order by label: `v`, `t`, `d`, `i` , `s`, `kt`, `k`, `nt`, `n`,
 `bt`, `b`, `c`, `a`, `di`.
@@ -5873,7 +5826,7 @@ b'iqvag0a8E_tbhpeJIgHhOXzlBCE6biH4a-Zg8LI3cMSx7JRoOvb8rRD62xbyl9N4M2g6-JAA-JAA'
 b'EDZOA3y_b_0LG4_cfpKTbWU-_3eeYNM0w9iTkT7frTYs')
 ```
 
-##### [§](#rotation-rot){.toc-anchor .d-print-none} Rotation `rot`
+##### [§](#rotation-rot) Rotation `rot`
 
 Field order by label: `v`, `t`, `d`, `i`, `s`, `p`, `kt`, `k`, `nt`,
 `n`, `bt`, `br`, `ba`, `c`, `a`.
@@ -5935,7 +5888,7 @@ b'IsCoBPowpltoeF14nMbU1ng89JSoYf3AmWhZ50KaCaVO6SIW-JAA-JAY-TAXEF-jViYoBr8p3vkp'
 b'ZuHlkvxAAY5GZkmQ0QaaHfiE0kg3MAABEFzRkEIXetj-ojZaj0U6P9OqroqZzV0kYwoHGqnlUOwv')
 ```
 
-##### [§](#delegated-rotation-drt){.toc-anchor .d-print-none} Delegated Rotation `drt`
+##### [§](#delegated-rotation-drt) Delegated Rotation `drt`
 
 Field order by label: `v`, `t`, `d`, `i`, `s`, `p`, `kt`, `k`, `nt`,
 `n`, `bt`, `br`, `ba`, `c`, `a`, `di`.
@@ -5985,9 +5938,9 @@ b'Gqj2MAAD-JALBOtF-I9geAUjX9NW1kLIq5qDRNgEXCuwpE4mKHkYuWsF-JALBOMrYd5izsqbqaq1'
 b'WZYa3nbEeTYLPwccfqfhirybKKqx-JAA-JAA')
 ```
 
-#### [§](#receipt-messages-2){.toc-anchor .d-print-none} Receipt Messages {#receipt-messages-2}
+#### [§](#receipt-messages-2) Receipt Messages
 
-##### [§](#receipt-rct){.toc-anchor .d-print-none} Receipt `rct`
+##### [§](#receipt-rct) Receipt `rct`
 
 Field order by label: `v`, `t`, `d`, `i`, `s`.
 
@@ -6010,11 +5963,11 @@ CESR serialization as a Python byte string.
 b'G4_cfpKTbWU-_3eeYNM0w9iTkT7frTYsMAAC')
 ```
 
-#### [§](#keri-routed-messages){.toc-anchor .d-print-none} KERI Routed Messages
+#### [§](#keri-routed-messages) KERI Routed Messages
 
 These have the packet types `qry`, `rpy`, `pro`, `bar`, `exn`
 
-#### [§](#query-message){.toc-anchor .d-print-none} Query Message
+#### [§](#query-message) Query Message
 
 Field order by label: `v`, `t`, `d`, `dt`, `r`, `rr`, `q`.
 
@@ -6046,7 +5999,7 @@ b'oobi6AAEAAA-oobi-process-IAQ0J_iEDZOA3y_b_0LG4_cfpKTbWU-_3eeYNM0w9iTkT7frTYs'
 b'1AAFroleYwitness')
 ```
 
-#### [§](#reply-message){.toc-anchor .d-print-none} Reply Message
+#### [§](#reply-message) Reply Message
 
 Field order by label: `v`, `t`, `d`, `dt`, `r`, `a`.
 
@@ -6078,7 +6031,7 @@ b'cHM6Ly9leGFtcGxlLmNvbS93aXRuZXNzL0JHS1Y2djkzdWU1TDV3c2drNzV0Nmo4VGNkZ0FCTU45'
 b'eC1lSXlQaTk2SjNC')
 ```
 
-#### [§](#prod-message){.toc-anchor .d-print-none} Prod Message
+#### [§](#prod-message) Prod Message
 
 Field order by label: `v`, `t`, `d`, `dt`, `r`, `rr`, `q`.
 
@@ -6110,7 +6063,7 @@ b'confidential6AAGAAA-confidential-process-IAP0J_iEDZOA3y_b_0LG4_cfpKTbWU-_3ee'
 b'YNM0w9iTkT7frTYs1AAFname1AAM')
 ```
 
-#### [§](#bare-message){.toc-anchor .d-print-none} Bare Message
+#### [§](#bare-message) Bare Message
 
 Field order by label: `v`, `t`, `d`, `dt`, `r`, `a`.
 
@@ -6141,7 +6094,7 @@ b'confidential-process-IAP0J_iEDZOA3y_b_0LG4_cfpKTbWU-_3eeYNM0w9iTkT7frTYs1AAF'
 b'nameXEan')
 ```
 
-#### [§](#exchange-transaction-inception-message){.toc-anchor .d-print-none} Exchange Transaction Inception Message
+#### [§](#exchange-transaction-inception-message) Exchange Transaction Inception Message
 
 Field order by label: `v`, `t`, `d`, `i`, `ri`, `dt`, `r`, `q`, `a`.
 
@@ -6180,7 +6133,7 @@ b'0Mtiming0N_immediate-IAO0Maction1AAFsell1AAFitem1AANRembrant0L_price4HAC3000'
 b'00p0')
 ```
 
-#### [§](#exchange-message){.toc-anchor .d-print-none} Exchange Message
+#### [§](#exchange-message) Exchange Message
 
 Field order by label: `v`, `t`, `d`, `i`, `ri`, `x`, `p`, `dt`, `r`,
 `q`, `a`.
@@ -6221,11 +6174,11 @@ b'SoNIKT-4EdwU1AAG2020-08-30T13c42c11d123456p00c005AACAA-agree-IAF0Mtiming0N_i'
 b'mmediate-IAN0MactionXbuy1AAFitem1AANRembrant0L_price4HAC300000p0')
 ```
 
-### [§](#out-of-band-introduction-oobi){.toc-anchor .d-print-none} Out-Of-Band-Introduction (OOBI)
+### [§](#out-of-band-introduction-oobi) Out-Of-Band-Introduction (OOBI)
 
-An Out-Of-Band Introduction ([OOBI](#term:oobi){.term-reference})
+An Out-Of-Band Introduction ([OOBI](#term:oobi))
 provides a discovery mechanism that associates a given URI or URL with a
-given AID or [SAID](#term:said){.term-reference}. The URI provided by an
+given AID or [SAID](#term:said). The URI provided by an
 OOBI acts as a service endpoint for discovering verifiable information
 about the AID or SAID. As such, an OOBI itself is not trusted but MUST
 be verified. To clarify, any information obtained from the service
@@ -6235,8 +6188,8 @@ act as an out-of-band infrastructure to discover verifiable information
 over an in-band mechanism or protocol. The primary in-band verification
 protocol is KERI. The OOBI protocol provides a web-based bootstrap
 and/or discovery mechanism for the KERI and the ACDC (Authentic Chained
-Data Container) protocols [ACDC](#term:acdc){.term-reference}
-[OOBI](#term:oobi){.term-reference}. Thus, the security (or, more
+Data Container) protocols [ACDC](#term:acdc)
+[OOBI](#term:oobi). Thus, the security (or, more
 correctly, the lack of security) of an OOBI is out-of-band with respect
 to a KERI AID or an ACDC that uses KERI. To clarify, everything in KERI
 or that depends on KERI is end-verifiable; therefore, it has no security
@@ -6251,8 +6204,8 @@ and update policy is denoted BADA (Best-Available-Data-Acceptance).
 
 Vacuous discovery of IP resources such as service endpoints associated
 with a KERI AID or SAID depend an OOBI to associate a given URL with a
-given AID or SAID [SAID](#term:said){.term-reference}
-[OOBI](#term:oobi){.term-reference} \[[29](#QRCode)\]. The principal
+given AID or SAID [SAID](#term:said)
+[OOBI](#term:oobi) \[[29](#QRCode)\]. The principal
 reason for this dependency is that KERI AIDs are derived in a completely
 decentralized manner. The root-of-trust of a KERI AID is completely
 independent of the Internet and DNS addressing infrastructure. Thus, an
@@ -6280,7 +6233,7 @@ which may then be securely attributed. KERI does not, therefore, need
 its own dedicated discovery network; OOBIs with URLs will do.
 
 A secondary use case for OOBIs is to provide service endpoints or URIs
-for [SAD](#term:sad){.term-reference} (items identifier by their SAID).
+for [SAD](#term:sad) (items identifier by their SAID).
 A SAID is a content address derived from a cryptographic digest of the
 serialization of a data item. The SAID protocol \[[1](#CESR)\] provides
 a derivation process where the SAID is actually included in the SAD.
@@ -6293,7 +6246,7 @@ referenced SAD item. The media type of the returned SAD is determined by
 its CESR-compatible serialization type, such as JSON, CBOR, MGPK, or
 native CESR, for example.
 
-#### [§](#basic-oobi){.toc-anchor .d-print-none} Basic OOBI
+#### [§](#basic-oobi) Basic OOBI
 
 The simplest form of a KERI OOBI MAY be expressed by any of a namespaced
 string, a tuple, a mapping, a structured message, or a structured
@@ -6321,7 +6274,7 @@ The OOBI is intentionally simplistic to enable very low byte count
 introductions such as a may be conveyed by a QR code or Data matrix
 \[[29](#QRCode)\] \[[30](#DataMatrix)\].
 
-#### [§](#oobi-url-iurl){.toc-anchor .d-print-none} OOBI URL (IURL)
+#### [§](#oobi-url-iurl) OOBI URL (IURL)
 
 URLs provide a namespace, which means that the mapping between URL and
 AID can be combined into one namespaced URL where the AID is in the path
@@ -6374,7 +6327,7 @@ URL itself to provide the AID. Furthermore, the query string in the URL
 namespace may contain other information or hints, such as the role of
 the service endpoint represented by the URL and/or a user-friendly name.
 
-#### [§](#well-known-oobi){.toc-anchor .d-print-none} Well-Known OOBI
+#### [§](#well-known-oobi) Well-Known OOBI
 
 An OOBI may be returned as the result of a 'GET' request to an \[[spec:
 RFC5785](#RFC5785)\] well-known URL.
@@ -6402,12 +6355,12 @@ http://8.8.5.5:8080/witness/witmer
 The resultant target URL may be in a different domain or IP address from
 the `well-known` resource.
 
-#### [§](#cid-and-eid){.toc-anchor .d-print-none} CID and EID
+#### [§](#cid-and-eid) CID and EID
 
 A more verbose version of an OOBI would also include the endpoint role
 and the AID (EID) of the endpoint provider in a self-describing OOBI
 URL. And endpoint provider might by a
-[Witness](#term:witness){.term-reference}.
+[Witness](#term:witness).
 
 For example,
 
@@ -6430,7 +6383,7 @@ Where: where `EPR7FWsN3tOM8PqfMap2FRfF4MFQ4v3ZXjBUcMVtvhmB` is the AID
 `BGKV6v93ue5L5wsgk75t6j8TcdgABMN9x-eIyPi96J3B` is the AID (EID) of one
 of its witnesses as endpoint provider.
 
-#### [§](#multi-oobi-moobi){.toc-anchor .d-print-none} Multi-OOBI (MOOBI)
+#### [§](#multi-oobi-moobi) Multi-OOBI (MOOBI)
 
 An OOBI may include a list of URLs, thus simultaneously making an
 introductory association between the AID and multiple URLs. This would
@@ -6438,7 +6391,7 @@ be a multi-OOBI (MOOBI). In general, an MOOBI is a special case of an
 OOBI without making a named distinction. The first KERI reply message
 below is an example of a MOOBI.
 
-#### [§](#keri-reply-messages-as-oobis){.toc-anchor .d-print-none} KERI Reply Messages as OOBIs
+#### [§](#keri-reply-messages-as-oobis) KERI Reply Messages as OOBIs
 
 A more verbose expression for an OOBI would be an unsigned KERI reply
 message, `rpy`. The route, `r` field in the message starts with `/oobi`.
@@ -6521,7 +6474,7 @@ b'VtvhmB/witness","a":{"eid":"BGKV6v93ue5L5wsgk75t6j8TcdgABMN9x-eIyPi96J3B","s'
 b'cheme":"https","url":"https://example.com/witness/wilma"}}')
 ```
 
-#### [§](#self-blind-oobi-soobi){.toc-anchor .d-print-none} Self (Blind) OOBI (SOOBI)
+#### [§](#self-blind-oobi-soobi) Self (Blind) OOBI (SOOBI)
 
 A bare URL but no AID may be used as a self (blind) OOBI for blind or
 self-introductions e.g., SOOBI. Querying that SOOBI may return or result
@@ -6567,7 +6520,7 @@ For example, a given indirect mode controller is identified by its AID
 (CID). The controller MUST also create witness hosts with endpoints.
 This means first spinning up witness host nodes and creating witness
 AIDs (WIDs) for those nodes. Given that these WIDs MUST be eventually
-designated in the [KEL](#term:kel){.term-reference} for the CID, the
+designated in the [KEL](#term:kel) for the CID, the
 controller of the CID can confirm using its KEL that the signed endpoint
 reply provided by a SOOBI request is indeed signed by the corresponding
 private keys for a WID designated in its KEL. This means that the only
@@ -6581,7 +6534,7 @@ security is best applied in the context of a self-healing or resilient
 threshold structure that explicitly manages the redundancy as a security
 mechanism instead of as un-managed inadvertent redundancy.
 
-#### [§](#oobi-forwarding){.toc-anchor .d-print-none} OOBI Forwarding
+#### [§](#oobi-forwarding) OOBI Forwarding
 
 In every case, an OOBI may result in proof for a different URL than that
 provided in the OOBI itself. It allows OOBI forwarding so that
@@ -6593,7 +6546,7 @@ result is always KERI authenticated before use in a given role, the
 worst case from a security perspective is that an OOBI may be part of a
 DDOS attack but not as part of a service endpoint cache poison attack.
 
-#### [§](#oobi-with-mfa){.toc-anchor .d-print-none} OOBI with MFA
+#### [§](#oobi-with-mfa) OOBI with MFA
 
 An OOBI may be augmented with one or more OOBAs to minimize the
 likelihood of a DDOS OOBI attack. A given recipient may require as a
@@ -6603,7 +6556,7 @@ security to the OOBI. Thus, an OOBI could employ out-of-band (with
 respect to KERI) multi-factor authentication (MFA) to preclude any
 OOBI-based DDOS attacks on KERI.
 
-#### [§](#sped-speedy-percolated-endpoint-discovery){.toc-anchor .d-print-none} SPED (Speedy Percolated Endpoint Discovery)
+#### [§](#sped-speedy-percolated-endpoint-discovery) SPED (Speedy Percolated Endpoint Discovery)
 
 All the information needed to discover and verify is bootstrapped from
 the OOBI. Subsequent authorization is non-interactive, thus making it
@@ -6618,7 +6571,7 @@ discovers with any subsequent discoverers. Because the information so
 discovered is end-verifiable, the percolation mechanism does not need to
 be trusted. Percolating intermediaries do not need to be trusted.
 
-#### [§](#jitntk-discovery){.toc-anchor .d-print-none} JIT/NTK Discovery
+#### [§](#jitntk-discovery) JIT/NTK Discovery
 
 With percolated discovery, discovery mechanisms can be made very
 efficient because they can be optimized for any given exchange of
@@ -6632,7 +6585,7 @@ information to the Exchangee at the time of exchange, i.e, just-in-time.
 This avoids the need to have a dedicated global infrastructure for the
 discovery of verifiable data and the associated proofs.
 
-#### [§](#summary){.toc-anchor .d-print-none} Summary
+#### [§](#summary) Summary
 
 The main value of an OOBI is that it is compact and is not encumbered by
 authentication proofs but may be used to kick-start the process of
@@ -6659,7 +6612,7 @@ each component uses OOBIs to retrieve the authentication proofs from
 other components, then all the components will have clean proofs instead
 of stale proofs.
 
-### [§](#bada-best-available-data-acceptance-policy){.toc-anchor .d-print-none} BADA (Best-Available-Data-Acceptance) Policy
+### [§](#bada-best-available-data-acceptance-policy) BADA (Best-Available-Data-Acceptance) Policy
 
 The recipient of an OOBI verifies the OOBI by authenticating the
 endpoint URL given by the OOBI with respect to an authorization signed
@@ -6672,7 +6625,7 @@ to the OOBI URL. Specifically, the service endpoint at the URL responds
 with a resource that contains the supporting reply messages that are
 KERI authenticatable.
 
-#### [§](#security-issues){.toc-anchor .d-print-none} Security Issues
+#### [§](#security-issues) Security Issues
 
 KERI follows a "zero-trust" security model for authentic or securely
 attributable data. That means that data is signed both in motion and at
@@ -6692,7 +6645,7 @@ verifier may thereby be fooled into believing that the replay is
 actually a new message and not a stale message. There are both
 interactive and non-interactive mitigations to replay attacks.
 Interactive mitigations use some type of nonce or
-[Salt](#term:salt){.term-reference} exchanged between Updater and
+[Salt](#term:salt) exchanged between Updater and
 Updatee. The nonce exchange introduces latency, scalability, and
 synchronization limitations. Non-interactive mitigations require a
 monotonic ordering mechanism. Typically, monotonic ordering is based on
@@ -6707,7 +6660,7 @@ directly anchored to or determined by a KEL, the relative KEL location
 determines the monotonic order. This ordering determination includes
 TELs , which themselves are monotonically ordered with respect to
 anchoring seals in the associated KEL
-[ACDC](#term:acdc){.term-reference}. For authentic data not directly
+[ACDC](#term:acdc). For authentic data not directly
 anchored or included in a KEL, the relative key state (which is
 determined by the KEL) may be used in combination with a date-time stamp
 to ensure monotonic ordering. Finally, for any AID whose key state is
@@ -6741,7 +6694,7 @@ signature(s). The two primary attacks are replay and deletion. Replay
 attack mitigation relies on replay monotonicity in data updates.
 Deletion attack mitigation relies on the redundancy of monotonic data.
 
-#### [§](#bada-rules){.toc-anchor .d-print-none} BADA Rules
+#### [§](#bada-rules) BADA Rules
 
 The BADA rules apply to any data item stored in a database record whose
 value is used for some defined purpose. Updates are sourced from the
@@ -6757,7 +6710,7 @@ There are two different mechanisms for the controller of an AID to
 authorize updates to a given database record. The first is by
 referencing the update in the KEL of the authorizing AID. All entries in
 a KEL MUST be signed by the current signing keypair(s) given by the
-[Key-state](#term:key-state){.term-reference} for that KEL. The second
+[Key-state](#term:key-state) for that KEL. The second
 is by signing a date-time stamped update. In this case, the update MUST
 either includes a reference to the Key-state in the authorizing AID's
 KEL from which the signing keypair(s) needed to verify the signature is
@@ -6765,7 +6718,7 @@ obtained or the AID MUST be ephemeral with a fixed Key-state (has a
 non-transferable derivation code). The rules differ for each of the two
 mechanisms.
 
-#### [§](#kel-anchored-updates){.toc-anchor .d-print-none} KEL Anchored Updates
+#### [§](#kel-anchored-updates) KEL Anchored Updates
 
 In this case, the update to a record is included in or anchored via a
 seal to the AID's Key-state in its KEL. In either case, the update is
@@ -6784,7 +6737,7 @@ prior record.
       The Update’s anchor appears later in KEL than the Prior’s anchor THEN accept.
       Otherwise, do not accept.
 
-#### [§](#signed-not-anchored-updates){.toc-anchor .d-print-none} Signed (Not Anchored) Updates
+#### [§](#signed-not-anchored-updates) Signed (Not Anchored) Updates
 
 In this case, the update to a record is signed by the controller of the
 AID, but the update itself is NOT included in or anchored to the AID's
@@ -6813,7 +6766,7 @@ There are two cases. These are as follows.
             the Update’s date-time is later than the Prior's date-time THEN accept.
       Otherwise, do not accept.
 
-#### [§](#run-off-the-crud){.toc-anchor .d-print-none} RUN off the CRUD
+#### [§](#run-off-the-crud) RUN off the CRUD
 
 In the conventional client-server database architecture, the database
 server is responsible for creating records on behalf of clients and
@@ -6863,7 +6816,7 @@ records. The second is to attach an associated Boolean logic flag field
 that indicates the record has been Nullified. This works for multi-field
 records.
 
-#### [§](#oobi-keri-endpoint-authorization-okea){.toc-anchor .d-print-none} OOBI KERI Endpoint Authorization (OKEA)
+#### [§](#oobi-keri-endpoint-authorization-okea) OOBI KERI Endpoint Authorization (OKEA)
 
 An important use case for BADA-RUN is to process OOBIs that provide
 service endpoint discovery of the AIDS of KERI components. These
@@ -6920,7 +6873,7 @@ top of KERI.
 This also follows the design ethos of KERI of minimally sufficient
 means. OOBIs leverage the existing Internet discovery mechanisms but
 without needing to trust the Internet security model (or the lack of
-one). [End-verifiability](#term:end-verifiability){.term-reference} in
+one). [End-verifiability](#term:end-verifiability) in
 KERI provides safety to any OOBI discovery. The Internet's discovery
 mechanism, DNS/CA, is out-of-band with respect to KERI security
 guarantees. Thus, OOBIs may safely use DNS/CA, web search engines,
@@ -6932,7 +6885,7 @@ Typically, the query of a ReST endpoint given by the OOBI URL could
 return as proof any associated authorizing reply message(s) and any
 associated KELs.
 
-#### [§](#authorized-endpoint-disclosure-example){.toc-anchor .d-print-none} Authorized Endpoint Disclosure Example
+#### [§](#authorized-endpoint-disclosure-example) Authorized Endpoint Disclosure Example
 
 This section provides an example of using OKEA (OOBI KERI Endpoint
 Authorization) with BADA-RUN for endpoint disclosure.
@@ -6969,7 +6922,7 @@ provided URL for proof that the URL is an authorized endpoint for the
 given AID. The proof format may depend on the actual role of the
 endpoint. A current witness for an AID is designated in the current key
 state's latest [Establishment
-event](#term:establishment-event){.term-reference} in the AID's KEL.
+event](#term:establishment-event) in the AID's KEL.
 Therefore, merely replying with the Key State or KEL may serve as proof
 for a witness introduced by an OOBI. The actual URL may be authorized by
 an attendant signed `/loc/scheme` reply message with the URL.
@@ -6982,7 +6935,7 @@ reply message. The actual URL may be authorized by an attendant signed
 
 Example reply messages.
 
-#### [§](#player-eid-in-role-by-cid-update){.toc-anchor .d-print-none} Player EID in Role by CID Update
+#### [§](#player-eid-in-role-by-cid-update) Player EID in Role by CID Update
 
 Reply message as Python dict.
 
@@ -7014,7 +6967,7 @@ b'ap2FRfF4MFQ4v3ZXjBUcMVtvhmB","role":"witness","eid":"BGKV6v93ue5L5wsgk75t6j8'
 b'TcdgABMN9x-eIyPi96J3B"}}')
 ```
 
-#### [§](#player-eid-in-role-by-cid-nullify-via-cut){.toc-anchor .d-print-none} Player EID in Role by CID Nullify Via Cut
+#### [§](#player-eid-in-role-by-cid-nullify-via-cut) Player EID in Role by CID Nullify Via Cut
 
 To nullify the EID use cut route.
 
@@ -7048,7 +7001,7 @@ b'ap2FRfF4MFQ4v3ZXjBUcMVtvhmB","role":"witness","eid":"BGKV6v93ue5L5wsgk75t6j8'
 b'TcdgABMN9x-eIyPi96J3B"}}')
 ```
 
-#### [§](#endpoint-location-with-scheme-by-eid-update){.toc-anchor .d-print-none} Endpoint Location with Scheme by EID Update
+#### [§](#endpoint-location-with-scheme-by-eid-update) Endpoint Location with Scheme by EID Update
 
 Reply message as Python dict.
 
@@ -7083,7 +7036,7 @@ b't6j8TcdgABMN9x-eIyPi96J3B","scheme":"https","url":"https//example.com/witnes'
 b's/wilma"}}')
 ```
 
-#### [§](#endpoint-location-with-scheme-by-eid-nullify-via-empty-url){.toc-anchor .d-print-none} Endpoint Location with Scheme by EID Nullify Via Empty URL
+#### [§](#endpoint-location-with-scheme-by-eid-nullify-via-empty-url) Endpoint Location with Scheme by EID Nullify Via Empty URL
 
 To Nullify set the `url` to the empty string `""`.
 
@@ -7116,165 +7069,158 @@ b'-21T17:52:12.000000+00:00","r":"/loc/scheme","a":{"eid":"BGKV6v93ue5L5wsgk75'
 b't6j8TcdgABMN9x-eIyPi96J3B","scheme":"https","url":""}}')
 ```
 
-## [§](#bibliography){.toc-anchor .d-print-none} Bibliography
+## [§](#bibliography) Bibliography
 
-### [§](#normative-section){.toc-anchor .d-print-none} Normative section
+### [§](#normative-section) Normative section
 
-[1]{#CESR}[]{#ref1}. Samuel M. Smith, [Composable Event Streaming
+[1][]. Samuel M. Smith, [Composable Event Streaming
 Representation
 (CESR)](https://github.com/trustoverip/kswg-cesr-specification), 2022
 
-[2]{#CBOR}[]{#ref2}. C. Bormann, P. Hoffman, [Concise Binary Object
+[2][]. C. Bormann, P. Hoffman, [Concise Binary Object
 Representation (CBOR)](https://www.rfc-editor.org/rfc/rfc8949.html),
-2020
 
-[3]{#MessagePack}[]{#ref3}. Sadayuki Furuhashi,
+[3][]. Sadayuki Furuhashi,
 [MessagePack](https://github.com/msgpack/msgpack/blob/master/spec.md),
-2008
 
-[4]{#KERI-WP}[]{#ref4}. Samuel M. Smith, [Key Event Receipt
+[4][]. Samuel M. Smith, [Key Event Receipt
 Infrastructure](https://github.com/SmithSamuelM/Papers/blob/master/whitepapers/KERI_WP_2.x.web.pdf),
-2021
 
-[30]{#RFC0791}[]{#ref30}. RFC0791 [Internet Protocol. J. Postel;
+[30][]. RFC0791 [Internet Protocol. J. Postel;
 1981-09](https://www.rfc-editor.org/rfc/rfc791). Status: Internet
 Standard.
 
-[31]{#RFC3986}[]{#ref31}. RFC3986 [Uniform Resource Identifier (URI):
+[31][]. RFC3986 [Uniform Resource Identifier (URI):
 Generic Syntax](https://www.rfc-editor.org/rfc/rfc3986). T. Berners-Lee;
 R. Fielding; L. Masinter; 2005-01. Status: Internet Standard.
 
-[32]{#RFC4627}[]{#ref32}. RFC4627 [The application/json Media Type for
+[32][]. RFC4627 [The application/json Media Type for
 JavaScript Object Notation
 (JSON)](https://www.rfc-editor.org/rfc/rfc4627). D. Crockford; 2006-07.
 Status: Informational.
 
-[33]{#RFC5280}[]{#ref33}. RFC5280 [Internet X.509 Public Key
+[33][]. RFC5280 [Internet X.509 Public Key
 Infrastructure Certificate and Certificate Revocation List (CRL)
 Profile](https://www.rfc-editor.org/rfc/rfc5280). D. Cooper; S.
 Santesson; S. Farrell; S. Boeyen; R. Housley; W. Polk; 2008-05. Status:
 Proposed Standard.
 
-[34]{#RFC5785}[]{#ref34}. RFC5785 [Defining Well-Known Uniform Resource
+[34][]. RFC5785 [Defining Well-Known Uniform Resource
 Identifiers (URIs)](https://www.rfc-editor.org/rfc/rfc5785). M.
 Nottingham; E. Hammer-Lahav; 2010-04. Status: Proposed Standard.
 
-[35]{#RFC6960}[]{#ref35}. RFC6960 [X.509 Internet Public Key
+[35][]. RFC6960 [X.509 Internet Public Key
 Infrastructure Online Certificate Status Protocol -
 OCSP](https://www.rfc-editor.org/rfc/rfc6960). S. Santesson; M. Myers;
 R. Ankney; A. Malpani; S. Galperin; C. Adams; 2013-06. Status: Proposed
 Standard.
 
-[36]{#RFC8949}[]{#ref36}. RFC8948 [Concise Binary Object Representation
+[36][]. RFC8948 [Concise Binary Object Representation
 (CBOR)](https://www.rfc-editor.org/rfc/rfc8949.html) . C. Bormann; P.
 Hoffman; 2020-12. Status:Internet Standard
 
-[37]{#RFC4648}[]{#ref37}. RFC4648 [The Base16, Base32, and Base64 Data
+[37][]. RFC4648 [The Base16, Base32, and Base64 Data
 Encodings](https://www.rfc-editor.org/rfc/rfc4648). S. Josefsson;
 2006-10. Status: Proposed Standard.
 
-[38]{#RFC2119}[]{#ref38}. IETF RFC-2119 [Key words for use in RFCs to
+[38][]. IETF RFC-2119 [Key words for use in RFCs to
 Indicate Requirement
 Levels](https://www.rfc-editor.org/rfc/rfc2119.txt). S. Bradner.
 1997-03. Status: Best Current Practice
 
-[39]{#IT7498}[]{#ref39}. ISO/IEC 7498-1:1994 Information technology ---
+[39][]. ISO/IEC 7498-1:1994 Information technology ---
 Open Systems Interconnection --- Basic Reference Model: The Basic Model.
 June 1999. Introduction. Retrieved 26 August 2022.
 
-[40]{#RFC3339}[]{#ref40}. IETF RFC-3339 Date and Time on the Internet:
+[40][]. IETF RFC-3339 Date and Time on the Internet:
 Timestamps [DateTime](https://www.rfc-editor.org/rfc/rfc3339.txt). G.
 Klyne. 2002-07. Status: Standards Track
 
-[41]{#BLAKE3}[]{#ref41}. Blake3 Specification
+[41][]. Blake3 Specification
 [Blake3](https://github.com/BLAKE3-team/BLAKE3-specs). J. O'Connor; J-P.
 Aumasson; S. Neves ; Z. Wilcox-O'Hearn. Version 20211102173700.
 
-### [§](#informative-section){.toc-anchor .d-print-none} Informative section
+### [§](#informative-section) Informative section
 
-[5]{#UIT}[]{#ref5}. Samuel M. Smith, [Universal Identifier
+[5][]. Samuel M. Smith, [Universal Identifier
 Theory](https://github.com/SmithSamuelM/Papers/blob/master/whitepapers/IdentifierTheory_web.pdf),
-2020
 
-[6]{#DAD}[]{#ref6}. Samuel M. Smith, [Decentralized Autonomic Data (DAD)
+[6][]. Samuel M. Smith, [Decentralized Autonomic Data (DAD)
 and the three R's of Key
 Management](https://github.com/SmithSamuelM/Papers/blob/master/whitepapers/DecentralizedAutonomicData.pdf),
-2018
 
-[7]{#NFPercTheo}[]{#ref7}. David Wilkinson, Jorge F Willemsen, [Invasion
+[7][]. David Wilkinson, Jorge F Willemsen, [Invasion
 percolation: a new form of percolation
 theory](https://www.physics.purdue.edu/flow/MMproject/Wilkinson1983.pdf),
-1983
 
-[8]{#ITPS}[]{#ref8}. [Information-Theoretic and Perfect
+[8][]. [Information-Theoretic and Perfect
 Security](https://en.wikipedia.org/wiki/Information-theoretic_security)
 
-[9]{#CSPRNG}[]{#ref9}. [Cryptographically-secure pseudorandom number
+[9][]. [Cryptographically-secure pseudorandom number
 generator](https://en.wikipedia.org/wiki/Cryptographically-secure_pseudorandom_number_generator)
 
-[10]{#InfoTheo}[]{#ref10}. [Information
+[10][]. [Information
 Theory](https://en.wikipedia.org/wiki/Information_theory)
 
-[11]{#CAHC}[]{#ref11}. [Cost analysis of hash collisions: Will quantum
+[11][]. [Cost analysis of hash collisions: Will quantum
 computers make SHARCS
 obsolete](https://cr.yp.to/hash/collisioncost-20090823.pdf)
 
-[12]{#TMCrypto}[]{#ref12}. Jean-Philippe Aumasson, [Too Much
+[12][]. Jean-Philippe Aumasson, [Too Much
 Crypto](https://eprint.iacr.org/2019/1492.pdf), 2021
 
-[13]{#OWF1}[]{#ref13}. [One-way
+[13][]. [One-way
 Function](https://en.wikipedia.org/wiki/One-way_function)
 
-[14]{#OWF2}[]{#ref14}. [One-way
+[14][]. [One-way
 Function](http://www.crypto-it.net/eng/theory/one-way-function.html)
 
-[15]{#PKCrypt}[]{#ref15}. [Public-key
+[15][]. [Public-key
 Cryptography](https://en.wikipedia.org/wiki/Public-key_cryptography)
 
-[16]{#SCPK}[]{#ref16}. Marc Girault, [Self-certified public
+[16][]. Marc Girault, [Self-certified public
 keys](https://link.springer.com/content/pdf/10.1007%2F3-540-46416-6_42.pdf)
 
-[17]{#SFS-HTTP}[]{#ref17}. M. Kaminsky, E. Banks, [SFS-HTTP: Securing
+[17][]. M. Kaminsky, E. Banks, [SFS-HTTP: Securing
 the Web with Self-Certifying
 URLs](https://pdos.csail.mit.edu/kaminsky/sfs-http.ps), 1999
 
-[18]{#SCFS}[]{#ref18}. David Mazieres, [Self-certifying File
+[18][]. David Mazieres, [Self-certifying File
 System](https://pdos.csail.mit.edu/kaminsky/sfs-http.ps), 2000
 
-[19]{#EscEvils}[]{#ref19}. David Mazieres, M. Kaashoek, [Escaping the
+[19][]. David Mazieres, M. Kaashoek, [Escaping the
 Evils of Centralized Control with self-certifying
 pathnames](https://dl.acm.org/doi/pdf/10.1145/319195.319213), 2000
 
-[20]{#CertRevList}[]{#ref20}. [Certificate Revocation
+[20][]. [Certificate Revocation
 List](https://en.wikipedia.org/wiki/Certificate_revocation_list)
 
-[21]{#VDS}[]{#ref21}. [Verifiable Data
+[21][]. [Verifiable Data
 Structures](https://github.com/google/trillian/blob/master/docs/papers/VerifiableDataStructures.pdf)
 
-[22]{#RicCont}[]{#ref22}. [Ricardian
+[22][]. [Ricardian
 contract](https://en.wikipedia.org/wiki/Ricardian_contract)
 
-[23]{#NameSpace}[]{#ref23}.
+[23][].
 [Namespace](https://en.wikipedia.org/wiki/Namespace)
 
-[24]{#EclipsAttack}[]{#ref24}. [Eclipse
+[24][]. [Eclipse
 Attack](https://www.gemini.com/cryptopedia/eclipse-attacks-defense-bitcoin)
 
-[25]{#PercTheo}[]{#ref25}. [Percolation
+[25][]. [Percolation
 Theory](https://en.wikipedia.org/wiki/Percolation_theory)
 
-[26]{#FPPerc}[]{#ref26}. [First Passage
+[26][]. [First Passage
 Percolation](https://en.wikipedia.org/wiki/First_passage_percolation)
 
-[27]{#InvasPerc}[]{#ref27}. [Invasion
+[27][]. [Invasion
 Percolation](https://www.physics.purdue.edu/flow/MMproject/Wilkinson1983.pdf)
 
-[28]{#URL}[]{#ref28}. [Uniform Resource
+[28][]. [Uniform Resource
 Locator](https://en.wikipedia.org/wiki/URL)
 
-[29]{#QRCode}[]{#ref29}. [QR
+[29][]. [QR
 Code](https://en.wikipedia.org/wiki/QR_code)
 
-[30]{#DataMatrix}[]{#ref30}. [Data
+[30][]. [Data
 Matrix](https://en.wikipedia.org/wiki/Data_Matrix)
-:::::::::::::::::

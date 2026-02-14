@@ -3,35 +3,23 @@
 KERI and Zero Trust Data Management
 https://hackmd.io/Qsrfj7Y-TIGl5ESvrxWGxw
 
-
-
 _Samuel M. Smith Ph.D._
-
-
 
 _[sam@keri.one](mailto:sam@keri.one)_
 _[https://keri.one](https://keri.one)_
 
-
-
 version 2.60
 
-
-
 2021/04/23
-
 
 ###### PAC Theorem
 
 A conversation may be two of the three, _private_, _authentic_, and _confidential_
 to the same degree, but not all three at the same degree.
 
-
 Authentic
 
-
 Trade-offs required!
-
 
 ###### Definitions
 
@@ -44,7 +32,6 @@ The origin and content of any statement by a party to a conversation is provable
 _Confidential_ :
 All statements in a conversation are only known by the parties to that conversation.
 
-
 _Privacy_ :
 
 about control over the disclosure of who participated is in the conversation (non-content meta-data)
@@ -55,18 +42,13 @@ _Confidentiality_ :
 
 about control over the disclosure of what was said in the conversation (content data)
 
-
 Relatively weak legal protection for non-content (supoena)
 Relatively strong legal protection for content (search warrant)
-
 
 [https://www.lawfareblog.com/relative-vs-absolute-approaches-contentmetadata-line](https://www.lawfareblog.com/relative-vs-absolute-approaches-contentmetadata-line)
 https://www.pogo.org/analysis/2019/06/the-history-and-future-of-mass-metadata-surveillance/
 
-
-
 Authenticity
-
 
 ###### Proving Authenticity
 
@@ -75,49 +57,28 @@ a statement's author cannot successfully dispute its authorship
 
 _Asymmetric key-pair digital signature_
 
-
 _Repudiable Proof:_
 a statement's author can successfully dispute its authorship
 
 _DH shared symmetric key-pair encryption (auth crypt)_
 _Shared secret makes every verifier a potential forger_
 
-
 Signed with
-
-
 
 Verified with
 
-
-
 private key
 
-
-
 public key
-
-
-
-
-
 
 Encrypted with
 shared private key
 
-
-
-
-
 Sue
 Zoe
 
-
-
-
 Sue
 Zoe
-
 
 ###### Trade-offs
 
@@ -130,7 +91,6 @@ The origin and content of any statement by a party to a conversation is provable
 _Confidential_ :
 All statements in a conversation are only known by the parties to that conversation.
 
-
 Non-repudiation means any party to conversation can proof to any other party exactly what was said by whom.
 This means that technologically there is no way to prevent disclosure by any party to some third party.
 We can incentivize confidentiality by imposing a liability on the parties to the disclosure set before disclosure
@@ -142,33 +102,22 @@ Enforcement of that liability will usually necessarily violate privacy but not c
 Real world value often requires transitivity.
 Transitive value transfer will violate complete privacy.
 
-
 ###### Layering
 
 A communication system can layer the different properties in different orders thereby imposing a
 priority on each property.
 
-
 Authenticity
 Confidentiality
 Privacy
 
-
-
 Authentic
-
 
 ## Privacy?
 
-
-
-
-
 Weak
 
-
 _Strong_ Privacy
-
 
 Definition: un-correlated interactions over unbounded time and space.
 
@@ -176,97 +125,60 @@ Super aggregators and state actors have effectively unlimited storage and
 compute capacity. Eventually all disclosed data will be at least statistically
 correlatable.
 
-
 _Weak_ Privacy
-
 
 Definition: un-correlated interactions over bounded time and space.
 
 when the cost of correlation exceeds the value of correlation the data will be
 un-correlated.
 
-
 |Col1|Operating Regimes|
 |---|---|
 |Hide<br>or<br>Bribe|Regulation<br>and/or<br>Legally Enforced Contracts|
 |Hide<br>and<br>Bribe|Criminally Enforced Contracts ?|
 
-
-
 Illegitimate Legitimate
-
 
 Economic
 
-
 _Economics of Correlator_
-
-
-
-
 
 data lifecycle _past_ _now_ _future_
 
-
 _measured_ _predicted_
-
 
 _Economics of Correlator: Value Extraction_
 
-
 data lifecycle _past_ _now_ _future_
 
-
 _measured_ _predicted_
-
 
 _Economics of De-correlator_
 
-
-
-
-
 data lifecycle _past_ _now_ _future_
 
-
 _measured_ _predicted_
-
 
 _Economics of De-correlator: Value Extraction_
 
-
-
-
-
-
-
 data lifecycle _past_ _now_ _future_
 
-
 _measured_ _predicted_
-
 
 ## Freedom
 
 _balanced_
 Freedom from … Freedom to …
 
-
-
 exploitation (commercial)
 
 intimidation (political)
-
-
 
 extract value(commercial)
 
 build relationships (social)
 
-
-
 censorship (political) build community (political)
-
 
 possibility of erasure = possibility of censorship
 
@@ -274,49 +186,33 @@ anonymity = loss-of-value from attribution
 
 fairness = loss of privacy from attribution
 
-
 ###### Three Party Exploitation Model
-
 
 ###### Contractually Governed Exchanges
 
 _Ricardian Contracts:_
 _[https://en.wikipedia.org/wiki/Ricardian_contract](https://en.wikipedia.org/wiki/Ricardian_contract)_
 
-
 _Chain-link Confidentiality_
 _[https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2045818](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2045818)_
 
-
 _Consent, Waiver, Terms-of-use, Remuneration, etc._
-
 
 ###### Chain-Link Confidentiality
 
 _[https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2045818](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2045818)_
 
-
 ###### Least Disclosure
-
-
-
-
-
-
-
 
 ###### Contractual Exchange
 
 Disclosee may now engage in permissioned use and carries liability as a deterrent against unpermissioned use.
 
-
 ###### Latent Accountability
 
 Example Use Cases
 
-
 ##### Background
-
 
 ###### BADA (Best Available Data Acceptance) Policy
 
@@ -338,9 +234,7 @@ Non-interactive:
 Memory (sequence number, date-time stamp, nullification)
 More scalable
 
-
 Authentic
-
 
 ###### RUN off the CRUD
 
@@ -365,15 +259,11 @@ Accept if no prior record.
 Accept if key state is later than prior record.
 Accept if key state is the same and date-time stamp is later than prior record.
 
-
 ## Toolkits
-
 
 ## Only have one set of tools for truly secure data control!
 
-
 ## Entropy Derived Tools Cryptographic one-way functions … hashes, ECC scalar multiplication… digital signatures, ZKPs …
-
 
 ## its
 
@@ -381,10 +271,8 @@ cryptographic
 ## bits
 pseudonymous identifiers
 
-
 control
 attribution
-
 
 ##### Secure Attribution Problem
 
@@ -400,72 +288,29 @@ Data Provenance
 
 Authentic data economy
 
-
 ###### Identity System Security Overlay
 
 Establish authenticity of IP packet’s message payload.
-
 
 The overlay’s security is contingent
 
 on the mapping’s security.
 
-
 ###### Self-Certifying Identifier Issuance and Binding
 
 entropy
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 self-certifying
-
-
-
-
 
 Self-Certifying Identifier Issuance
 
-
 ###### Basic SCID
-
-
-
-
 
 Prefix
 
-
-
-
-
 one-way function one-way function
 
-
-
-
-
 one-way function
-
-
-
-
-
 
 ```
     BDKrJxkcR9m5u1xs33F5pxRJP6T7hJEbhpHrUtlDdhh0
@@ -476,32 +321,7 @@ did:un:BDKrJxkcR9m5u1xs33F5pxRJP6T7hJEbhpHrUtlDdhh0/path/to/resource?name=secure
 
 ###### Self-Addressing SCID
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Prefix
-
-
-
-
-
-
-
-
-
 
 ```
     EXq5YqaL6L48pf0fu7IUhL0JRaU2_RxFP0AL43wYn148
@@ -512,72 +332,21 @@ did:keri:EXq5YqaL6L48pf0fu7IUhL0JRaU2_RxFP0AL43wYn148/path/to/resource?name=secu
 
 ###### Multi-Sig Self-Addressing SCID
 
-
-
-
-
-
-
-
-
 one-way function one-way function
-
-
-
-
-
-
 
 Prefix
 
-
-
 one-way function
 
-
-
-
-
-
-
 one-way function one-way function
-
-
-
-
-
-
-
-
-
-
 
 …
 
-
-
 one-way function
-
-
-
-
 
 one-way function one-way function
 
-
-
-
-
 one-way function
-
-
-
-
-
-
-
-
-
 
 ```
     EXq5YqaL6L48pf0fu7IUhL0JRaU2_RxFP0AL43wYn148
@@ -588,42 +357,7 @@ did:un:EXq5YqaL6L48pf0fu7IUhL0JRaU2_RxFP0AL43wYn148/path/to/resource?name=secure
 
 ###### Delegated Self-Addressing SCID
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Prefix
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ```
     EXq5YqaL6L48pf0fu7IUhL0JRaU2_RxFP0AL43wYn148
@@ -634,56 +368,23 @@ did:un:EXq5YqaL6L48pf0fu7IUhL0JRaU2_RxFP0AL43wYn148/path/to/resource?name=secure
 
 ###### Self-Signing SCID
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Prefix
 
-
-
-
-
-
-
-
-
-
 Full Sequence
-
-
 
 Establishment
 
 Subsequence
 
-
-
-
-
 Non-Establishment
 
 Subsequence
-
 
 ###### Inconsistency and Duplicity
 
 _inconsistency_ : lacking agreement, as two or more things in relation to each other
 
 _duplicity_ : acting in two different ways to different people concerning the same matter
-
 
 Internal vs. External Inconsistency
 
@@ -692,13 +393,10 @@ Internally inconsistent log = not verifiable.
 Log verification from self-certifying root-of-trust protects
 against internal inconsistency.
 
-
 Externally inconsistent log with a purported copy of log but
 both verifiable = duplicitous.
 
-
 Duplicity detection protects against external inconsistency.
-
 
 |Inception Event|Col2|Col3|
 |---|---|---|
@@ -714,14 +412,9 @@ Duplicity detection protects against external inconsistency.
 ||Interaction Event|Interaction Event|
 ||Interaction Event||
 
-
 Duplicity Game
 
-
-
 _How may Cate be duplicitous_
-
-
 
 Cate promises to provide a
 
@@ -731,184 +424,93 @@ consistent pair-wise log.
 
 _and not get caught?_
 
-
-
 consistent pair-wise log.
 _Local Consistency Guarantee_
-
-
 
 Cate
 _Controller_
 
 Log
 
-
-
-
-
 Eve
 _Validator_
 
 Log
 
-
-
 private (one-to-one) interactions
-
-
 
 Joe
 _Validator_
 
 Log
-
 
 Service promises to provide a
 
 consistent log to anyone.
 _Local Consistency Guarantee_
 
-
-
 Duplicity Game
-
 
 Cate
 _Controller_
 
 Log
 
-
-
 How may Cate/Service/Agent be
 
 duplicitous and not get caught?
 
-
-
 Truncate Log
 
 Delete Log
-
-
 
 Service/Agent
 _Controlled by Cate_
 
 Log
 
-
-
-
-
-
-
-
-
 Eve
 _Validator_
 
 Log
-
-
 
 Joe
 _Validator_
 
 Log
 
-
 highly available, private (one-to-one) interactions
-
 
 Service promises to provide
 exact same log to everyone.
 _Global Consistency Guarantee_
 
-
-
 Duplicity Game
-
 
 Cate
 _Controller_
 
 Log
 
-
-
 How may Cate and/or service be
 
 duplicitous and not get caught?
 
-
-
 Service
 _Controlled by Cate_
 
-
-
 Log
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 Ledger Registration
 
-
-
-
-
-
-
-
-
-
-
 entropy
 
-
-
-
-
-
-
-
-
-
-
 self-certifying access identifier
-
 
 The access identifier may have a self-certifying primary root-of-trust, but the registered
 identifier does not, even if its format appears to be self-certifying.
 
-
 Autonomic Identifier (AID) and Namespace (AN)
-
 
 _auto nomos_ = self rule
 _autonomic_ = self-governing, self-controlling, etc.
@@ -918,110 +520,19 @@ _self-certifying_ and hence _self-administrating._
 _AIDs_ and ANs are _portable =_ truly self-sovereign.
 autonomic prefix = self-cert + UUID + URL = universal identifier
 
-
 ###### Trust Basis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### Administrative Trust Basis
 
 DNS/Certificate Authorities
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###### Algorithmic Trust Basis
 
 Shared Distributed Ledgers
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###### Autonomic Trust Basis
 
 Cryptographic Proofs
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### KEY Event Based Provenance of Identifiers
 
@@ -1040,7 +551,6 @@ _Anyone_ may verify _any-log_, _anywhere_, at _anytime_ .
 
 KERI = self-cert root-of-trust + certificate transparency + KA [2] CE +
 recoverable + post-quantum.
-
 
 ###### KERI for the DID ified
 
@@ -1080,17 +590,6 @@ did:indy:sov:keri:BDKrJxkcR9m5u1xs33F5pxRJP6T7hJEbhpHrUtlDdhh0
 
 ###### Autonomic Identifier System
 
-
-
-
-
-
-
-
-
-
-
-
 ###### Zooko’s Trilemma
 
 _Desirable identifier properties: secure, decentralized, human meaningful_
@@ -1101,25 +600,13 @@ _One way to sort of solve the trilemma is to uniquely register a human meaningfu
 _identifier on a ledger controlled by a different identifier that is secure and_
 _decentralized but not human meaningful._
 
-
-
-
-
-
-
-
 ###### Trust Balance
 
 Reputational Trust
 
-
-
 Cryptographic Trust
 
-
-
 authenticity
-
 
 ###### Unified Identifier Model
 
@@ -1137,12 +624,7 @@ authorization is verifiable to the root-of-trust of AID
 
 Forms _`AID|LID`_ couplet within trust domain of AID
 
-
-
 AID LID
-
-
-
 
 ###### AID|LID Couplet
 
@@ -1159,25 +641,6 @@ Infrastructure
 
 Stack
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 |Key<br>Event|Confirmation|
 |---|---|
 |Key<br>Event|Verification|
@@ -1190,272 +653,82 @@ Stack
 |Key|Storage|
 |Key|Creation|
 
-
-
-
 ###### Basic KERI Stack
-
-
 
 KERI employs a modular architecture with modular components that each provide services. Participants may
 configure their stacks to provide some of all of the services or share services provided by others.
 
-
 The component services include Controller, Witness, Watcher, Delegate, Oracle, Validator.
-
 
 The root-of-trust for the GLEIF ecosystem is provided by a single globally published AID called the Root AID. It is a
 KERI DID.
 
-
 This Root AID is the issuer of delegations to other KERI AID DIDs. These delegated identifiers may be the issuers of
 VCs.
 
-
-
-
-
 Cloud Delegate AID
-
-
 
 Witness Pool
 
-
-
-
-
-
-
-
-
 Participant AID Cloud
-
-
-
-
-
-
-
 
 ###### Decentralized Key Management Infrastructure (Univalent DKMI)
 
-
-
-
-
-
-
-
-
-
-
-
 ###### Hierarchical DKMI: Bivalent DKMI
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### MultiValent Delegation
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###### Delegation (Cross Anchor)
-
-
-
-
-
-
-
 
 |prefix|sn|digest|Col4|
 |---|---|---|---|
 |_prefix_|_sn_|_digest_|_gest_|
 
-
 |Delegating Event Data<br>Data (Seals)<br>Delegated Event Seal<br>header configuration prefix sn digest|Col2|
 |---|---|
 |Delegating  Event Data<br>_header_<br>_configuration_<br>Data (Seals)<br>Delegated Event Seal<br>_sn_<br>_prefix_<br>_digest_|_signatures_|
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### Interaction Delegation
 
 Delegator Delegate
 
-
-
 C
 Key Event Stream
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ∆→ X : Delegation to X
 
-
 ∆← A : Delegation from A
-
-
 
 D
 Key Event Stream
 
-
 D ∆← C Inception
 
-
 D Interaction
 
-
 D Interaction
-
 
 D ∆← C Rotation
 
+D Interaction
 
 D Interaction
 
-
 D Interaction
-
-
-D Interaction
-
 
 D ∆← C Rotation
 
-
 D Interaction
 
-
 D Interaction
-
 
 D ∆← C Rotation
 
-
 D Interaction
 
-
 D Interaction
-
 
 ###### Scaling Delegation via Interaction
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |A Key Event Stream Delegator|X Key Event Stream Y Key Event Stream Z Key Event Stream Delegate Delegate Delegate|
 |---|---|
@@ -1472,7 +745,6 @@ D Interaction
 |A Interaction<br>∆→ X Rotation|A Interaction<br>∆→ X Rotation|
 |A Rotation|A Rotation|
 
-
 |Col1|Col2|Col3|Col4|Col5|Col6|Col7|
 |---|---|---|---|---|---|---|
 ||||||||
@@ -1484,122 +756,49 @@ D Interaction
 ||||||||
 ||||||||
 
-
 ∆← A : Delegation from A
-
 
 ###### Rotation Delegation
 
 Delegator Delegate
 
-
-
 C
 Key Event Stream
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ∆→ X : Delegation to X
 
-
 ∆← A : Delegation from A
-
-
 
 D
 Key Event Stream
 
-
 D ∆← C Inception
 
-
 D Interaction
 
-
 D Interaction
-
 
 D ∆← C Rotation
 
+D Interaction
 
 D Interaction
 
-
 D Interaction
-
-
-D Interaction
-
 
 D ∆← C Rotation
 
-
 D Interaction
 
-
 D Interaction
-
 
 D ∆← C Rotation
 
-
 D Interaction
 
-
 D Interaction
-
 
 ###### Scaling Delegation via Rotation
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |A Key Event Stream Delegator|X Key Event Stream Y Key Event Stream Z Key Event Stream Delegate Delegate Delegate|Col3|
 |---|---|---|
@@ -1622,7 +821,6 @@ D Interaction
 |A Rotation<br>∆→ X Rotation|A Rotation<br>∆→ X Rotation|A Rotation<br>∆→ X Rotation|
 |A Rotation<br>∆→ X Rotation|A Rotation<br>∆→ X Rotation|Z Interaction|
 
-
 |Col1|Col2|Col3|Col4|Col5|Col6|Col7|
 |---|---|---|---|---|---|---|
 ||||||||
@@ -1634,210 +832,89 @@ D Interaction
 ||||||||
 ||||||||
 
-
 ∆→ X : Delegation to X
 ∆← A : Delegation from A
-
 
 Sovrin
 Network
 
-
-
 Indy X
 Network
-
-
 
 Ethereum
 
 Network
 
-
-
 Ledger X
 
 Network
 
-
 Each level of delegation forms a nested trust domain that is protected by the level above.
 This increases ultimate security while enabling higher performance event issuance in lower layers.
-
 
 The Level 1 entity AID provides the root-of-trust for the whole ecosystem. This enables secure decentralized
 interoperability.
 
-
 Each trust domain may make delegations of both identifiers and verifiable credentials to a subordinate trust
 domain. These delegations provide revocable authorizations.
 
-
 system.
 
-
-
-
-
-
-
-
 Entity A
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |Col1|Col2|Col3|Col4|Col5|Col6|
 |---|---|---|---|---|---|
 |||||||
 |||||||
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 **Tripartite Authentic Data (VC) Model**
-
 
 Issuer: Source of the VC. Creates (issues) and signs VC
 Holder: Usually the target of the VC. The holder is the “ _issuee_ ” that receives the VC and holds it for its own use.
 Verifier: Verifies the signatures on the VC and authenticates the holder at the time of presentation
 
-
 The issuer and target each have a DID (decentralized identifier).
 The DIDs are used to look-up the public key(s) needed to verify signatures.
 
-
 Issuer-Holder-Verifier Model
 
-
 **Tripartite Authentic Data (VC) Model with VDR**
-
 
 Verifiable Data Registry (VDR) enables decentralized but interoperable discovery and verification of authoritative key pairs for
 DIDs in order to verify the signatures on VCs. A VDR may also provide other information such as data schema or revocation state
 of a VC.
 
-
 Each controller of a DID registers that DID on a VDR so that a verifier can determine the authoritative key pairs for any
 signatures.
 
-
 We call this determination, _establishment of control authority_ over a DID.
-
 
 Issuer-Holder-Verifier Model with Verification at Verifiable Data Registry
 
-
-
-
-
-
-
-
-
-
 **KERI VDRs vs. Shared Ledger VDRs**
-
 
 Most DID methods use a shared ledger (commonly referred to as a _blockchain_ ) for their VDR. Typically, in order to interoperate all participants must
 use the same shared ledger or support multiple different DID methods. There are currently over 70 DID methods. Instead GLEIF has chosen to use
 KERI based DID methods. KERI stands for Key Event Receipt Infrastructure. KERI based VDRs are ledger independent, i.e. not locked to a given ledger.
 This provides a path for greater interoperability without forcing participants in the vLEI ecosystem to use the same shared ledger.
 
-
 A KERI VDR is called a key event log (KEL). It is a cryptographically verifiable signed hash chained data structure, a special class of verifiable data
 structure. Each KERI based identifier has its own dedicated KEL. The purpose of the KEL is to provide proof of the establishment of control authority
 over an identifier. This provides cryptographically verifiable proof of the current set of authoritative keys for the identifier. KERI identifiers are long
 cryptographic pseudo random strings of characters. They are self-certifying and self-managing.
 
-
 A KERI identifier is abstractly called an Autonomic Identifier (AID) because it is self-certifying and self-managing. A KERI DID is one concrete
 implementation of a KERI AID. The same KERI prefix may control multiple different DIDs as long as they share the same prefix.
 
-
 Full Sequence
-
-
 
 Establishment
 
 Subsequence
 
-
-
-
-
 Non-Establishment
 
 Subsequence
-
 
 ```
 did:keri: prefix [: options ][/ path ][? query ][# fragment ]
@@ -1860,7 +937,6 @@ did:keri:ENqFtH6_cfDg8riLZ-GDvDaCKVn6clOJa7ZXXVXSWpRY
 ||Interaction Event|Interaction Event|
 ||Interaction Event||
 
-
 **KERI Identifier KEL VDR** _**Controls**_ **Verifiable Credential Registry TEL VDR**
 
 A KERI KEL for a given identifier provides proof of authoritative key state at each event. The events are ordered. This ordering may be used to
@@ -1875,66 +951,7 @@ The TEL provides a cryptographic proof of registry state by reference to the cor
 Any validator may therefore cryptographically verify the authoritative state of the registry.
 In the case of the vLEI the associated TEL controls a vLEI issuance and revocation registry.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 _seal = proof of authenticity_
-
 
 **Registry with Separable VC Issuance-Revocation TELs**
 
@@ -1945,73 +962,15 @@ These may be used as database keys to lookup a VC and verify the content of a gi
 This combination enables a separable registry of VC issuance-revocation state.
 The state may employ a cryptographic accumulator for enhanced privacy
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###### Identity System Security Overlay
 
 Establish authenticity of IP packet’s message payload.
-
 
 The overlay’s security is contingent
 
 on the mapping’s security.
 
-
 **Identifier System Security**
-
 
 Authentic transmission of data may be verified using an identity system security overlay.
 This overlay maps cryptographic key-pairs to identifiers.
@@ -2021,131 +980,73 @@ A key event log (KEL) provide support for secure key rotation without changing t
 Message authenticity is provided by verifying signatures to the authoritative keys pairs for the identifier included in the
 message.
 
-
 The overlay’s security is contingent
 
 on the mapping’s security.
 
-
 ###### Smith’s Identifier System Properties Triangle
 
-
-
-
-
 May exhibit any two at the highest level but not all three at the highest level
-
 
 ###### The Internet Protocol (IP) is bro-ken because it has no security layer.
 
 OSI Model IP Model
 
-
-
 Application
-
 
 Transport
 
-
 Network
 
-
 Link
-
-
 
 Authentication
 
-
-
 Application
-
 
 Presentation
 
-
 Session
-
 
 Transport
 
-
 Network
-
 
 Link
 
-
 Physical
-
-
 
 TCP, UDP
 
-
 IP
 
-
 ###### Instead … We use bolt-on identity system security overlays. (DNS-CA …)
-
 
 ###### Identity System Security Overlay
 
 Establish authenticity of IP packet’s message payload.
 
-
 The overlay’s security is contingent
 
 on the mapping’s security.
-
 
 ###### Administrative Identifier Issuance and Binding
 
 entropy
 
-
-
-
-
-
-
 controller
-
-
 
 administrator
 
-
-
-
-
-
-
-
-
-
-
-
-
 admin-certifying
 
-
-
 Admin-Certifying Identifier Issuance
-
-
-
-
-
 
 ###### DNS Hijacking
 
 [A DNS hijacking wave is targeting companies at an almost unprecedented scale. Clever trick allows attackers to obtain valid TLS certificate for hijacked domains.](https://w3c-ccg.github.io/did-spec/)
 
-
 https://arstechnica.com/information-technology/2019/01/a-dns-hijacking-wave-is-targeting-companies-at-an-almost-unprecedented-scale/
-
 
 ###### BGP Hijacking: AS Path Poisoning
 
@@ -2156,59 +1057,15 @@ Birge-Lee, H., Sun, Y., Edmundson, A., Rexford, J. and Mittal, P., “Bamboozlin
 
 Gavrichenkov, A., “Breaking HTTPS with BGP Hijacking,” BlackHat, 2015 https://www.blackhat.com/docs/us-15/materials/us-15-Gavrichenkov-Breaking-HTTPS-With-BGP-Hijacking-wp.pdf
 
-
 ###### Identity System Security Overlay
 
-
-
-
-
-
-
-
 ###### Spanning Layer
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### Hourglass
 
 Fewer Applications
 
-
-
-
-
 More Supports
-
 
 |Col1|All Necessary Applications|Col3|
 |---|---|---|
@@ -2217,43 +1074,17 @@ More Supports
 ||~~All Possible Supports~~||
 ||||
 
-
 ###### Platform Locked Trust
 
 Trust Domain Based
 
 Segmentation
 
-
 Each trust layer only spans platform specific applications
 Bifurcates the internet trust map
 No spanning trust layer
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###### Waist and Neck
-
-
-
-
-
-
-
 
 |Application 1|Application 2|Application 3|
 |---|---|---|
@@ -2262,169 +1093,67 @@ No spanning trust layer
 |IP Spanning Layer|IP Spanning Layer|IP Spanning Layer|
 |Support 1|Support 2|Support 3|
 
-
 ###### Identity System Security Overlay
 
 Establish authenticity of IP packet’s message payload.
-
 
 The overlay’s security is contingent
 
 on the mapping’s security.
 
-
 ###### Tripartite Authentic Data Model
 
 Issuer-Holder-Verifier Model
-
 
 ###### Tripartite with VDR
 
 Issuer-Holder-Verifier Model with Verification at Verifiable Data Registry
 
-
-
-
-
-
-
-
-
-
 ###### Tripartite without VDR
 
 Issuer-Holder-Verifier Model with Verification at Issuer
 
-
 |Verification|Col2|
 |---|---|
 |||
-
 
 ###### Bipartite Model
 
 Issuer-Holder Model with Verification at Issuer
 
-
 Holder
-
 
 |Presentation/Verification|Col2|
 |---|---|
 |||
 
-
 ###### Joint Delegator-Service Model
 
 Joint Delegator-Service Model
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### Split Delegator-Service Model
 
 Split Delegator-Service Model
 
-
-
 Service
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### Closed Loop Joint Model
 
 Closed Loop Joint Model
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###### Closed Loop Split Model
 
 Closed Loop Split Model
 
-
-
 Service
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |Verification|Col2|
 |---|---|
 |||
 
-
 ###### Open Loop Split Model
 
 Open Loop Split Model
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### Autonomic Identity System
 
@@ -2441,22 +1170,9 @@ controller of the private key = _who_
 
 authoritative operation = _what, when, how_
 
-
 ###### Key Event Message
 
-
-
-
-
-
-
-
 ###### Event Chaining
-
-
-
-
-
 
 ###### Self-Certifying Identifier Prefixes
 
@@ -2465,35 +1181,21 @@ includes a derivation code prepended to the crypto-material.
 
 Identifier prefixes are fully qualified crypto-material.
 
-
 ###### Event Sequencing
-
-
 
 Establishment
 
 Subsequence
 
-
-
 Full Sequence
-
-
-
-
 
 Non-Establishment
 
 Subsequence
 
-
-
-
-
 Establishment
 
 Subsequence
-
 
 |Inception Event|Col2|
 |---|---|
@@ -2503,7 +1205,6 @@ Subsequence
 |Rotation Event||
 |Rotation Event|Rotation Event|
 |Rotation Event||
-
 
 |Inception Event|Col2|Col3|
 |---|---|---|
@@ -2519,39 +1220,11 @@ Subsequence
 ||Interaction Event|Interaction Event|
 ||Interaction Event||
 
-
 ###### Establishment Events
-
-
 
 Establishment
 
 Subsequence
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |Inception Event|Col2|
 |---|---|
@@ -2561,44 +1234,18 @@ Subsequence
 |Rotation Event||
 |Rotation Event|Rotation Event|
 |Rotation Event||
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### Non-Establishment Events
 
 Full Sequence
 
-
-
-
-
 Non-Establishment
 
 Subsequence
 
-
-
-
-
 Establishment
 
 Subsequence
-
 
 |Inception Event|Col2|Col3|
 |---|---|---|
@@ -2614,20 +1261,9 @@ Subsequence
 ||Interaction Event|Interaction Event|
 ||Interaction Event||
 
-
 ###### Seal (Anchor)
 
 _seal provides_ _evidence of authenticity_
-
-
-
-
-
-
-
-
-
-
 
 A _seal_ anchors arbitrary data to an event in the key event sequence thereby
 providing proof of control authority for that data at the location of the anchoring
@@ -2638,478 +1274,71 @@ instead of context dependent extensibility via internal linked data or tag regis
 Interoperability is total w.r.t. establishment of control authority.
 Minimally sufficient means.
 
-
 ###### Pre-Rotation
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 Digest of _next_ key(s) makes pre-rotation post-quantum secure
 
-
 ###### _Key Infrastructure Valence_
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###### _Repurposed Keys_
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### _Univalent Key Roles_
 
 Repurposed Rotation to Interaction
 
-
-
 Rotation Only
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###### Delegation (Cross Anchor)
-
-
-
-
-
-
-
 
 |prefix|sn|digest|Col4|
 |---|---|---|---|
 |_prefix_|_sn_|_digest_|_gest_|
 
-
 |Delegating Event Data<br>Data (Seals)<br>Delegated Event Seal<br>header configuration prefix sn digest|Col2|
 |---|---|
 |Delegating  Event Data<br>_header_<br>_configuration_<br>Data (Seals)<br>Delegated Event Seal<br>_sn_<br>_prefix_<br>_digest_|_signatures_|
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### Interaction Delegation
 
 Delegator Delegate
 
-
-
 C
 Key Event Stream
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ∆→ D : Delegation to D
 
-
 ∆← C : Delegation from C
-
-
 
 D
 Key Event Stream
 
-
 D ∆← C Inception
 
-
 D Interaction
 
-
 D Interaction
-
 
 D ∆← C Rotation
 
+D Interaction
 
 D Interaction
 
-
 D Interaction
-
-
-D Interaction
-
 
 D ∆← C Rotation
 
-
 D Interaction
 
-
 D Interaction
-
 
 D ∆← C Rotation
 
-
 D Interaction
 
-
 D Interaction
-
 
 ###### Scaling Delegation via Interaction
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |A Key Event Stream Delegator|X Key Event Stream Y Key Event Stream Z Key Event Stream Delegate Delegate Delegate|
 |---|---|
@@ -3126,7 +1355,6 @@ D Interaction
 |A Interaction<br>∆→ X Rotation|A Interaction<br>∆→ X Rotation|
 |A Rotation|A Rotation|
 
-
 |Col1|Col2|Col3|Col4|Col5|Col6|Col7|
 |---|---|---|---|---|---|---|
 ||||||||
@@ -3138,122 +1366,49 @@ D Interaction
 ||||||||
 ||||||||
 
-
 ∆← A : Delegation from A
-
 
 ###### Rotation Delegation
 
 Delegator Delegate
 
-
-
 C
 Key Event Stream
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ∆→ D : Delegation to D
 
-
 ∆← C : Delegation from C
-
-
 
 D
 Key Event Stream
 
-
 D ∆← C Inception
 
-
 D Interaction
 
-
 D Interaction
-
 
 D ∆← C Rotation
 
+D Interaction
 
 D Interaction
 
-
 D Interaction
-
-
-D Interaction
-
 
 D ∆← C Rotation
 
-
 D Interaction
 
-
 D Interaction
-
 
 D ∆← C Rotation
 
-
 D Interaction
 
-
 D Interaction
-
 
 ###### Scaling Delegation via Rotation
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |A Key Event Stream Delegator|X Key Event Stream Y Key Event Stream Z Key Event Stream Delegate Delegate Delegate|Col3|
 |---|---|---|
@@ -3276,7 +1431,6 @@ D Interaction
 |A Rotation<br>∆→ X Rotation|A Rotation<br>∆→ X Rotation|A Rotation<br>∆→ X Rotation|
 |A Rotation<br>∆→ X Rotation|A Rotation<br>∆→ X Rotation|Z Interaction|
 
-
 |Col1|Col2|Col3|Col4|Col5|Col6|Col7|
 |---|---|---|---|---|---|---|
 ||||||||
@@ -3288,10 +1442,8 @@ D Interaction
 ||||||||
 ||||||||
 
-
 ∆→ X : Delegation to X
 ∆← A : Delegation from A
-
 
 ###### _Security Concepts_
 
@@ -3315,27 +1467,21 @@ Protection to controller: key management, promulgation consensus, redundancy.
 
 Protection to validator: verifiable logs, verification consensus, duplicity detection
 
-
 ###### _Ledger Attack Vectors_
 
 Exploring the Attack Surface of Blockchain: A Systematic Overview https://arxiv.org/pdf/1904.03487.pdf
 
-
 Exploring the Attack Surface of Blockchain: A Systematic Overview https://arxiv.org/pdf/1904.03487.pdf
-
 
 Ledger:
 
 Network paid by transaction fees
-
 
 ###### _Apples-to-Apples_
 
 KERI:
 
 Networks paid by transaction fees
-
-
 
 (more or less competitive within the network)
 
@@ -3357,8 +1503,6 @@ Need full access to network
 
 Must trust that a majority are honest
 
-
-
 (competitive across all networks)
 
 _Controller_ :
@@ -3379,198 +1523,45 @@ Need full access to network of own choosing.
 
 Must “ _trust”_ that a majority are honest
 
-
 ###### Protocol Operational Modes
 
 Direct Event Replay Mode (one-to-one)
 
-
 Indirect Event Replay Mode (one-to-any)
-
 
 Entity
 
 A
 
-
-
 Entity
 
 B
-
-
-
 
 ###### Direct Mode: A to B
 
-
-
-
-
-
-
-
-
-
-
-
 Entity
 
 A
-
-
 
 Entity
 
 B
 
-
-
-
 ###### Direct Mode: B to A
-
-
-
-
-
-
-
-
-
-
-
 
 Indirect Mode
 Promulgation Service
 
-
 Key Event Promulgation Service
 
-
-
-
-
-
-
-
-
-
-
-
 ###### Establishment Events
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 Indirect Mode
 Promulgation and Confirmation Services
 
-
 Key Event Promulgation Service Key Event Confirmation Service
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###### Indirect Mode Full
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |Col1|Col2|Col3|Col4|Col5|
 |---|---|---|---|---|
@@ -3588,7 +1579,6 @@ Key Event Promulgation Service Key Event Confirmation Service
 ||||||
 ||||||
 
-
 |Col1|Col2|Col3|
 |---|---|---|
 ||||
@@ -3600,9 +1590,6 @@ Key Event Promulgation Service Key Event Confirmation Service
 ||||
 ||||
 ||||
-
-
-
 
 |Indirect Replay Mode|Col2|Key Event Confirmation Service|Col4|Col5|Col6|
 |---|---|---|---|---|---|
@@ -3619,38 +1606,11 @@ Key Event Promulgation Service Key Event Confirmation Service
 |Designated by A<br>Entity A<br>Controller of Identifier A<br>KEL/KERL of A<br>Key Event Log<br>Key Event Receipt Log<br>Event Generator<br> Event and Event Receipt Streams<br>Witness W-0<br>KERL of A<br>Key Event Receipt Log<br>Event Verifier<br>Witness W-1<br>KERL of A<br>Key Event Receipt Log<br>Event Verifier<br>Witness W-2<br>KERL of A<br>Key Event Receipt Log<br>Event Verifier<br>Witness W-3<br>KERL of A<br>Key Event Receipt Log<br>Event Verifier<br>Event Receipt Streams<br>Key Event Promulgation Service||||||
 |Designated by A<br>Entity A<br>Controller of Identifier A<br>KEL/KERL of A<br>Key Event Log<br>Key Event Receipt Log<br>Event Generator<br> Event and Event Receipt Streams<br>Witness W-0<br>KERL of A<br>Key Event Receipt Log<br>Event Verifier<br>Witness W-1<br>KERL of A<br>Key Event Receipt Log<br>Event Verifier<br>Witness W-2<br>KERL of A<br>Key Event Receipt Log<br>Event Verifier<br>Witness W-3<br>KERL of A<br>Key Event Receipt Log<br>Event Verifier<br>Event Receipt Streams<br>Key Event Promulgation Service||||||
 
-
 ###### Indirect Mode with Ledger Oracles
 
 Indirect Replay Mode with Ledger Oracle
 
-
 Key Event Promulgation Service Key Event Confirmation Service
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### Separation of Control
 
@@ -3667,328 +1627,64 @@ Separated control between controllers and validators may provide
 better decentralization, more flexibility, better scalability, lower
 cost, higher performance, and more privacy at comparable security.
 
-
 (current signing keys)
 ###### Live Exploit
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 _Hard Problem:_
 _Recovery from Live Exploit_
 _of Current Signing Keys_
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Pre-rotation provides protection from successful _live_ exploit of current signing keys.
-
 
 (next signing keys)
 ###### Live Exploit
 
-
-
 Compromised
 
 Keys
 
-
-
 Preemptive Alternate History
 
-
-
-
-
 Original History
-
-
 
 Exposed
 
 Keys
 
-
 ! [0]
 _C_
-
 
 !
 _C_ [1]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ! [3]
 _C_
-
 
 ! [4]
 _C_
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Difficulty of inverting _next_ key(s) protects against successful _live_ exploit.
-
 
 (stale next signing keys)
 ###### Dead Exploit
 
-
-
 Original History
-
-
 
 Compromised
 
 Keys
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Exposed
 
 Keys
 
-
 ! [0]
 _C_
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ! [4]
 _C_
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Any copy of original history protects against successful _dead_ exploit: First Seen Wins
-
 
 ###### Witnessing Rules
 
@@ -3998,7 +1694,6 @@ That event version must first be verified.
 A verified event version must be signed by the controller’s authoritative keys as
 determined by prior events.
 A verified event version must be consistent with all prior events.
-
 
 ###### Agreement
 
@@ -4014,7 +1709,6 @@ This copy provides _proof of agreement_ .
 Such a proof may be obtained via any verifiable KERL that includes that version of that
 event.
 
-
 _N_ =
 number of witness
 _M_ =
@@ -4027,7 +1721,6 @@ _Validator_
 _C_
 _Controller_
 
-
 ###### Definitions
 
 Sufficient Agreement
@@ -4036,8 +1729,6 @@ _Controller’s Guarantee_
 ###### _M M_ ≥
 
 _C_
-
-
 
 _Threshold of Accountable Duplicity_
 _TOAD_
@@ -4048,14 +1739,11 @@ _C_
 _M_
 _V_
 
-
-
 _Validator’s Choice_
 
 _M_ _M_
 ≥
 _V_ _C_
-
 
 ###### Algorithm Objectives
 
@@ -4075,7 +1763,6 @@ duplicitous but sufficient agreement about current events.
 
 (KAACE immune agreement prevents this, i.e. Validator is immune)
 
-
 ###### Detectable vs Undetectable Duplicity
 
 Witness Duplicity
@@ -4088,25 +1775,15 @@ Controller Duplicity wrt witnesses is undetectable if a sufficient
 number of witnesses are not duplicitous and sufficient agreement is
 small enough.
 
-
 (KA [2] CE)
 Keri’s Agreement Algorithm for Control Establishment
-
-
 
 Produce Witnessed
 
 Agreements
 with Guarantees
 
-
-
-
-
-
 ###### Agreement Constraints
-
-
 
 _N_ =
 number of witness
@@ -4119,37 +1796,26 @@ _V Validator_
 _C_
 _Controller_
 
-
-
 Proper Agreement
 
 _F_ + 1
-
 
 Bounds on Sufficient Agreement
 
 _M_    - _F_
 
-
 _M_ ≤ _N_    - _F_
 
-
 _F_ < _M_ ≤ _N_    - _F_
-
 
 Intact Agreement
 
 _N_ 2 _F_ 1
 ≥ +
 
-
 ###### One Agreement or None at All (Immune)
 
-
-
 _first seen rule limits liveness induces recovery rotation_
-
-
 
 ⌢ ⌢ ⌢
 ⌢ ⌢
@@ -4161,31 +1827,19 @@ _M_ _M_ = _N_ = _N_
 1 2
 ∪⌢
 
-
-
 ⌢ ⌢
 _M_ = _M_ = _M_
 1 2
-
-
 
 Overlapping Sets
 ⌢ ⌢
 _M_ _M_ = _N_
 1 2
 
-
-
 ⌢ ⌢ ⌢ ⌢
 _M_ + _M_ = _M_ _M_ + _M_ _M_
 1 2 1 2 1 2
 ∪⌢ ∩⌢
-
-
-
-
-
-
 
 2 _M_ = _N_ + _F_ + 1
 
@@ -4193,17 +1847,12 @@ _M_ + _M_ = _M_ _M_ + _M_ _M_
 
 _M_ ≥ _[N]_ [ +] _[ F]_ [ +] [1]
 
-2
 ⎢ [⎢]
 
 _M_ ≤ _N_ - _F_
 
-
-
 ⎤
 ⎥ [⎥]
-
-
 
 One honest witness if:
 ⌢
@@ -4211,29 +1860,14 @@ _M_ _M_ ≥ _F_ + 1
 1 2
 ∩⌢
 
-
-
 Immune Agreement
 _N_ + _F_ + 1
 
 ≤ _M_ ≤ _N_    - _F_
-2
-
 
 ###### Example Values
 
 Immunity
-
-
-
-
-
-
-
-
-
-
-
 
 |F|N|3F+1|+ +<br>⎡ ⎤<br>N F 1<br>⎢ ⎥<br>⎢ ⎥<br>2|N-F|M|
 |---|---|---|---|---|---|
@@ -4256,12 +1890,9 @@ Immunity
 |3|14|10|9|11|9, 10, 11|
 |3|15|10|10|12|10, 11, 12|
 
-
 Recovery from Live Exploit Of Current Signing Keys
 
 Recovery from Live Exploit
-
-
 
 Unexploited Events
 
@@ -4274,76 +1905,40 @@ Unexploited Events
 |4|5|Interaction|
 |4|6|Interaction|
 
-
-
 Recovery Event
 
-
-
 Exploited Events
-
-
 
 Accountable Event
 # event
 
-
-
 Non-Accountable Event
-
 
 Disputed (Forked) Events
 
-
-
 # event
-
 
 |7|Rotation|Col3|
 |---|---|---|
 ||8|Interaction|
 ||9|Interaction|
 
-
 |7|Interaction|
 |---|---|
 |8|Interaction|
 |9|Interaction|
 
-
 ###### Function Stack
-
-
 
 KERI
 
-
 On Top of KERI
 
-
-
-
-
-
-
-
-
-
-
-
-
 Authorizations after Establishment
-
-
 
 Design follows the
 _Hourglass Model_ of
 a stack of thin layers
-
-
-
-
-
 
 ###### Rotate Prefix vs Rotate Keys
 
@@ -4352,164 +1947,13 @@ Rotate prefix good for bootstrapping. No key event log (KEL) needed.
 If prefix has no persistent value outside its function and its function may be marshaled by
 some other prefix controller then rotating prefix may be preferred.
 
-
 ###### Events
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Delegating Events
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### State Verifier Engine
 
 KERI Core — State Verifier Engine
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |Current State<br>Current Signatories Next Signatories|Col2|Col3|Col4|Col5|Col6|Col7|Col8|Col9|Col10|
 |---|---|---|---|---|---|---|---|---|---|
@@ -4520,31 +1964,9 @@ KERI Core — State Verifier Engine
 |Next State<br>Current Signatories<br>Next Signatories|Next State<br>Current Signatories<br>Next Signatories|Next State<br>Current Signatories<br>Next Signatories|Current Signatories|Current Signatories|Next Signatories|Next Signatories|Next Signatories|Next Signatories|Next Signatories|
 |ID|SN|Digest|Threshold|Signers|Threshold|Signers|Tally|Witnesses|Event Message|
 
-
 ###### Delegated State Verifier Engine
 
 KERI Delegated Core — State Verifier Engine
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |Current State<br>Delegation Signatory|Col2|Col3|Col4|Col5|Col6|Col7|Col8|Col9|Col10|Col11|Col12|Col13|Col14|Col15|Col16|Col17|
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -4557,200 +1979,61 @@ KERI Delegated Core — State Verifier Engine
 |Next State<br>Signatory<br>Delegation|Next State<br>Signatory<br>Delegation|Next State<br>Signatory<br>Delegation|Delegation|Delegation|Delegation|Delegation|Delegation|Delegation|Delegation|Delegation|Delegation|Signatory|Signatory|Signatory|Signatory|Signatory|
 |ID|SN|Digest|ID|ID|SN|SN|Digest|Digest|Controller|Controller|Perms|Threshold|Signers|Tally|Witnesses|Event Message|
 
-
 ###### Witness Designation
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### Witnessed Key Event Receipt
 
-
-
-
-
 …
-
-
 
 _C_
 _CW_
-1
-
-
 
 _C_
 _W_
 
 _k_ 0
 
-
-
 _C_
 _C_
 ε
 _k_
 
-
+_C_ _C_
+σ
+_W_
 
 _C_ _C_
 σ
 _W_
-0
-
-
-
-_C_ _C_
-σ
-_W_
-1
-
-
 
 ε
 _k_
 
-
-
 _C_ _C_
 σ
 _W_
-0
-
-
 
 _C_
 _W_
 
 _k_ 0
 
-
-
 _C_
 _C_
-
 
 ###### Generic Event Formats
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###### Generic Inception
-
-
 
 _C_
 _K_
 
 0 1
 
-
-
 _C_
 , _W_
 
 [⌢]
-0
-
-
 
 _C_
 , _cnfg_ σ
@@ -4759,33 +2042,22 @@ _C_
 
 [ ]
 
-
-
 _C_
 = ν
 
 0 0
-
-
 
 _C_
 , icp, _K_
 
 0 0
 
-
-
 ε
-0
-
-
 
 _C_
 , _C_, _t_
 
 0 0
-
-
 
 _C_ _C_
 
@@ -4797,74 +2069,46 @@ _K_, _C_
 
 ( ) [,] _[ M]_
 
+_C_
+, _C_
 
+[⌢]
 
 _C_
 , _C_
 
 [⌢]
-1
-
-
-
-_C_
-, _C_
-
-[⌢]
-0
-
-
 
 _C_
 ,η
-0
-
-
 
 _C_
-
-
 
 ⌢
 _C_
-0
-
-
 
 _C_
 −1
 
-0
 0 _L_
 _C_,, _C_
 …
 
 ⎡⎣ ⎤⎦0
 
-
-
 _C_
 
 _C_
-0
+
 0 _L_
 = _C_, …, _C_
 
-
-
 _C_
 
-
-
 _C_
-
-
 
 ⌢
 _C_
-1
-
-
 
 _C_
 
@@ -4876,20 +2120,13 @@ _C_,, _C_
 
 ⎡⎣ ⎤⎦1
 
-
-
 _C_ + _L_
 1 1 1
 _r_ _r_
 = _C_, …, _C_
 
-
-
 ⌢
 _W_
-0
-
-
 
 _C_ _C_
 
@@ -4897,59 +2134,36 @@ _W_,, _W_ _C_
 
 …
 
-0
-
 _N_ −1
 
 ⎡⎣ 0 ⎤⎦0
-
-
 
 _C_ _C_
 ,, _W_
 …
 _N_
-0
-
-
 
 _C_
 = _W_
-0
-
-
 
 _C_
-
-
 
 ⌢
 σ
-0
-
-
 
 _C_
-
-
 
 _C_
 _s_
 = σ σ
-0
+
 _C_ …
-
-
 
 _C_
 
 _sS_ −1
-0
-
 
 ###### Generic Rotation
-
-
 
 _C_
 , _X_
@@ -4957,21 +2171,15 @@ _C_
 [⌢]
 _l_
 
-
-
 _C_
 , _Y_
 
 [⌢]
 _l_
 
-
-
 _C_ _C_
 _K_
 _l_ +1
-
-
 
 _C_ _C_
 , _seals_ σ
@@ -4980,21 +2188,15 @@ _C_ _C_
 
 [ ]
 
-
-
 _C_
 = ν
 
 _k_ _k_
 
-
-
 _C_
 ,η
 
 _k_ _k_
-
-
 
 _C_
 , _C_
@@ -5002,19 +2204,13 @@ _C_
 [⌢]
 _l_
 
-
-
 ε
 _k_
-
-
 
 _C_
 , _C_, _t_
 
 _k_ _k_
-
-
 
 _C_
 
@@ -5023,13 +2219,9 @@ _k_ −1 _l_
 
 ( ) [,][ rot][,] _[ K]_
 
-
-
 _C_
 ,η
 _l_
-
-
 
 _C_ _C_
 
@@ -5041,16 +2233,12 @@ _l_ +1 _l_ +1 _l_
 
 ( ) [,] _[ M]_
 
-
-
 _C_ _C_
 , _C_
 
 [⌢]
 
 +1 _l_ +1
-
-
 
 _C_ _C_
 ε
@@ -5059,34 +2247,22 @@ _k_ _k_ −1
 
 (
 
-
-
 ⌢
 _C_
 _l_
-
-
 
 _C_
 _l_
 _r_
 = _C_
 
-
-
 _C_
-
-
 
 _C_
 + _L_
 _l_
 
-
-
 _C_
-
-
 
 ⌢
 
@@ -5094,8 +2270,6 @@ _C_
 
 _C_
 _l_ +1
-
-
 
 _C_ _C_ _C_
 
@@ -5108,8 +2282,6 @@ _C_,, _C_
 …
 
 ⎡⎣ ⎤⎦ _l_
-
-
 
 _C_
 
@@ -5125,15 +2297,11 @@ _C_,, _C_
 
 ⎡⎣ ⎤⎦ _l_ +1
 
-
-
 _C_
 _l_
 _r_
 ,, _C_
 …
-
-
 
 _C_
 
@@ -5144,8 +2312,6 @@ _r_
 
 +1
 
-
-
 _C_ _C_
 
 +1 _l_ +1
@@ -5154,20 +2320,14 @@ _r_
 ,, _C_
 …
 
-
-
 _C_ _C_
 + _L_
 
 +1 _l_ +1
 
-
-
 ⌢
 _X_
 _l_
-
-
 
 _C_ _C_
 
@@ -5175,35 +2335,21 @@ _X_,, _X_ _C_
 
 …
 
-0
-
 _O_ −1
 
 ⎡⎣ _l_ ⎤⎦ _l_
 
-
-
 _C_
-
-
 
 ⌢
 _Y_
 _l_
 
-
-
 _C_
 = _X_
-0
-
-
 
 _C_
 = _Y_
-0
-
-
 
 _C_ _C_
 ,, _X_
@@ -5211,17 +2357,11 @@ _C_ _C_
 _O_
 _l_
 
-
-
 _C_
-
-
 
 ⌢ _C_
 σ
 _kl_
-
-
 
 _C_ _C_
 
@@ -5229,22 +2369,14 @@ _Y_,, _Y_ _C_
 
 …
 
-0
-
 _P_ −1
 
 ⎡⎣ _l_ ⎤⎦ _l_
 
-
-
 _C_
-
-
 
 _C_
 = σ
-
-
 
 _C_
 ,, _Y_
@@ -5252,31 +2384,18 @@ _C_
 _P_
 _l_
 
-
-
 _C_
-
-
 
 _C_ [−][1]
 
-
-
 _rl_
-
-
 
 _C_
 + _s_
-0
 
 […][σ]
 
-
-
 _rl_
-
-
 
 _C_
 +
@@ -5285,24 +2404,17 @@ _C_
 
 _sSkl_
 
-
 ###### Generic Interaction
-
-
 
 _C_
 = ν
 
 _k_ _k_
 
-
-
 _C_
 ,η
 
 _k_ _k_
-
-
 
 _C_
 
@@ -5310,8 +2422,6 @@ _C_
 _k_
 
 _C_
-
-
 
 _C_ _C_
 
@@ -5321,14 +2431,10 @@ _k_ −1 [⌢] _kl_
 [ ]
 ( ) [,] [ixn][,]
 
-
-
 _C_
 , _C_, _t_
 
 _k_ _k_
-
-
 
 _C_ _C_
 ε
@@ -5337,39 +2443,25 @@ _k_ _k_ −1
 
 (
 
-
-
 _C_
-
-
 
 _K_
 _l_
 
-
-
 ⌢
 _C_
 _l_
-
-
 
 _C_
 _l_
 _r_
 = _C_
 
-
-
 _C_
 + _L_
 _l_
 
-
-
 _C_
-
-
 
 _C_
 _l_
@@ -5377,13 +2469,9 @@ _r_
 ,, _C_
 …
 
-
-
 ⌢ _C_
 σ
 _kl_
-
-
 
 _C_ _C_ _C_
 
@@ -5397,40 +2485,23 @@ _C_,, _C_
 
 ⎡⎣ ⎤⎦ _l_
 
-
-
 _C_
-
-
 
 _C_
 = σ
 
-
-
 _C_
-
-
 
 _C_ [−][1]
 
-
-
 _rl_
-
-
 
 _C_
 + _s_
-0
 
 […][σ]
 
-
-
 _rl_
-
-
 
 _C_
 +
@@ -5439,81 +2510,12 @@ _C_
 
 _sSkl_
 
-
 ###### Generic Delegating Event Formats
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### Inception Delegation
 
-
-
 ⌢
 Δ
-0
-
-
 
 _D_ _C_ _D_
 
@@ -5523,20 +2525,14 @@ _D_, _t_,η ε Delegated Event Seal
 ( )
 { }
 
-
-
 _D_
 ,η
 _k_
-
-
 
 _D_
 = _D_, _t_
 
 0 0
-
-
 
 _C_
 ε
@@ -5545,109 +2541,66 @@ _k_ 0
 
 (
 
-
-
 _D_
 , _W_
 
 [⌢]
-0
-
-
 
 _D_
 = ν
-0
-
-
 
 _D_
 , dip, _K_
-0
-
-
 
 ⌢
 Δ
 _k_
-
-
 
 _C_ ⌢
 σ
 
 _k_ 0
 
-
-
 ε
-0
-
-
 
 _D_
 , _D_, _t_
-0
-
-
 
 _D_
 , _D_
 
 [⌢]
-0
-
-
 
 _D_
 , _M_
-0
-
-
 
 _D_
 , _cnfg_,
 
 [ ]
 
-
-
 _D_
-
-
 
 ⌢
 _D_
-0
-
-
 
 _D_
 
 0 _L_ −1
-0
+
 _D_,, _D_
 …
 
 ⎡⎣ ⎤⎦0
 
-
-
 _D_ 0 _L_
-0
+
 = _D_, …, _D_
-
-
 
 _D_
 
-
-
 ⌢
 _W_
-0
-
-
 
 _C_ _C_
 
@@ -5655,31 +2608,19 @@ _W_,, _W_ _C_
 
 …
 
-0
-
 _N_ −1
 
 ⎡⎣ 0 ⎤⎦0
-
-
 
 _C_ _C_
 ,, _W_
 …
 _N_
-0
-
-
 
 _C_
 = _W_
-0
-
-
 
 _C_
-
-
 
 ⌢
 
@@ -5691,8 +2632,6 @@ _k_ _k_ _k_ _k_ −1
 ( )
 { }
 
-
-
 _C_ _C_ _C_
 
 _C_, _t_, _ilk_,η ε
@@ -5701,14 +2640,10 @@ _k_ _k_ _k_ −1
 ( )
 { }
 
-
-
 _C_
 = _C_, _t_
 
 _k_ _k_
-
-
 
 _C_ _C_
 ε
@@ -5717,41 +2652,26 @@ _k_ _k_ −1
 
 (
 
-
-
 _C_
 , _ilk_,η
 
 _k_ _k_
 
-
-
 ⌢
 σ
-0
-
-
 
 _D_
-
-
 
 _D_
 _s_
 = σ 0 σ
 _D_ …
 
-
-
 _sSD_ [−][1]
-0
-
 
 ⌢
 Δ
 _k_
-
-
 
 _D_ _C_ _D_
 
@@ -5761,16 +2681,11 @@ _k_ _k_ _k_
 ( )
 { }
 
-
-
 _D_
 ,η
 _k_
 
-
 ###### Rotation Delegation
-
-
 
 _D_
 , _X_
@@ -5778,14 +2693,10 @@ _D_
 [⌢]
 _l_
 
-
-
 _D_
 = _D_, _t_
 
 _k_ _k_
-
-
 
 _C_
 ε
@@ -5794,26 +2705,18 @@ _k_ _k_
 
 (
 
-
-
 _D_
 , _seals_,
 
 [ ]
 
-
-
 _D_
 = ν
 _k_
 
-
-
 _D_
 ,η
 _k_
-
-
 
 _D_
 , _D_
@@ -5821,25 +2724,17 @@ _D_
 [⌢]
 _l_
 
-
-
 ⌢
 Δ
 _k_
-
-
 
 _C_ ⌢ _D_
 σ
 
 _k_ _kl_
 
-
-
 ε
 _k_
-
-
 
 _D_
 
@@ -5848,13 +2743,9 @@ _k_ −1 _l_
 
 ( ) [,][ drt][,] _[ K]_
 
-
-
 _D_
 , _M_
 _l_
-
-
 
 _D_ _D_
 ε
@@ -5863,37 +2754,25 @@ _k_ _k_ −1
 
 (
 
-
-
 _D_
 , _Y_
 
 [⌢]
 _l_
 
-
-
 _D_
-
-
 
 ⌢
 _D_
 _l_
 
-
-
 _D_
 , _D_, _t_
 _k_
 
-
-
 _D_ _r_
 _l_
 = _D_
-
-
 
 _D_
 _r_
@@ -5901,23 +2780,15 @@ _l_
 ,, _D_
 …
 
-
-
 _D_
 + _L_
 _l_
 
-
-
 _D_
-
-
 
 ⌢
 _X_
 _l_
-
-
 
 _D_ _D_ _D_
 
@@ -5929,21 +2800,15 @@ _D_,, _D_
 
 ⎡⎣ ⎤⎦ _l_
 
-
-
 _D_ _D_
 
 _X_,, _X_ _D_
 
 …
 
-0
-
 _O_ −1
 
 ⎡⎣ _l_ ⎤⎦ _l_
-
-
 
 _D_ _D_
 ,, _X_
@@ -5951,29 +2816,17 @@ _D_ _D_
 _O_
 _l_
 
-
-
 _D_
 = _X_
-0
-
-
 
 _D_
-
-
 
 ⌢
 _Y_
 _l_
 
-
-
 _D_
 = _Y_
-0
-
-
 
 _D_ _D_
 
@@ -5981,13 +2834,9 @@ _Y_,, _Y_ _D_
 
 …
 
-0
-
 _P_ −1
 
 ⎡⎣ _l_ ⎤⎦ _l_
-
-
 
 _D_
 ,, _Y_
@@ -5995,11 +2844,7 @@ _D_
 _P_
 _l_
 
-
-
 _D_
-
-
 
 ⌢
 
@@ -6012,8 +2857,6 @@ _k_ _k_ _k_ _k_ −1
 ( )
 { }
 
-
-
 _C_ _C_ _C_
 
 _C_, _t_, _ilk_,η ε
@@ -6022,14 +2865,10 @@ _k_ _k_ _k_ −1
 ( )
 { }
 
-
-
 _C_
 = _C_, _t_
 
 _k_ _k_
-
-
 
 _C_ _C_
 ε
@@ -6038,49 +2877,30 @@ _k_ _k_ −1
 
 (
 
-
-
 _C_
 , _ilk_,η
 
 _k_ _k_
 
-
-
 ⌢
 σ = σ
 _kl_
 
-
-
 _C_
-
-
 
 _D_ [−][1]
 
-
-
 _C_
-
-
 
 +
 _rl_
 
-
-
 _D_
 + _s_
-0
 
 […][σ]
 
-
-
 _rl_
-
-
 
 _D_
 +
@@ -6089,33 +2909,22 @@ _D_
 
 _sSkl_
 
-
 ###### Delegated Interaction
-
-
 
 _D_
 = ν
 _k_
 
-
-
 _D_
 ,η
 _k_
 
-
-
 ε
 _k_
-
-
 
 _D_
 , _D_, _t_
 _k_
-
-
 
 _D_ _D_
 
@@ -6125,28 +2934,17 @@ _k_ −1 [⌢] _kl_
 [ ]
 ( ) [,] [ixn][,]
 
-
-
 _D_ _D_
 ε
 _k_ −1
 
 (
 
-
-
 _D_
-
 
 ###### Receipt Messages
 
-
-
-
-
 …
-
-
 
 _C_ _C_
 _C_, …, _W_
@@ -6154,17 +2952,11 @@ _lN_
 
 _l_ 0 _s_
 
-
-
 _C_ _C_
 σ _C_
 
-0
-
 _W_
 _l_ 0
-
-
 
 _C_
 
@@ -6173,14 +2965,10 @@ _C_
 _W_
 _ls_
 
-
-
 _C_
 _C_ ε
 
 ! _k_
-
-
 
 _C_
 
@@ -6189,21 +2977,15 @@ _k_ [=] _k_
 
 ( )
 
-
-
 _C_
 , _C_, _t_
 
 _k_ _k_
 
-
-
 _C_
 , rct,η
 
 _k_ _k_
-
-
 
 _C_ _C_
 
@@ -6211,8 +2993,6 @@ _C_ _C_
 _k_ _[W]_ _l_ 0
 
 ( )
-
-
 
 _C_ _C_
 _C_ σ _C_
@@ -6222,8 +3002,6 @@ _s_
 
 _lNs_ −1
 
-
-
 _C_
 ε
 
@@ -6231,18 +3009,10 @@ _k_ _k_
 
 (
 
-
-
 _C_
 _C_
-
-
-
-
 
 …
-
-
 
 _V_
 ε
@@ -6250,8 +3020,6 @@ _V_
 _k_ _k_
 
 (
-
-
 
 ⌢
 
@@ -6259,8 +3027,6 @@ _V_
 
 Δ
 _k_
-
-
 
 _V_ ⌢ _C_
 σ
@@ -6269,20 +3035,14 @@ _k_ _V_
 
 _l_
 
-
-
 _C_
 ε
 _k_
 
 (
 
-
-
 ρ
 _V_
-
-
 
 _C_
 
@@ -6291,16 +3051,12 @@ _k_ [=] _k_
 
 ( )
 
-
-
 ⌢
 
 _V_
 
 Δ
 _k_
-
-
 
 _C_
 
@@ -6309,11 +3065,7 @@ _k_
 
 ( ) [,]
 
-
-
 _C_
-
-
 
 _V_ _V_
 
@@ -6323,21 +3075,15 @@ _k_ _k_
 ( )
 { }
 
-
-
 _C_
 , _C_, _t_
 
 _k_ _k_
 
-
-
 _C_
 , vrc,η
 
 _k_ _k_
-
-
 
 _C_
 ε
@@ -6346,17 +3092,12 @@ _k_ _k_
 
 (
 
-
-
 _V_
 = _V_,η
 
 _k_ _k_
 
-
 ###### Witness Rotations
-
-
 
 ⌢
 _W_ = _W_ _W_ ", _W_
@@ -6370,19 +3111,13 @@ _l_ _l_ −1 _l_ _l_
 ⌢ ⌢ ⌢ ⌢ ⌢
 _Xl_ ⊆ _Wl_ −1 _Yl_ ⊄ _Wl_ −1 _Xl_ ⊄
 
-
-
 ⌢
 _X_ = _O_
 _l_ _l_
 
-
-
 ⌢
 _Y_ = _P_
 _l_ _l_
-
-
 
 ⌢ ⌢ ⌢
 _X_ = _O_ _Y_ = _P_ _W_ = _N_
@@ -6396,8 +3131,6 @@ _U_ _W_
 _l_ −1 _l_ −1 _U_ ≥ _M_
 ⊆ _l_ −1 _l_ −1
 
-
-
 ⌢
 
 ⌢ ⌢
@@ -6408,8 +3141,6 @@ _l_ _l_
 _U_ _U_ ≤ _M_ _M_
 _l_ −1 _l_ _l_ −1 _l_
 ∪⌢ +
-
-
 
 ⌢
 
@@ -6425,19 +3156,13 @@ _l_ −1 _l_ −1 _U_ ≥ _M_
 _U_ ⊆ _W_ _Ul_ ≥ _M_ _l_
 _l_ _l_
 
-
-
 ⌢ ⌢
 _Y_ ⊄ _W_
 _l_ _l_ −1
 
-
-
 ⌢ ⌢
 _X_ ⊄ _W_
 _l_ _l_
-
-
 
 _N_ = _N_ _O_ _P_
 _l_ _l_ −1 _l_ _l_
@@ -6446,18 +3171,13 @@ _l_ _l_ −1 _l_ _l_
 _M_ ≤ _N_
 _l_ _l_
 
-
 ###### Complex Weighted Signing Thresholds
-
-
 
 ⌢
 _C_ = _C_
 _l_ _l_
 
 ⎡⎣
-
-
 
 1 _L_
 
@@ -6471,26 +3191,17 @@ _l_ _l_ _l_
 
 1 _L_
 
-1
-
 _K_ = _U_, …, _U_
 _l_ _l_ _l_
 
 ⎡⎣ ⎤⎦ _l_
 
-
-
-1
 ,, _C_
 …
 
 _l_ _l_
 
-
-
 1 _L_
-
-1
 
 _U_,, _U_
 
@@ -6500,70 +3211,49 @@ _l_ _l_
 
 ⎡⎣ ⎤⎦ _l_
 
-
-
 ⌢
 1 2 3
 _C_ = ⎡⎣ _C_, _C_, _C_ ⎤⎦
 
-
-
-1
 ,, _U_
 …
 _l_
-
-
 
 _j_
 
 0 < _U_ ≤ 1
 _l_
 
-
-
 _U_
 _l_
-
-
 
 _j_
 = 1
 _K_
 _l_
 
-
-
 ⌢ _l_
 _s_
 _k_
-
-
 
 _l_
 
 _s_,, _s_ _l_
 …
-0
+
 _S_ −1
 
 ⎡⎣ _k_ ⎤⎦ _k_
 
-
-
 _l_
 = _s_, …, _s_ _l_
-0
+
 _S_
 _k_
 
 ⎡⎣
 
-
-
 _l_
-
-
 
 ⌢
 _K_ = 12, 12, 12
@@ -6582,8 +3272,6 @@ _l_
 [ ] [,] [ ] [,] [ ]
 ⎡⎣ ⎤⎦
 
-
-
 _s_
 −1
 _Sk_ _i_
@@ -6592,8 +3280,6 @@ _U_ ≥ 1
 _l_
 
 ∑ _i_ = _s_ 0
-
-
 
 _s_
 −1
@@ -6604,105 +3290,60 @@ _l_ _l_
 
 _i_ = _s_
 
-
-
 _i_
 
-
-
 _i_ = _s_
-0
-
 
 #### BACKGROUND
 
-
-
-
-
-
-
-
-
-
-
-
 **Tripartite Authentic Data (VC) Model**
-
 
 Issuer: Source of the VC. Creates (issues) and signs VC
 Holder: Usually the target of the VC. The holder is the “ _issuee_ ” that receives the VC and holds it for its own use.
 Verifier: Verifies the signatures on the VC and authenticates the holder at the time of presentation
 
-
 The issuer and target each have a DID (decentralized identifier).
 The DIDs are used to look-up the public key(s) needed to verify signatures.
 
-
 Issuer-Holder-Verifier Model
 
-
 **Tripartite Authentic Data (VC) Model with VDR**
-
 
 Verifiable Data Registry (VDR) enables decentralized but interoperable discovery and verification of authoritative key pairs for
 DIDs in order to verify the signatures on VCs. A VDR may also provide other information such as data schema or revocation state
 of a VC.
 
-
 Each controller of a DID registers that DID on a VDR so that a verifier can determine the authoritative key pairs for any
 signatures.
 
-
 We call this determination, _establishment of control authority_ over a DID.
-
 
 Issuer-Holder-Verifier Model with Verification at Verifiable Data Registry
 
-
-
-
-
-
-
-
-
-
 **KERI VDRs vs. Shared Ledger VDRs**
-
 
 Most DID methods use a shared ledger (commonly referred to as a _blockchain_ ) for their VDR. Typically, in order to interoperate all participants must
 use the same shared ledger or support multiple different DID methods. There are currently over 70 DID methods. Instead GLEIF has chosen to use
 KERI based DID methods. KERI stands for Key Event Receipt Infrastructure. KERI based VDRs are ledger independent, i.e. not locked to a given ledger.
 This provides a path for greater interoperability without forcing participants in the vLEI ecosystem to use the same shared ledger.
 
-
 A KERI VDR is called a key event log (KEL). It is a cryptographically verifiable hash chained data structure. Each KERI based identifier has its own
 dedicated KEL. The purpose of the KEL is to provide proof of the establishment of control authority over an identifier. This provides cryptographically
 verifiable proof of the current set of authoritative keys for the identifier. KERI identifiers are long cryptographic pseudo random strings of characters.
 They are self-certifying and self-managing.
 
-
 A KERI identifier is abstractly called an Autonomic Identifier (AID) because it is self-certifying and self-managing. A KERI DID is one concrete
 implementation of a KERI AID. The same KERI prefix may control multiple different DIDs as long as they share the same prefix.
 
-
 Full Sequence
-
-
 
 Establishment
 
 Subsequence
 
-
-
-
-
 Non-Establishment
 
 Subsequence
-
 
 ```
 did:keri: prefix [: options ][/ path ][? query ][# fragment ]
@@ -6725,7 +3366,6 @@ did:keri:ENqFtH6_cfDg8riLZ-GDvDaCKVn6clOJa7ZXXVXSWpRY
 ||Interaction Event|Interaction Event|
 ||Interaction Event||
 
-
 **KERI Identifier KEL VDR** _**Controls**_ **Verifiable Credential Registry TEL VDR**
 
 A KERI KEL for a given identifier provides proof of authoritative key state at each event. The events are ordered. This ordering may
@@ -6739,70 +3379,7 @@ In the case of the vLEI the TEL controls a vLEI issuance and revocation registry
 The TEL provides a cryptographic proof of registry state by reference to the corresponding controlling KEL.
 Any validator may therefore cryptographically verify the authoritative state of the registry.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 _seal = proof of authenticity_
-
 
 **Registry with Separable VC Issuance-Revocation TELs**
 
@@ -6811,51 +3388,7 @@ Each VC also has a uniquely identified issuer using a KERI AID.
 This combination enables a separable registry of VC issuance-revocation state.
 The state may employ a cryptographic accumulator for enhanced privacy
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 **Identifier System Security**
-
 
 Authentic transmission of data may be verified using an identity system security overlay.
 This overlay maps cryptographic key-pairs to identifiers.
@@ -6865,31 +3398,13 @@ A key event log (KEL) provide support for secure key rotation without changing t
 Message authenticity is provided by verifying signatures to the authoritative keys pairs for the identifier included in the
 message.
 
-
 Cryptographic Material Derivation Code Tables
 
 Length of crypt material determines number of pad characters. One character table for one pad char. Two character table for two pad char.
 
-
 One Character KERI Base64 Prefix Derivation Code Selector
 
-
-
-
-
-
-
 Four Character KERI Base64 Count Code for Attached Receipt Couplets
-
-
-
-
-
-
-
-
-
-
 
 |Derivation<br>Code|Prefix Description|
 |---|---|
@@ -6902,53 +3417,14 @@ Four Character KERI Base64 Count Code for Attached Receipt Couplets
 |**6**|Ten character derivation code. Use ten character table.|
 |**-**|Count code for attached receipts. Use receipt count code table(s)|
 
-
 One Character KERI Base64 Prefix Derivation Code
-
-
-
-
 
 |Derivati<br>on<br>Code|Prefix Description|Data<br>Length<br>Bytes|Pad<br>Length|Count<br>Code<br>Length|Qual<br>Length<br>Base64|Code<br>Length<br>Bytes|
 |---|---|---|---|---|---|---|
 |**-A**_XX_|Count of Attached Qualifed Base64 Receipt Couplets|0|0|4|4|3|
 |**-B**_XX_|Count of Attached Qualifed Base2 Receipt Couplets|0|0|4|4|3|
 
-
 Two Character KERI Base64 Prefix Derivation Code
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |Derivation<br>Code|Prefix Description|Data<br>Length<br>Bytes|Pad<br>Length|Derivat<br>ion<br>Code<br>Length|Prefix<br>Length<br>Base64|Prefix<br>Length<br>Bytes|
 |---|---|---|---|---|---|---|
@@ -6958,13 +3434,6 @@ Two Character KERI Base64 Prefix Derivation Code
 |**0D**|SHA3-512 Digest. Self-addressing derivation.|64|2|2|88|66|
 |**0E**|Blake2b-512 Digest. Self-addressing derivation.|64|2|2|88|66|
 |**0F**|SHA2-512 Digest. Self-addressing derivation.|64|2|2|88|66|
-
-
-
-
-
-
-
 
 |Derivation<br>Code|Prefix Description|Data<br>Length<br>Bytes|Pad<br>Length|Derivat<br>ion<br>Code<br>Length|Prefix<br>Length<br>Base64|Prefix<br>Length<br>Bytes|
 |---|---|---|---|---|---|---|
@@ -6979,41 +3448,13 @@ Two Character KERI Base64 Prefix Derivation Code
 |**I**|SHA3-256 Digest. Self-addressing derivation.|32|1|1|44|33|
 |**J**|SHA2-256 Digest. Self-addressing derivation.|32|1|1|44|33|
 
-
 Attached Signature Derivation Code Tables
 
 Length of crypt material determines number of pad characters. One character table for one pad char. Two character table for two pad char.
 
-
 Two Character KERI Base64 Attached Signature Selection Code
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Four Character KERI Base64 Count Code for Attached Signatures
-
-
-
-
-
-
-
-
-
-
-
-
 
 |Derivation<br>Code|Selector Description|Data<br>Length<br>Bytes|Pad<br>Length|Derivation<br>Code<br>Length|Prefix<br>Length<br>Base64|Prefix<br>Length<br>Bytes|
 |---|---|---|---|---|---|---|
@@ -7022,49 +3463,19 @@ Four Character KERI Base64 Count Code for Attached Signatures
 |**2**|Six character attached signature code. Use six character table||||||
 |**-**|Count code for attached signatures. Use attached signature count code table(s)||||||
 
-
 Two Character KERI Base64 Attached Signature Derivation Code
-
-
-
 
 |Derivation<br>Code|Prefix Description|Data<br>Length<br>Bytes|Pad<br>Length|Count<br>Code<br>Length|Qual<br>Length<br>Base64|Code<br>Length<br>Bytes|
 |---|---|---|---|---|---|---|
 |**-A**_XX_|Count of Attached Qualifed Base64 Signatures|0|0|4|4|3|
 |**-B**_XX_|Count of Attached Qualifed Base2 Signatures|0|0|4|4|3|
 
-
-
-
-
-
-
-
-
-
-
 |Derivation<br>Code|Prefix Description|Data<br>Length<br>Bytes|Pad<br>Length|Derivation<br>Code<br>Length|Prefix<br>Length<br>Base64|Prefix<br>Length<br>Bytes|
 |---|---|---|---|---|---|---|
 |**A**_X_|Ed25519 signature|64|2|2|88|66|
 |**B**_X_|ECDSA secp256k1 signature|64|2|2|88|66|
 
-
 Four Character KERI Base64 Attached Signature Derivation Code
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |Derivation<br>Code|Prefix Description|Data<br>Length<br>Bytes|Pad<br>Length|Derivation<br>Code<br>Length|Prefix<br>Length<br>Base64|Prefix<br>Length<br>Bytes|
 |---|---|---|---|---|---|---|
@@ -7073,99 +3484,15 @@ Four Character KERI Base64 Attached Signature Derivation Code
 |**0C**_XX_|||||||
 ||||||||
 
-
 Base64
-
-
 
 Base64 Decode ASCII to Binary
 
-
 Base64 Binary Decoding from ASCII
-
-
 
 Base64 Encode Binary to ASCII
 
-
 Base64 Binary Encoding to ASCII
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |ASCII<br>Char|Base64<br>Index<br>Decimal|Base64<br>Index<br>Hex|Base64<br>Index<br>6 bit Binary|ASCII<br>Char|Base64<br>Index<br>Decimal|Base64<br>Index<br>Hex|Base64<br>Index<br>6 bit Binary|ASCII<br>Char|Base64<br>Index<br>Decimal|Base64<br>Index<br>Hex|Base64<br>Index<br>6 bit Binary|ASCII<br>Char|Base64<br>Index<br>Decimal|Base64<br>Index<br>Hex|Base64<br>Index<br>6 bit Binary|
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -7186,7 +3513,6 @@ Base64 Binary Encoding to ASCII
 |O|14|0E|001110|e|30|1E|011110|u|46|2E|101110|-|62|3E|111110|
 |P|15|0F|001111|f|31|1F|011111|v|47|2F|101111|_|63|3F|111111|
 
-
 |Base64<br>Index<br>Decimal|ASCII<br>Char|ASCII<br>Decimal|ASCII<br>Hex|ASCII<br>8 bit<br>Binary|Base64<br>Index<br>Decimal|ASCII<br>Char|ASCII<br>Decimal|ASCII<br>Hex|ASCII<br>8 bit<br>Binary|Base64<br>Index<br>Decimal|ASCII<br>Char|ASCII<br>Decimal|ASCII<br>Hex|ASCII<br>8 bit<br>Binary|Base64<br>Index<br>Decimal|ASCII<br>Char|ASCII<br>Decimal|ASCII<br>Hex|ASCII<br>8 bit<br>Binary|
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 |**0**|A|65|41|01000001|**16**|Q|81|51|01010001|**32**|g|103|67|01100111|**48**|w|119|77|01110111|
@@ -7206,19 +3532,15 @@ Base64 Binary Encoding to ASCII
 |**14**|O|79|4F|01001111|**30**|e|101|65|01100101|**46**|u|117|75|01110101|**62**|-|45|2D|00101101|
 |**15**|P|80|50|01010000|**31**|f|102|66|01100110|**47**|v|118|76|01110110|**63**|_|95|5F|01011111|
 
-
 ###### Discovery
 
 Ledger Based
 
-
 Non-Ledger Based
-
 
 ###### DNS “Hierarchical” Discovery
 
 Diagrams from https://www.cloudflare.com/learning/dns/what-is-dns/
-
 
 $ORIGIN example.com.
 @          3600 SOA  ns1.p30.oraclecloud.net. (
@@ -7243,16 +3565,10 @@ webapp          60 A   216.146.46.10
 webapp          60 A   216.146.46.11
 www          43200 CNAME example.com.
 
-
 ###### DHT “Distributed” Discovery
-
-
-
-
 
 Diagrams from https://en.wikipedia.org/wiki/Distributed_hash_table
 Diagrams from https://en.wikipedia.org/wiki/Kademlia
-
 
 ###### DHT Discovery for KERI
 
@@ -7263,15 +3579,11 @@ bootstrap DHT access from any cache ( ≈ DNS Server cache)
 Query DHT for Latest Rotation Event of Controller Prefix
 -> Extract Witness Prefixes from Event (≈ CName Record)
 
-
 Query DHT for IP Address of Witness Prefix (≈ A Record)
-
 
 Query Witness for KERL of Controller Prefix
 
-
 Query Watcher Network for Duplicitous KERL of Controller Prefix
-
 
 ###### Certificate Transparency Problem
 
@@ -7286,13 +3598,11 @@ Notaries inadequate
 DNSSec inadequate
 All require trust in 3rd party compute infrastructure that is inherently vulnerable
 
-
 Certificate Transparency: (related EFF SSL Observatory)
 Public end-verifiable append-only event log with consistency and inclusion proofs
 End-verifiable duplicity detection = Ambient verifiability of duplicity
 Event log is third party infrastructure but zero trust because it is verifiable.
 Sparse Merkle Trees for revocation of certificates
-
 
 ###### Certificate Transparency Solution
 
@@ -7301,28 +3611,18 @@ End-verifiable duplicity detection = ambient verifiability of duplicity
 Event log is third party infrastructure but it is not trusted because logs are verifiable.
 Sparse Merkle trees for revocation of certificates
 
-
 # Key Event Receipt Infrastructure
 
 Security Considerations
 
-
-
 _Samuel M. Smith Ph.D._
 _[sam@samuelsmith.org](mailto:sam@keri.one)_
 
-
-
 _[https://keri.one](https://keri.one)_
-
-
 
 version 2.59
 
-
-
 2021/03/09
-
 
 **Macro vs. Micro Security Considerations for Public KERI Identifiers**
 
@@ -7344,9 +3644,7 @@ Details of multi-valent key management infrastructure via delegation
 Details of promulgation and confirmation communication protocols and pool construction
 Details of Duplicity Detection algorithms and protocols
 
-
 The security of KERI private identifiers in pair-wise or group-wise relationships is trivially established.
-
 
 **Security from Outside In**
 •Treat Micro considerations as a black box with certain properties
@@ -7369,20 +3667,13 @@ Multi-valent cooperative delegation = scalable performant tiered-security key ma
 
 Full Sequence
 
-
-
 Establishment
 
 Subsequence
 
-
-
-
-
 Non-Establishment
 
 Subsequence
-
 
 |Inception Event|Col2|Col3|
 |---|---|---|
@@ -7398,9 +3689,7 @@ Subsequence
 ||Interaction Event|Interaction Event|
 ||Interaction Event||
 
-
 **Terminology**
-
 
 _Controller_ is entity that controls the authoritative set of asymmetric key-pairs for an identifier (PKI). Non-repudiable
 signature key pairs.
@@ -7419,9 +3708,7 @@ Each party acts in turn as _Controller_ of own identifier/KEL and _Validator_ of
 Each _Validator’s decision to interact_ is based on its validation and resultant degree of trust in _Controller’s_ identifier/KEL
 used in the interaction.
 
-
 **Macro Consideration #1: Key Compromise**
-
 
 •External entity compromises Controller’s exposed signing keys.
 •Malicious Controller misuses its own signing keys
@@ -7431,30 +3718,21 @@ from any source.
 _Validator_ may be protected from such key compromise given it detects duplicity before continuing interaction with
 Controller.
 
-
 Full Sequence
-
-
 
 Establishment
 
 Subsequence
 
-
-
-
-
 Non-Establishment
 
 Subsequence
-
 
 ###### Inconsistency and Duplicity
 
 _inconsistency_ : lacking agreement, as two or more things in relation to each other
 
 _duplicity_ : acting in two different ways to different people concerning the same matter
-
 
 Internal vs. External Inconsistency
 
@@ -7463,13 +3741,10 @@ Internally inconsistent log = not verifiable.
 Log verification from self-certifying root-of-trust protects
 against internal inconsistency.
 
-
 Externally inconsistent log with a purported copy of log but
 both verifiable = duplicitous.
 
-
 Duplicity detection protects against external inconsistency.
-
 
 |Inception Event|Col2|Col3|
 |---|---|---|
@@ -7485,14 +3760,9 @@ Duplicity detection protects against external inconsistency.
 ||Interaction Event|Interaction Event|
 ||Interaction Event||
 
-
 Duplicity Game
 
-
-
 _How may Cate be duplicitous_
-
-
 
 Cate promises to provide a
 
@@ -7502,213 +3772,113 @@ consistent pair-wise log.
 
 _and not get caught?_
 
-
-
 consistent pair-wise log.
 _Local Consistency Guarantee_
-
-
 
 Cate
 _Controller_
 
 Log
 
-
-
-
-
 Eve
 _Validator_
 
 Log
 
-
-
 private (one-to-one) interactions
-
-
 
 Joe
 _Validator_
 
 Log
-
 
 Service promises to provide a
 
 consistent log to anyone.
 _Local Consistency Guarantee_
 
-
-
 Duplicity Game
-
 
 Cate
 _Controller_
 
 Log
 
-
-
 How may Cate/Service/Agent be
 
 duplicitous and not get caught?
 
-
-
 Truncate Log
 
 Delete Log
-
-
 
 Service/Agent
 _Controlled by Cate_
 
 Log
 
-
-
-
-
-
-
-
-
 Eve
 _Validator_
 
 Log
-
-
 
 Joe
 _Validator_
 
 Log
 
-
 highly available, private (one-to-one) interactions
-
 
 Service promises to provide
 exact same log to everyone.
 _Global Consistency Guarantee_
 
-
-
 Duplicity Game
-
 
 Cate
 _Controller_
 
 Log
 
-
-
 How may Cate and/or service be
 
 duplicitous and not get caught?
-
-
 
 Service
 _Controlled by Cate_
 
-
-
 Log
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 How may Cate and/or service be
 
 duplicitous and not get caught?
-
-
 
 Service promises to provide
 exact same log to everyone.
 
-
-
 Cate
 _Controller_
 
 Log
 
-
 Service
 _Controlled by Cate_
 
 Log
-
-
 
 Duplicity Game
 
-
-
 Cate
 _Controller_
 
 Log
-
 
 Service
 _Controlled by Cate_
 
 Log
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 **Macro Consideration #2: First Seen Immutability of Verifiers (Watchers) of KEL**
-
 
 _Watcher_ is observer of KEL that verifies a given KEL using its _first seen_ version of that KEL.
 _First Seen_ = Always Seen never Unseen. No later key compromise (dead attack) may change first seen state of honest watcher..
@@ -7731,10 +3901,7 @@ This recovery operation may be repeated until Controller detects and mitigates s
 Main purpose of Witness pool designated by Controller is to help honest Controller ensure that its own promulgation of any event happens
 before any compromised event.
 
-
 **Macro Consideration #3: Safety and Liveness of Total Ordering**
-
-
 
 _Safety and Liveness_ are typically used to describe properties
 of Byzantine fault tolerant (BFT) totally ordering distributed
@@ -7756,90 +3923,7 @@ Liveness means that the Node pool will eventually come to
 consensus as the total ordering of all client promulgated
 transactions.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 **Macro Consideration #3 continued: Hard constraint space = high cost floor**
-
-
 
 There are four major classes of BFT total ordering
 distributed consensus algorithms with many variants and
@@ -7860,90 +3944,7 @@ Thus an identifier system does not absolutely need to
 
 of these requirements.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 **Macro Consideration #3 continued: Ledger as primary root-of-trust is not portable**
-
-
 
 When the Ledger Algorithm is the primary root-of-trust/
 source-of-trust for ordering transactions then key-state is
@@ -7963,98 +3964,13 @@ to drive market value to a given platform usually a ledger
 with a platform (ledger) locked (platform specific)
 identifier (DID method).
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###### _Ledger Attack Vectors_
 
 Exploring the Attack Surface of Blockchain: A Systematic Overview https://arxiv.org/pdf/1904.03487.pdf
 
-
 Exploring the Attack Surface of Blockchain: A Systematic Overview https://arxiv.org/pdf/1904.03487.pdf
 
-
 **Macro Consideration #3 continued: Secure Attribution only requires Safety, not liveness nor Total Ordering**
-
-
 
 An identifier system must solve the secure attribution
 problem. In other words any statement must be
@@ -8082,28 +3998,7 @@ and safe but the liveness is up to the controller while
 safety is up to the Validator.
 Better _dead_ but _safe_ than _live_ but _unsafe_ .
 
-
-
 Key Event Promulgation Service Key Event Confirmation Service
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 **Macro Consideration #4: Honest Controller ensures Liveness with key management**
 
@@ -8133,146 +4028,13 @@ then the overall security of a non-ledger KERI NFT would be higher than a ledger
 The weak link of the ledger is the access identifier private key protection from key compromise
 (safety) which may be much less than KERI.
 
-
 ###### Pre-Rotation
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 Digest of _next_ key(s) makes pre-rotation post-quantum secure
 
-
 ###### _Key Infrastructure Valence_
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###### Scaling Delegation via Interaction
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |A Key Event Stream Delegator|X Key Event Stream Y Key Event Stream Z Key Event Stream Delegate Delegate Delegate|
 |---|---|
@@ -8289,7 +4051,6 @@ Digest of _next_ key(s) makes pre-rotation post-quantum secure
 |A Interaction<br>∆→ X Rotation|A Interaction<br>∆→ X Rotation|
 |A Rotation|A Rotation|
 
-
 |Col1|Col2|Col3|Col4|Col5|Col6|Col7|
 |---|---|---|---|---|---|---|
 ||||||||
@@ -8301,9 +4062,7 @@ Digest of _next_ key(s) makes pre-rotation post-quantum secure
 ||||||||
 ||||||||
 
-
 ∆← A : Delegation from A
-
 
 **Macro Consideration #5: Validator is responsible for ensuring its Safety WRT a given KEL**
 
@@ -8316,7 +4075,6 @@ Given evidence of duplicity then Validator must reconcile that duplicity or else
 KERI provides key rotation recovery mechanisms to enable duplicity reconciliation of live signing key compromise.
 Immutable first seen property of honest watchers in threshold structure enables duplicity reconciliation of dead (stale)
 key compromise.
-
 
 ###### _Security Concepts_
 
@@ -8340,19 +4098,15 @@ Protection to controller: key management, promulgation consensus, redundancy.
 
 Protection to validator: verifiable logs, verification consensus, duplicity detection
 
-
 Ledger:
 
 Network paid by transaction fees
-
 
 ###### _Apples-to-Apples_
 
 KERI:
 
 Networks paid by transaction fees
-
-
 
 (more or less competitive within the network)
 
@@ -8374,8 +4128,6 @@ Need full access to network
 
 Must trust that a majority are honest
 
-
-
 (competitive across all networks)
 
 _Controller_ :
@@ -8396,159 +4148,47 @@ Need full access to network of own choosing.
 
 Must “ _trust”_ that a majority are honest
 
-
 ###### Smith’s Identifier System Properties Triangle
-
-
-
-
 
 May exhibit any two at the highest level but not all three at the highest level
 
-
 ###### Trust Basis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### Administrative Trust Basis
 
 DNS/Certificate Authorities
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ###### Algorithmic Trust Basis
 
 Shared Distributed Ledgers
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ###### Autonomic Trust Basis
 
 Cryptographic Proofs
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Composable cryptographic material primitives and groups
 
 in dual text and binary streaming protocol design
 
-
 Application
-
 
 Presentation
 
-
 Session
-
 
 Transport
 
-
 Network
-
 
 Link
 
-
 Physical
-
-
 
 TCP, UDP
 
-
 IP
 
-
-
 OSI Model IP Model
-
-
 
 _LonTalk Protocol (1988+)_
 CEA/EIA/ANSI 709.1 - .4
@@ -8561,42 +4201,27 @@ IFSF
 OSGP
 NASA FAA DO-178B 709.1
 
-
 _LonTalk over IP (UDP)_
 CEA/EIA/ANSI 852 A B C
 CEA/EIA/ANSI 852.1
-
 
 RAET (Reliable Asynchronous
 Event Transport) Protocol
 Reliable secure UDP
 
-
-
 Application
-
 
 Transport
 
-
 Network
-
 
 Link
 
-
-
-
-
 **Open Standard Protocol Design History**
-
 
 Authentication
 
-
 **Protocol Formats**
-
-
 
 **Internet Protocols**
 _**Binary**_
@@ -8612,8 +4237,6 @@ _**Inflection Point in Protocol Design**_ _(dual representation)_
 _XML, JSON (text self describing map)_
 _MGPK, CBOR (binary self describing map)_
 
-
-
 **Cryptographic Protocols**
 _**JSON or Hybrid JSON/MGPK**_
 RAET, Secure Scuttlebutt, DIDCom
@@ -8625,9 +4248,7 @@ Noise (Signal)
 _**Flexible Composable Concatenable Text/Binary Crypto Material**_
 CESR (KERI) Composable Event Streaming Representation
 
-
 **Binary vs Text Based Protocol Features**
-
 
 **Binary Format**
 _Advantages_ :
@@ -8652,9 +4273,7 @@ Extremely easy to fix and version
 Easy to adopt as text with no additional barrier to binary adoption
 Fairly compact when binary, Fairly efficient when binary, fairly performant when binary
 
-
 **Composable Concatenable (Text/Binary) Event Streaming Representation (CESR)**
-
 
 **Hybrid Flexible Concatenated Compact Text Base64 & Binary Formats**
 _Advantages_ :
@@ -8677,12 +4296,10 @@ Compact when binary, Efficient when binary, Performant when binary
 _Disadvantages:_
 Not as but almost as compact, efficient, performant as non-composable tuned binary.
 
-
 **Three native domains and formats**
 Raw Domain (separated code and raw binary) (cryptographic operations)
 Namespace Domain (fully qualified text) (name-spaceable text) (streamable text) (archivable text) (envelopable text)
 Compact Domain (fully qualified binary) (streaming binary)
-
 
 Raw Domain = Raw binary representation that crypto libraries use
 
@@ -8745,19 +4362,7 @@ KERI replaces pad characters with prepend derivation codes whose length preserve
 By comparison did:key is not stable, did:peer is, neither are composable.
 In general Multi-Codec is not stable nor composable except fro serendipitous combinations of code and value
 
-
 _(dc, rm) -> R2T -> t -> T2S -> s -> S2R -> (dc, rm)_
-
-
-
-
-
-
-
-
-
-
-
 
 **Code Tables**
 
@@ -8766,7 +4371,6 @@ Basic material primitives,
 Indexed signature primitives or variable length values,
 Grouping count codes.
 
-
 Appear in namespace domain:
 Name-spaced identifiers
 Ephemeral identifiers
@@ -8774,38 +4378,7 @@ VCs
 Documents
 Message bodies
 
-
-
-
-
-
-
 **Basic Primitives**
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |Derivatio<br>n<br>Code|Description|Code<br>Length|Index<br>Length|Total<br>Length|Max<br>Count|
 |---|---|---|---|---|---|
@@ -8844,30 +4417,15 @@ Message bodies
 |**1AAF**|Tag Base64 4 chars or 3 bytes|4||8||
 |**1AAG**|DateTime Base64 custom encoded 32 char ISO8601|4||36||
 
-
 Appear in message
 attachments as stream group:
 Compact list is signatures
 indexed by offset into key or
 witness list.
 
-
-
-
-
-
-
 **Indexed Codes**
 
-
 KERI Master Base64 Char Derivation Code Table
-
-
-
-
-
-
-
 
 |Derivation<br>Code|Description|Code<br>Length|Index<br>Length|Total<br>Length|Max<br>Count|
 |---|---|---|---|---|---|
@@ -8880,74 +4438,15 @@ KERI Master Base64 Char Derivation Code Table
 |**0A**_##_|Ed448 indexed signature|4|2|156|4,095|
 |**0B**_##_|Label Base64 char of variable length L=N*4 where N is value of index, total = L+4|4|2|Variable|4,095|
 
-
 Appear in message
 attachments to group and/or
 pipeline heterogenous
 attachments and future
 composable message format:
 
-
-
-
-
-
-
 **Group Count Codes**
 
-
 KERI Master Base64 Char Derivation Code Table
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 |Derivatio<br>n<br>Code|Description|Code<br>Length|Index<br>Length|Total<br>Length|Max<br>Count|
 |---|---|---|---|---|---|
@@ -8986,9 +4485,7 @@ KERI Master Base64 Char Derivation Code Table
 |||||||
 |**-0a**_#####_|Count of anchor seals  (seal groups in list)|8|5|8<br>|3,741,823|
 
-
 **Stream Parsing Rules**
-
 
 Stream start, cold restart, message end, group end:
 Examine tritet (3 bits).
@@ -9009,7 +4506,6 @@ information needed to parse the attached group.
 The framing code may be in either Base64 or binary.
 At the end of the stream start, the stream must resume with one of the 5 things, either a new JSON, CBOR, or
 MGPK encoded mapping or another of two types of framing codes expressed in either Base64 or binary.
-
 
 **Annotated Example**
 
@@ -9065,16 +4561,10 @@ Verifiable Authentic Data world human facing side is Text
 Verifiable Digitally Signed Contract world is Text
 Verifiable Audit Trail World is Text
 
-
 **Archival Preservation**
 
-
 **Archival Preservation**
-
 
 **Legally Binding Digital Signatures (Contracts)**
 
-
 **Audit Trails**
-
-

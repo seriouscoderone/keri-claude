@@ -9,7 +9,6 @@ _Samuel M. Smith Ph.D._
 _[sam@samuelsmith.org](mailto:sam@samuelsmith.org)_
 _[some graphics from fatiron.com or freepik.com](http://flatiron.com)_
 
-
 #### Economics
 
 ### value creation and capture
@@ -20,77 +19,35 @@ _[some graphics from fatiron.com or freepik.com](http://flatiron.com)_
 #### security
 ### value
 
-
 ### control
-
 
 ### control
 #### its
 
-
 ### value
-
-
 
 _digital_
 #### atoms information ?
 
-
-
 physical security
 Informational security
-
-
-1960
-
-
 
 Revenue
 Market Value
 
 1980 2000 2020 2020
 
-
-
-1980
-
-
 #### 60 Years of Its & Bits
-
-
-
-2000
-
-
-
-2020
-
-
 
 2000 Fortune 20 Revenue
 
-
-
-
-
 2020 Fortune 20 Market Value
-
-
 
 1960 Fortune 20 Revenue
 
-
-
 1980 Fortune 20 Revenue
 
-
-
-
-
-
-
 2020 Fortune 20 Revenue
-
 
 |Rank|Company|Revenues<br>($ millions)|
 |---|---|---|
@@ -115,7 +72,6 @@ Market Value
 |19|Boeing|1,612|
 |20|Kraft|1,606|
 
-
 |Rank|Company|Revenues<br>($ millions)|
 |---|---|---|
 |1|Exxon Mobil|79,107|
@@ -138,7 +94,6 @@ Market Value
 |18|Tenneco Automotive|11,209|
 |19|AT&T|10,964|
 |20|Sunoco|10,666|
-
 
 |Rank|Company|Revenues<br>($ millions)|
 |---|---|---|
@@ -163,7 +118,6 @@ Market Value
 |19|TIAA-CREF|39,410|
 |20|Compaq Computer|38,525|
 
-
 |Rank|Company|Revenues<br>($ millions)|
 |---|---|---|
 |1|Walmart|523,964|
@@ -186,7 +140,6 @@ Market Value
 |18|General Motors|137,237|
 |19|Walgreens Boots Alliance|136,866|
 |20|Verizon|131,868|
-
 
 |Rank|Company|Market Value<br>($ millions)|
 |---|---|---|
@@ -211,23 +164,17 @@ Market Value
 |19|Coca-Cola|189,983|
 |20|Bank of America|185,227|
 
-
 ##### Networks Effects
 
 Network scaling law: How network value scales with number of participants.
 
-
 Metcalfe’s Law
-
 
 _v_ = _a_ ⋅ _N_
 
-
 _V = a_ ⋅ _N_ ⋅ _N_ = _a_ ⋅ _N_ ²
 
-
 Value = Reach
-
 
 ##### Metcalfe’s Law Validation
 
@@ -243,179 +190,95 @@ Van Hove L., “Testing Metcalfe’s law: Pitfalls and possibilities,” _Inform
 Zhang X.-Z., J.-J. Liu and Z.-W. Xu, “Tencent an dFacebook Data Validate Metcalfe’s Law,” _Journal of Computer Science and Technology_, vol. 30,
 no. 2, pp. 246–251, March 2015
 Xie, J. and Sirbu, M., “Price competition and compatibility in the presence of positive demand externalities,” _Management science_, vol. 41, no. 5, pp. 909-926,
-1995
-
 
 #### How do we recapture the value in our data? 1- Leverage cooperative network effects 2- Retake control of our data
-
 
 ##### Cooperating Networks
 
 What happens to value when two smaller networks combine?
 
-
-
-
-
 _N_ ₁
-
 
 _N_ ₂
 
-
-
-
-
-
-
 _v_ ₁ = _v_ ₂ = _a_ ⋅( _N_ ₁+ _N_ ₂)
-
 
 _V_ ₁ = _a_ ⋅ _N_ ₁⋅( _N_ ₁+ _N_ ₂) = _a_ ⋅ _N_ ₁²+ _a_ ⋅ _N_ ₁⋅ _N_ ₂
 
-
 _V_ ₂ = _a_ ⋅ _N_ ₂⋅( _N_ ₁+ _N_ ₂) = _a_ ⋅ _N_ ₂²+ _a_ ⋅ _N_ ₁⋅ _N_ ₂
-
 
 _V_ = _V_ ₁ + _V_ ₂ = _a_ ⋅ _N_ ₁²+2⋅ _a_ ⋅ _N_ ₁⋅ _N_ ₂+ _a_ ⋅ _N_ ₂² = _a_ ⋅( _N_ ₁+ _N_ ₂)²
 
-
 _a_ ⋅ _N_ ₁⋅ _N_ ₂.
-
 
 |N₁|N₂|
 |---|---|
 |_N_₁²|_N_₁⋅_N_₂|
 |_N_₁⋅_N_₂|_N_₂²|
 
-
 ##### Cooperating Network Lifetime Value
 
 Xie, J. and Sirbu, M., “Price competition and compatibility in the presence of positive demand
 externalities,” _Management science_, vol. 41, no. 5, pp. 909-926, 1995
 
-
 When the two networks are value symmetric then it is
 always more profitable for both to combine.
 
-
 When the two networks are value asymmetric then it is
 always more profitable for the smaller network to combine.
-
 
 When the two networks are value asymmetric and when
 the larger network’s size is below a threshold then it is also
 always more profitable for the larger network to combine.
 
-
 ##### Feedback and Adoption Growth Rate
-
-
-
-
-
-
 
 time
 
-
 ##### Competing Small Networks
-
-
-
-
-
-
 
 …
 
-
-
-
-
-
-
-
-
-
 ##### Super-Network of Cooperating Small Networks
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ##### Cooperative Network of Networks Effect
 
 _V_ ( _N:M_ )/ _V_ ( _N_ ) = (( _N_ / _M_ )· _a_         - _M_ ²)/( _a_         - _N_ ²) = _M/N_
 
-
 _V_ ( _N_ : _M_ ) = ( _M/N)_          - _V_ ( _N)_
-
 
 _The network effect resulting from sub-network joining a cooperating super-network is that the_
 _sub-network’s value is increased by the ratio of super-network to sub-network size._
 
-
 _Cooperation Advantage_
-
 
 ##### Small Network Strategy
 
 _Cooperative Network Cascade_
 
-
 How to remove primary barrier to cooperation?
-
 
 Different value contexts = not directly competitive.
 
-
 Find value that is transferrable between contexts.
 
-
 _Trans-contextual value creation and capture._
-
 
 Use _trans-contextual_ value creation and capture to _fuel_
 _cooperative_ network effects.
 
-
 Participant controlled
 trans-contextual value creation and capture
 = _virtual_ participant centric network
-
 
 Enables participant to _amplify_ own value
 across multiple contexts
 = maximum adoption _pull_
 = fastest spin-up of _cooperative_ network effects.
 
-
 ##### Cooperative long-tail network effects
 
 Treat long-tail as effective set of different contexts
-
 
 Q: Where to find trans-contextual value?
 A: Transaction Costs?
@@ -426,16 +289,13 @@ _Transfer_ : Facilitation,Transport, Delivery, Payment
 
 _Trust_ : Security, Competency, Reliability, Privacy, Liability
 
-
 Platforms/Networks sell reductions in transaction costs.
 
 To a consumer, all costs look like transaction costs.
 
 Principal super aggregator pull is reduced trust transaction costs.
 
-
 Trust may be highly transferable between contexts!
-
 
 Reduction of trust transaction costs
 
@@ -443,21 +303,14 @@ is a
 
 primary network effect value from cooperation.
 
-
 ##### Transitive Value Virtual Network Scaling Law
-
-
 
 Set of trans-contextual
 cooperating networks **n** .
 
-
 average transitivity factor, _t_,
 
-
 0 ≤ _t_ ≤ 1.
-
-
 
 ⎡ ⎤
 **v** _v_ _v_ _v_
@@ -473,50 +326,32 @@ average transitivity factor, _t_,
 ⎣ ⎦
 _V_ = **n** ⋅ **v** [T] = **n** ⋅ **T** ⋅ **s** [T]
 
-
-
 ⎡ ⎤
 **s** _a_ _N_ _a_ _N_ _a_ _N_
 = …
 1 2 2 _m_ _m_
 ⎣ ⎦
 
-
-
 ⎡
-
-
 
 ⎤
 
-
-
 ⎦
-
-
 
 **T**
 =
 
-
-
 ⎢
 ⎢
 ⎢
 ⎢
 ⎢
-
-
 
 _t_ 1
 =
 _ij_ _i_ = _j_
 
-
-
 ⎣
-
-
 
 _t_ _t_ … _t_
 11 12 1 _m_
@@ -526,64 +361,43 @@ _t_ _t_ … _t_
 _t_ _t_ … _t_
 _m_ 1 _m_ 2 _mm_
 
-
-
 ⎥
 ⎥
 ⎥
 ⎥
 ⎥
-
-
 
 https://medium.com/selfrule/meta-platforms-and-cooperative-network-of-networks-effects-6e61eb15c586
 
-
 #### Retake control of our data
-
 
 #### Toolkits
 
-
 #### Only have one set of tools for truly secure data control!
-
 
 #### its bits
 
-
 ### control
 
-
 ### value
-
-
 
 _digital_
 #### atoms information
 
-
-
 _digital_
-
 
 #### digital uniqueness
 
-
 #### ?
-
-
 
 physical security Informational security
 ## Entropy
 
-
 #### Entropy Derived Tools Cryptographic one-way functions … hashes, ECC scalar multiplication… digital signatures, ZKPs …
-
 
 #### Information uniqueness from captured entropy To retake control of our data we must first retake control of our identifiers. self-certifying pseudonymous identifiers Key Event Receipt Infrastructure (KERI)
 
 https://arxiv.org/abs/1907.02143
-
 
 #### Four A’s of Secure Data Control
 
@@ -594,22 +408,18 @@ _Authoritative_ : accurate, reputable
 
 #### A [4] data control securely established via self- certifying pseudonymous identifiers
 
-
 #### Sapored Data
 
 Sapor _: noun_
 _the quality in a substance that affects the sense of taste; savor; flavor._
 
-
 _Sapored data_ may be securely provenanced to its author(s).
 _Sapored data_ value extraction may be securely attributed
 to its authors.
 
-
 _Sapored_ data supply chains.
 Enable consumer pull in addition to regulatory push.
 Conscious consumers of _Sapored data_ .
-
 
 #### its
 
@@ -617,25 +427,16 @@ cryptographic
 #### bits
 pseudonymous identifiers
 
-
 control
 attribution
 
-
 sapored data
-
 
 #### Privacy?
 
-
-
-
-
 Weak
 
-
 _Strong_ Privacy
-
 
 un-correlated interactions over unbounded time and space.
 
@@ -643,103 +444,61 @@ Super aggregators and state actors have effectively unlimited
 storage and compute capacity. Eventually all disclosed data will be
 at least statistically correlatable.
 
-
 _Weak_ Privacy
-
 
 un-correlated interactions over bounded time and space.
 
 When the cost of correlation exceeds the value of correlation the
 data will be un-correlated.
 
-
 _Economics of Correlator_
-
-
-
-
 
 data lifecycle _past_ _now_ _future_
 
-
 _measured_ _predicted_
-
 
 _Economics of Correlator: Value Extraction_
 
-
 data lifecycle _past_ _now_ _future_
 
-
 _measured_ _predicted_
-
 
 _Economics of De-correlator_
 
-
-
-
-
 data lifecycle _past_ _now_ _future_
 
-
 _measured_ _predicted_
-
 
 _Economics of De-correlator: Value Extraction_
 
-
-
-
-
-
-
 data lifecycle _past_ _now_ _future_
-
 
 _measured_ _predicted_
 
-
 Operating Regimes
-
-
-
-
-
-
 
 |Hide or Bribe|Regulation<br>Contracts|
 |---|---|
 |Hide and Bribe|Contracts ?|
 
-
 Illegitimate Legitimate
 
-
 Economic
-
 
 #### Freedom
 
 _balanced_
 Freedom from … Freedom to …
 
-
-
 exploitation (commercial)
 
 intimidation (political)
-
-
 
 extract value(commercial)
 
 build relationships (social)
 
-
-
 censorship (political) build community (political)
-
 
 possibility of erasure = possibility of censorship
 
@@ -747,19 +506,15 @@ anonymity = loss-of-value from attribution
 
 fairness = requires data attribution
 
-
 #### Class-Based (A [4] ) Pseudonymity Separable Identifier Trust Bases
 
 KERI
 
-
 ##### CONCLUSION Q&A
-
 
 https://medium.com/selfrule/meta-platforms-andcooperative-network-of-networks-effects-6e61eb15c586
 
 ## _GitHub_ _SmithSamuelM_ _Papers_
-
 
 ##### Reading List 1
 
@@ -790,7 +545,6 @@ Munger M. C., “Tomorrow 3.0: Transaction costs and the sharing economy,” Cam
 Odlyzko A. and B. Tilly, “A refutation of Metcalfe’s Law and a better estimate for the value of networks and network interconnections,” _Manuscript,_
 _March_, vol. 2, pp. 2005, 2005
 
-
 ##### Reading List 2
 
 Pearson T., “Markets Are Eating The World,” _RibbonFarm_ [, 2019/02/18 https://www.ribbonfarm.com/2019/02/28/markets-are-eating-the-world/](https://www.ribbonfarm.com/2019/02/28/markets-are-eating-the-world/)
@@ -815,29 +569,25 @@ Van Hove L., “Testing Metcalfe’s law: pitfalls and possibilities,” _ES-Wor
 [Working-Papers/es_working_paper_6_-_van_hove_l._2016_testing_metcalfes_law._pitfalls_and_possibilities.pdf](http://research.vub.ac.be/sites/default/files/uploads/BUTO/Working-Papers/es_working_paper_6_-_van_hove_l._2016_testing_metcalfes_law._pitfalls_and_possibilities.pdf)
 Van Hove L., “Metcalfe’s law: not so wrong after all,” _NETNOMICS: Economic Research and Electronic Networking_, vol. 15, no. 1, pp. 1–8, 2014
 Van Hove L., “Metcalfe’s Law and Network Quality: An Extension of Zhang et al.,” _Journal of Computer Science and Technology_, vol. 31, no. 1, pp. 117–123,
-2016
+
 Van Hove L., “Testing Metcalfe’s law: Pitfalls and possibilities,” _Information Economics and Policy_, vol. 37, pp. 67–76, 2016
 Wu, T. “The Master Switch: The Rise and Fall of Information Empires” Random House, 2010. https://www.amazon.com/Master-Switch-Rise-InformationEmpires-ebook/dp/B003F3PKTK/ref=sr_1_1?keywords=The+master+switch&qid=1553973768&s=digital-text&sr=1-1
 Xie, J. and Sirbu, M., “Price competition and compatibility in the presence of positive demand externalities,” _Management science_, vol. 41, no. 5, pp. 909-926, 1995
 Zhang X.-Z., J.-J. Liu and Z.-W. Xu, “Tencent an dFacebook Data Validate Metcalfe’s Law,” _Journal of Computer Science and Technology_, vol. 30, no. 2, pp. 246–251,
 March 2015
 
-
 # KERI
 ### Key Event Receipt Infrastructure
 
 A Secure Identifier Overlay for the Internet
 
-
 _Samuel M. Smith Ph.D._
 
 version 2.31
 
-
 ### Resources
 
 [sam@prosapien.com](mailto:sam@samuelsmith.org)
-
 
 https://arxiv.org/abs/1907.02143
 [https://github.com/SmithSamuelM/Papers/blob/master/whitepapers/KERI_WP_2.x.web.pdf](https://github.com/SmithSamuelM/Papers/blob/master/whitepapers/KERI_WP_2.x.web.pdf)
@@ -846,19 +596,15 @@ https://arxiv.org/abs/1907.02143
 [https://github.com/SmithSamuelM/keri](https://github.com/SmithSamuelM/keri)
 [https://github.com/SmithSamuelM/keripy](https://github.com/SmithSamuelM/keripy)
 
-
 DIF
 Identity and Discovery WG
 [https://github.com/decentralized-identity/keri](https://github.com/decentralized-identity/keri)
 [https://github.com/decentralized-identity/keripy](https://github.com/decentralized-identity/keripy)
 
-
 SSI Meetup
 https://ssimeetup.org/key-event-receipt-infrastructure-keri-secure-identifier-overlay-internet-sam-smith-webinar-58/
 
-
 Background References
-
 
 **Self-Certifying Identifiers:**
 
@@ -915,5 +661,3 @@ Google, “Certificate Transparency,”
 Laurie, B. and Kasper, E., “Revocation Transparency,”
 
 https://www.links.org/files/RevocationTransparency.pdf
-
-
