@@ -126,7 +126,8 @@ export default function ChatWindow({
                 <MessageBubble key={i} message={msg} />
               ))}
 
-              {isLoading && (
+              {/* Show loading dots only during pre-streaming phase (reformulate/retrieve) */}
+              {isLoading && (!messages.length || messages[messages.length - 1]?.content === '') && (
                 <div className="flex justify-start mb-4">
                   <div className="bg-keri-surface rounded-2xl rounded-bl-sm px-4 py-3">
                     <div className="flex gap-1.5">

@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { sendMessage, ChatApiError, NumberedCitation, Attachment } from '../api/chat';
+import { useState, useCallback, useRef } from 'react';
+import { streamMessage, ChatApiError, NumberedCitation, Attachment } from '../api/chat';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -19,6 +19,8 @@ export function useChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<ChatErrorInfo>();
+  // Track accumulated streaming text outside React state for performance
+  const streamRef = useRef('');
 
   const send = useCallback(
     async (text: string, attachments?: Attachment[]) => {
@@ -31,22 +33,61 @@ export function useChat() {
       };
       setMessages((prev) => [...prev, userMsg]);
       setIsLoading(true);
+      streamRef.current = '';
+
+      // Add an empty assistant message that will grow as chunks arrive
+      const assistantMsg: Message = {
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
 
       try {
-        // Build history from existing messages
+        // Build history from existing messages (before this exchange)
         const history = messages.map((m) => ({
           role: m.role,
           content: m.content,
         }));
-        const response = await sendMessage(text, history, attachments);
-        const assistantMsg: Message = {
-          role: 'assistant',
-          content: response.answer,
-          citations: response.citations,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
+
+        await streamMessage(
+          text,
+          history,
+          attachments,
+          // onChunk: append text to the assistant message
+          (chunk: string) => {
+            streamRef.current += chunk;
+            const accumulated = streamRef.current;
+            setMessages((prev) => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              if (last && last.role === 'assistant') {
+                updated[updated.length - 1] = { ...last, content: accumulated };
+              }
+              return updated;
+            });
+          },
+          // onCitations: attach citations to the assistant message
+          (citations: NumberedCitation[]) => {
+            setMessages((prev) => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              if (last && last.role === 'assistant') {
+                updated[updated.length - 1] = { ...last, citations };
+              }
+              return updated;
+            });
+          },
+        );
       } catch (err) {
+        // Remove the empty assistant message on error
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last && last.role === 'assistant' && !last.content) {
+            return prev.slice(0, -1);
+          }
+          return prev;
+        });
         if (err instanceof ChatApiError) {
           setError({
             message: err.message,

@@ -80,6 +80,16 @@ download_url \
   "https://www.ietf.org/archive/id/draft-ssmith-keri-00.txt" \
   "draft-ssmith-keri-00.txt"
 
+# keridoc LLM docs
+download_url \
+  "https://raw.githubusercontent.com/seriouscoderone/keridoc/refs/heads/main/llm-docs/llms-full.txt" \
+  "keridoc-llms-full.txt"
+
+# WOT-terms glossary/education (Docusaurus site LLM export)
+download_url \
+  "https://seriouscoderone.github.io/WOT-terms/llms-full.txt" \
+  "wot-terms-llms-full.txt"
+
 # signifypy docs (singlehtml from GitHub)
 download_url \
   "https://raw.githubusercontent.com/seriouscoderone/signifypy/main/docs/singlehtml/index.html" \

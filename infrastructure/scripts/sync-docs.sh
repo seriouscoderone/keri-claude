@@ -16,9 +16,9 @@ if [ ! -d "$STAGING_DIR" ]; then
 fi
 
 # Read config from SSM
-BUCKET_NAME=$(aws $AWS_OPTS ssm get-parameter --name /keri-rag/document-bucket-name --query 'Parameter.Value' --output text)
-KB_ID=$(aws $AWS_OPTS ssm get-parameter --name /keri-rag/knowledge-base-id --query 'Parameter.Value' --output text)
-DS_ID=$(aws $AWS_OPTS ssm get-parameter --name /keri-rag/data-source-id --query 'Parameter.Value' --output text)
+BUCKET_NAME=$(aws $AWS_OPTS ssm get-parameter --name /keri-chat/document-bucket-name --query 'Parameter.Value' --output text)
+KB_ID=$(aws $AWS_OPTS ssm get-parameter --name /keri-chat/knowledge-base-id --query 'Parameter.Value' --output text)
+DS_ID=$(aws $AWS_OPTS ssm get-parameter --name /keri-chat/data-source-id --query 'Parameter.Value' --output text)
 
 echo "Syncing $STAGING_DIR -> s3://$BUCKET_NAME/"
 
