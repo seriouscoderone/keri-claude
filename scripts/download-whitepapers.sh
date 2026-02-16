@@ -37,10 +37,32 @@ download_url() {
 # SmithSamuelM/Papers - whitepapers/
 download "whitepapers/SPAC_Message.md"
 download "whitepapers/IdentifierTheory_web.pdf"
+download "whitepapers/KERI_WP_2.x.web.pdf"
+download "whitepapers/Identity-System-Essentials.pdf"
 
 # SmithSamuelM/Papers - presentations/
 download "presentations/KERI_PAC_Theorem.pdf"
 download "presentations/NonconformistKeynoteWeb20200702.pdf"
+download "presentations/KERI2_Overview.web.pdf"
+download "presentations/KERI_Overview.web.pdf"
+download "presentations/DuplicityGame_IIW_2020_A.pdf"
+download "presentations/KERIVerifiableTrustBases.web.pdf"
+download "presentations/KERI_AlphaOmega.20250903.pdf"
+download "presentations/KERI_Appraisal.pdf"
+download "presentations/KERI_Details_IIW_2019_B.pdf"
+download "presentations/KERI_DuplicityDICE2024.pdf"
+download "presentations/KERI_RootOfTrust_IIW_2019_B.pdf"
+download "presentations/KERI_SecurityDeepDive.web.pdf"
+download "presentations/KERI_Security_DICE2024.pdf"
+download "presentations/KERI_for_Muggles.pdf"
+download "presentations/MetaPlatforms_IIW_20190430_5A.pdf"
+download "presentations/MetaPlatformBYUCIOLecture20190305.pdf"
+download "presentations/ReputationAlgorithms.pdf"
+download "presentations/ReputationDisintermediation_IIW_20180405.pdf"
+download "presentations/ReputationIIW2017.pdf"
+download "presentations/ReputationTwoSidedNetworks_20180208.pdf"
+download "presentations/SevenPrivacies.web.pdf"
+download "presentations/ZeroTrustRaet.pdf"
 
 # Trust over IP specifications (Spec-Up-T single-page HTML)
 download_url \
@@ -52,6 +74,11 @@ download_url \
 download_url \
   "https://raw.githubusercontent.com/trustoverip/kswg-acdc-specification/main/docs/index.html" \
   "acdc-specification.html"
+
+# IETF drafts
+download_url \
+  "https://www.ietf.org/archive/id/draft-ssmith-keri-00.txt" \
+  "draft-ssmith-keri-00.txt"
 
 # signifypy docs (singlehtml from GitHub)
 download_url \
@@ -72,6 +99,14 @@ for f in "$STAGING_DIR"/*.md; do
   [ -f "$f" ] || continue
   name="$(basename "$f")"
   echo "Moving $name"
+  cp "$f" "$MARKDOWN_DIR/$name"
+done
+
+# TXT files: copy as markdown
+for f in "$STAGING_DIR"/*.txt; do
+  [ -f "$f" ] || continue
+  name="$(basename "${f%.txt}.md")"
+  echo "Copying $(basename "$f") -> $name"
   cp "$f" "$MARKDOWN_DIR/$name"
 done
 
