@@ -1,5 +1,5 @@
 ---
-name: cesride
+name: cesride-skill
 description: >
   Rust CESR primitives library for KERI protocol. Auto-activates when working with
   cesride imports, Matter/Indexer traits, CESR primitive types (Verfer, Diger, Signer,

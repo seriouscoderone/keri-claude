@@ -1,5 +1,5 @@
 ---
-name: signify-ts
+name: signify-ts-skill
 description: >
   TypeScript client library for KERI signing at the edge via Signify protocol.
   Auto-activates when working with signify-ts imports, SignifyClient usage,

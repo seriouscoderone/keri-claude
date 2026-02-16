@@ -1,5 +1,5 @@
 ---
-name: keripy
+name: keripy-skill
 description: >
   Python KERI reference implementation. Auto-activates when working with keripy imports,
   KERI event processing in Python, Hab/Habery identifier management, LMDB database ops
