@@ -8,6 +8,7 @@ MARKDOWN_DIR="$SCRIPT_DIR/markdown"
 VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python3"
 BASE="https://raw.githubusercontent.com/SmithSamuelM/Papers/master"
 
+IMAGES_DIR="$STAGING_DIR"
 mkdir -p "$STAGING_DIR" "$MARKDOWN_DIR"
 
 # --- Download phase ---
@@ -34,11 +35,36 @@ download_url() {
   fi
 }
 
+download_image() {
+  local path="$1"
+  local name="$(basename "$path")"
+  if [ -f "$IMAGES_DIR/$name" ]; then
+    echo "Already exists: $name"
+  else
+    echo "Downloading image $name..."
+    curl -fSL -o "$IMAGES_DIR/$name" "$BASE/$path"
+  fi
+}
+
+download_image_dir() {
+  local dir="$1"
+  echo "Listing images in $dir..."
+  local files
+  files=$(gh api "repos/SmithSamuelM/Papers/contents/$dir" --jq '.[].path') || {
+    echo "SKIP $dir: gh api failed (not authenticated or rate limited)"
+    return
+  }
+  for path in $files; do
+    download_image "$path"
+  done
+}
+
 # SmithSamuelM/Papers - whitepapers/
 download "whitepapers/SPAC_Message.md"
 download "whitepapers/IdentifierTheory_web.pdf"
 download "whitepapers/KERI_WP_2.x.web.pdf"
 download "whitepapers/Identity-System-Essentials.pdf"
+download "whitepapers/KERIArchGroupIssuance.md"
 
 # SmithSamuelM/Papers - presentations/
 download "presentations/KERI_PAC_Theorem.pdf"
@@ -89,6 +115,18 @@ download_url \
 download_url \
   "https://seriouscoderone.github.io/WOT-terms/llms-full.txt" \
   "wot-terms-llms-full.txt"
+
+# vLEI ecosystem docs
+download_url \
+  "https://raw.githubusercontent.com/seriouscoderone/vLEI/feat/llm-doc-generation/docs/llm-doc.md" \
+  "vlei-llm-doc.md"
+download_url \
+  "https://raw.githubusercontent.com/GLEIF-IT/vlei-trainings/main/markdown/llm_context.md" \
+  "vlei-trainings-llm-context.md"
+
+# SmithSamuelM/Papers - images (dynamically listed via GitHub API)
+download_image_dir "whitepapers/assets"
+download_image_dir "whitepapers/graphics"
 
 # signifypy docs (singlehtml from GitHub)
 download_url \

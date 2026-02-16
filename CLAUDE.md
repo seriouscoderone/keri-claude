@@ -19,7 +19,18 @@ This is NOT a KERI implementation. It contains no protocol code. It teaches Clau
         naming_conventions.md
         patterns.md
         examples.md
+infrastructure/         # KeriChat CDK stack (Bedrock KB + Aurora + CloudFront)
+  lib/stacks/           # CDK stack definition
+  lambda/               # Lambda handlers (chat, ingestion, db-init)
+  frontend/             # React chat UI
+  edge/                 # CloudFront Function (IP filter)
+  scripts/
+    publish-template.sh # Build + publish Launch Stack template
+    sync-docs.sh        # Manual doc sync (for updates outside deploy)
 scripts/
+  download-whitepapers.sh  # Download KERI papers/specs into staging/
+  staging/              # Raw documents (PDFs, HTML, TXT) — deployed to S3
+  markdown/             # Converted markdown (for skills/local use)
   pdf2md.py             # Convert PDF to markdown (requires pymupdf4llm)
   minimize-md.py        # Strip conversion artifacts from markdown
   .venv/                # Python venv for scripts (gitignored)
@@ -50,9 +61,48 @@ cp -r /path/to/keri-claude/skills/keri-style .claude/skills/
 claude --add-dir /path/to/keri-claude
 ```
 
+## Infrastructure (KeriChat)
+
+The `infrastructure/` directory contains a CDK stack that deploys a complete KERI knowledge base chat system: Aurora Serverless v2 (pgvector), Bedrock Knowledge Base, Lambda chat handler with streaming, and CloudFront distribution.
+
+### Deployment workflow
+
+Documents are packaged into the CDK template as assets. You must populate `scripts/staging/` before synthesizing:
+
+```bash
+# 1. Download KERI papers, specs, and docs into scripts/staging/
+./scripts/download-whitepapers.sh
+
+# 2. Deploy (documents are baked into the template and deployed to S3 automatically)
+cd infrastructure
+npx cdk deploy --profile personal
+```
+
+The stack's `BucketDeployment` extracts `scripts/staging/` into the document bucket, then a deploy-time custom resource triggers `StartIngestionJob` so the KB is ready immediately. A daily EventBridge rule handles ongoing re-ingestion.
+
+### Publishing for Launch Stack
+
+```bash
+cd infrastructure
+./scripts/publish-template.sh keri-chat-public-assets
+```
+
+This synths, zips all assets (including the ~113MB document bundle), uploads to the public S3 bucket, and prints a Launch Stack URL.
+
+### S3 bucket naming
+
+Both buckets use account-prefixed names for global uniqueness:
+- `{AccountId}-keri-chat-documents` — KB source documents
+- `{AccountId}-keri-chat-frontend` — React chat UI
+
 ## Scripts
 
-Both scripts live in `scripts/` and use a local venv (`scripts/.venv/`, gitignored).
+Scripts live in `scripts/` and use a local venv (`scripts/.venv/`, gitignored).
+
+**download-whitepapers.sh** — Downloads KERI papers, specs, and community docs into `scripts/staging/`. Must be run before `cdk deploy` or `publish-template.sh`:
+```bash
+./scripts/download-whitepapers.sh
+```
 
 **pdf2md.py** — Converts PDF to markdown using pymupdf4llm:
 ```bash

@@ -275,11 +275,23 @@ export class KeriChatStack extends cdk.Stack {
     // =================================================================
 
     const documentBucket = new s3.Bucket(this, 'DocumentBucket', {
+      bucketName: `${cdk.Aws.ACCOUNT_ID}-keri-chat-documents`,
       versioned: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
       autoDeleteObjects: false,
       encryption: s3.BucketEncryption.S3_MANAGED,
+    });
+
+    // Deploy KERI documents from staging/ into the document bucket
+    const documentDeployment = new s3deploy.BucketDeployment(this, 'DocumentDeployment', {
+      sources: [s3deploy.Source.asset(path.join(__dirname, '../../../scripts/staging'), {
+        exclude: ['.DS_Store', 'distill-*', '*.py'],
+      })],
+      destinationBucket: documentBucket,
+      prune: false,
+      memoryLimit: 3008,
+      ephemeralStorageSize: cdk.Size.mebibytes(1024),
     });
 
     // =================================================================
@@ -432,6 +444,44 @@ export class KeriChatStack extends cdk.Stack {
     dailyRule.addTarget(new targets.LambdaFunction(ingestionFn));
 
     // =================================================================
+    // 8b. Deploy-time ingestion — triggers after document upload
+    // =================================================================
+
+    const deployIngestion = new cr.AwsCustomResource(this, 'DeployIngestion', {
+      onCreate: {
+        service: 'BedrockAgent',
+        action: 'startIngestionJob',
+        parameters: {
+          knowledgeBaseId: knowledgeBase.attrKnowledgeBaseId,
+          dataSourceId: dataSource.attrDataSourceId,
+        },
+        physicalResourceId: cr.PhysicalResourceId.of('deploy-ingestion'),
+      },
+      onUpdate: {
+        service: 'BedrockAgent',
+        action: 'startIngestionJob',
+        parameters: {
+          knowledgeBaseId: knowledgeBase.attrKnowledgeBaseId,
+          dataSourceId: dataSource.attrDataSourceId,
+        },
+        physicalResourceId: cr.PhysicalResourceId.of('deploy-ingestion'),
+      },
+      policy: cr.AwsCustomResourcePolicy.fromStatements([
+        new iam.PolicyStatement({
+          actions: ['bedrock:StartIngestionJob'],
+          resources: [
+            cdk.Fn.sub(
+              'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/${kbId}',
+              { kbId: knowledgeBase.attrKnowledgeBaseId },
+            ),
+          ],
+        }),
+      ]),
+    });
+
+    deployIngestion.node.addDependency(documentDeployment);
+
+    // =================================================================
     // 9. Chat Lambda — 3-step pipeline (reformulate → retrieve → generate)
     // =================================================================
 
@@ -510,6 +560,7 @@ export class KeriChatStack extends cdk.Stack {
     // =================================================================
 
     const frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
+      bucketName: `${cdk.Aws.ACCOUNT_ID}-keri-chat-frontend`,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,

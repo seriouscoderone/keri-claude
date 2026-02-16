@@ -58,6 +58,30 @@ git clone https://github.com/seriouscoderone/keri-claude.git ~/keri-claude
 claude --add-dir ~/keri-claude
 ```
 
+## Infrastructure (KeriChat)
+
+The `infrastructure/` directory contains a one-click CDK stack for a KERI knowledge base chat system — Aurora Serverless v2 (pgvector), Bedrock Knowledge Base, Lambda chat with streaming, and CloudFront.
+
+### Deploy
+
+```bash
+# 1. Populate scripts/staging/ with KERI documents
+./scripts/download-whitepapers.sh
+
+# 2. Deploy — documents are packaged as CDK assets and deployed to S3 automatically
+cd infrastructure
+npx cdk deploy --profile personal
+```
+
+Documents are baked into the template at synth time. The stack deploys them to S3, then triggers a Bedrock ingestion job so the KB is ready immediately.
+
+### Publish for Launch Stack
+
+```bash
+cd infrastructure
+./scripts/publish-template.sh keri-chat-public-assets
+```
+
 ## Contributing
 
 To add a new skill:
