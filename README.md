@@ -1,80 +1,138 @@
 # keri-claude
 
-Claude Code skills for the KERI ecosystem. Browse the catalog, install what you need.
-
-## Skills
-
-### keri-style
-
-KERI coding style guide implementing the "Domain-Specific Gerund-Agent Pattern with CESR-Native Nomenclature." Teaches Claude the naming conventions used across KERI protocol implementations: gerund modules (`-ing`), agent noun classes (`-er`), codex patterns (`-Dex`), transformation functions (`-ify`), and CESR-native abbreviations (`qb64`, `qb2`, `hs`, `ss`).
-
-**Use for:** keripy, keriox, signify-ts, keria, or any KERI protocol work.
-
-**Activates:** Automatically when Claude detects KERI-related code.
-
-```
-.claude/skills/keri-style/
-├── SKILL.md
-└── references/
-    ├── naming_conventions.md
-    ├── patterns.md
-    └── examples.md
-```
-
-### keriox-skill
-
-Rust KERI protocol implementation (keriox) distilled into a compact skill. Covers the full keriox workspace: core event types, processor pipeline, escrow system, database traits (redb), transport abstraction, controller/witness/watcher components, and TEL (teliox). Defers protocol semantics to keri-spec/cesr-spec/acdc-spec.
-
-**Use for:** Working with keriox imports, keriox_core types, witness/watcher components, or Rust TEL processing.
-
-**Activates:** Automatically when Claude detects keriox-related Rust code.
-
-```
-.claude/skills/keriox-skill/
-├── SKILL.md
-└── references/
-    ├── api.md
-    ├── types.md
-    ├── patterns.md
-    ├── components.md
-    └── errors.md
-```
-
-### keri-blog
-
-Blog writing skill for [KERI.host](https://keri.host). Handles creating, editing, and reviewing blog posts in the project's distinctive voice — conversational, anti-hype, grounded in real architecture.
-
-**Use for:** Writing and editing KERI.host blog posts.
-
-**Invoke:** `/blog new [topic]`, `/blog edit [post-name]`, `/blog review [post-name]`, `/blog list`
-
-```
-.claude/skills/keri-blog/
-└── SKILL.md
-```
+A Claude Code **plugin** for the KERI (Key Event Receipt Infrastructure) ecosystem. Provides 16 skills covering protocol specifications, implementation APIs, coding conventions, and architecture planning.
 
 ## Installation
 
-### Copy a single skill into your project
+### As a Plugin (recommended)
+
+Install via the plugin marketplace — this gives you all skills with namespaced commands (`/keri:skill-name`):
 
 ```bash
-# From your project root
-cp -r /path/to/keri-claude/.claude/skills/keri-style .claude/skills/
+# Add the marketplace
+/plugin marketplace add SeriousCoderOne/keri-claude
+
+# Install the plugin
+/plugin install keri@keri-skills
 ```
 
-Claude Code picks up skills from `.claude/skills/` automatically.
+All skills are now available. Auto-activating skills work automatically; user-invocable skills are available as `/keri:skill-name`.
 
-### Load all skills via --add-dir
+### Test locally before publishing
 
 ```bash
-claude --add-dir /path/to/keri-claude
+# Clone the repo
+git clone https://github.com/SeriousCoderOne/keri-claude.git ~/keri-claude
+
+# Load as a local plugin for testing
+claude --plugin-dir ~/keri-claude
 ```
 
-Or clone this repo and point to it:
+### Alternative: --add-dir (no plugin system)
 
 ```bash
-git clone https://github.com/seriouscoderone/keri-claude.git ~/keri-claude
 claude --add-dir ~/keri-claude
+```
+
+This loads skills into the session but without plugin namespacing or marketplace updates.
+
+### Alternative: Copy individual skills
+
+```bash
+# Copy a single skill into your project
+cp -r /path/to/keri-claude/.claude/skills/style .claude/skills/
+```
+
+## Skills Catalog
+
+### Protocol Specifications
+
+| Skill | Description | Activation |
+|-------|-------------|------------|
+| **spec** | KERI protocol specification — KEL rules, witness agreement, delegation, pre-rotation, OOBI | Auto on KERI event processing |
+| **cesr** | CESR encoding specification — code tables, stream parsing, SAID, primitives | Auto on CESR codec work |
+| **acdc** | ACDC credential specification — schemas, graduated disclosure, IPEX exchange | Auto on ACDC/credential work |
+
+### Implementation APIs
+
+| Skill | Language | Description | Activation |
+|-------|----------|-------------|------------|
+| **keripy** | Python | keripy reference implementation — Hab/Habery, LMDB, Matter/Verfer/Diger, Serder, VDR/TEL | Auto on keripy imports |
+| **keriox** | Rust | keriox workspace — events, processor, escrows, redb, transport, witness/watcher, teliox | Auto on keriox imports |
+| **signify-ts** | TypeScript | signify-ts edge signing — SignifyClient, identifier lifecycle, CESR primitives | Auto on signify-ts imports |
+| **cesride** | Rust | cesride CESR primitives — Matter/Indexer traits, Verfer, Diger, Signer, Salter | Auto on cesride imports |
+| **parside** | Rust | parside CESR parser — Message/MessageList, counter-code groups, cold start | Auto on parside imports |
+
+### Coding & Style
+
+| Skill | Description | Activation |
+|-------|-------------|------------|
+| **style** | KERI naming conventions — gerund modules, agent nouns, codex patterns, CESR abbreviations | Auto on KERI code |
+
+### Architecture Planning
+
+| Skill | Description | Invoke |
+|-------|-------------|--------|
+| **design0-ecosystem** | Design KERI-native industry ecosystems — governance, credential schemas, trust frameworks | `/keri:design0-ecosystem` |
+| **design1-service** | Design human-facing KERI services — value proposition, user journeys, KERI requirements | `/keri:design1-service` |
+| **design2-infrastructure** | Generate AWS infrastructure stacks for KERI services | `/keri:design2-infrastructure` |
+| **design3-domain** | Design KERI domain components — data structures, state mapping, runtime selection | `/keri:design3-domain` |
+
+### Knowledge Base & Tools
+
+| Skill | Description | Invoke |
+|-------|-------------|--------|
+| **chat** | Query keri.host KB for spec-grounded answers with citations | Auto on KERI architecture review |
+| **lib-distill** | Distill a source library into a Claude Code skill | `/keri:lib-distill <path>` |
+| **spec-distill** | Distill a protocol spec into a Claude Code skill | `/keri:spec-distill <path>` |
+
+## What's in the Plugin
+
+```
+keri-claude/
+├── .claude-plugin/
+│   ├── plugin.json          # Plugin manifest
+│   └── marketplace.json     # Self-hosted marketplace
+├── skills/ → .claude/skills/  # Symlink (plugin convention)
+├── .claude/
+│   └── skills/              # 16 skill directories
+│       ├── spec/
+│       ├── cesr/
+│       ├── acdc/
+│       ├── keripy/
+│       ├── keriox/
+│       ├── signify-ts/
+│       ├── cesride/
+│       ├── parside/
+│       ├── style/
+│       ├── chat/
+│       ├── design0-ecosystem/
+│       ├── design1-service/
+│       ├── design2-infrastructure/
+│       ├── design3-domain/
+│       ├── lib-distill/
+│       └── spec-distill/
+├── infrastructure/          # KeriChat CDK stack
+└── scripts/                 # Document download & conversion
+```
+
+### What plugins can provide
+
+| Component | Directory | Status |
+|-----------|-----------|--------|
+| **Skills** | `skills/` | 16 skills |
+| **Agents** | `agents/` | Not yet — custom subagent definitions |
+| **Hooks** | `hooks/hooks.json` | Not yet — event automation |
+| **MCP servers** | `.mcp.json` | Not yet — keri-chat could be exposed here |
+| **LSP servers** | `.lsp.json` | Not yet — code intelligence |
+
+## Recommended Companion Skills
+
+When using the Rust KERI skills (keriox, cesride, parside), consider also installing the [Rust Best Practices](https://skills.sh/apollographql/skills/rust-best-practices) skill:
+
+```bash
+/plugin marketplace add apollographql/skills
+/plugin install rust-best-practices@apollographql
 ```
 
 ## Infrastructure (KeriChat)
@@ -92,8 +150,6 @@ cd infrastructure
 npx cdk deploy --profile personal
 ```
 
-Documents are baked into the template at synth time. The stack deploys them to S3, then triggers a Bedrock ingestion job so the KB is ready immediately.
-
 ### Publish for Launch Stack
 
 ```bash
@@ -101,26 +157,16 @@ cd infrastructure
 ./scripts/publish-template.sh keri-host-chat-stack
 ```
 
-## Recommended Companion Skills
-
-When using the Rust KERI skills (keriox-skill, cesride-skill, parside-skill), consider also installing the community [Rust Best Practices](https://skills.sh/apollographql/skills/rust-best-practices) skill in your project:
-
-```bash
-claude install-skill https://skills.sh/apollographql/skills/rust-best-practices
-```
-
-This adds general Rust idioms, error handling patterns, and code quality guidance that complements the KERI-specific domain knowledge.
-
 ## Contributing
 
 To add a new skill:
 
-1. Create `.claude/skills/<skill-name>/SKILL.md` with a YAML front matter block (`name`, `description`, and optionally `command` and `user_invocable`)
-2. Add any reference files the skill needs alongside SKILL.md
-3. Add a catalog entry to this README under **Skills**
+1. Create `.claude/skills/<skill-name>/SKILL.md` with YAML front matter (`name`, `description`)
+2. Add any reference files alongside SKILL.md
+3. Add a catalog entry to this README under the appropriate section
 4. Open a PR
 
-See the [Claude Code skills docs](https://docs.anthropic.com/en/docs/claude-code/skills) for the SKILL.md format.
+See the [Claude Code skills docs](https://code.claude.com/docs/en/skills) and [plugins docs](https://code.claude.com/docs/en/plugins) for format details.
 
 ## License
 

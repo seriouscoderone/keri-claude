@@ -20,7 +20,7 @@ Transforms a large protocol specification (markdown, 3,000–9,000 lines) into a
 
 **Goal:** Understand the spec's structure, classify content, plan reference file organization.
 
-1. Parse the input argument to get the spec markdown path. Derive `spec-name` from the filename (e.g., `cesr-specification.md` → `cesr-spec`; `keri-specification.md` → `keri-spec`).
+1. Parse the input argument to get the spec markdown path. Derive `spec-name` from the filename (e.g., `cesr-specification.md` → `cesr`; `keri-specification.md` → `spec`).
 
 2. Create staging directories:
    ```
@@ -177,7 +177,7 @@ Transforms a large protocol specification (markdown, 3,000–9,000 lines) into a
    ---
    name: <spec-name>
    description: <Specific description for auto-activation. State the protocol name,
-     what kind of code it applies to, and key concepts. Model after keri-style's
+     what kind of code it applies to, and key concepts. Model after style's
      description — specific enough to activate only when relevant.>
    ---
    ```
