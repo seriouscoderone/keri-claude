@@ -1,0 +1,130 @@
+# KERI Ecosystem Schema
+# Canonical template for defining an industry ecosystem restructured around
+# KERI-native verifiable relationships. This file is populated by the
+# /keri-c0-ecosystem workflow and consumed by downstream C1-C4 skills.
+#
+# Example comments use the insurance industry for illustration.
+
+version: "1.0"
+
+ecosystem:
+  # Machine-readable identifier (lowercase, hyphens)
+  name: ""              # e.g., "insurance"
+  # Human-readable label
+  display_name: ""      # e.g., "Insurance Industry Ecosystem"
+  # One-paragraph description of the ecosystem scope
+  description: ""       # e.g., "Restructures insurance around verifiable credentials..."
+
+governance:
+  # Regulatory frameworks that apply to this ecosystem
+  # e.g., ["NAIC Model Laws", "State Insurance Codes", "GDPR"]
+  regulatory_frameworks: []
+
+  # Privacy requirements that constrain credential design
+  # e.g., ["PII must use selective disclosure", "Medical data requires consent ACDC"]
+  privacy_requirements: []
+
+  # How disputes are resolved in this ecosystem
+  # e.g., "Duplicity evidence submitted to industry arbitration panel"
+  dispute_resolution: ""
+
+roles:
+  # Each role represents a category of participant in the ecosystem.
+  # Roles map industry concepts to KERI infrastructure obligations.
+  #
+  # Example:
+  # - name: carrier
+  #   display_name: "Insurance Carrier"
+  #   description: "Licensed insurance company that underwrites policies"
+  #   keri_infrastructure:
+  #     witness_pool: true       # Operates own witness pool
+  #     watcher_network: true    # Subscribes to watcher network
+  #     agent_service: true      # Runs KERIA agent
+  #     acdc_registry: true      # Maintains credential registry
+  #   governance_obligations:
+  #     - "Must maintain witness pool with >= 3 witnesses"
+  #     - "Must publish OOBI for public verification"
+  #   credentials_issued:
+  #     - policy_credential
+  #     - claim_approval
+  #   credentials_required:
+  #     - carrier_license
+  - name: ""
+    display_name: ""
+    description: ""
+    keri_infrastructure:
+      witness_pool: false
+      watcher_network: false
+      agent_service: false
+      acdc_registry: false
+    governance_obligations: []
+    credentials_issued: []
+    credentials_required: []
+
+credential_catalog:
+  # Each entry defines an ACDC credential type in the ecosystem.
+  #
+  # Example:
+  # - id: carrier_license
+  #   name: "Carrier License Credential"
+  #   description: "Proves an entity is licensed to underwrite insurance"
+  #   issuer_role: regulator
+  #   holder_role: carrier
+  #   verifier_roles: [policyholder, adjuster, reinsurer]
+  #   schema_fields:
+  #     - { name: "license_number", type: "string", required: true }
+  #     - { name: "jurisdiction", type: "string", required: true }
+  #     - { name: "lines_of_business", type: "string[]", required: true }
+  #     - { name: "expiration_date", type: "date", required: true }
+  #   disclosure_mode: full          # full | selective | partial
+  #   chained_from: null             # credential id this chains from, or null
+  - id: ""
+    name: ""
+    description: ""
+    issuer_role: ""
+    holder_role: ""
+    verifier_roles: []
+    schema_fields:
+      - { name: "", type: "", required: true }
+    disclosure_mode: full
+    chained_from: null
+
+delegation_trees:
+  # Authority delegation hierarchies within the ecosystem.
+  #
+  # Example:
+  # - root_role: regulator
+  #   delegates:
+  #     - role: carrier
+  #       scope: "Issue policies within licensed lines of business"
+  #       depth_limit: 2          # How many levels of sub-delegation allowed
+  #     - role: tpa
+  #       scope: "Process claims on behalf of carrier"
+  #       depth_limit: 1
+  - root_role: ""
+    delegates:
+      - role: ""
+        scope: ""
+        depth_limit: 1
+
+interoperability:
+  # Cross-ecosystem bridges for credential exchange.
+  #
+  # Example:
+  # - target_ecosystem: healthcare
+  #   bridge_credentials:
+  #     - "medical_record_credential"
+  #   data_flows:
+  #     - "Insurance verifies medical eligibility via healthcare ecosystem credentials"
+  - target_ecosystem: ""
+    bridge_credentials: []
+    data_flows: []
+
+systems:
+  # Populated by C1 skill (/keri-c1-system). Lists services built within
+  # this ecosystem. Leave empty during C0 design.
+  #
+  # Example:
+  # - name: claims-processing-platform
+  #   path: docs/insurance/systems/claims-processing-platform/
+  []

@@ -1,0 +1,143 @@
+# ACDC Registry + TEL Service — Pre-filled Stack Template
+# Issuance and revocation registry for verifiable credentials.
+# Compute: Lambda | Database: DynamoDB | Storage: S3 | API: API Gateway REST
+
+version: "1.0"
+
+stack:
+  name: ""                    # e.g. "acme-acdc-registry"
+  type: "acdc-registry"
+  system: ""
+  ecosystem: ""
+
+parameters:
+  environment: "dev"
+  region: "us-west-2"
+  issuer_aid: ""              # AID prefix of the credential issuer
+  supported_schemas: []       # ACDC schema SAIDs this registry handles
+  revocation_policy: "backed" # backed | backerless
+  witness_pool_oobi: ""       # OOBI URL for witness pool (backed revocation)
+
+# Architecture:
+#
+#   API Gateway REST (ACDC issuance, revocation, verification)
+#       |
+#   Lambda (ACDC operations: schema validation, TEL events, sig verification)
+#       |
+#   +-------------+-----------------+
+#   |             |                 |
+#   DynamoDB     S3               EventBridge
+#   (ACDC +      (immutable       (issuance/revocation
+#    TEL,         ACDC docs,       notifications)
+#    SAID-        versioned)
+#    indexed)
+
+aws_resources:
+  - logical_name: RegistryAPI
+    type: AWS::ApiGateway::RestApi
+    purpose: REST API for ACDC lifecycle operations
+    properties:
+      endpoints:
+        - "POST /credentials"         # Issue ACDC
+        - "POST /credentials/{said}/revoke"  # Revoke ACDC
+        - "GET  /credentials/{said}"  # Verify ACDC status
+        - "GET  /credentials/{said}/tel"  # Query TEL
+      authorization: IAM             # or API key for external consumers
+
+  - logical_name: RegistryFunction
+    type: AWS::Lambda::Function
+    purpose: ACDC operations — schema validation, TEL event creation, signature verification
+    properties:
+      runtime: python3.12
+      memory: 512
+      timeout: 30
+      environment:
+        ISSUER_AID: "{issuer_aid}"
+        REVOCATION_POLICY: "{revocation_policy}"
+        WITNESS_OOBI: "{witness_pool_oobi}"
+
+  - logical_name: ACDCTable
+    type: AWS::DynamoDB::Table
+    purpose: ACDC storage indexed by SAID
+    properties:
+      billing_mode: PAY_PER_REQUEST
+      key_schema:
+        hash: said            # ACDC SAID (S)
+      gsi:
+        - name: IssuerIndex
+          hash: issuer_aid    # Issuer AID (S)
+          range: issued_at    # Timestamp (N)
+        - name: SchemaIndex
+          hash: schema_said   # Schema SAID (S)
+      point_in_time_recovery: true
+      deletion_protection: true   # prod only
+
+  - logical_name: TELTable
+    type: AWS::DynamoDB::Table
+    purpose: Transaction Event Log — issuance/revocation state tracking
+    properties:
+      billing_mode: PAY_PER_REQUEST
+      key_schema:
+        hash: acdc_said       # ACDC SAID (S)
+        range: sn             # TEL sequence number (N)
+      point_in_time_recovery: true
+
+  - logical_name: ACDCDocumentBucket
+    type: AWS::S3::Bucket
+    purpose: Immutable ACDC document storage
+    properties:
+      versioning: true
+      encryption: AES256
+      lifecycle_rules:
+        - transition_to_ia: 90   # days
+        - transition_to_glacier: 365
+      block_public_access: true
+
+  - logical_name: RegistryEventBus
+    type: AWS::Events::EventBus
+    purpose: ACDC lifecycle event notifications
+    properties:
+      name: "{stack.name}-events"
+      rules:
+        - name: IssuanceNotification
+          pattern: '{"detail-type": ["ACDCIssued"]}'
+        - name: RevocationNotification
+          pattern: '{"detail-type": ["ACDCRevoked"]}'
+
+networking:
+  vpc: default
+  subnets: [private]          # Lambda in private subnets
+  security_groups:
+    - name: RegistryLambdaSG
+      purpose: Lambda outbound to DynamoDB + S3 (via VPC endpoints)
+  load_balancer: none         # API Gateway handles routing
+
+monitoring:
+  dashboards:
+    - "{stack.name}-operations"
+  alarms:
+    - name: LambdaErrors
+      metric: Errors
+      threshold: "> 0 (5min)"
+      action: SNS notification
+    - name: APILatency
+      metric: Latency (API Gateway)
+      threshold: "> 1s (p99)"
+      action: SNS notification
+    - name: DynamoDBThrottling
+      metric: ThrottledRequests
+      threshold: "> 0"
+      action: SNS notification
+  log_groups:
+    - "/aws/lambda/{stack.name}-registry"
+    - "/aws/apigateway/{stack.name}"
+
+outputs:
+  - name: RegistryApiUrl
+    value: "https://{RegistryAPI}.execute-api.{region}.amazonaws.com/prod"
+    description: REST API URL for ACDC operations
+  - name: EventBusArn
+    value: "{RegistryEventBus.Arn}"
+    description: EventBridge bus for issuance/revocation notifications
+
+domain_components: []

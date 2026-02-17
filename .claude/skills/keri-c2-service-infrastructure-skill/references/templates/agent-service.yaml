@@ -1,0 +1,199 @@
+# Agent Service (KERIA) — Pre-filled Stack Template
+# Full-featured KERI agent with wallet, credential, and delegation support.
+# Compute: ECS Fargate | Database: RDS PostgreSQL | CDN: CloudFront
+
+version: "1.0"
+
+stack:
+  name: ""                    # e.g. "acme-agent"
+  type: "agent-service"
+  system: ""
+  ecosystem: ""
+
+parameters:
+  environment: "dev"
+  region: "us-west-2"
+  tenant_mode: "single"       # single | multi
+  supported_schemas: []       # ACDC schema SAIDs this agent handles
+  witness_pool_oobis: []      # OOBI URLs for witness discovery
+  watcher_oobis: []           # OOBI URLs for watcher discovery
+  backup_retention_days: 30   # RDS backup retention
+
+# Architecture:
+#
+#   CloudFront (CDN + DDoS protection)
+#       |
+#   ALB (HTTPS termination, path-based routing)
+#       |
+#   ECS Fargate (KERIA service, multi-tenant, auto-scaling)
+#       |
+#   +-----------+--------------------+
+#   |           |                    |
+#   RDS PG     Secrets Manager     SQS
+#   (agent     (key material,      (async processing:
+#    state,     auto-rotation)      ACDC issuance,
+#    KEL,                           delegation,
+#    ACDC,                          receipt collection)
+#    wallet)
+
+aws_resources:
+  - logical_name: AgentCDN
+    type: AWS::CloudFront::Distribution
+    purpose: CDN + DDoS protection + caching for OOBI/KEL queries
+    properties:
+      origins:
+        - domain: "{AgentALB.DNSName}"
+          protocol: https-only
+      default_cache_behavior:
+        viewer_protocol_policy: redirect-to-https
+      web_acl: "{optional WAF ARN}"
+
+  - logical_name: AgentALB
+    type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    purpose: HTTPS termination and request routing
+    properties:
+      scheme: internet-facing
+      listeners:
+        - port: 443
+          protocol: HTTPS
+          rules:
+            - path: "/boot/*"
+              target: AgentBootTG     # Agency provisioning (port 3903)
+            - path: "/agent/*"
+              target: AgentAdminTG    # API handler (port 3901)
+            - path: "/*"
+              target: AgentHttpTG     # Message router (port 3902)
+
+  - logical_name: AgentECSCluster
+    type: AWS::ECS::Cluster
+    purpose: Fargate cluster for KERIA containers
+    properties:
+      capacity_provider: FARGATE
+      container_insights: true
+
+  - logical_name: AgentTaskDefinition
+    type: AWS::ECS::TaskDefinition
+    purpose: KERIA container with 3 exposed ports
+    properties:
+      cpu: 1024               # 1 vCPU
+      memory: 2048            # 2 GB
+      image: "{account}.dkr.ecr.{region}.amazonaws.com/keria:latest"
+      port_mappings:
+        - container: 3901     # Admin API
+        - container: 3902     # HTTP message router
+        - container: 3903     # Boot/agency
+      environment:
+        KERIA_DB_HOST: "{AgentDB.Endpoint}"
+        KERIA_TENANT_MODE: "{tenant_mode}"
+        KERIA_WITNESS_OOBIS: "{witness_pool_oobis}"
+        KERIA_WATCHER_OOBIS: "{watcher_oobis}"
+      secrets:
+        DB_PASSWORD: "{AgentDBSecret.Arn}"
+
+  - logical_name: AgentService
+    type: AWS::ECS::Service
+    purpose: Multi-AZ KERIA with auto-scaling
+    properties:
+      desired_count: 2        # prod: 3, staging: 2, dev: 1
+      auto_scaling:
+        min: 1
+        max: 10
+        target_cpu: 70
+
+  - logical_name: AgentDB
+    type: AWS::RDS::DBInstance
+    purpose: PostgreSQL for agent state, KEL, ACDC, wallet
+    properties:
+      engine: postgres
+      engine_version: "16.6"
+      instance_class: db.t4g.medium  # prod: db.r6g.large
+      storage: 100            # GB, auto-scaling enabled
+      multi_az: true          # prod only
+      backup_retention: "{backup_retention_days}"
+      encryption: true
+      deletion_protection: true  # prod only
+
+  - logical_name: AgentDBSecret
+    type: AWS::SecretsManager::Secret
+    purpose: Database credentials with auto-rotation
+    properties:
+      generate_secret_string: true
+      rotation_days: 30
+
+  - logical_name: AgentKeySecret
+    type: AWS::SecretsManager::Secret
+    purpose: Agent key material (encrypted at rest via KMS)
+    properties:
+      kms_key: "{AgentKMSKey.Arn}"
+
+  - logical_name: AgentKMSKey
+    type: AWS::KMS::Key
+    purpose: Envelope encryption for key material
+    properties:
+      key_spec: SYMMETRIC_DEFAULT
+      enable_rotation: true
+
+  - logical_name: AgentAsyncQueue
+    type: AWS::SQS::Queue
+    purpose: Async processing for ACDC issuance, delegation, receipts
+    properties:
+      visibility_timeout: 300
+      dead_letter_queue: "{AgentDLQ.Arn}"
+      max_receive_count: 3
+
+  - logical_name: AgentDLQ
+    type: AWS::SQS::Queue
+    purpose: Dead letter queue for failed async operations
+
+networking:
+  vpc: default
+  subnets: [public, private, isolated]  # ALB public, Fargate private, RDS isolated
+  security_groups:
+    - name: AgentALBSG
+      purpose: Allow HTTPS inbound
+      ingress: [443/tcp from 0.0.0.0/0]
+    - name: AgentTaskSG
+      purpose: Allow traffic from ALB, outbound to RDS + SQS
+      ingress: [3901-3903/tcp from AgentALBSG]
+    - name: AgentDBSG
+      purpose: PostgreSQL from Fargate tasks only
+      ingress: [5432/tcp from AgentTaskSG]
+  load_balancer: ALB
+
+monitoring:
+  dashboards:
+    - "{stack.name}-operations"
+    - "{stack.name}-database"
+  alarms:
+    - name: HighLatency
+      metric: TargetResponseTime
+      threshold: "2s (p99)"
+      action: SNS notification
+    - name: DBHighCPU
+      metric: CPUUtilization (RDS)
+      threshold: "> 80%"
+      action: SNS notification
+    - name: DLQMessages
+      metric: ApproximateNumberOfMessagesVisible (DLQ)
+      threshold: "> 0"
+      action: SNS alert
+    - name: UnhealthyHosts
+      metric: UnHealthyHostCount
+      threshold: ">= 1"
+      action: SNS notification
+  log_groups:
+    - "/ecs/{stack.name}/keria"
+    - "/rds/{stack.name}/postgresql"
+
+outputs:
+  - name: AgentApiUrl
+    value: "https://{domain or AgentCDN.DomainName}/agent"
+    description: KERIA admin API URL (port 3901 equivalent)
+  - name: BootUrl
+    value: "https://{domain or AgentCDN.DomainName}/boot"
+    description: Agency provisioning URL (port 3903 equivalent)
+  - name: AdminUrl
+    value: "https://{domain or AgentCDN.DomainName}/agent"
+    description: Agent admin URL for Signify clients
+
+domain_components: []

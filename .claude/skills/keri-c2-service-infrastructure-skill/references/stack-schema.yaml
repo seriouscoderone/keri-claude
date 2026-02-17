@@ -1,0 +1,41 @@
+# Canonical Stack Schema — KERI C2 Service Infrastructure
+# Every stack.yaml in docs/{ecosystem}/{system}/{stack-name}/ follows this shape.
+
+version: "1.0"
+
+stack:
+  name: ""                    # e.g. "acme-witness-pool"
+  type: ""                    # witness-pool | watcher-node | agent-service | acdc-registry | judge-jury | frontend
+  system: ""                  # Parent system name from system.yaml
+  ecosystem: ""               # Parent ecosystem name from ecosystem.yaml
+
+parameters:
+  environment: "dev"          # prod | staging | dev
+  region: "us-west-2"        # AWS region
+  # --- type-specific params filled from template ---
+
+aws_resources:
+  - logical_name: ""          # CloudFormation logical ID (e.g. WitnessECSCluster)
+    type: ""                  # AWS::Service::Resource (e.g. AWS::ECS::Cluster)
+    purpose: ""               # One-line description
+    properties: {}            # Key config properties (not full CFN — just the important ones)
+
+networking:
+  vpc: ""                     # VPC logical name or "default"
+  subnets: []                 # public | private | isolated
+  security_groups: []         # Logical names + purpose
+  load_balancer: ""           # ALB | NLB | none
+
+monitoring:
+  dashboards: []              # CloudWatch dashboard names
+  alarms: []                  # { name, metric, threshold, action }
+  log_groups: []              # CloudWatch log group paths
+
+outputs:
+  - name: ""                  # Output key
+    value: ""                 # CFN !Sub or !GetAtt expression
+    description: ""           # What consumers use this for
+
+domain_components: []         # Populated by C3 skill — just name + type placeholders
+  # - name: ""
+  #   type: ""                # event-log-engine | witness-service | watcher-service | agent | acdc-registry | judge-jury

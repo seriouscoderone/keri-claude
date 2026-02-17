@@ -1,0 +1,160 @@
+# Witness Pool — Pre-filled Stack Template
+# High-availability witness service for many controllers.
+# Compute: ECS Fargate | Database: DynamoDB | Networking: ALB + Route53
+
+version: "1.0"
+
+stack:
+  name: ""                    # e.g. "acme-witness-pool"
+  type: "witness-pool"
+  system: ""
+  ecosystem: ""
+
+parameters:
+  environment: "dev"
+  region: "us-west-2"
+  witness_aid_prefix: ""      # AID prefix for this witness (from C1 system.yaml)
+  witness_threshold: 2        # KAACE threshold for receipt generation
+  allowed_controllers: []     # AID prefixes allowed to use this witness (empty = public)
+
+# Architecture:
+#
+#   Route53 (DNS + health checks)
+#       |
+#   ALB (SSL termination, path-based routing)
+#       |
+#   ECS Fargate (witness service, multi-AZ, auto-scaling)
+#       |
+#   DynamoDB (KEL storage, PAY_PER_REQUEST, PITR)
+#       |
+#   EventBridge (receipt notifications)
+
+aws_resources:
+  - logical_name: WitnessECSCluster
+    type: AWS::ECS::Cluster
+    purpose: Fargate cluster for witness containers
+    properties:
+      capacity_provider: FARGATE
+      container_insights: true
+
+  - logical_name: WitnessTaskDefinition
+    type: AWS::ECS::TaskDefinition
+    purpose: Witness container definition
+    properties:
+      cpu: 512                # 0.5 vCPU
+      memory: 1024            # 1 GB
+      image: "{account}.dkr.ecr.{region}.amazonaws.com/keri-witness:latest"
+      environment:
+        WITNESS_AID: "{witness_aid_prefix}"
+        WITNESS_THRESHOLD: "{witness_threshold}"
+      health_check:
+        path: /health
+        interval: 30
+
+  - logical_name: WitnessService
+    type: AWS::ECS::Service
+    purpose: Multi-AZ witness service with auto-scaling
+    properties:
+      desired_count: 2        # prod: 3, staging: 2, dev: 1
+      deployment_minimum: 50
+      deployment_maximum: 200
+      auto_scaling:
+        min: 1
+        max: 6
+        target_cpu: 70
+
+  - logical_name: WitnessKELTable
+    type: AWS::DynamoDB::Table
+    purpose: Append-only KEL storage
+    properties:
+      billing_mode: PAY_PER_REQUEST
+      point_in_time_recovery: true
+      key_schema:
+        hash: prefix          # AID prefix (S)
+        range: sn             # Sequence number (N)
+      gsi:
+        - name: SAIDIndex
+          hash: said          # Event SAID for receipt lookups
+      deletion_protection: true   # prod only
+
+  - logical_name: WitnessReceiptTable
+    type: AWS::DynamoDB::Table
+    purpose: Receipt storage indexed by event SAID
+    properties:
+      billing_mode: PAY_PER_REQUEST
+      key_schema:
+        hash: event_said      # Receipted event SAID (S)
+        range: witness_aid    # Witness AID (S)
+
+  - logical_name: WitnessALB
+    type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    purpose: SSL termination + health check routing
+    properties:
+      scheme: internet-facing
+      listeners:
+        - port: 443
+          protocol: HTTPS
+          certificate: "{acm_certificate_arn}"
+        - port: 80
+          protocol: HTTP
+          action: redirect_to_https
+
+  - logical_name: WitnessEventBus
+    type: AWS::Events::EventBus
+    purpose: Receipt notification events
+    properties:
+      name: "{stack.name}-events"
+
+  - logical_name: WitnessDNS
+    type: AWS::Route53::RecordSet
+    purpose: DNS alias for witness endpoint
+    properties:
+      type: A
+      alias_target: WitnessALB
+
+networking:
+  vpc: default
+  subnets: [public, private]  # ALB in public, Fargate in private
+  security_groups:
+    - name: WitnessALBSG
+      purpose: Allow HTTPS inbound
+      ingress: [443/tcp from 0.0.0.0/0]
+    - name: WitnessTaskSG
+      purpose: Allow traffic from ALB only
+      ingress: [8080/tcp from WitnessALBSG]
+  load_balancer: ALB
+
+monitoring:
+  dashboards:
+    - "{stack.name}-operations"
+  alarms:
+    - name: HighLatency
+      metric: TargetResponseTime
+      threshold: "1s (p99)"
+      action: SNS notification
+    - name: UnhealthyHosts
+      metric: UnHealthyHostCount
+      threshold: ">= 1"
+      action: SNS notification
+    - name: KELTableThrottling
+      metric: ThrottledRequests
+      threshold: "> 0"
+      action: SNS notification
+  log_groups:
+    - "/ecs/{stack.name}/witness"
+
+outputs:
+  - name: WitnessOOBIUrl
+    value: "https://{domain}/oobi/{witness_aid_prefix}"
+    description: Witness OOBI URL for controller discovery
+  - name: HealthCheckEndpoint
+    value: "https://{domain}/health"
+    description: Health check URL for monitoring
+  - name: MetricsDashboardUrl
+    value: "https://{region}.console.aws.amazon.com/cloudwatch/home#dashboards:{stack.name}-operations"
+    description: CloudWatch operations dashboard
+  - name: EventBusArn
+    value: "{WitnessEventBus.Arn}"
+    description: EventBridge bus for receipt notifications
+
+domain_components: []

@@ -1,0 +1,123 @@
+# Watcher Node — Pre-filled Stack Template
+# First-seen validation and duplicity detection service.
+# Compute: Lambda | Database: Aurora Serverless | API: API Gateway WebSocket
+
+version: "1.0"
+
+stack:
+  name: ""                    # e.g. "acme-watcher"
+  type: "watcher-node"
+  system: ""
+  ecosystem: ""
+
+parameters:
+  environment: "dev"
+  region: "us-west-2"
+  watched_aid_list: []        # AID prefixes to watch (empty = public watcher)
+  first_seen_policy: "strict" # strict | lenient (strict rejects late duplicates)
+  alert_destinations: []      # SNS topic ARNs for duplicity alerts
+  data_retention_days: 365    # How long to keep KEL + evidence data
+
+# Architecture:
+#
+#   API Gateway WebSocket (real-time event streaming)
+#       |
+#   Lambda (stateless KEL validation, duplicity detection)
+#       |
+#   Aurora Serverless v2 (KEL + receipt DB, first-seen tracking)
+#       |
+#   SNS (duplicity alerts, multi-protocol delivery)
+
+aws_resources:
+  - logical_name: WatcherWebSocketAPI
+    type: AWS::ApiGatewayV2::Api
+    purpose: WebSocket API for real-time event streaming
+    properties:
+      protocol: WEBSOCKET
+      route_selection: "$request.body.action"
+      routes:
+        - "$connect"
+        - "$disconnect"
+        - "submitEvent"
+        - "queryKEL"
+        - "queryDuplicity"
+
+  - logical_name: WatcherFunction
+    type: AWS::Lambda::Function
+    purpose: Stateless KEL validation and duplicity detection
+    properties:
+      runtime: python3.12
+      memory: 512
+      timeout: 30
+      environment:
+        DB_CLUSTER_ARN: "{WatcherDBCluster.Arn}"
+        DB_SECRET_ARN: "{WatcherDBSecret.Arn}"
+        ALERT_TOPIC_ARN: "{WatcherAlertTopic.Arn}"
+        FIRST_SEEN_POLICY: "{first_seen_policy}"
+
+  - logical_name: WatcherDBCluster
+    type: AWS::RDS::DBCluster
+    purpose: Aurora Serverless v2 for KEL + first-seen tracking
+    properties:
+      engine: aurora-postgresql
+      engine_version: "16.6"
+      serverless_v2:
+        min_capacity: 0.5
+        max_capacity: 4        # prod: 16, staging: 4, dev: 2
+      enable_data_api: true
+      backup_retention: 7      # prod: 30
+      deletion_protection: true # prod only
+
+  - logical_name: WatcherDBSecret
+    type: AWS::SecretsManager::Secret
+    purpose: Database credentials with auto-rotation
+    properties:
+      generate_secret_string: true
+      rotation_days: 30
+
+  - logical_name: WatcherAlertTopic
+    type: AWS::SNS::Topic
+    purpose: Duplicity alert notifications
+    properties:
+      subscriptions: "{alert_destinations}"
+
+networking:
+  vpc: default
+  subnets: [private]          # Lambda + Aurora in private subnets
+  security_groups:
+    - name: WatcherLambdaSG
+      purpose: Lambda outbound to Aurora
+      egress: [5432/tcp to WatcherDBSG]
+    - name: WatcherDBSG
+      purpose: Aurora accepts from Lambda only
+      ingress: [5432/tcp from WatcherLambdaSG]
+  load_balancer: none         # API Gateway handles routing
+
+monitoring:
+  dashboards:
+    - "{stack.name}-operations"
+  alarms:
+    - name: LambdaErrors
+      metric: Errors
+      threshold: "> 0 (5min)"
+      action: SNS notification
+    - name: DuplicityDetected
+      metric: Custom/DuplicityCount
+      threshold: "> 0"
+      action: SNS alert + PagerDuty (prod)
+    - name: AuroraHighCPU
+      metric: CPUUtilization
+      threshold: "> 80%"
+      action: SNS notification
+  log_groups:
+    - "/aws/lambda/{stack.name}-watcher"
+
+outputs:
+  - name: WatcherApiUrl
+    value: "wss://{WatcherWebSocketAPI}.execute-api.{region}.amazonaws.com/prod"
+    description: WebSocket API URL for event streaming
+  - name: AlertTopicArn
+    value: "{WatcherAlertTopic.Arn}"
+    description: SNS topic ARN for duplicity alerts
+
+domain_components: []

@@ -1,0 +1,164 @@
+# Judge + Jury Network — Pre-filled Stack Template
+# Duplicity detection consensus and evidence aggregation.
+# Compute: Step Functions + Lambda | Database: DocumentDB | Alerts: SNS
+
+version: "1.0"
+
+stack:
+  name: ""                    # e.g. "acme-judge-jury"
+  type: "judge-jury"
+  system: ""
+  ecosystem: ""
+
+parameters:
+  environment: "dev"
+  region: "us-west-2"
+  consensus_threshold: 3      # Minimum juror agreements for judgment
+  watcher_pool_size: 5        # Number of watchers to query for evidence
+  evidence_retention_days: 730  # How long to keep duplicity evidence (2 years)
+
+# Architecture:
+#
+#   API Gateway REST (judgment requests, evidence queries)
+#       |
+#   Step Functions (consensus workflows)
+#       |
+#   +---------------------+
+#   |                     |
+#   Lambda               Lambda
+#   (evidence            (evidence
+#    collection)          validation)
+#       |
+#   DocumentDB (evidence storage, flexible schema)
+#       |
+#   SNS (judgment notifications, duplicity alerts)
+
+aws_resources:
+  - logical_name: JudgeAPI
+    type: AWS::ApiGateway::RestApi
+    purpose: REST API for judgment requests and evidence queries
+    properties:
+      endpoints:
+        - "POST /judge/{prefix}/{sn}"    # Request judgment
+        - "GET  /evidence/{prefix}/{sn}" # Query evidence
+        - "GET  /judgments/{prefix}"      # List judgments for AID
+
+  - logical_name: ConsensusStateMachine
+    type: AWS::StepFunctions::StateMachine
+    purpose: Multi-watcher evidence collection and consensus workflow
+    properties:
+      definition:
+        states:
+          CollectEvidence:
+            type: Parallel
+            branches: "{watcher_pool_size} parallel Lambda invocations"
+            next: ValidateEvidence
+          ValidateEvidence:
+            type: Task
+            resource: EvidenceValidationFunction
+            next: EvaluateConsensus
+          EvaluateConsensus:
+            type: Choice
+            choices:
+              - condition: "valid_variants > 1"
+                next: RecordDuplicity
+              - condition: "valid_variants == 1"
+                next: RecordTrustworthy
+          RecordDuplicity:
+            type: Task
+            resource: RecordJudgmentFunction
+            next: NotifyDuplicity
+          RecordTrustworthy:
+            type: Task
+            resource: RecordJudgmentFunction
+            next: Done
+          NotifyDuplicity:
+            type: Task
+            resource: "arn:aws:states:::sns:publish"
+            next: Done
+          Done:
+            type: Succeed
+
+  - logical_name: EvidenceCollectionFunction
+    type: AWS::Lambda::Function
+    purpose: Query individual watchers for KEL versions
+    properties:
+      runtime: python3.12
+      memory: 256
+      timeout: 30
+
+  - logical_name: EvidenceValidationFunction
+    type: AWS::Lambda::Function
+    purpose: Cryptographic proof verification and duplicity classification
+    properties:
+      runtime: python3.12
+      memory: 512
+      timeout: 60
+
+  - logical_name: RecordJudgmentFunction
+    type: AWS::Lambda::Function
+    purpose: Store judgment result in DocumentDB
+    properties:
+      runtime: python3.12
+      memory: 256
+      timeout: 15
+
+  - logical_name: EvidenceDB
+    type: AWS::DocDB::DBCluster
+    purpose: Flexible-schema storage for duplicity evidence and judgments
+    properties:
+      engine_version: "5.0"
+      instance_class: db.t4g.medium  # prod: db.r6g.large
+      instance_count: 1              # prod: 3
+      backup_retention: 7            # prod: 30
+      encryption: true
+      deletion_protection: true      # prod only
+
+  - logical_name: JudgmentTopic
+    type: AWS::SNS::Topic
+    purpose: Judgment notifications — duplicity alerts and resolution updates
+    properties:
+      subscriptions: []       # Configured per environment
+
+networking:
+  vpc: default
+  subnets: [private, isolated]  # Lambda private, DocumentDB isolated
+  security_groups:
+    - name: JudgeLambdaSG
+      purpose: Lambda outbound to DocumentDB + watchers
+      egress: [27017/tcp to EvidenceDBSG, 443/tcp to 0.0.0.0/0]
+    - name: EvidenceDBSG
+      purpose: DocumentDB from Lambda only
+      ingress: [27017/tcp from JudgeLambdaSG]
+  load_balancer: none
+
+monitoring:
+  dashboards:
+    - "{stack.name}-operations"
+  alarms:
+    - name: ConsensusTimeout
+      metric: ExecutionsFailed (Step Functions)
+      threshold: "> 0"
+      action: SNS notification
+    - name: DuplicityJudgment
+      metric: Custom/DuplicityJudgments
+      threshold: "> 0"
+      action: SNS alert + PagerDuty (prod)
+    - name: EvidenceDBHighCPU
+      metric: CPUUtilization (DocDB)
+      threshold: "> 80%"
+      action: SNS notification
+  log_groups:
+    - "/aws/lambda/{stack.name}-evidence-collection"
+    - "/aws/lambda/{stack.name}-evidence-validation"
+    - "/aws/states/{stack.name}-consensus"
+
+outputs:
+  - name: JudgeApiUrl
+    value: "https://{JudgeAPI}.execute-api.{region}.amazonaws.com/prod"
+    description: REST API URL for judgment requests
+  - name: JudgmentTopicArn
+    value: "{JudgmentTopic.Arn}"
+    description: SNS topic ARN for judgment notifications
+
+domain_components: []
