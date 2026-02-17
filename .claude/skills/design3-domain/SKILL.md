@@ -1,6 +1,6 @@
 ---
 name: design3-domain
-description: Design KERI domain components for an infrastructure stack. Reads all prior levels (ecosystem.yaml, system.yaml, stack.yaml) to understand context, then guides through component selection, data structure identification, state mapping, and runtime recommendation. Produces domain.yaml, components.md, and data-structures.md. Invoke with /keri:design3-domain.
+description: Design KERI domain components for an infrastructure stack. Reads all prior levels (ecosystem.yaml, system.yaml, stack.yaml) to understand context, then guides through component selection, data structure identification, state mapping, and runtime recommendation. Produces domain.yaml, components.md, and data-structures.md.
 command: /keri:design3-domain
 user_invocable: true
 ---

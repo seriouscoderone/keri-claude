@@ -1,6 +1,6 @@
 ---
 name: design0-ecosystem
-description: Guide users through designing a KERI-native industry ecosystem. Activates when users want to define industry governance, credential schemas, participant roles, delegation trees, and trust frameworks for a KERI ecosystem. Produces ecosystem.yaml, credential-catalog.md, and trust-framework.md artifacts. Invoke with /keri:design0-ecosystem.
+description: Guide users through designing a KERI-native industry ecosystem. Activates when users want to define industry governance, credential schemas, participant roles, delegation trees, and trust frameworks for a KERI ecosystem. Produces ecosystem.yaml, credential-catalog.md, and trust-framework.md artifacts.
 command: /keri:design0-ecosystem
 user_invocable: true
 ---

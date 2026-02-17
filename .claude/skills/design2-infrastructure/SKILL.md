@@ -1,6 +1,6 @@
 ---
 name: design2-infrastructure
-description: Generate AWS infrastructure stacks for KERI services. Reads system.yaml from C1 to determine required stack types, then generates stack.yaml files from pre-built templates. Intentionally thin — most decisions are made at C0 and C1. Supports 6 stack types: witness-pool, watcher-node, agent-service, acdc-registry, judge-jury, frontend. Invoke with /keri:design2-infrastructure.
+description: Generate AWS infrastructure stacks for KERI services. Reads system.yaml from C1 to determine required stack types, then generates stack.yaml files from pre-built templates. Intentionally thin — most decisions are made at C0 and C1. Supports 6 stack types: witness-pool, watcher-node, agent-service, acdc-registry, judge-jury, frontend.
 command: /keri:design2-infrastructure
 user_invocable: true
 ---

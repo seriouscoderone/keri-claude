@@ -1,7 +1,7 @@
 ---
 name: spec-distill
 description: Invoke with `/spec-distill <path-to-spec.md>` to distill a protocol specification into a compact, actionable Claude Code skill. Transforms large markdown specs (200-435KB) into structured skill packages (25-40KB) through a 5-phase pipeline with interactive checkpoints. Use when you have a protocol specification in markdown format and want to create a Claude Code skill that teaches the spec's rules, structures, and algorithms.
-command: /spec-distill
+command: /keri:spec-distill
 user_invocable: true
 ---
 

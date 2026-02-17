@@ -8,7 +8,7 @@ description: >
   (keripy, signify-ts, cesride, polaris-web, etc.) but works on any
   well-structured library. Produces 25-40KB skill packages through a
   5-phase pipeline with interactive checkpoints.
-command: /lib-distill
+command: /keri:lib-distill
 user_invocable: true
 ---
 

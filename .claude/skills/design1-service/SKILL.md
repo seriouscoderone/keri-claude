@@ -1,6 +1,6 @@
 ---
 name: design1-service
-description: Design a human-facing KERI service within an existing ecosystem. Reads ecosystem.yaml from C0 to understand governance context, then guides through service definition including value proposition, user journeys, KERI requirements, and business model. Produces system.yaml and service-design.md. Invoke with /keri:design1-service.
+description: Design a human-facing KERI service within an existing ecosystem. Reads ecosystem.yaml from C0 to understand governance context, then guides through service definition including value proposition, user journeys, KERI requirements, and business model. Produces system.yaml and service-design.md.
 command: /keri:design1-service
 user_invocable: true
 ---
