@@ -1,0 +1,199 @@
+version: "1.0"
+
+# --- System Identity ---
+system:
+  name: "locked-in"
+  display_name: "LockedIn"
+  description: >-
+    A private, cryptographic presence attestation service that silently records
+    where you were and when, letting you prove it to anyone on demand with
+    absolute certainty and full privacy control.
+  ecosystem:
+    name: "humanitarian-service-marketplace"
+
+# --- Service Definition ---
+service:
+  pattern: "credential-verification"
+
+  value_proposition: >-
+    Your phone silently builds a private, undeniable record of your presence.
+    Nobody sees it unless you choose to share it — but when you need to prove
+    where you were, the proof is absolute.
+
+  business_model:
+    type: "freemium"
+    pricing_notes: >-
+      Free tier: app + LockedIn as sole witness (low trust, functional but
+      warnings displayed to user and proof requesters). Paid tier: $2-5/month
+      for LockedIn + 2 ecosystem witnesses (standard trust, real verifiability).
+      API access: per-verification or subscription pricing for Ecosystem
+      Integrators. Perpetual revenue sharing: referral cuts for ecosystem growth
+      contributions — when LockedIn introduces a user to a third-party witness
+      service (or vice versa), the referrer receives a perpetual share of
+      resulting fees. Depth and decay terms governed by attribution agreements
+      between participants. Revenue sharing is anchored in verifiable credential
+      chains so provenance of referrals survives AID rotation and key migration.
+
+  user_journeys:
+    - name: "First-time setup"
+      actor: "Individual"
+      steps:
+        - step_number: 1
+          action: "Download LockedIn app"
+          keri_operation: "None"
+        - step_number: 2
+          action: "Grant phone permissions (location, barometer, biometrics)"
+          keri_operation: "None"
+        - step_number: 3
+          action: "AID is created behind the scenes (or existing AID discovered)"
+          keri_operation: "AID inception (or AID discovery via OOBI)"
+        - step_number: 4
+          action: "App begins silently logging signed presence attestations"
+          keri_operation: "KEL event anchoring (location + barometrics + biometrics signed to KEL)"
+        - step_number: 5
+          action: "User sees friendly message about what LockedIn is doing"
+          keri_operation: "None"
+        - step_number: 6
+          action: "User selects witness tier (free/paid/BYOW) or accepts default"
+          keri_operation: "Witness designation, OOBI exchange with witness services"
+        - step_number: 7
+          action: "Witnesses begin receipting presence events"
+          keri_operation: "Witness receipting (event confirmation by 1-3+ witnesses)"
+
+    - name: "Daily passive use"
+      actor: "Individual"
+      steps:
+        - step_number: 1
+          action: "Phone silently logs location + barometrics + biometrics at 3-5 minute intervals"
+          keri_operation: "Signed presence events appended to KEL"
+        - step_number: 2
+          action: "Witnesses receipt events in the background"
+          keri_operation: "Witness receipting, KAACE consensus"
+        - step_number: 3
+          action: "User can open app anytime to browse their presence history"
+          keri_operation: "Local KEL query (all data on device)"
+        - step_number: 4
+          action: "User sees trust tier indicator and witness health status"
+          keri_operation: "Witness AID status check"
+
+    - name: "Sharing a proof"
+      actor: "Individual"
+      steps:
+        - step_number: 1
+          action: "Someone asks the user to prove they were at location X on date Y"
+          keri_operation: "None"
+        - step_number: 2
+          action: "User opens LockedIn, selects the time/location window"
+          keri_operation: "KEL query for presence events in window"
+        - step_number: 3
+          action: "LockedIn packages a selective disclosure proof (only that window, nothing else)"
+          keri_operation: "ACDC issuance — presence_attestation credential with selective disclosure"
+        - step_number: 4
+          action: "User shares the proof (link, QR code, or API push)"
+          keri_operation: "IPEX presentation exchange"
+        - step_number: 5
+          action: "Trust tier and witness list are visible in the proof"
+          keri_operation: "Witness AID references included in credential edge block"
+
+    - name: "Verifying a proof"
+      actor: "Proof Requester"
+      steps:
+        - step_number: 1
+          action: "Receive a presence proof from an individual"
+          keri_operation: "IPEX grant receipt"
+        - step_number: 2
+          action: "Check the proof against witness receipts"
+          keri_operation: "KEL validation, witness receipt verification"
+        - step_number: 3
+          action: "See verification result with trust tier and witness reputation"
+          keri_operation: "ACDC verification, witness AID reputation check"
+        - step_number: 4
+          action: "Accept or reject based on trust level"
+          keri_operation: "None (business decision)"
+
+    - name: "Ecosystem integration"
+      actor: "Ecosystem Integrator"
+      steps:
+        - step_number: 1
+          action: "Integrate LockedIn API into their platform"
+          keri_operation: "OOBI exchange, API credential provisioning"
+        - step_number: 2
+          action: "When a volunteer commits to service, platform requests a proof window"
+          keri_operation: "Presence attestation request via IPEX"
+        - step_number: 3
+          action: "After service, proof is automatically packaged and attached to service record"
+          keri_operation: "ACDC chaining — presence_attestation chained to proof_of_service"
+        - step_number: 4
+          action: "Platform can offer its own witness service to LockedIn users (revenue share)"
+          keri_operation: "Witness designation, attribution agreement credential issuance"
+        - step_number: 5
+          action: "Referral revenue sharing tracked via verifiable attribution chain"
+          keri_operation: "Attribution agreement ACDC with perpetual referral provenance"
+
+  sla:
+    availability: "99.9%"
+    latency_p99: "200ms"
+    throughput: "Scales with user base — location events every 3-5 minutes per active user"
+    recovery_time: "1 hour — other witnesses cover the gap, no data loss during outage"
+
+# --- KERI Infrastructure Requirements ---
+keri_requirements:
+  agent_service: true       # AID creation for new users, KEL management for presence events
+  witness_pool: true         # Core product — witnesses receipt location events, trust tiers
+  watcher_network: true      # Proof Requesters verify proofs, duplicity detection
+  acdc_registry: true        # Presence proofs packaged as verifiable credentials
+  judge_jury: false           # Watcher-level duplicity detection sufficient
+  frontend: true             # Phone app is the product
+
+  credentials_handled:
+    - proof_of_service         # Presence attestations for humanitarian marketplace
+    - presence_attestation     # Cross-ecosystem presence proof (new credential type)
+    - attribution_agreement    # Perpetual revenue sharing between witness referrers
+
+# --- Integration Points ---
+integrations:
+  - name: "Phone OS APIs"
+    type: "api"
+    direction: "inbound"
+    description: >-
+      GPS location, barometric pressure, and biometric authentication (Face ID,
+      fingerprint) from the device OS. Core data sources for presence attestations.
+      Data never leaves the device except via selective disclosure proofs.
+
+  - name: "Humanitarian Service Marketplace"
+    type: "keri-service"
+    direction: "bidirectional"
+    description: >-
+      First ecosystem integration. Provides proof-of-service for volunteers by
+      chaining presence attestations to service commitment credentials. The
+      marketplace can also offer witness services to LockedIn users.
+
+  - name: "Third-party witness services"
+    type: "keri-service"
+    direction: "bidirectional"
+    description: >-
+      Other apps and platforms in the KERI ecosystem that provide witness
+      services. Discovered via OOBI, connected via witness designation protocol.
+      Revenue sharing tracked via attribution agreement credentials with
+      perpetual referral provenance.
+
+  - name: "SEDI / State Identity Systems"
+    type: "keri-service"
+    direction: "inbound"
+    description: >-
+      State-Endorsed Digital Identity for bootstrapping the user's AID from
+      government-issued identity. Provides the gold-standard identity root
+      when available.
+
+  - name: "Non-KERI External Systems"
+    type: "api"
+    direction: "outbound"
+    description: >-
+      REST API for traditional proof requesters who do not use KERI. Returns
+      verifiable presence proofs in standard JSON format with a verification
+      URL, enabling non-KERI systems to consume proofs without understanding
+      KERI internals.
+
+# --- Infrastructure Stacks ---
+# Populated by C2 (/keri-c2-service-infrastructure). Leave empty at C1.
+stacks: []
