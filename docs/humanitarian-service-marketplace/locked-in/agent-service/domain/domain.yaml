@@ -1,0 +1,558 @@
+version: "1.0"
+
+# --- Parent references ---
+domain:
+  stack: "locked-in-agent"
+  system: "locked-in"
+  ecosystem: "humanitarian-service-marketplace"
+
+# --- Components ---
+components:
+  - name: agent-event-log-engine
+    type: event-log-engine
+    purpose: >-
+      Full KEL validation for all managed AIDs. Handles inception, rotation,
+      and interaction events for user AIDs. The agent manages the complete
+      lifecycle of each user's identifier.
+    operations:
+      - name: incept
+        description: >-
+          Create an inception event for a new AID. Generate key pairs (signing +
+          next pre-rotation), build inception event, compute SAID.
+        inputs: [inception_config]
+        outputs: [key_event_icp]
+      - name: rotate
+        description: >-
+          Create a rotation event for an existing AID. Rotate signing keys using
+          pre-committed next key digests.
+        inputs: [aid_prefix, rotation_config]
+        outputs: [key_event_rot]
+      - name: interact
+        description: >-
+          Create an interaction event for seal anchoring (TEL seals for credential
+          operations, delegation seals, etc.).
+        inputs: [aid_prefix, seal_data]
+        outputs: [key_event_ixn]
+      - name: validate_event
+        description: >-
+          Validate an incoming event (from external sources) against stored KEL.
+        inputs: [key_event, prior_key_state]
+        outputs: [validation_result]
+      - name: compute_key_state
+        description: >-
+          Replay stored KEL to compute current key state for a managed AID.
+        inputs: [prefix]
+        outputs: [key_state]
+      - name: deserialize_event
+        description: >-
+          Parse raw CESR-encoded bytes into a structured key event.
+        inputs: [raw_bytes]
+        outputs: [key_event]
+      - name: serialize_event
+        description: >-
+          Serialize a key event to CESR-encoded bytes for transmission to witnesses.
+        inputs: [key_event]
+        outputs: [raw_bytes]
+    state:
+      - name: kel_store
+        storage_mapping: AgentKELTable
+        description: >-
+          Per-tenant event logs for all managed AIDs. Keyed by (prefix, sn),
+          GSI on SAID.
+    invariants:
+      - "Sequence numbers MUST increment by exactly 1"
+      - "Rotated-in keys MUST match prior event's next key digests"
+      - "Signatures MUST verify against current signing keys at threshold"
+      - "SAID MUST equal digest of serialized event with d as placeholder"
+      - "Inception event i MUST equal d for self-addressing AIDs"
+      - "All events MUST be signed before submission to witnesses"
+    failure_modes:
+      - condition: "Key pair generation failure"
+        impact: "AID cannot be created"
+        recovery: "Return error; retry with different entropy source"
+      - condition: "Sequence gap in stored KEL"
+        impact: "Cannot create new events"
+        recovery: "Re-sync KEL from witnesses; resolve gaps"
+    observability:
+      metrics:
+        - events_created_total
+        - events_validated_total
+        - validation_failures_total
+        - inceptions_total
+        - rotations_total
+        - interactions_total
+      logs:
+        - event_created
+        - event_validated
+        - validation_failed
+      traces:
+        - incept_span
+        - rotate_span
+        - interact_span
+        - validate_event_span
+    dependencies: []
+
+  - name: agent-keri-service
+    type: keri-agent
+    purpose: >-
+      Multi-tenant KERI agent that orchestrates AID lifecycle, witness
+      coordination, and credential wallet management for LockedIn users.
+      Each user gets an isolated agent tenant. Delegates ACDC issuance
+      and revocation to the separate acdc-registry stack.
+    operations:
+      - name: provision_agent
+        description: >-
+          Create a new agent tenant. Generate key material, store encrypted
+          in Secrets Manager, create AID via Event Log Engine, submit inception
+          to witnesses, collect receipts.
+        inputs: [provisioning_request]
+        outputs: [agent_tenant]
+      - name: create_aid
+        description: >-
+          Incept a new AID for an existing tenant. Submit inception event to
+          configured witnesses. Collect receipts until witness threshold met.
+        inputs: [tenant_id, inception_config]
+        outputs: [new_aid]
+      - name: rotate_keys
+        description: >-
+          Create rotation event for a tenant's AID. Submit to witnesses.
+          Update key material in Secrets Manager.
+        inputs: [tenant_id, aid_prefix, rotation_config]
+        outputs: [rotation_result]
+      - name: submit_presence_event
+        description: >-
+          Accept a signed presence attestation event (interaction event with
+          location/barometric/biometric seal) from the LockedIn app. Submit
+          to witnesses based on user's subscription tier.
+        inputs: [tenant_id, presence_event]
+        outputs: [submission_result]
+      - name: request_credential
+        description: >-
+          Request ACDC issuance from the acdc-registry stack. Provides the
+          agent's AID, schema SAID, and credential attributes. Receives the
+          issued ACDC and stores a wallet reference.
+        inputs: [tenant_id, credential_request]
+        outputs: [credential_reference]
+      - name: present_credential
+        description: >-
+          Package a selective disclosure proof from a stored credential
+          reference. Fetches the ACDC from the registry and applies
+          disclosure rules.
+        inputs: [tenant_id, acdc_said, disclosure_scope]
+        outputs: [presentation]
+      - name: receive_message
+        description: >-
+          Receive external KERI protocol messages (multisig coordination,
+          credential presentations, OOBI introductions) from other agents.
+        inputs: [keri_message]
+        outputs: [message_result]
+    state:
+      - name: agent_state
+        storage_mapping: AgentStateTable
+        description: >-
+          Tenant index, AID metadata, configuration, subscription tier.
+          Keyed by (tenant_id, resource_type).
+      - name: kel_store
+        storage_mapping: AgentKELTable
+        description: >-
+          Event logs for all managed AIDs across tenants.
+      - name: wallet
+        storage_mapping: AgentWalletTable
+        description: >-
+          Credential wallet — references to ACDCs stored in the registry.
+          Keyed by (tenant_id, acdc_said). GSI on schema_said.
+      - name: key_material
+        storage_mapping: AgentKeySecret
+        description: >-
+          Encrypted private keys per tenant. Envelope encryption via KMS.
+          Stored in Secrets Manager with per-tenant secret paths.
+      - name: async_operations
+        storage_mapping: AgentAsyncQueue
+        description: >-
+          SQS queue for async processing — witness receipt collection,
+          credential requests to registry, delegation workflows.
+    invariants:
+      - "Private keys MUST be encrypted at rest via KMS envelope encryption"
+      - "Private keys MUST NOT leave the agent service — signing happens server-side"
+      - "All events MUST be receipted by witness threshold before confirmation"
+      - "Tenant state MUST be completely isolated — no cross-tenant data access"
+      - "Presence events MUST be submitted to witnesses matching the user's subscription tier"
+      - "Free tier: 1 witness (LockedIn only). Paid tier: 3 witnesses (LockedIn + 2 ecosystem)"
+      - "Credential wallet stores references to registry ACDCs, not full ACDC documents"
+      - "Agent provisioning MUST create Secrets Manager entry before creating AID"
+    failure_modes:
+      - condition: "Witness pool unavailable"
+        impact: "Cannot receipt events; presence attestations queued"
+        recovery: "Queue events in SQS; retry when witnesses return; DLQ for persistent failures"
+      - condition: "Key compromise suspected"
+        impact: "User's AID may be compromised"
+        recovery: "Immediate rotation using pre-rotated keys; alert user via app"
+      - condition: "Registry stack unavailable"
+        impact: "Cannot issue or retrieve credentials"
+        recovery: "Queue credential requests in SQS; retry with backoff"
+      - condition: "Secrets Manager throttling"
+        impact: "Cannot access key material for signing"
+        recovery: "Retry with backoff; cache decrypted keys in Lambda memory for request duration only"
+    observability:
+      metrics:
+        - agents_provisioned_total
+        - aids_created_total
+        - key_rotations_total
+        - presence_events_submitted_total
+        - credential_requests_total
+        - credential_presentations_total
+        - witness_receipt_latency_ms
+        - async_queue_depth
+        - dlq_messages_total
+      logs:
+        - agent_provisioned
+        - aid_created
+        - key_rotated
+        - presence_event_submitted
+        - witness_receipts_collected
+        - credential_requested
+        - credential_presented
+        - message_received
+      traces:
+        - provision_agent_span
+        - create_aid_span
+        - submit_presence_event_span
+        - request_credential_span
+        - present_credential_span
+    dependencies:
+      - agent-event-log-engine
+
+  - name: agent-oobi-resolver
+    type: oobi-resolver
+    purpose: >-
+      Discovers and caches endpoint information for witnesses, watchers, and
+      peer agents. Critical for witness submission (presence events) and
+      credential verification flows.
+    operations:
+      - name: resolve
+        description: >-
+          Fetch OOBI URL, parse endpoint descriptors, verify against KEL, cache.
+        inputs: [oobi_url]
+        outputs: [resolved_endpoint]
+      - name: discover_witnesses
+        description: >-
+          Resolve witness endpoints from configured witness pool OOBIs.
+          Used during AID inception and presence event submission.
+        inputs: [witness_oobis]
+        outputs: [witness_endpoints]
+      - name: discover_watchers
+        description: >-
+          Resolve watcher endpoints for credential verification flows.
+        inputs: [watcher_oobis]
+        outputs: [watcher_endpoints]
+      - name: refresh_cache
+        description: >-
+          Re-resolve stale OOBI entries when connections fail.
+        inputs: [stale_entries]
+        outputs: [refresh_result]
+    state:
+      - name: oobi_cache
+        storage_mapping: AgentStateTable
+        description: >-
+          OOBI resolution cache stored in agent state table with resource_type
+          "oobi". TTL-managed for freshness.
+    invariants:
+      - "OOBI resolution MUST NOT trust endpoints without verifying the KEL"
+      - "Cached endpoints MUST have TTL; stale entries re-resolved on demand"
+      - "Failed resolutions MUST NOT evict valid cached entries"
+      - "Witness and watcher OOBIs from stack configuration are pre-resolved at deploy"
+    failure_modes:
+      - condition: "All witness OOBIs unreachable"
+        impact: "Cannot submit events to any witness"
+        recovery: "Use cached endpoints; queue events; alert operations"
+      - condition: "OOBI returns mismatched KEL"
+        impact: "Endpoint untrusted — possible MITM"
+        recovery: "Reject resolution; try alternate URLs; alert operations"
+    observability:
+      metrics:
+        - oobi_resolutions_total
+        - oobi_resolution_failures_total
+        - cache_hits_total
+        - cache_misses_total
+      logs:
+        - oobi_resolved
+        - oobi_resolution_failed
+        - cache_refreshed
+      traces:
+        - resolve_oobi_span
+    dependencies: []
+
+# --- Data Structures ---
+data_structures:
+  - name: InceptionEvent
+    type: key-event
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Must match version regex"
+      - name: t
+        type: string
+        description: "Event type"
+        constraints: "'icp'"
+      - name: d
+        type: string
+        description: "SAID"
+        constraints: "Valid CESR-qualified digest"
+      - name: i
+        type: string
+        description: "AID prefix"
+        constraints: "Equals d for self-addressing"
+      - name: s
+        type: string
+        description: "Sequence number"
+        constraints: "'0'"
+      - name: kt
+        type: string
+        description: "Signing threshold"
+        constraints: "Valid threshold"
+      - name: k
+        type: string[]
+        description: "Signing keys"
+        constraints: "CESR-qualified public keys"
+      - name: nt
+        type: string
+        description: "Next key threshold"
+        constraints: "Valid threshold"
+      - name: n
+        type: string[]
+        description: "Next key digests"
+        constraints: "CESR-qualified digests"
+      - name: bt
+        type: string
+        description: "Witness threshold"
+        constraints: "<= witness count"
+      - name: b
+        type: string[]
+        description: "Witness AIDs"
+        constraints: "Valid AID prefixes"
+      - name: c
+        type: string[]
+        description: "Config traits"
+        constraints: "Valid trait codes"
+      - name: a
+        type: object[]
+        description: "Anchored seals"
+        constraints: "Valid seal structures"
+    serialization:
+      - format: cesr
+      - format: json
+      - format: cbor
+      - format: msgpack
+
+  - name: RotationEvent
+    type: key-event
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Must match version regex"
+      - name: t
+        type: string
+        description: "Event type"
+        constraints: "'rot'"
+      - name: d
+        type: string
+        description: "SAID"
+        constraints: "Valid CESR-qualified digest"
+      - name: i
+        type: string
+        description: "AID prefix"
+        constraints: "Match inception prefix"
+      - name: s
+        type: string
+        description: "Sequence number"
+        constraints: "Prior sn + 1"
+      - name: p
+        type: string
+        description: "Prior event SAID"
+        constraints: "Match prior event's d"
+      - name: kt
+        type: string
+        description: "New signing threshold"
+        constraints: "Valid threshold"
+      - name: k
+        type: string[]
+        description: "New signing keys"
+        constraints: "Digests match prior n"
+      - name: nt
+        type: string
+        description: "New next key threshold"
+        constraints: "Valid threshold"
+      - name: n
+        type: string[]
+        description: "New next key digests"
+        constraints: "CESR-qualified digests"
+      - name: bt
+        type: string
+        description: "New witness threshold"
+        constraints: "<= total after changes"
+      - name: br
+        type: string[]
+        description: "Witnesses to remove"
+        constraints: "Current witnesses"
+      - name: ba
+        type: string[]
+        description: "Witnesses to add"
+        constraints: "Valid AID prefixes"
+      - name: a
+        type: object[]
+        description: "Anchored seals"
+        constraints: "Valid seal structures"
+    serialization:
+      - format: cesr
+      - format: json
+      - format: cbor
+      - format: msgpack
+
+  - name: InteractionEvent
+    type: key-event
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Must match version regex"
+      - name: t
+        type: string
+        description: "Event type"
+        constraints: "'ixn'"
+      - name: d
+        type: string
+        description: "SAID"
+        constraints: "Valid CESR-qualified digest"
+      - name: i
+        type: string
+        description: "AID prefix"
+        constraints: "Match inception prefix"
+      - name: s
+        type: string
+        description: "Sequence number"
+        constraints: "Prior sn + 1"
+      - name: p
+        type: string
+        description: "Prior event SAID"
+        constraints: "Match prior event's d"
+      - name: a
+        type: object[]
+        description: "Anchored seals (presence attestation seals, TEL anchors)"
+        constraints: "Valid seal structures"
+    serialization:
+      - format: cesr
+      - format: json
+      - format: cbor
+      - format: msgpack
+
+  - name: Receipt
+    type: receipt
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Must match version regex"
+      - name: t
+        type: string
+        description: "Event type"
+        constraints: "'vrc' or 'rct'"
+      - name: d
+        type: string
+        description: "SAID"
+        constraints: "Valid CESR-qualified digest"
+      - name: i
+        type: string
+        description: "Receipted controller AID"
+        constraints: "Valid AID"
+      - name: s
+        type: string
+        description: "Receipted event sn"
+        constraints: "Match receipted event"
+      - name: a
+        type: object
+        description: "Seal to receipted event"
+        constraints: "Contains receipted event SAID"
+    serialization:
+      - format: cesr
+      - format: json
+
+  - name: OOBI
+    type: oobi
+    fields:
+      - name: url
+        type: string
+        description: "OOBI endpoint URL"
+        constraints: "Valid HTTP(S) URL"
+      - name: aid
+        type: string
+        description: "AID being introduced"
+        constraints: "Valid AID prefix"
+      - name: role
+        type: string
+        description: "Role of the endpoint (witness, watcher, controller)"
+        constraints: "Valid role identifier"
+    serialization:
+      - format: json
+
+  - name: PresenceAttestationSeal
+    type: key-event
+    fields:
+      - name: i
+        type: string
+        description: "SAID of the presence attestation ACDC"
+        constraints: "Valid CESR-qualified digest"
+      - name: s
+        type: string
+        description: "TEL sequence number for the attestation"
+        constraints: "Non-negative integer"
+      - name: d
+        type: string
+        description: "SAID of the TEL issuance event"
+        constraints: "Valid CESR-qualified digest"
+    serialization:
+      - format: json
+
+  - name: AgentTenant
+    type: key-state
+    fields:
+      - name: tenant_id
+        type: string
+        description: "Unique tenant identifier"
+        constraints: "UUID v4"
+      - name: aid_prefix
+        type: string
+        description: "Primary AID for this tenant"
+        constraints: "Valid AID"
+      - name: subscription_tier
+        type: string
+        description: "Witness tier: free | paid | byow"
+        constraints: "One of: free, paid, byow"
+      - name: witness_count
+        type: number
+        description: "Number of witnesses for this tenant's events"
+        constraints: "free=1, paid=3, byow=variable"
+      - name: witness_aids
+        type: string[]
+        description: "AIDs of designated witnesses"
+        constraints: "Valid AID prefixes"
+      - name: created_at
+        type: string
+        description: "ISO 8601 creation timestamp"
+        constraints: "Valid timestamp"
+    serialization:
+      - format: json
+
+# --- Runtime Recommendation ---
+runtime_recommendation:
+  language: rust
+  library: "keriox + cesride"
+  rationale: >-
+    Serverless agent on Lambda requires Rust — this is NOT KERIA (which depends
+    on LMDB and HIO). This is a ground-up serverless KERI agent that reimplements
+    AID lifecycle, witness coordination, and credential wallet management for
+    Lambda's request-response model. Rust compiles to custom runtime
+    (provided.al2023, arm64/Graviton) with <50ms cold starts. keriox provides
+    AID lifecycle and KEL validation. cesride provides CESR primitive operations.
+    Key material stored in Secrets Manager with KMS envelope encryption.

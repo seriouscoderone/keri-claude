@@ -1,0 +1,41 @@
+version: "1.0"
+
+# --- Parent references ---
+domain:
+  stack: "locked-in-frontend"
+  system: "locked-in"
+  ecosystem: "humanitarian-service-marketplace"
+
+# --- Components ---
+# The frontend is a thin client that delegates all KERI operations to the
+# agent-service stack via the Signify protocol. No C3 domain components
+# are required — signify-ts handles signing at the edge.
+#
+# The LockedIn app:
+# 1. Collects presence data (GPS, barometrics, biometrics) from device APIs
+# 2. Signs presence events locally using signify-ts
+# 3. Submits signed events to the agent-service API
+# 4. Requests selective disclosure proofs from the agent/registry
+# 5. Presents proofs to requesters
+#
+# All KERI protocol logic (KEL management, witness coordination, ACDC
+# lifecycle, TEL processing) runs server-side in the agent-service and
+# acdc-registry stacks.
+components: []
+
+# --- Data Structures ---
+# Handled by signify-ts library — no domain-level data structures to define.
+# The frontend consumes and produces KERI protocol messages but does not
+# implement its own event processing.
+data_structures: []
+
+# --- Runtime Recommendation ---
+runtime_recommendation:
+  language: typescript
+  library: signify-ts
+  rationale: >-
+    Browser/mobile-based signing at the edge. signify-ts handles all
+    cryptographic operations client-side — key generation, event signing,
+    CESR encoding. Keys never leave the device. The app communicates with
+    the agent-service API for server-side KERI operations (witness
+    coordination, credential management).

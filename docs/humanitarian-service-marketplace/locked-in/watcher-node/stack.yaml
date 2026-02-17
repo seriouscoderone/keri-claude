@@ -133,4 +133,14 @@ outputs:
     value: "{WatcherAlertTopic.Arn}"
     description: SNS topic ARN for duplicity alerts
 
-domain_components: []
+# C2 UPDATE NEEDED: runtime should be Rust Lambda (provided.al2023), not python3.12.
+# keripy LMDB/HIO incompatible with Lambda. See domain/domain.yaml for details.
+# C2 UPDATE NEEDED: API should be REST + EventBridge schedule, not WebSocket.
+# Watcher uses on-demand response + periodic 30-min witness sync, not real-time streaming.
+domain_components:
+  - name: watcher-event-log-engine
+    type: event-log-engine
+  - name: watcher-duplicity-service
+    type: watcher-service
+  - name: watcher-oobi-resolver
+    type: oobi-resolver

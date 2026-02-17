@@ -1,0 +1,547 @@
+version: "1.0"
+
+# --- Parent references ---
+domain:
+  stack: "locked-in-acdc-registry"
+  system: "locked-in"
+  ecosystem: "humanitarian-service-marketplace"
+
+# --- Components ---
+components:
+  - name: registry-event-log-engine
+    type: event-log-engine
+    purpose: >-
+      Validates issuer KEL for anchoring TEL events. When a credential is issued
+      or revoked, the TEL event must be anchored in the issuer's KEL via an
+      interaction event with a seal. This engine validates that anchoring chain.
+    operations:
+      - name: validate_event
+        description: >-
+          Validate a key event against prior key state. Used to verify issuer
+          KEL integrity before accepting TEL anchoring seals.
+        inputs: [key_event, prior_key_state]
+        outputs: [validation_result]
+      - name: compute_key_state
+        description: >-
+          Replay issuer KEL to compute current key state. Used to verify
+          issuer signatures on ACDCs and TEL events.
+        inputs: [prefix]
+        outputs: [key_state]
+      - name: verify_seal_anchor
+        description: >-
+          Verify that a TEL event is properly anchored in the issuer's KEL.
+          Check that an interaction event exists with a seal referencing the
+          TEL event's SAID.
+        inputs: [tel_event_said, issuer_prefix]
+        outputs: [anchor_verification_result]
+      - name: deserialize_event
+        description: >-
+          Parse raw CESR-encoded bytes into a structured key event.
+        inputs: [raw_bytes]
+        outputs: [key_event]
+    state:
+      - name: issuer_kel_cache
+        storage_mapping: ACDCTable
+        description: >-
+          Cached issuer KEL data stored alongside ACDC records. Used for
+          signature verification without re-fetching full KEL each time.
+    invariants:
+      - "Issuer signatures MUST verify against issuer's current signing keys"
+      - "TEL anchoring seals MUST reference valid interaction events in issuer KEL"
+      - "Issuer key state MUST be current — stale key state may accept revoked keys"
+    failure_modes:
+      - condition: "Issuer KEL unavailable"
+        impact: "Cannot verify issuer signatures or seal anchoring"
+        recovery: "Fetch issuer KEL from witnesses via OOBI; retry"
+      - condition: "Seal anchor not found in issuer KEL"
+        impact: "TEL event is orphaned — credential status unknown"
+        recovery: "Retry anchor verification; escrow TEL event until anchor appears"
+    observability:
+      metrics:
+        - issuer_validations_total
+        - seal_anchor_verifications_total
+        - anchor_verification_failures_total
+      logs:
+        - issuer_validated
+        - seal_anchor_verified
+        - seal_anchor_missing
+      traces:
+        - validate_issuer_span
+        - verify_seal_anchor_span
+    dependencies: []
+
+  - name: registry-acdc-tel-manager
+    type: acdc-registry
+    purpose: >-
+      Manages the lifecycle of presence attestation credentials via Transaction
+      Event Logs. Handles issuance (with schema validation), revocation (backed
+      by witness receipts), status queries, and selective disclosure packaging.
+      This is the authoritative source of truth for all LockedIn credentials.
+    operations:
+      - name: issue
+        description: >-
+          Issue a new ACDC. Validate attributes against schema, build ACDC
+          structure, compute SAID, sign with issuer keys, create TEL issuance
+          event (bis — backed by witnesses), anchor TEL in issuer's KEL,
+          store ACDC document in S3 and metadata in DynamoDB.
+        inputs: [issuer_aid, schema_said, attributes, edge_references]
+        outputs: [acdc_with_said]
+      - name: revoke
+        description: >-
+          Revoke an issued ACDC. Create TEL revocation event (brv — backed),
+          anchor in issuer's KEL, update status in DynamoDB.
+        inputs: [acdc_said, revocation_reason]
+        outputs: [revocation_result]
+      - name: verify_status
+        description: >-
+          Query TEL to determine current status of an ACDC. Returns:
+          Issued | Revoked | Unknown.
+        inputs: [acdc_said]
+        outputs: [credential_status]
+      - name: validate_schema
+        description: >-
+          Validate ACDC attributes against the referenced schema definition.
+          Ensures all required fields are present and type-correct.
+        inputs: [schema_said, attributes]
+        outputs: [schema_validation_result]
+      - name: package_disclosure
+        description: >-
+          Package a selective disclosure proof for a presence attestation.
+          Only the requested time/location window is revealed; all other
+          attestation data remains hidden.
+        inputs: [acdc_said, disclosure_scope]
+        outputs: [disclosure_proof]
+      - name: resolve_chain
+        description: >-
+          Follow ACDC edge references to verify chained credentials (e.g.,
+          presence_attestation -> proof_of_service -> service_commitment).
+        inputs: [acdc_said]
+        outputs: [chain_verification_result]
+    state:
+      - name: acdc_metadata
+        storage_mapping: ACDCTable
+        description: >-
+          ACDC metadata indexed by SAID. Includes issuer AID, schema SAID,
+          issuance timestamp, and current status. GSI on issuer_aid and schema_said.
+      - name: tel_store
+        storage_mapping: TELTable
+        description: >-
+          Transaction Event Log per ACDC. Keyed by (acdc_said, sn). Records
+          issuance and revocation events.
+      - name: acdc_documents
+        storage_mapping: ACDCDocumentBucket
+        description: >-
+          Immutable ACDC document storage in S3. Versioned, encrypted,
+          lifecycle-managed (IA at 90 days, Glacier at 365).
+      - name: lifecycle_events
+        storage_mapping: RegistryEventBus
+        description: >-
+          EventBridge notifications for ACDC issuance and revocation events.
+          Consumed by agent service and external integrators.
+    invariants:
+      # ACDC structure invariants
+      - "ACDC fields MUST appear in order: [v, t, d, u, i, rd, s, a, A, e, r]"
+      - "ACDC required fields: [v, d, i, s] — all others optional"
+      - "ACDC a and A fields are mutually exclusive — MUST NOT both be non-empty"
+      - "ACDC SAID (d) MUST equal digest of serialized ACDC with d as placeholder"
+      - "ACDC i MUST be valid Issuer AID derivable from key pair(s)"
+      - "ACDC s MUST reference a static SAIDified schema — $id MUST be bare SAID"
+      - "ACDC rd MUST equal rip d (REGID) — binds credential to its registry"
+      # TEL registry lifecycle invariants
+      - "Registry inception (rip) creates the REGID; rip i MUST match ACDC i"
+      - "Registry MUST be created (rip sealed in KEL) before any ACDC referencing it"
+      - "All TEL events MUST be sealed in Issuer KEL via SealTrans [s, d]"
+      - "TEL events do NOT need own signatures — KEL seal is cryptographically equivalent"
+      - "TEL sequence numbers MUST increment monotonically from 0"
+      - "TEL event p field MUST equal d of immediately prior TEL event"
+      # TEL state machine invariants
+      - "Non-blindable (upd): ta MUST equal ACDC top-level d; ts MUST be CESR-encoded state"
+      - "Blindable (bup): b MUST equal BLID of blinded attribute block"
+      - "Revoked ACDCs MUST NOT be re-issued — new SAID required"
+      # Backed TEL invariants
+      - "Backed TEL: backer AIDs MUST be non-transferable"
+      - "Backed TEL: backer threshold MUST be satisfied"
+      # Selective disclosure invariants
+      - "Partial disclosure: replacing block with its d value MUST preserve top-level SAID"
+      - "Selective disclosure: AGID = H(serialize([dummy, SAID(block_1)..SAID(block_N)]))"
+      - "Selective disclosure MUST NOT reveal attributes outside the requested scope"
+      # Storage invariants
+      - "ACDC documents in S3 are immutable — never modified after initial write"
+      - "Schema validation MUST pass before issuance"
+    failure_modes:
+      - condition: "Schema validation fails"
+        impact: "Issuance rejected"
+        recovery: "Return error with specific schema violations"
+      - condition: "KEL anchor fails"
+        impact: "TEL event orphaned — credential status ambiguous"
+        recovery: "Retry KEL interaction; do not store TEL until anchored"
+      - condition: "TEL out of sync with witnesses"
+        impact: "Stale revocation status — revoked credential appears valid"
+        recovery: "Re-sync TEL from issuer's witnesses"
+      - condition: "S3 write failure"
+        impact: "ACDC document not stored"
+        recovery: "Retry with backoff; do not return success until S3 write confirms"
+      - condition: "Witness receipts unavailable for backed TEL"
+        impact: "TEL event not confirmed"
+        recovery: "Queue for async receipt collection; return pending status"
+    observability:
+      metrics:
+        - credentials_issued_total
+        - credentials_revoked_total
+        - schema_validations_total
+        - schema_validation_failures_total
+        - status_queries_total
+        - disclosure_packages_total
+        - chain_resolutions_total
+        - tel_depth_per_acdc
+      logs:
+        - credential_issued
+        - credential_revoked
+        - schema_validated
+        - schema_validation_failed
+        - status_queried
+        - disclosure_packaged
+        - chain_resolved
+        - kel_anchor_verified
+      traces:
+        - issue_credential_span
+        - revoke_credential_span
+        - verify_status_span
+        - package_disclosure_span
+        - resolve_chain_span
+    dependencies:
+      - registry-event-log-engine
+
+  - name: registry-oobi-resolver
+    type: oobi-resolver
+    purpose: >-
+      Discovers issuer and verifier endpoints. Resolves witness OOBIs for
+      backed TEL receipt collection. Resolves issuer OOBIs for KEL sync
+      during signature verification.
+    operations:
+      - name: resolve
+        description: >-
+          Fetch OOBI URL, parse endpoint descriptors, verify against KEL, cache.
+        inputs: [oobi_url]
+        outputs: [resolved_endpoint]
+      - name: discover_backers
+        description: >-
+          Resolve backer (witness) endpoints for backed TEL operations.
+        inputs: [backer_aids]
+        outputs: [backer_endpoints]
+      - name: refresh_cache
+        description: >-
+          Re-resolve stale OOBI entries when connections fail.
+        inputs: [stale_entries]
+        outputs: [refresh_result]
+    state:
+      - name: oobi_cache
+        storage_mapping: ACDCTable
+        description: >-
+          OOBI resolution cache stored alongside ACDC records.
+          TTL-managed for freshness.
+    invariants:
+      - "OOBI resolution MUST NOT trust endpoints without verifying the KEL"
+      - "Cached endpoints MUST have TTL; stale entries re-resolved on demand"
+      - "Failed resolutions MUST NOT evict valid cached entries"
+    failure_modes:
+      - condition: "Backer OOBI unreachable"
+        impact: "Cannot collect witness receipts for backed TEL"
+        recovery: "Use cached endpoint; queue receipt collection; retry"
+    observability:
+      metrics:
+        - oobi_resolutions_total
+        - oobi_resolution_failures_total
+      logs:
+        - oobi_resolved
+        - oobi_resolution_failed
+      traces:
+        - resolve_oobi_span
+    dependencies: []
+
+# --- Data Structures ---
+data_structures:
+  - name: ACDC
+    type: acdc
+    fields:
+      - name: v
+        type: string
+        description: "Version string — regex ACDCMmmGggKKKKSSSS., protocol MUST be ACDC"
+        constraints: "MUST be first field; protocol type ACDC"
+      - name: t
+        type: string
+        description: "Message type (3-char)"
+        constraints: "Default 'acm' if absent"
+      - name: d
+        type: string
+        description: "SAID — self-addressing identifier of the credential"
+        constraints: "Must be valid CESR-qualified digest"
+      - name: u
+        type: string
+        description: "Salty nonce — controls Public/Private/Metadata variant"
+        constraints: "~128 bits entropy for Private; absent for Public; empty for Metadata"
+      - name: i
+        type: string
+        description: "Issuer AID prefix — MUST derive from key pair(s)"
+        constraints: "Must be valid AID with verifiable KEL"
+      - name: rd
+        type: string
+        description: "Registry ID — SAID of the rip event"
+        constraints: "Must match rip event's d field (REGID)"
+      - name: s
+        type: string
+        description: "Schema SAID — references the credential schema"
+        constraints: "Must reference a static SAIDified schema; $id MUST be bare SAID"
+      - name: a
+        type: object
+        description: "Attribute section — credential payload (presence data)"
+        constraints: "Must validate against schema; MUST NOT coexist with non-empty A"
+      - name: A
+        type: string
+        description: "Attribute Aggregate — SAID of aggregate for selective disclosure"
+        constraints: "MUST NOT coexist with non-empty a; AGID computed from SAID list"
+      - name: e
+        type: object
+        description: "Edge section — references to chained credentials"
+        constraints: "Each edge must reference a valid ACDC SAID"
+      - name: r
+        type: object
+        description: "Rule section — Ricardian contract / governance terms"
+        constraints: "Valid rule structure"
+    serialization:
+      - format: cesr
+      - format: json
+      - format: cbor
+
+  - name: PresenceAttestationACDC
+    type: acdc
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "ACDC version regex"
+      - name: d
+        type: string
+        description: "SAID of this attestation"
+        constraints: "Valid CESR-qualified digest"
+      - name: i
+        type: string
+        description: "Issuer AID (LockedIn user's AID)"
+        constraints: "Valid AID"
+      - name: s
+        type: string
+        description: "Schema SAID for presence_attestation"
+        constraints: "Must match published schema"
+      - name: a
+        type: object
+        description: "Presence data attributes"
+        constraints: "Schema-validated"
+      - name: "a.dt"
+        type: string
+        description: "Attestation timestamp"
+        constraints: "ISO 8601 datetime"
+      - name: "a.location"
+        type: object
+        description: "GPS coordinates (lat/lon/altitude)"
+        constraints: "Valid geographic coordinates"
+      - name: "a.barometric_pressure"
+        type: number
+        description: "Barometric pressure reading (hPa)"
+        constraints: "Physically plausible range"
+      - name: "a.biometric_confirmed"
+        type: boolean
+        description: "Whether biometric authentication was active"
+        constraints: "Boolean"
+      - name: "a.verification_method"
+        type: string
+        description: "How presence was verified"
+        constraints: "One of: gps+barometric, gps+biometric, gps+barometric+biometric"
+      - name: "a.verification_strength"
+        type: string
+        description: "Trust level of the verification"
+        constraints: "One of: low, medium, high"
+      - name: "a.witness_tier"
+        type: string
+        description: "Witness tier at time of attestation"
+        constraints: "One of: free, paid, byow"
+      - name: "a.witness_aids"
+        type: string[]
+        description: "Witness AIDs that receipted this attestation"
+        constraints: "Valid AID prefixes"
+      - name: e
+        type: object
+        description: "Edge — optional chain to service_commitment ACDC"
+        constraints: "Valid ACDC SAID reference if present"
+      - name: r
+        type: object
+        description: "Rules — disclosure terms"
+        constraints: "Selective disclosure rules"
+    serialization:
+      - format: cesr
+      - format: json
+
+  - name: RegistryInceptionEvent
+    type: tel-event
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Protocol type MUST be ACDC (not KERI)"
+      - name: t
+        type: string
+        description: "Event type"
+        constraints: "Must be 'rip' (registry inception)"
+      - name: d
+        type: string
+        description: "SAID — becomes the REGID (registry identifier)"
+        constraints: "Valid CESR-qualified digest"
+      - name: u
+        type: string
+        description: "Salty nonce"
+        constraints: "Must have ~128 bits entropy"
+      - name: i
+        type: string
+        description: "Issuer AID"
+        constraints: "Must match ACDC issuer AID"
+      - name: "n"
+        type: string
+        description: "Sequence number"
+        constraints: "Must be hex 0 for inception"
+      - name: dt
+        type: string
+        description: "Inception datetime"
+        constraints: "ISO 8601 with microseconds + UTC offset"
+    serialization:
+      - format: cesr
+      - format: json
+
+  - name: TELUpdateEvent
+    type: tel-event
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Protocol type MUST be ACDC"
+      - name: t
+        type: string
+        description: "Event type"
+        constraints: "'upd' (non-blindable update) for presence attestations"
+      - name: d
+        type: string
+        description: "SAID of this TEL event"
+        constraints: "Valid CESR-qualified digest"
+      - name: rd
+        type: string
+        description: "Registry ID — SAID of rip event"
+        constraints: "Must match rip event's d field (REGID)"
+      - name: "n"
+        type: string
+        description: "TEL sequence number (hex)"
+        constraints: "Monotonically increasing from 0"
+      - name: p
+        type: string
+        description: "Prior TEL event SAID"
+        constraints: "Must match d of immediately prior TEL event"
+      - name: dt
+        type: string
+        description: "Update datetime"
+        constraints: "ISO 8601 with microseconds + UTC offset"
+      - name: ta
+        type: string
+        description: "ACDC SAID — binds this TEL event to the credential"
+        constraints: "Must equal ACDC top-level d field"
+      - name: ts
+        type: string
+        description: "State — CESR Text domain encoded"
+        constraints: "CESR-encoded state string (e.g., 0Missued, Yrevoked)"
+    serialization:
+      - format: cesr
+      - format: json
+
+  - name: TELBlindableUpdateEvent
+    type: tel-event
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Protocol type MUST be ACDC"
+      - name: t
+        type: string
+        description: "Event type"
+        constraints: "'bup' (blindable update) for privacy-preserving attestations"
+      - name: d
+        type: string
+        description: "SAID of this TEL event"
+        constraints: "Valid CESR-qualified digest"
+      - name: rd
+        type: string
+        description: "Registry ID — SAID of rip event"
+        constraints: "Must match rip event's d field (REGID)"
+      - name: "n"
+        type: string
+        description: "TEL sequence number (hex)"
+        constraints: "Monotonically increasing from 0"
+      - name: p
+        type: string
+        description: "Prior TEL event SAID"
+        constraints: "Must match d of immediately prior TEL event"
+      - name: dt
+        type: string
+        description: "Update datetime"
+        constraints: "ISO 8601 with microseconds + UTC offset"
+      - name: b
+        type: string
+        description: "BLID — SAID of blinded attribute block"
+        constraints: "Must equal BLID computed over CESR concat [d, u, td, ts]"
+    serialization:
+      - format: cesr
+      - format: json
+
+  - name: InteractionEvent
+    type: key-event
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Must match version regex"
+      - name: t
+        type: string
+        description: "Event type"
+        constraints: "'ixn'"
+      - name: d
+        type: string
+        description: "SAID"
+        constraints: "Valid CESR-qualified digest"
+      - name: i
+        type: string
+        description: "Issuer AID prefix"
+        constraints: "Must match issuer's inception prefix"
+      - name: s
+        type: string
+        description: "Sequence number"
+        constraints: "Prior sn + 1"
+      - name: p
+        type: string
+        description: "Prior event SAID"
+        constraints: "Match prior event's d"
+      - name: a
+        type: object[]
+        description: "Anchored seals — TEL event SAID references"
+        constraints: "Valid seal structures referencing TEL events"
+    serialization:
+      - format: cesr
+      - format: json
+      - format: cbor
+      - format: msgpack
+
+# --- Runtime Recommendation ---
+runtime_recommendation:
+  language: rust
+  library: "keriox + cesride"
+  rationale: >-
+    Serverless ACDC registry on Lambda requires Rust — keripy depends on LMDB
+    and HIO which are incompatible with Lambda. Note: stack.yaml currently
+    specifies python3.12 — this is a C2 update needed. Rust provides stateless
+    ACDC validation, TEL event processing, and schema validation. keriox
+    includes teliox for TEL support. cesride handles CESR primitives.
+    S3 for immutable ACDC document storage with lifecycle management.

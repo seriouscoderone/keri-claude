@@ -1,0 +1,457 @@
+version: "1.0"
+
+# --- Parent references ---
+domain:
+  stack: "locked-in-witness-pool"
+  system: "locked-in"
+  ecosystem: "humanitarian-service-marketplace"
+
+# --- Components ---
+components:
+  - name: witness-event-log-engine
+    type: event-log-engine
+    purpose: >-
+      Deterministic key state machine for validating incoming events before
+      witness receipting. Replays KEL to compute current key state, validates
+      signatures, enforces sequence monotonicity, and detects equivocation.
+    operations:
+      - name: validate_event
+        description: >-
+          Validate incoming key event against prior key state from stored KEL.
+          Checks signature verification, sequence number monotonicity, next key
+          digest commitment, and SAID integrity.
+        inputs: [key_event, prior_key_state]
+        outputs: [validation_result]
+      - name: compute_key_state
+        description: >-
+          Replay stored KEL for a given AID prefix to derive current key state
+          (current signing keys, next key digests, witness list, thresholds).
+        inputs: [prefix]
+        outputs: [key_state]
+      - name: apply_event
+        description: >-
+          Apply a validated event to prior key state to produce updated key state.
+          Pure function — no side effects.
+        inputs: [prior_key_state, key_event]
+        outputs: [key_state]
+      - name: detect_equivocation
+        description: >-
+          Given multiple events at the same (prefix, sn), determine if they
+          represent equivocation (different SAIDs at same sequence number).
+        inputs: [events_at_same_sn]
+        outputs: [equivocation_result]
+      - name: deserialize_event
+        description: >-
+          Parse raw CESR-encoded bytes into a structured key event.
+          Validates version string, event type code, and CESR primitive integrity.
+        inputs: [raw_bytes]
+        outputs: [key_event]
+      - name: compute_said
+        description: >-
+          Compute the SAID (Self-Addressing Identifier) for a serialized event
+          by digesting the event with the d field set to placeholder.
+        inputs: [serialized_event]
+        outputs: [said]
+    state:
+      - name: kel_store
+        storage_mapping: WitnessKELTable
+        description: >-
+          Append-only key event log per AID prefix. Keyed by (prefix, sn).
+          GSI on SAID for receipt lookups.
+    invariants:
+      - "Sequence numbers MUST increment by exactly 1 — no gaps, no duplicates"
+      - "Rotated-in keys MUST match prior event's next key digests (n field)"
+      - "Signatures MUST verify against current signing keys (k field) at signing threshold (kt); rotation requires DUAL threshold — current kt AND prior nt"
+      - "SAID (d field) MUST equal the digest of the serialized event with d set to placeholder"
+      - "Inception event i field MUST equal d for self-addressing AIDs"
+      - "Delegated events (dip/drt) MUST have anchoring seal in delegator's KEL"
+      - "Version string MUST be well-formed (KERIvvSSSSSSSSSS_)"
+      - "Event type code MUST be one of: icp, rot, ixn, dip, drt"
+    failure_modes:
+      - condition: "Invalid signature on event"
+        impact: "Event rejected — not stored, not receipted"
+        recovery: "Return validation error to submitting controller"
+      - condition: "Sequence number gap (missing prior events)"
+        impact: "Event cannot be validated without prior key state"
+        recovery: "Escrow event; request missing events from controller"
+      - condition: "Wrong next key digest on rotation"
+        impact: "Rotation rejected — potential key compromise attempt"
+        recovery: "Return validation error; do not update key state"
+      - condition: "Equivocation detected (different SAID at same prefix+sn)"
+        impact: "Duplicity — controller may be compromised"
+        recovery: "Record both versions; alert watcher network via EventBridge"
+    observability:
+      metrics:
+        - events_validated_total
+        - validation_failures_total
+        - equivocations_detected_total
+        - kel_depth_per_aid
+        - event_deserialization_errors_total
+      logs:
+        - event_received
+        - validation_succeeded
+        - validation_failed
+        - equivocation_detected
+      traces:
+        - validate_event_span
+        - compute_key_state_span
+        - deserialize_event_span
+    dependencies: []
+
+  - name: witness-receipting-service
+    type: witness-service
+    purpose: >-
+      Receives events from any controller (public witness), applies the first-seen
+      rule, validates via the Event Log Engine, generates receipts by signing the
+      event SAID with the witness's own key, and participates in KAACE consensus
+      with peer witnesses.
+    operations:
+      - name: receive_event
+        description: >-
+          Primary entry point. Validates event structure, checks first-seen for
+          (prefix, sn), validates against KEL via Event Log Engine, stores as
+          first-seen, generates receipt, broadcasts to peer witnesses.
+          Returns: Success(receipt) | AlreadySeen | Duplicitous | ValidationError
+        inputs: [key_event]
+        outputs: [receipt_result]
+      - name: generate_receipt
+        description: >-
+          Sign the event SAID with the witness's own signing key to produce a
+          transferable receipt (non-transferable receipt for non-transferable AIDs).
+        inputs: [event_said, witness_signing_key]
+        outputs: [receipt]
+      - name: broadcast_receipt
+        description: >-
+          Send generated receipt to peer witnesses in the pool for KAACE
+          consensus. Uses EventBridge for async delivery.
+        inputs: [receipt, peer_witness_endpoints]
+        outputs: [broadcast_result]
+      - name: query_kel
+        description: >-
+          Return the stored KEL for a given AID prefix. Used by controllers,
+          other witnesses, and watchers to sync state.
+        inputs: [prefix]
+        outputs: [key_event_log]
+      - name: query_receipts
+        description: >-
+          Return all receipts for a given event SAID. Used by controllers to
+          confirm witness threshold has been met.
+        inputs: [event_said]
+        outputs: [receipts]
+      - name: serve_oobi
+        description: >-
+          Serve the witness's own OOBI endpoint for controller discovery.
+          Returns the witness AID and endpoint URL.
+        inputs: [witness_aid]
+        outputs: [oobi_response]
+    state:
+      - name: kel_store
+        storage_mapping: WitnessKELTable
+        description: >-
+          Append-only event log per AID prefix. First-seen enforced via
+          DynamoDB conditional write on (prefix, sn) — PutItem with
+          condition attribute_not_exists(sn).
+      - name: receipt_store
+        storage_mapping: WitnessReceiptTable
+        description: >-
+          Receipts indexed by (event_said, witness_aid). Stores both own
+          receipts and collected peer receipts for KAACE.
+      - name: receipt_notifications
+        storage_mapping: WitnessEventBus
+        description: >-
+          Publishes receipt events for consumers (peer witnesses, watchers,
+          controllers). EventBridge delivers to subscribers.
+    invariants:
+      - "First-seen rule: only ONE version of an event at (prefix, sn) is accepted — enforced by DynamoDB conditional write"
+      - "Witness AIDs MUST be non-transferable (B prefix for Ed25519) — no KEL rotation"
+      - "Receipts use type 'rct' — witness signs the RECEIPTED EVENT's serialization, not the receipt body"
+      - "Receipt d field is the SAID of the receipted event, not the receipt itself"
+      - "Witness MUST NOT receipt an event that fails Event Log Engine validation"
+      - "KAWA fault model: given N witnesses, tally M, at most F*=N-M unavailable and F<M duplicitous — at most one sufficient agreement can exist"
+      - "Duplicate event with same SAID at same (prefix, sn) returns AlreadySeen (idempotent)"
+      - "Duplicate event with different SAID at same (prefix, sn) returns Duplicitous and records both versions"
+      - "Witness MUST serve its OOBI endpoint for discovery"
+    failure_modes:
+      - condition: "Duplicity detected — two events at same (prefix, sn) with different SAIDs"
+        impact: "Controller may be compromised; trust in AID degraded"
+        recovery: "Record both versions in KEL store; publish duplicity event to EventBridge; return Duplicitous to submitter"
+      - condition: "KAACE timeout — peer witnesses unreachable"
+        impact: "Consensus not reached; controller cannot confirm event"
+        recovery: "Escrow receipt; retry broadcast with exponential backoff; return partial receipt count to controller"
+      - condition: "Witness key compromise"
+        impact: "Invalid receipts may be generated"
+        recovery: "Rotate witness key; re-receipt pending events with new key; publish key rotation to peer witnesses"
+      - condition: "DynamoDB conditional write failure (ConditionalCheckFailedException)"
+        impact: "First-seen already recorded — either idempotent or duplicitous"
+        recovery: "Read existing event at (prefix, sn); compare SAIDs; return AlreadySeen or Duplicitous"
+    observability:
+      metrics:
+        - events_receipted_total
+        - receipts_generated_total
+        - first_seen_conflicts_total
+        - duplicity_events_total
+        - kaace_consensus_reached_total
+        - kaace_timeouts_total
+        - oobi_queries_total
+      logs:
+        - event_received
+        - first_seen_stored
+        - receipt_generated
+        - receipt_broadcast
+        - duplicity_detected
+        - kaace_consensus_reached
+        - kaace_timeout
+      traces:
+        - receive_event_span
+        - generate_receipt_span
+        - broadcast_receipt_span
+        - kaace_consensus_span
+    dependencies:
+      - witness-event-log-engine
+
+# --- Data Structures ---
+data_structures:
+  - name: InceptionEvent
+    type: key-event
+    fields:
+      - name: v
+        type: string
+        description: "Version string (e.g., KERI10JSON00011c_)"
+        constraints: "Must match version regex KERIvvSSSSSSSSSS_"
+      - name: t
+        type: string
+        description: "Event type identifier"
+        constraints: "Must be 'icp'"
+      - name: d
+        type: string
+        description: "SAID — self-addressing identifier (digest of serialized event)"
+        constraints: "Must be valid CESR-qualified digest"
+      - name: i
+        type: string
+        description: "AID prefix"
+        constraints: "Must equal d for self-addressing AIDs"
+      - name: s
+        type: string
+        description: "Sequence number"
+        constraints: "Must be '0' for inception"
+      - name: kt
+        type: string
+        description: "Signing threshold"
+        constraints: "Must be valid threshold expression"
+      - name: k
+        type: string[]
+        description: "Current signing keys (CESR-qualified public keys)"
+        constraints: "Length must satisfy signing threshold"
+      - name: nt
+        type: string
+        description: "Next key threshold (for pre-rotation)"
+        constraints: "Must be valid threshold expression"
+      - name: n
+        type: string[]
+        description: "Next key digests (pre-rotation commitment)"
+        constraints: "Must be valid CESR-qualified digests"
+      - name: bt
+        type: string
+        description: "Witness threshold (KAACE backer threshold)"
+        constraints: "Must be <= number of witnesses"
+      - name: b
+        type: string[]
+        description: "Witness AID prefixes (backers)"
+        constraints: "Must be valid AID prefixes"
+      - name: c
+        type: string[]
+        description: "Configuration traits"
+        constraints: "Valid trait codes"
+      - name: a
+        type: object[]
+        description: "Anchored seals (optional in inception)"
+        constraints: "Valid seal structures"
+    serialization:
+      - format: cesr
+      - format: json
+      - format: cbor
+      - format: msgpack
+
+  - name: RotationEvent
+    type: key-event
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Must match version regex"
+      - name: t
+        type: string
+        description: "Event type identifier"
+        constraints: "Must be 'rot'"
+      - name: d
+        type: string
+        description: "SAID"
+        constraints: "Must be valid CESR-qualified digest"
+      - name: i
+        type: string
+        description: "AID prefix"
+        constraints: "Must match prefix from inception event"
+      - name: s
+        type: string
+        description: "Sequence number"
+        constraints: "Must be prior sn + 1"
+      - name: p
+        type: string
+        description: "Prior event SAID"
+        constraints: "Must match SAID of event at sn - 1"
+      - name: kt
+        type: string
+        description: "New signing threshold"
+        constraints: "Must be valid threshold expression"
+      - name: k
+        type: string[]
+        description: "New signing keys"
+        constraints: "Key digests must match prior event's n field"
+      - name: nt
+        type: string
+        description: "New next key threshold"
+        constraints: "Must be valid threshold expression"
+      - name: n
+        type: string[]
+        description: "New next key digests"
+        constraints: "Must be valid CESR-qualified digests"
+      - name: bt
+        type: string
+        description: "New witness threshold"
+        constraints: "Must be <= total witness count after adds/removes"
+      - name: br
+        type: string[]
+        description: "Witnesses to remove"
+        constraints: "Must be current witnesses"
+      - name: ba
+        type: string[]
+        description: "Witnesses to add"
+        constraints: "Must be valid AID prefixes"
+      - name: a
+        type: object[]
+        description: "Anchored seals"
+        constraints: "Valid seal structures"
+    serialization:
+      - format: cesr
+      - format: json
+      - format: cbor
+      - format: msgpack
+
+  - name: InteractionEvent
+    type: key-event
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Must match version regex"
+      - name: t
+        type: string
+        description: "Event type identifier"
+        constraints: "Must be 'ixn'"
+      - name: d
+        type: string
+        description: "SAID"
+        constraints: "Must be valid CESR-qualified digest"
+      - name: i
+        type: string
+        description: "AID prefix"
+        constraints: "Must match prefix from inception event"
+      - name: s
+        type: string
+        description: "Sequence number"
+        constraints: "Must be prior sn + 1"
+      - name: p
+        type: string
+        description: "Prior event SAID"
+        constraints: "Must match SAID of event at sn - 1"
+      - name: a
+        type: object[]
+        description: "Anchored seals (TEL seals, delegation seals, etc.)"
+        constraints: "Valid seal structures"
+    serialization:
+      - format: cesr
+      - format: json
+      - format: cbor
+      - format: msgpack
+
+  - name: NonTransferableReceipt
+    type: receipt
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Must match version regex"
+      - name: t
+        type: string
+        description: "Event type identifier"
+        constraints: "Must be 'rct' (non-transferable receipt — witnesses MUST be non-transferable)"
+      - name: d
+        type: string
+        description: "SAID of the RECEIPTED EVENT (not the receipt itself)"
+        constraints: "Must match the receipted event's d field"
+      - name: i
+        type: string
+        description: "AID prefix of the receipted event's controller"
+        constraints: "Must be valid AID prefix"
+      - name: s
+        type: string
+        description: "Sequence number of receipted event (hex)"
+        constraints: "Must match receipted event's sn"
+    serialization:
+      - format: cesr
+      - format: json
+
+  - name: KeyState
+    type: key-state
+    fields:
+      - name: i
+        type: string
+        description: "AID prefix"
+        constraints: "Must be valid AID"
+      - name: s
+        type: string
+        description: "Current sequence number"
+        constraints: "Must match latest applied event"
+      - name: d
+        type: string
+        description: "SAID of latest event"
+        constraints: "Must be valid digest"
+      - name: k
+        type: string[]
+        description: "Current signing keys"
+        constraints: "Must be CESR-qualified public keys"
+      - name: kt
+        type: string
+        description: "Current signing threshold"
+        constraints: "Must be valid threshold"
+      - name: n
+        type: string[]
+        description: "Next key digests"
+        constraints: "Must be CESR-qualified digests"
+      - name: nt
+        type: string
+        description: "Next key threshold"
+        constraints: "Must be valid threshold"
+      - name: b
+        type: string[]
+        description: "Current witness list"
+        constraints: "Must be valid AID prefixes"
+      - name: bt
+        type: string
+        description: "Current witness threshold"
+        constraints: "Must be <= witness count"
+    serialization:
+      - format: json
+
+# --- Runtime Recommendation ---
+runtime_recommendation:
+  language: rust
+  library: "keriox + cesride"
+  rationale: >-
+    Serverless witness on Lambda requires Rust — keripy depends on LMDB
+    (memory-mapped files incompatible with Lambda's ephemeral filesystem)
+    and HIO (long-running async incompatible with request-response model).
+    Rust compiles to Lambda custom runtime (provided.al2023, arm64/Graviton)
+    with <50ms cold starts. keriox provides complete witness support including
+    KEL validation and receipt generation. cesride provides CESR primitive
+    operations (Verfer, Diger, Signer, Salter).

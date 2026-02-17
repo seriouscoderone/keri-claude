@@ -2,17 +2,31 @@
 
 Maps each C2 stack type to its required/optional C3 domain components, data structures, state mappings, and runtime recommendation.
 
+## Runtime Selection Guide
+
+The runtime recommendation depends on the deployment model chosen at C2:
+
+| Deployment Model | Recommended Runtime | Skills to Use |
+|---|---|---|
+| **Serverless (Lambda)** | Rust / keriox + cesride | `/keriox-skill`, `/cesride-skill`, `/parside-skill` |
+| **Container (ECS/Fargate)** | Python / keripy (KERIA) | `/keripy-skill` |
+| **Frontend (S3/CDN)** | TypeScript / signify-ts | `/signify-ts-skill` |
+
+**Important:** If the C2 stack uses Lambda (serverless), Python/keripy is NOT recommended because keripy depends on LMDB (memory-mapped files incompatible with Lambda's ephemeral filesystem) and HIO (long-running async orchestration incompatible with Lambda's request-response model). Use Rust/keriox or a custom Rust implementation built on cesride primitives instead.
+
+Always verify the chosen runtime supports required operations by invoking the relevant implementation skill.
+
 ---
 
 ## Pattern Overview
 
 | Stack Type | Required Components | Optional Components | Recommended Runtime |
 |---|---|---|---|
-| witness-pool | Event Log Engine, Witness Service | OOBI Resolver | Python / keripy |
-| watcher-node | Event Log Engine, Watcher Service | OOBI Resolver | Python / keripy or Rust / keriox |
-| agent-service | Event Log Engine, KERI Agent, OOBI Resolver | Delegator, ACDC Registry | Python / keripy |
-| acdc-registry | Event Log Engine, ACDC Registry + TEL | OOBI Resolver | Python / keripy |
-| judge-jury | Judge Service, Jury Service | Watcher Service | Python / keripy |
+| witness-pool | Event Log Engine, Witness Service | OOBI Resolver | Rust / keriox (serverless) or Python / keripy (container) |
+| watcher-node | Event Log Engine, Watcher Service | OOBI Resolver | Rust / keriox (serverless) or Python / keripy (container) |
+| agent-service | Event Log Engine, KERI Agent, OOBI Resolver | Delegator, ACDC Registry | Rust / keriox (serverless) or Python / keripy via KERIA (container) |
+| acdc-registry | Event Log Engine, ACDC Registry + TEL | OOBI Resolver | Rust / keriox (serverless) or Python / keripy (container) |
+| judge-jury | Judge Service, Jury Service | Watcher Service | Rust / keriox (serverless) or Python / keripy (container) |
 | frontend | (none — thin client, signing at the edge) | — | TypeScript / signify-ts |
 
 ---
@@ -48,9 +62,8 @@ Maps each C2 stack type to its required/optional C3 domain components, data stru
 
 ### Runtime
 
-- **Language:** Python
-- **Library:** keripy
-- **Rationale:** Witness requires full KEL validation. keripy is the reference implementation with complete witness support and KAACE algorithm. Long-running process suits ECS Fargate.
+- **Serverless (Lambda):** Rust / keriox + cesride — Use `/keriox-skill` and `/cesride-skill` for API reference. keripy is incompatible with Lambda (LMDB + HIO require persistent processes). Rust compiles to Lambda custom runtime (`provided.al2023`, arm64/Graviton) with <50ms cold starts.
+- **Container (Fargate):** Python / keripy — Use `/keripy-skill` for API reference. keripy is the reference implementation with complete witness support and KAACE algorithm.
 
 ---
 
@@ -78,16 +91,15 @@ Maps each C2 stack type to its required/optional C3 domain components, data stru
 
 | Component State | AWS Resource (from stack.yaml) | Description |
 |----------------|-------------------------------|-------------|
-| KEL store | WatcherDBCluster (Aurora) | First-seen event storage per AID |
-| Duplicity evidence | WatcherDBCluster (Aurora) | All versions of duplicitous events |
-| First-seen timestamps | WatcherDBCluster (Aurora) | Timestamp of first observation |
+| KEL store | WatcherKELTable (DynamoDB) | First-seen event storage per AID |
+| Duplicity evidence | WatcherDuplicityTable (DynamoDB) | All versions of duplicitous events |
+| First-seen index | WatcherFirstSeenTable (DynamoDB) | Atomic first-seen via conditional writes (`attribute_not_exists`) |
 | Duplicity alerts | WatcherAlertTopic (SNS) | Real-time duplicity notifications |
 
 ### Runtime
 
-- **Language:** Python or Rust
-- **Library:** keripy or keriox
-- **Rationale:** Watcher validation is stateless and event-driven — suits Lambda. keripy for full compatibility; keriox for performance-critical deployments. Rust/keriox compiles to Lambda custom runtime.
+- **Serverless (Lambda):** Rust / keriox + cesride — Use `/keriox-skill` and `/cesride-skill`. Watcher validation is stateless and event-driven — ideal for Lambda. DynamoDB conditional writes provide first-seen atomicity without relational databases.
+- **Container (Fargate):** Python / keripy — Use `/keripy-skill`. keripy has full watcher support with LMDB-based first-seen tracking.
 
 ---
 
@@ -119,17 +131,16 @@ Maps each C2 stack type to its required/optional C3 domain components, data stru
 
 | Component State | AWS Resource (from stack.yaml) | Description |
 |----------------|-------------------------------|-------------|
-| KEL store | AgentDB (RDS PostgreSQL) | Event logs for all managed AIDs |
-| ACDC store | AgentDB (RDS PostgreSQL) | Issued and received credentials |
-| Wallet data | AgentDB (RDS PostgreSQL) | Agent state, contact book, settings |
-| Key material | AgentSecrets (Secrets Manager) | Encrypted private keys (or key wrapping material) |
-| Async operations | AgentQueue (SQS) | Credential issuance, delegation workflows |
+| KEL store | AgentKELTable (DynamoDB) | Event logs for all managed AIDs |
+| ACDC store | AgentWalletTable (DynamoDB) | Issued and received credentials |
+| Agent state | AgentStateTable (DynamoDB) | Tenant index, AID metadata, configuration |
+| Key material | AgentKeySecret (Secrets Manager + KMS) | Encrypted private keys (per-tenant secrets) |
+| Async operations | AgentAsyncQueue (SQS) | Credential issuance, delegation workflows |
 
 ### Runtime
 
-- **Language:** Python
-- **Library:** keripy (backend via KERIA)
-- **Rationale:** KERIA is the production cloud agent built on keripy. Multi-tenant, falcon REST framework. Signify protocol for edge signing.
+- **Serverless (Lambda):** Rust / keriox + cesride — Use `/keriox-skill` and `/cesride-skill`. This is NOT KERIA — it's a ground-up serverless KERI agent. KERIA depends on LMDB and HIO which require persistent processes. The Rust agent reimplements AID lifecycle, credential ops, and witness coordination for Lambda's request-response model. Use `/keri-spec` to verify protocol compliance for the reimplemented operations.
+- **Container (Fargate):** Python / keripy via KERIA — Use `/keripy-skill`. KERIA is the production cloud agent. Multi-tenant, falcon REST framework. Signify protocol for edge signing.
 
 ---
 
@@ -165,9 +176,8 @@ Maps each C2 stack type to its required/optional C3 domain components, data stru
 
 ### Runtime
 
-- **Language:** Python
-- **Library:** keripy
-- **Rationale:** ACDC issuance requires full KEL + TEL support. keripy has the most complete ACDC implementation including schema validation and graduated disclosure.
+- **Serverless (Lambda):** Rust / keriox + cesride — Use `/keriox-skill`, `/cesride-skill`, and `/acdc-spec` for TEL/ACDC structure details. ACDC issuance requires KEL + TEL support. keriox has TEL support via teliox. Use `/acdc-spec` to verify graduated disclosure implementation.
+- **Container (Fargate):** Python / keripy — Use `/keripy-skill`. keripy has the most complete ACDC implementation including schema validation and graduated disclosure.
 
 ---
 
@@ -199,9 +209,8 @@ Maps each C2 stack type to its required/optional C3 domain components, data stru
 
 ### Runtime
 
-- **Language:** Python
-- **Library:** keripy
-- **Rationale:** Judge/jury requires cryptographic proof verification. keripy provides all needed primitives. Step Functions orchestrate multi-step consensus.
+- **Serverless (Lambda + Step Functions):** Rust / keriox + cesride — Use `/keriox-skill` and `/cesride-skill`. Step Functions orchestrate multi-watcher evidence collection. Lambda handles cryptographic proof verification.
+- **Container (Fargate):** Python / keripy — Use `/keripy-skill`. keripy provides all needed primitives for proof verification.
 
 ---
 
@@ -225,5 +234,5 @@ Handled by signify-ts library — no domain-level data structures to define.
 ### Runtime
 
 - **Language:** TypeScript
-- **Library:** signify-ts
+- **Library:** signify-ts — Use `/signify-ts-skill` for API reference (SignifyClient, identifier lifecycle, credential operations, CESR primitives in TypeScript)
 - **Rationale:** Browser-based signing at the edge. signify-ts handles all cryptographic operations client-side. Keys never leave the browser.

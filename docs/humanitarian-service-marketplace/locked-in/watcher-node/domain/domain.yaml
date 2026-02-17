@@ -1,0 +1,466 @@
+version: "1.0"
+
+# --- Parent references ---
+domain:
+  stack: "locked-in-watcher"
+  system: "locked-in"
+  ecosystem: "humanitarian-service-marketplace"
+
+# --- Components ---
+components:
+  - name: watcher-event-log-engine
+    type: event-log-engine
+    purpose: >-
+      Validates events for correctness before recording first-seen. The watcher
+      uses this to verify event structure, signatures, and sequence monotonicity
+      to prevent storing invalid events as first-seen.
+    operations:
+      - name: validate_event
+        description: >-
+          Validate incoming key event against prior key state. Same validation
+          as the witness Event Log Engine — signatures, sequence, SAID integrity.
+        inputs: [key_event, prior_key_state]
+        outputs: [validation_result]
+      - name: compute_key_state
+        description: >-
+          Replay stored KEL to compute current key state for a watched AID.
+        inputs: [prefix]
+        outputs: [key_state]
+      - name: apply_event
+        description: >-
+          Apply a validated event to prior key state (pure function).
+        inputs: [prior_key_state, key_event]
+        outputs: [key_state]
+      - name: deserialize_event
+        description: >-
+          Parse raw CESR-encoded bytes into a structured key event.
+        inputs: [raw_bytes]
+        outputs: [key_event]
+    state:
+      - name: kel_store
+        storage_mapping: WatcherKELTable
+        description: >-
+          KEL storage for watched AIDs. Keyed by (prefix, sn), GSI on SAID.
+    invariants:
+      - "Sequence numbers MUST increment by exactly 1"
+      - "Rotated-in keys MUST match prior event's next key digests"
+      - "Signatures MUST verify against current signing keys at threshold"
+      - "SAID MUST equal digest of serialized event with d as placeholder"
+      - "Version string MUST be well-formed"
+    failure_modes:
+      - condition: "Invalid event received from witness sync"
+        impact: "Event not stored — watcher does not propagate invalid events"
+        recovery: "Log validation error; flag witness as potentially unreliable"
+      - condition: "Sequence gap in synced KEL"
+        impact: "Incomplete key state — cannot validate subsequent events"
+        recovery: "Request missing events from alternate witnesses"
+    observability:
+      metrics:
+        - events_validated_total
+        - validation_failures_total
+        - kel_depth_per_watched_aid
+      logs:
+        - event_validated
+        - validation_failed
+      traces:
+        - validate_event_span
+        - compute_key_state_span
+    dependencies: []
+
+  - name: watcher-duplicity-service
+    type: watcher-service
+    purpose: >-
+      Monitors watched AIDs for duplicity by maintaining first-seen records and
+      detecting conflicting events. Operates in two modes: on-demand response
+      (processes events when queried) and periodic audit (syncs KELs from
+      witnesses every 30 minutes to catch gaps and detect duplicity).
+    operations:
+      - name: receive_event
+        description: >-
+          Process an incoming event for a watched AID. Check first-seen via
+          DynamoDB conditional write. If first-seen, store and validate. If
+          conflict, record duplicity evidence and alert.
+          Returns: FirstSeen | AlreadySeen | Duplicitous
+        inputs: [key_event]
+        outputs: [receive_result]
+      - name: query_duplicity
+        description: >-
+          Return all versions seen for a given (prefix, sn). Used by proof
+          requesters and judge services to evaluate AID trustworthiness.
+        inputs: [prefix, sn]
+        outputs: [duplicity_evidence]
+      - name: query_kel
+        description: >-
+          Return the first-seen KEL for a given AID prefix. Used by proof
+          requesters to verify presence attestation event chains.
+        inputs: [prefix]
+        outputs: [key_event_log]
+      - name: sync_with_witnesses
+        description: >-
+          Periodic audit operation (every 30 minutes via EventBridge schedule).
+          For each watched AID, pull latest KEL from known witnesses. Compare
+          with stored first-seen records. Detect gaps, inconsistencies, and
+          duplicity across the witness pool.
+        inputs: [watched_aid_list, witness_endpoints]
+        outputs: [sync_result]
+      - name: alert_duplicity
+        description: >-
+          Publish duplicity evidence to SNS topic for downstream consumers
+          (agent services, proof requesters, governance bodies).
+        inputs: [duplicity_evidence]
+        outputs: [alert_result]
+    state:
+      - name: kel_store
+        storage_mapping: WatcherKELTable
+        description: >-
+          First-seen event storage per watched AID. Keyed by (prefix, sn).
+      - name: first_seen_index
+        storage_mapping: WatcherFirstSeenTable
+        description: >-
+          Atomic first-seen tracking via DynamoDB conditional writes
+          (attribute_not_exists). Keyed by event_said. TTL for auto-expiry
+          after data retention period (365 days).
+      - name: duplicity_evidence
+        storage_mapping: WatcherDuplicityTable
+        description: >-
+          All versions of duplicitous events. Keyed by (prefix, detection_time).
+          Preserves full evidence chain for auditability.
+      - name: duplicity_alerts
+        storage_mapping: WatcherAlertTopic
+        description: >-
+          SNS topic for real-time duplicity notifications. Multi-protocol
+          delivery (email, webhook, SQS, Lambda).
+    invariants:
+      - "First-seen recording is immutable — cannot be overwritten"
+      - "All versions of a duplicitous event MUST be preserved as evidence"
+      - "Duplicity alerts MUST include both (or all) conflicting versions with SAIDs"
+      - "Watchers MUST NOT sign receipts — only witnesses receipt events"
+      - "Periodic sync MUST compare witness KELs against stored first-seen records"
+      - "Sync discrepancies between witnesses MUST be treated as potential duplicity"
+      - "First-seen policy is strict — late duplicates are rejected and flagged"
+    failure_modes:
+      - condition: "Duplicity detected — conflicting events at same (prefix, sn)"
+        impact: "AID trustworthiness degraded; downstream proof verification affected"
+        recovery: "Record all variants; publish alert to SNS; return Duplicitous"
+      - condition: "Witness unreachable during periodic sync"
+        impact: "Incomplete audit — gaps may not be detected until next sync"
+        recovery: "Log warning; retry on next scheduled sync; alert if persistent"
+      - condition: "False duplicity from network partition"
+        impact: "Premature duplicity alert; unnecessary trust degradation"
+        recovery: "Verify with multiple witnesses before confirming duplicity"
+      - condition: "Storage approaching retention limit"
+        impact: "Old first-seen records auto-expire via TTL"
+        recovery: "TTL handles cleanup; no manual intervention needed"
+    observability:
+      metrics:
+        - events_received_total
+        - first_seen_stored_total
+        - duplicity_detected_total
+        - sync_cycles_completed_total
+        - sync_discrepancies_found_total
+        - alerts_published_total
+        - watched_aids_count
+      logs:
+        - event_received
+        - first_seen_stored
+        - duplicity_detected
+        - sync_started
+        - sync_completed
+        - sync_discrepancy_found
+        - alert_published
+      traces:
+        - receive_event_span
+        - sync_with_witnesses_span
+        - alert_duplicity_span
+    dependencies:
+      - watcher-event-log-engine
+
+  - name: watcher-oobi-resolver
+    type: oobi-resolver
+    purpose: >-
+      Discovers and caches witness endpoint information for periodic KEL sync.
+      Resolves OOBIs to find witness endpoints for each watched AID.
+    operations:
+      - name: resolve
+        description: >-
+          Fetch OOBI URL, parse endpoint descriptors, verify against KEL,
+          and cache the resolved endpoint.
+        inputs: [oobi_url]
+        outputs: [resolved_endpoint]
+      - name: discover_witnesses
+        description: >-
+          Look up witness endpoints for an AID from its inception event's
+          witness list (b field). Resolves each witness AID via OOBI.
+        inputs: [aid_prefix]
+        outputs: [witness_endpoints]
+      - name: refresh_cache
+        description: >-
+          Re-resolve stale OOBI entries. Triggered when sync_with_witnesses
+          encounters connection failures.
+        inputs: [stale_entries]
+        outputs: [refresh_result]
+    state:
+      - name: oobi_cache
+        storage_mapping: WatcherKELTable
+        description: >-
+          OOBI resolution cache stored alongside KEL data. Keyed by witness AID.
+          TTL-managed for freshness.
+    invariants:
+      - "OOBI resolution MUST NOT trust endpoints without verifying the KEL"
+      - "Cached endpoints MUST have TTL; stale entries re-resolved on next sync"
+      - "Failed resolutions MUST NOT evict valid cached entries"
+    failure_modes:
+      - condition: "OOBI URL unreachable"
+        impact: "Cannot discover witness endpoint for sync"
+        recovery: "Use cached endpoint if available; log warning; retry on next sync"
+      - condition: "OOBI endpoint returns invalid KEL"
+        impact: "Witness endpoint untrusted"
+        recovery: "Reject resolution; try alternate OOBI URLs"
+    observability:
+      metrics:
+        - oobi_resolutions_total
+        - oobi_resolution_failures_total
+        - cache_hits_total
+        - cache_misses_total
+      logs:
+        - oobi_resolved
+        - oobi_resolution_failed
+        - cache_refreshed
+      traces:
+        - resolve_oobi_span
+    dependencies: []
+
+# --- Data Structures ---
+data_structures:
+  - name: InceptionEvent
+    type: key-event
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Must match version regex"
+      - name: t
+        type: string
+        description: "Event type"
+        constraints: "Must be 'icp'"
+      - name: d
+        type: string
+        description: "SAID"
+        constraints: "Valid CESR-qualified digest"
+      - name: i
+        type: string
+        description: "AID prefix"
+        constraints: "Must equal d for self-addressing AIDs"
+      - name: s
+        type: string
+        description: "Sequence number"
+        constraints: "Must be '0'"
+      - name: kt
+        type: string
+        description: "Signing threshold"
+        constraints: "Valid threshold expression"
+      - name: k
+        type: string[]
+        description: "Current signing keys"
+        constraints: "CESR-qualified public keys"
+      - name: nt
+        type: string
+        description: "Next key threshold"
+        constraints: "Valid threshold expression"
+      - name: n
+        type: string[]
+        description: "Next key digests"
+        constraints: "CESR-qualified digests"
+      - name: bt
+        type: string
+        description: "Witness threshold"
+        constraints: "<= witness count"
+      - name: b
+        type: string[]
+        description: "Witness AIDs"
+        constraints: "Valid AID prefixes"
+      - name: c
+        type: string[]
+        description: "Configuration traits"
+        constraints: "Valid trait codes"
+      - name: a
+        type: object[]
+        description: "Anchored seals"
+        constraints: "Valid seal structures"
+    serialization:
+      - format: cesr
+      - format: json
+      - format: cbor
+      - format: msgpack
+
+  - name: RotationEvent
+    type: key-event
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Must match version regex"
+      - name: t
+        type: string
+        description: "Event type"
+        constraints: "Must be 'rot'"
+      - name: d
+        type: string
+        description: "SAID"
+        constraints: "Valid CESR-qualified digest"
+      - name: i
+        type: string
+        description: "AID prefix"
+        constraints: "Must match inception prefix"
+      - name: s
+        type: string
+        description: "Sequence number"
+        constraints: "Prior sn + 1"
+      - name: p
+        type: string
+        description: "Prior event SAID"
+        constraints: "Must match SAID of event at sn - 1"
+      - name: kt
+        type: string
+        description: "New signing threshold"
+        constraints: "Valid threshold"
+      - name: k
+        type: string[]
+        description: "New signing keys"
+        constraints: "Digests must match prior n field"
+      - name: nt
+        type: string
+        description: "New next key threshold"
+        constraints: "Valid threshold"
+      - name: n
+        type: string[]
+        description: "New next key digests"
+        constraints: "CESR-qualified digests"
+      - name: bt
+        type: string
+        description: "New witness threshold"
+        constraints: "<= total witness count after changes"
+      - name: br
+        type: string[]
+        description: "Witnesses to remove"
+        constraints: "Must be current witnesses"
+      - name: ba
+        type: string[]
+        description: "Witnesses to add"
+        constraints: "Valid AID prefixes"
+      - name: a
+        type: object[]
+        description: "Anchored seals"
+        constraints: "Valid seal structures"
+    serialization:
+      - format: cesr
+      - format: json
+      - format: cbor
+      - format: msgpack
+
+  - name: InteractionEvent
+    type: key-event
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Must match version regex"
+      - name: t
+        type: string
+        description: "Event type"
+        constraints: "Must be 'ixn'"
+      - name: d
+        type: string
+        description: "SAID"
+        constraints: "Valid CESR-qualified digest"
+      - name: i
+        type: string
+        description: "AID prefix"
+        constraints: "Must match inception prefix"
+      - name: s
+        type: string
+        description: "Sequence number"
+        constraints: "Prior sn + 1"
+      - name: p
+        type: string
+        description: "Prior event SAID"
+        constraints: "Must match SAID of event at sn - 1"
+      - name: a
+        type: object[]
+        description: "Anchored seals"
+        constraints: "Valid seal structures"
+    serialization:
+      - format: cesr
+      - format: json
+      - format: cbor
+      - format: msgpack
+
+  - name: Receipt
+    type: receipt
+    fields:
+      - name: v
+        type: string
+        description: "Version string"
+        constraints: "Must match version regex"
+      - name: t
+        type: string
+        description: "Event type"
+        constraints: "'vrc' (transferable) or 'rct' (non-transferable)"
+      - name: d
+        type: string
+        description: "SAID of receipt"
+        constraints: "Valid CESR-qualified digest"
+      - name: i
+        type: string
+        description: "Receipted event controller AID"
+        constraints: "Valid AID prefix"
+      - name: s
+        type: string
+        description: "Receipted event sequence number"
+        constraints: "Must match receipted event"
+      - name: a
+        type: object
+        description: "Seal referencing receipted event"
+        constraints: "Must contain receipted event SAID"
+    serialization:
+      - format: cesr
+      - format: json
+
+  - name: DuplicityEvidence
+    type: key-event
+    fields:
+      - name: prefix
+        type: string
+        description: "AID prefix of the duplicitous controller"
+        constraints: "Valid AID"
+      - name: sn
+        type: string
+        description: "Sequence number where duplicity was detected"
+        constraints: "Non-negative integer"
+      - name: variants
+        type: object[]
+        description: "All versions of the event at this (prefix, sn)"
+        constraints: "At least 2 entries with different SAIDs"
+      - name: detection_time
+        type: string
+        description: "ISO 8601 timestamp of detection"
+        constraints: "Valid timestamp"
+      - name: source_witnesses
+        type: string[]
+        description: "Witness AIDs that provided the conflicting events"
+        constraints: "Valid AID prefixes"
+    serialization:
+      - format: json
+
+# --- Runtime Recommendation ---
+runtime_recommendation:
+  language: rust
+  library: "keriox + cesride"
+  rationale: >-
+    Serverless watcher on Lambda requires Rust — keripy depends on LMDB and HIO
+    which are incompatible with Lambda. Note: stack.yaml currently specifies
+    python3.12 — this is a C2 update needed. Rust provides stateless event
+    validation and DynamoDB conditional writes for first-seen atomicity.
+    The periodic sync function (every 30 minutes) also runs as a Rust Lambda
+    triggered by EventBridge schedule. keriox provides KEL validation and
+    cesride provides CESR primitive operations.

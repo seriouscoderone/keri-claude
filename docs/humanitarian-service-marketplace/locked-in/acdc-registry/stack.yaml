@@ -136,4 +136,12 @@ outputs:
     value: "{RegistryEventBus.Arn}"
     description: EventBridge bus for issuance/revocation notifications
 
-domain_components: []
+# C2 UPDATE NEEDED: runtime should be Rust Lambda (provided.al2023), not python3.12.
+# keripy LMDB/HIO incompatible with Lambda. See domain/domain.yaml for details.
+domain_components:
+  - name: registry-event-log-engine
+    type: event-log-engine
+  - name: registry-acdc-tel-manager
+    type: acdc-registry
+  - name: registry-oobi-resolver
+    type: oobi-resolver

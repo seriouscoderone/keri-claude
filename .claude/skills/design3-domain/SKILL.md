@@ -212,6 +212,43 @@ For each confirmed component, ask targeted questions based on component type. Re
    > - `data-structures.md` — {size}
    > Updated `stack.yaml` with {N} domain components.
 
+## Available Skills for C3 Design
+
+When designing domain components, **use the skills in this repo** to ground your work in actual KERI protocol knowledge and implementation patterns. Do not guess at KERI behavior — query the relevant skill.
+
+### Specification Skills (Protocol Rules & Invariants)
+
+| Skill | Command | Use For |
+|---|---|---|
+| **keri-spec** | `/keri-spec` | KERI protocol specification — event processing, key state, KEL validation, witness agreement (KAWA/KAACE), delegation, pre-rotation, OOBI discovery. **Use this for all protocol invariants and event structure definitions.** |
+| **cesr-spec** | `/cesr-spec` | CESR encoding specification — code tables, stream parsing, SAID derivation, qualified primitives (qb64/qb2). **Use this for data structure serialization and CESR encoding details.** |
+| **acdc-spec** | `/acdc-spec` | ACDC credential specification — credential construction, schema anchoring, graduated disclosure (partial/selective/full), IPEX exchange, TEL lifecycle. **Use this for ACDC registry and credential-related components.** |
+
+### Implementation Skills (Code Patterns & APIs)
+
+| Skill | Command | Use For |
+|---|---|---|
+| **keriox-skill** | `/keriox-skill` | Rust KERI implementation — keriox_core types, Controller/Identifier SDK, redb database ops, witness/watcher components. **Use this when the runtime is Rust/keriox.** |
+| **cesride-skill** | `/cesride-skill` | Rust CESR primitives — Matter/Indexer traits, Verfer/Diger/Signer/Salter types, Serder/Sadder serialization. **Use this for Rust CESR primitive operations.** |
+| **parside-skill** | `/parside-skill` | Rust CESR stream parser — Message/MessageList types, counter-code group dispatch, cold start detection. **Use this for CESR stream parsing in Rust.** |
+| **keripy-skill** | `/keripy-skill` | Python KERI reference implementation — Hab/Habery, LMDB ops, Python CESR primitives. **Use this when the runtime is Python/keripy.** |
+| **signify-ts-skill** | `/signify-ts-skill` | TypeScript edge signing — SignifyClient, identifier lifecycle, CESR primitives in TS. **Use this for frontend components.** |
+
+### Architecture & Style Skills
+
+| Skill | Command | Use For |
+|---|---|---|
+| **keri-chat** | `/keri-chat` | Query the keri.host knowledge base for spec-grounded answers. **Use this to verify protocol claims, find edge cases, and stress-test designs.** |
+| **keri-style** | `/keri-style` | KERI coding conventions — gerund-agent naming pattern, CESR nomenclature. **Use this when naming components, operations, and data structures.** |
+
+### How to Use Skills During C3
+
+1. **Phase 4 (Component Deep Dive):** Use `/keri-spec` to verify protocol invariants for each component. Use `/keri-chat` to stress-test designs against spec edge cases.
+2. **Phase 5 (Data Structures):** Use `/cesr-spec` for serialization details and field definitions. Use `/acdc-spec` for ACDC/TEL structure details.
+3. **Phase 7 (Invariant Review):** Use `/keri-spec` to ensure all spec-mandated invariants are captured. Use `/keri-chat` as devil's advocate.
+4. **Phase 8 (Runtime Recommendation):** Use the appropriate implementation skill (`/keriox-skill`, `/keripy-skill`, `/signify-ts-skill`) to verify the chosen runtime supports the required operations.
+5. **Phase 9 (Output):** Use `/keri-style` for naming conventions in domain.yaml component and operation names.
+
 ## Key Principles
 
 ### C3 Must Be Deterministic and Spec-Aligned (Invariant 4)
