@@ -21,6 +21,25 @@ KERI coding style guide implementing the "Domain-Specific Gerund-Agent Pattern w
     └── examples.md
 ```
 
+### keriox-skill
+
+Rust KERI protocol implementation (keriox) distilled into a compact skill. Covers the full keriox workspace: core event types, processor pipeline, escrow system, database traits (redb), transport abstraction, controller/witness/watcher components, and TEL (teliox). Defers protocol semantics to keri-spec/cesr-spec/acdc-spec.
+
+**Use for:** Working with keriox imports, keriox_core types, witness/watcher components, or Rust TEL processing.
+
+**Activates:** Automatically when Claude detects keriox-related Rust code.
+
+```
+.claude/skills/keriox-skill/
+├── SKILL.md
+└── references/
+    ├── api.md
+    ├── types.md
+    ├── patterns.md
+    ├── components.md
+    └── errors.md
+```
+
 ### keri-blog
 
 Blog writing skill for [KERI.host](https://keri.host). Handles creating, editing, and reviewing blog posts in the project's distinctive voice — conversational, anti-hype, grounded in real architecture.
@@ -81,6 +100,16 @@ Documents are baked into the template at synth time. The stack deploys them to S
 cd infrastructure
 ./scripts/publish-template.sh keri-host-chat-stack
 ```
+
+## Recommended Companion Skills
+
+When using the Rust KERI skills (keriox-skill, cesride-skill, parside-skill), consider also installing the community [Rust Best Practices](https://skills.sh/apollographql/skills/rust-best-practices) skill in your project:
+
+```bash
+claude install-skill https://skills.sh/apollographql/skills/rust-best-practices
+```
+
+This adds general Rust idioms, error handling patterns, and code quality guidance that complements the KERI-specific domain knowledge.
 
 ## Contributing
 
