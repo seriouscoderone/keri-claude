@@ -57,7 +57,7 @@ export const handler = async (event: {
     return;
   }
 
-  const dimension = embeddingDimension || '3072';
+  const dimension = embeddingDimension || '1024';
   console.log('Initializing database', { resourceArn, database, dimension });
 
   for (const sql of sqlStatements(dimension)) {

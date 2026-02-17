@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 STAGING_DIR="$REPO_ROOT/scripts/staging"
 
-AWS_OPTS="--profile ${AWS_PROFILE:-personal} --region ${AWS_REGION:-us-west-2}"
+AWS_OPTS="--profile ${AWS_PROFILE:-personal} --region ${AWS_REGION:-us-east-1}"
 
 if [ ! -d "$STAGING_DIR" ]; then
   echo "Error: staging directory not found at $STAGING_DIR"

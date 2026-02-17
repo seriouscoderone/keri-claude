@@ -8,8 +8,8 @@ MARKDOWN_DIR="$SCRIPT_DIR/markdown"
 VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python3"
 BASE="https://raw.githubusercontent.com/SmithSamuelM/Papers/master"
 
-IMAGES_DIR="$STAGING_DIR"
-mkdir -p "$STAGING_DIR" "$MARKDOWN_DIR"
+IMAGES_DIR="$STAGING_DIR/images"
+mkdir -p "$STAGING_DIR" "$MARKDOWN_DIR" "$IMAGES_DIR"
 
 # --- Download phase ---
 

@@ -16,12 +16,12 @@ CDK_OUT="/tmp/keri-chat-cdk-out"
 if [ $# -lt 1 ]; then
   echo "Usage: $0 <s3-bucket-name> [region]"
   echo "  s3-bucket-name: Public S3 bucket for template and assets"
-  echo "  region: AWS region (default: us-west-2)"
+  echo "  region: AWS region (default: us-east-1)"
   exit 1
 fi
 
 BUCKET="$1"
-REGION="${2:-us-west-2}"
+REGION="${2:-us-east-1}"
 ASSET_PREFIX="latest"
 TEMPLATE_KEY="keri-chat/template.yaml"
 

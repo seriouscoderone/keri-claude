@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
-  StreamableHTTPServerTransport,
-} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+  WebStandardStreamableHTTPServerTransport,
+} from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { z } from 'zod';
 
 // --- Types ---
@@ -183,7 +183,7 @@ export async function handler(event: {
     },
   );
 
-  const transport = new StreamableHTTPServerTransport({
+  const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless
     enableJsonResponse: true,
   });

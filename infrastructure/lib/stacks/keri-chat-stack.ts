@@ -7,7 +7,6 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as lambdaBase from 'aws-cdk-lib/aws-lambda';
 import * as cr from 'aws-cdk-lib/custom-resources';
-import * as bedrock from 'aws-cdk-lib/aws-bedrock';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
@@ -99,7 +98,7 @@ export class KeriChatStack extends cdk.Stack {
 
     const embeddingDimension = new cdk.CfnParameter(this, 'EmbeddingDimension', {
       type: 'String',
-      default: '3072',
+      default: '1024',
       allowedValues: [...ALLOWED_DIMENSIONS],
       description: 'Embedding vector dimension (must be compatible with chosen model)',
     });
@@ -277,8 +276,17 @@ export class KeriChatStack extends cdk.Stack {
     // =================================================================
 
     const documentBucket = new s3.Bucket(this, 'DocumentBucket', {
-      bucketName: `${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}-keri-chat-documents`,
+      // Let CFN generate unique bucket name to avoid S3 409 conflicts on redeploy
       versioned: true,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+    });
+
+    // Separate bucket for multimodal supplemental storage (extracted media)
+    // Must be different from document source bucket to avoid re-ingestion loops
+    const multimodalStorageBucket = new s3.Bucket(this, 'MultimodalStorageBucket', {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
@@ -288,13 +296,26 @@ export class KeriChatStack extends cdk.Stack {
     // Deploy KERI documents from staging/ into the document bucket
     const documentDeployment = new s3deploy.BucketDeployment(this, 'DocumentDeployment', {
       sources: [s3deploy.Source.asset(path.join(__dirname, '../../../scripts/staging'), {
-        exclude: ['.DS_Store', 'distill-*', '*.py'],
+        exclude: ['.DS_Store', 'distill-*', '*.py', 'images', 'images/*'],
       })],
       destinationBucket: documentBucket,
       prune: false,
       memoryLimit: 3008,
       ephemeralStorageSize: cdk.Size.mebibytes(1024),
     });
+
+    // Deploy images into the multimodal storage bucket (separate from documents)
+    const imagesPath = path.join(__dirname, '../../../scripts/staging/images');
+    if (fs.existsSync(imagesPath)) {
+      const imageDeployment = new s3deploy.BucketDeployment(this, 'ImageDeployment', {
+        sources: [s3deploy.Source.asset(imagesPath, {
+          exclude: ['.DS_Store'],
+        })],
+        destinationBucket: multimodalStorageBucket,
+        prune: false,
+      });
+      imageDeployment.node.addDependency(documentDeployment);
+    }
 
     // =================================================================
     // 5. Bedrock KB IAM role — S3 + RDS + Bedrock model access
@@ -306,6 +327,7 @@ export class KeriChatStack extends cdk.Stack {
     });
 
     documentBucket.grantReadWrite(kbRole);
+    multimodalStorageBucket.grantReadWrite(kbRole);
 
     kbRole.addToPolicy(
       new iam.PolicyStatement({
@@ -341,10 +363,11 @@ export class KeriChatStack extends cdk.Stack {
     );
 
     // =================================================================
-    // 6. Bedrock Knowledge Base — vector config pointing at Aurora
+    // 6. Bedrock Knowledge Base — via SDK custom resource (bypasses
+    //    CFN handler which doesn't support Nova multimodal embeddings)
     // =================================================================
 
-    const knowledgeBase = new bedrock.CfnKnowledgeBase(this, 'KnowledgeBase', {
+    const kbCreateParams = {
       name: 'keri-chat-knowledge-base',
       description: 'KERI ecosystem chat knowledge base',
       roleArn: kbRole.roleArn,
@@ -352,12 +375,17 @@ export class KeriChatStack extends cdk.Stack {
         type: 'VECTOR',
         vectorKnowledgeBaseConfiguration: {
           embeddingModelArn,
+          embeddingModelConfiguration: {
+            bedrockEmbeddingModelConfiguration: {
+              dimensions: cdk.Token.asNumber(embeddingDimension.valueAsString),
+            },
+          },
           supplementalDataStorageConfiguration: {
-            supplementalDataStorageLocations: [
+            storageLocations: [
               {
-                supplementalDataStorageLocationType: 'S3',
+                type: 'S3',
                 s3Location: {
-                  uri: documentBucket.s3UrlForObject(),
+                  uri: multimodalStorageBucket.s3UrlForObject(),
                 },
               },
             ],
@@ -379,42 +407,111 @@ export class KeriChatStack extends cdk.Stack {
           },
         },
       },
+    };
+
+    const knowledgeBase = new cr.AwsCustomResource(this, 'KnowledgeBase', {
+      onCreate: {
+        service: 'BedrockAgent',
+        action: 'createKnowledgeBase',
+        parameters: kbCreateParams,
+        physicalResourceId: cr.PhysicalResourceId.fromResponse('knowledgeBase.knowledgeBaseId'),
+      },
+      onUpdate: {
+        service: 'BedrockAgent',
+        action: 'updateKnowledgeBase',
+        parameters: {
+          knowledgeBaseId: new cr.PhysicalResourceIdReference(),
+          ...kbCreateParams,
+        },
+        physicalResourceId: cr.PhysicalResourceId.fromResponse('knowledgeBase.knowledgeBaseId'),
+      },
+      onDelete: {
+        service: 'BedrockAgent',
+        action: 'deleteKnowledgeBase',
+        parameters: {
+          knowledgeBaseId: new cr.PhysicalResourceIdReference(),
+        },
+        ignoreErrorCodesMatching: 'ResourceNotFoundException|ValidationException|AccessDeniedException',
+      },
+      policy: cr.AwsCustomResourcePolicy.fromStatements([
+        new iam.PolicyStatement({
+          actions: [
+            'bedrock:CreateKnowledgeBase',
+            'bedrock:UpdateKnowledgeBase',
+            'bedrock:DeleteKnowledgeBase',
+          ],
+          resources: ['*'],
+        }),
+        new iam.PolicyStatement({
+          actions: ['iam:PassRole'],
+          resources: [kbRole.roleArn],
+        }),
+      ]),
     });
+
+    const knowledgeBaseId = knowledgeBase.getResponseField('knowledgeBase.knowledgeBaseId');
 
     // Ensure IAM policy and DB initialization complete before KB validates RDS access.
     // The KB validates the Aurora connection at creation time, requiring both the
     // Writer instance (created by dbInit's dependency on cluster) and the schema.
     const defaultPolicy = kbRole.node.findChild('DefaultPolicy').node.defaultChild as cdk.CfnResource;
-    knowledgeBase.addDependency(defaultPolicy);
+    knowledgeBase.node.addDependency(defaultPolicy);
     knowledgeBase.node.addDependency(dbInitResource);
 
     // =================================================================
     // 7. Bedrock Data Source — hierarchical chunking (1500/300/60)
     // =================================================================
 
-    const dataSource = new bedrock.CfnDataSource(this, 'DataSource', {
-      name: 'keri-docs',
-      description: 'KERI specification and documentation source',
-      knowledgeBaseId: knowledgeBase.attrKnowledgeBaseId,
-      dataSourceConfiguration: {
-        type: 'S3',
-        s3Configuration: {
-          bucketArn: documentBucket.bucketArn,
-        },
-      },
-      vectorIngestionConfiguration: {
-        chunkingConfiguration: {
-          chunkingStrategy: 'HIERARCHICAL',
-          hierarchicalChunkingConfiguration: {
-            levelConfigurations: [
-              { maxTokens: 1500 },
-              { maxTokens: 300 },
-            ],
-            overlapTokens: 60,
+    const dataSource = new cr.AwsCustomResource(this, 'DataSource', {
+      onCreate: {
+        service: 'BedrockAgent',
+        action: 'createDataSource',
+        parameters: {
+          knowledgeBaseId,
+          name: 'keri-docs',
+          description: 'KERI specification and documentation source',
+          dataSourceConfiguration: {
+            type: 'S3',
+            s3Configuration: {
+              bucketArn: documentBucket.bucketArn,
+            },
+          },
+          vectorIngestionConfiguration: {
+            chunkingConfiguration: {
+              chunkingStrategy: 'HIERARCHICAL',
+              hierarchicalChunkingConfiguration: {
+                levelConfigurations: [
+                  { maxTokens: 1500 },
+                  { maxTokens: 300 },
+                ],
+                overlapTokens: 60,
+              },
+            },
           },
         },
+        physicalResourceId: cr.PhysicalResourceId.fromResponse('dataSource.dataSourceId'),
       },
+      onDelete: {
+        service: 'BedrockAgent',
+        action: 'deleteDataSource',
+        parameters: {
+          knowledgeBaseId,
+          dataSourceId: new cr.PhysicalResourceIdReference(),
+        },
+        ignoreErrorCodesMatching: 'ResourceNotFoundException|ValidationException|AccessDeniedException',
+      },
+      policy: cr.AwsCustomResourcePolicy.fromStatements([
+        new iam.PolicyStatement({
+          actions: [
+            'bedrock:CreateDataSource',
+            'bedrock:DeleteDataSource',
+          ],
+          resources: ['*'],
+        }),
+      ]),
     });
+
+    const dataSourceId = dataSource.getResponseField('dataSource.dataSourceId');
 
     // =================================================================
     // 8. Ingestion Lambda — triggers StartIngestionJob on daily schedule
@@ -427,8 +524,8 @@ export class KeriChatStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(60),
       memorySize: 256,
       environment: {
-        KNOWLEDGE_BASE_ID: knowledgeBase.attrKnowledgeBaseId,
-        DATA_SOURCE_ID: dataSource.attrDataSourceId,
+        KNOWLEDGE_BASE_ID: knowledgeBaseId,
+        DATA_SOURCE_ID: dataSourceId,
       },
       bundling: {
         externalModules: ['@aws-sdk/*'],
@@ -442,7 +539,7 @@ export class KeriChatStack extends cdk.Stack {
         resources: [
           cdk.Fn.sub(
             'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/${kbId}',
-            { kbId: knowledgeBase.attrKnowledgeBaseId },
+            { kbId: knowledgeBaseId },
           ),
         ],
       }),
@@ -464,8 +561,8 @@ export class KeriChatStack extends cdk.Stack {
         service: 'BedrockAgent',
         action: 'startIngestionJob',
         parameters: {
-          knowledgeBaseId: knowledgeBase.attrKnowledgeBaseId,
-          dataSourceId: dataSource.attrDataSourceId,
+          knowledgeBaseId: knowledgeBaseId,
+          dataSourceId: dataSourceId,
         },
         physicalResourceId: cr.PhysicalResourceId.of('deploy-ingestion'),
       },
@@ -473,20 +570,15 @@ export class KeriChatStack extends cdk.Stack {
         service: 'BedrockAgent',
         action: 'startIngestionJob',
         parameters: {
-          knowledgeBaseId: knowledgeBase.attrKnowledgeBaseId,
-          dataSourceId: dataSource.attrDataSourceId,
+          knowledgeBaseId: knowledgeBaseId,
+          dataSourceId: dataSourceId,
         },
         physicalResourceId: cr.PhysicalResourceId.of('deploy-ingestion'),
       },
       policy: cr.AwsCustomResourcePolicy.fromStatements([
         new iam.PolicyStatement({
           actions: ['bedrock:StartIngestionJob'],
-          resources: [
-            cdk.Fn.sub(
-              'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/${kbId}',
-              { kbId: knowledgeBase.attrKnowledgeBaseId },
-            ),
-          ],
+          resources: ['*'],
         }),
       ]),
     });
@@ -506,7 +598,7 @@ export class KeriChatStack extends cdk.Stack {
       memorySize: 256,
       timeout: cdk.Duration.minutes(5),
       environment: {
-        KNOWLEDGE_BASE_ID: knowledgeBase.attrKnowledgeBaseId,
+        KNOWLEDGE_BASE_ID: knowledgeBaseId,
         MODEL_ARN: modelArn,
         REFORMULATION_MODEL_ARN: `arn:aws:bedrock:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0`,
       },
@@ -604,7 +696,7 @@ export class KeriChatStack extends cdk.Stack {
     // =================================================================
 
     const frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
-      bucketName: `${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}-keri-chat-frontend`,
+      // Let CFN generate unique bucket name to avoid S3 409 conflicts on redeploy
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
@@ -766,7 +858,7 @@ export class KeriChatStack extends cdk.Stack {
 
     new ssm.StringParameter(this, 'KnowledgeBaseIdParam', {
       parameterName: '/keri-chat/knowledge-base-id',
-      stringValue: knowledgeBase.attrKnowledgeBaseId,
+      stringValue: knowledgeBaseId,
       description: 'Bedrock Knowledge Base ID for KERI Chat',
     });
 
@@ -778,7 +870,7 @@ export class KeriChatStack extends cdk.Stack {
 
     new ssm.StringParameter(this, 'DataSourceIdParam', {
       parameterName: '/keri-chat/data-source-id',
-      stringValue: dataSource.attrDataSourceId,
+      stringValue: dataSourceId,
       description: 'Bedrock Data Source ID for KERI Chat',
     });
 
