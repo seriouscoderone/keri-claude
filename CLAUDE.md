@@ -84,7 +84,7 @@ The stack's `BucketDeployment` extracts `scripts/staging/` into the document buc
 
 ```bash
 cd infrastructure
-./scripts/publish-template.sh keri-chat-public-assets
+./scripts/publish-template.sh keri-host-chat-stack
 ```
 
 This synths, zips all assets (including the ~113MB document bundle), uploads to the public S3 bucket, and prints a Launch Stack URL.

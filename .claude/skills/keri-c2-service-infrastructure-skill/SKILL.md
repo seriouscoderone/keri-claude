@@ -86,7 +86,7 @@ Generate missing stacks? (y/n)
 For each stack to generate, ask only the 4 C2 design questions (see `references/c2-design-questions.md`):
 
 1. **Environment** — prod / staging / dev? (default: dev)
-2. **Region** — AWS region? (default: us-west-2)
+2. **Region** — AWS region? (default: us-east-1)
 3. **Custom domain** — Only for frontend, agent-service, witness-pool (default: none)
 4. **Security requirements** — HIPAA / SOC2 / FedRAMP / none? (default: none)
 

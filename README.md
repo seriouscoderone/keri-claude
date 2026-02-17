@@ -79,7 +79,7 @@ Documents are baked into the template at synth time. The stack deploys them to S
 
 ```bash
 cd infrastructure
-./scripts/publish-template.sh keri-chat-public-assets
+./scripts/publish-template.sh keri-host-chat-stack
 ```
 
 ## Contributing

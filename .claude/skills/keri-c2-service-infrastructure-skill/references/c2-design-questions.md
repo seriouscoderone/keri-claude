@@ -22,7 +22,7 @@ C2 is intentionally thin. Most decisions are already made at C0 (governance) and
 |---|---|---|
 | Region code | `parameters.region` | All resources created in this region |
 
-**Default:** `us-west-2`
+**Default:** `us-east-1`
 
 Consider: data residency requirements, latency to users, service availability for DynamoDB global tables / Aurora Serverless / Step Functions.
 
