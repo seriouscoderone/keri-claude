@@ -1,0 +1,608 @@
+version: "1.0"
+
+ecosystem:
+  name: "humanitarian-service-marketplace"
+  display_name: "Humanitarian Service Marketplace"
+  description: >-
+    A cross-organizational ecosystem where individuals and organizations declaratively
+    state service needs, and credentialed volunteers contractually commit to meet those
+    needs. Service organizations (Red Cross, United Way, faith-based organizations, etc.)
+    participate as peers — each credentialing and vetting volunteers according to their
+    own governance, while service opportunities and verified service records flow freely
+    across organizational boundaries. Trust is rooted in verifiable credentials: whoever
+    issues a credential also verifies it. Volunteers build portable reputation through
+    cryptographically verified service history owned by the individual.
+
+governance:
+  regulatory_frameworks:
+    - "State nonprofit reporting requirements (scales with organizational formality)"
+    - "Tax-exempt status auditing (IRS 990 reporting for formal organizations)"
+    - "Child protection laws (background checks required for service involving minors)"
+    - "OSHA regulations (applicable to physical labor volunteer activities)"
+    - "State-Endorsed Digital Identity (SEDI) frameworks (Utah leading, multi-state adoption)"
+    - "GDPR / state privacy laws (where applicable to personal data handling)"
+
+  privacy_requirements:
+    - "Volunteer personal data owned by the individual — organizations receive contractual views, not copies"
+    - "Service need publications use selective disclosure to protect requester vulnerability"
+    - "Biometric and location proof-of-service data exposed only on selective disclosure basis"
+    - "Guardian-managed AIDs for minors and vulnerable populations — scope-bounded delegation"
+    - "Privacy violations are provable via cryptographic audit trail — law is the enforcement mechanism"
+    - "Platforms and individuals bound by legally enforceable contracts governing data use"
+
+  dispute_resolution: >-
+    Disputes are resolved through cryptographic evidence. The KEL/TEL audit trail shows
+    exactly who verified what credentials, who authorized what actions, and what proof-of-service
+    was recorded. Duplicity (equivocation) detected by watchers constitutes automatic grounds
+    for credential suspension. For formal organizations, a governance body convenes a judge/jury
+    panel to evaluate evidence. For grassroots interactions, the cryptographic record itself
+    serves as the basis for any legal proceedings. Liability follows the audit trail — if a
+    platform verified credentials that were fraudulent, the chain shows where fraud originated.
+    If a platform failed to verify, that omission is equally visible.
+
+roles:
+  - name: individual
+    display_name: "Individual"
+    description: >-
+      A person — can be a requester, volunteer, or both. Owns their identity, credentials,
+      and service history. The center of the ecosystem. May hold a SEDI identity or bootstrap
+      trust through ecosystem-native KYV credentials.
+    keri_infrastructure:
+      witness_pool: false
+      watcher_network: false
+      agent_service: true
+      acdc_registry: false
+    governance_obligations:
+      - "Maintain key security for their AID"
+      - "Provide truthful self-asserted data (equipment inventory, availability)"
+      - "Honor service commitments or revoke them before the commitment window"
+    credentials_issued:
+      - service_need
+      - equipment_inventory
+      - guardian_delegation
+    credentials_required: []
+
+  - name: guardian
+    display_name: "Guardian"
+    description: >-
+      Manages a delegated AID on behalf of someone who cannot manage their own (minor,
+      elderly, person with disabilities). The ward retains their own AID — the guardian
+      holds a delegated AID that acts within a cryptographically bounded scope. When the
+      ward gains capacity, delegation can be revoked and they take full control.
+    keri_infrastructure:
+      witness_pool: false
+      watcher_network: false
+      agent_service: true
+      acdc_registry: false
+    governance_obligations:
+      - "Act within the scope defined by the guardian_delegation credential"
+      - "Preserve the ward's AID and transfer control when delegation ends"
+      - "Comply with applicable guardianship laws and court orders"
+    credentials_issued: []
+    credentials_required:
+      - guardian_delegation
+
+  - name: grassroots_org
+    display_name: "Grassroots Organization"
+    description: >-
+      Informal groups — neighborhood clubs, homeschool co-ops, friend networks, small
+      faith communities — that publish needs and coordinate volunteers without formal
+      governance. Permissionless entry. Same protocols as large platforms, different
+      scale and reputation depth.
+    keri_infrastructure:
+      witness_pool: false
+      watcher_network: false
+      agent_service: true
+      acdc_registry: false
+    governance_obligations:
+      - "Publish service needs accurately"
+      - "Honor interoperability agreements with partner organizations"
+      - "Comply with legal obligations that scale with organizational formality"
+    credentials_issued:
+      - service_need
+      - org_membership
+      - service_record
+    credentials_required: []
+
+  - name: service_platform
+    display_name: "Service Platform"
+    description: >-
+      Formal organizations (Red Cross, United Way, Church of Jesus Christ of Latter-day
+      Saints, etc.) that operate as marketplace peers — matching volunteers to needs,
+      running KYV programs, and serving as trust anchors. Their value-add may evolve as
+      the ecosystem matures: KYV vetting, disaster coordination at scale, government
+      liaison, rather than simply being middlemen.
+    keri_infrastructure:
+      witness_pool: true
+      watcher_network: true
+      agent_service: true
+      acdc_registry: true
+    governance_obligations:
+      - "Maintain witness pool with >= 3 geographically distributed witnesses"
+      - "Publish OOBI endpoints for discovery"
+      - "Operate KYV programs per published standards"
+      - "Honor interoperability and attribution agreements with partner platforms"
+      - "Report duplicity evidence to governance body"
+      - "Comply with nonprofit reporting and tax-exempt auditing requirements"
+    credentials_issued:
+      - org_membership
+      - service_record
+      - service_need
+      - kyv_standard
+      - interop_agreement
+      - attribution_agreement
+    credentials_required:
+      - platform_registration
+
+  - name: credential_provider
+    display_name: "Credential Provider"
+    description: >-
+      Entities that issue skill and training credentials — trade schools, CPR trainers,
+      online education platforms, professional licensing bodies. The issuer is also the
+      verifier: whoever grants the credential is responsible for confirming its validity.
+    keri_infrastructure:
+      witness_pool: true
+      watcher_network: false
+      agent_service: true
+      acdc_registry: true
+    governance_obligations:
+      - "Verify credential validity when queried"
+      - "Revoke credentials when underlying qualifications expire or are lost"
+      - "Maintain credential schemas in the ecosystem schema registry"
+      - "Publish OOBI endpoints for credential verification"
+    credentials_issued:
+      - skill_credential
+    credentials_required: []
+
+  - name: kyv_provider
+    display_name: "KYV Provider"
+    description: >-
+      Entities running Know Your Volunteer programs — composing background checks,
+      training certificates, psychological evaluations, and other component credentials
+      into a KYV credential. Multiple KYV standards coexist, each with known strengths
+      and weaknesses. Could be a service platform, a specialized provider, or a
+      consortium. As the ecosystem matures, high-standard KYV becomes accessible even
+      to small organizations.
+    keri_infrastructure:
+      witness_pool: true
+      watcher_network: true
+      agent_service: true
+      acdc_registry: true
+    governance_obligations:
+      - "Publish the KYV standard definition (what component credentials are required)"
+      - "Verify all component credentials before issuing KYV credential"
+      - "Revoke KYV credentials when component credentials expire or are revoked"
+      - "May require in-person training or other governance structures as they see fit"
+    credentials_issued:
+      - kyv_credential
+    credentials_required:
+      - kyv_standard
+
+  - name: verification_service
+    display_name: "Verification Service"
+    description: >-
+      Background check providers, identity verification services, biometric verification
+      providers — the component suppliers that feed into KYV and other composite
+      credentials. Specialized providers that serve multiple KYV providers and platforms.
+    keri_infrastructure:
+      witness_pool: false
+      watcher_network: false
+      agent_service: true
+      acdc_registry: true
+    governance_obligations:
+      - "Perform checks according to published standards"
+      - "Issue results as verifiable credentials with clear methodology disclosure"
+      - "Maintain data privacy per legal and contractual obligations"
+    credentials_issued:
+      - background_check
+      - proof_of_service
+    credentials_required: []
+
+  - name: government_agency
+    display_name: "Government Agency"
+    description: >-
+      Regulatory bodies that issue licenses (SEDI identity, professional licenses),
+      receive tax reporting, and enforce child protection laws. Consumes aggregated,
+      auditable roll-ups of service data. Benefits from KERI's automatic verifiability
+      — reduced accounting overhead, provable compliance.
+    keri_infrastructure:
+      witness_pool: true
+      watcher_network: true
+      agent_service: true
+      acdc_registry: true
+    governance_obligations:
+      - "Issue SEDI and other government-backed credentials per regulatory standards"
+      - "Publish credential schemas and verification endpoints"
+      - "Accept and validate aggregated reporting from ecosystem participants"
+    credentials_issued:
+      - sedi_identity
+      - platform_registration
+    credentials_required: []
+
+credential_catalog:
+  - id: sedi_identity
+    name: "State-Endorsed Digital Identity"
+    description: >-
+      Government-issued digital identity credential backed by KERI protocols. The gold
+      standard root of identity. Utah is leading adoption with multi-state expansion
+      underway. Apple and Google wallets in talks for integration. Provides the
+      foundational identity that all other credentials reference.
+    issuer_role: government_agency
+    holder_role: individual
+    verifier_roles: [service_platform, grassroots_org, kyv_provider, credential_provider, government_agency]
+    schema_fields:
+      - { name: "legal_name", type: "string", required: true }
+      - { name: "date_of_birth", type: "date", required: true }
+      - { name: "jurisdiction", type: "string", required: true }
+      - { name: "sedi_id", type: "string", required: true }
+      - { name: "address", type: "string", required: false }
+      - { name: "photo_hash", type: "string", required: false }
+    disclosure_mode: selective
+    chained_from: null
+
+  - id: kyv_credential
+    name: "Know Your Volunteer Credential"
+    description: >-
+      Composable credential attesting that a volunteer has been vetted to a specific
+      standard. Built from component credentials (background checks, training certs,
+      psych evals, etc.). Multiple KYV standards coexist — each with different
+      compositions and trust levels. The ACDC chaining makes the composition transparent
+      so verifiers can see exactly what went into it.
+    issuer_role: kyv_provider
+    holder_role: individual
+    verifier_roles: [service_platform, grassroots_org, individual]
+    schema_fields:
+      - { name: "kyv_standard_said", type: "string", required: true }
+      - { name: "vetting_date", type: "date", required: true }
+      - { name: "expiration_date", type: "date", required: true }
+      - { name: "component_credentials", type: "string[]", required: true }
+      - { name: "verification_methods", type: "string[]", required: true }
+      - { name: "in_person_verified", type: "boolean", required: true }
+    disclosure_mode: selective
+    chained_from: background_check
+
+  - id: skill_credential
+    name: "Skill/Training Certificate"
+    description: >-
+      Credential issued by a training provider, trade school, or licensing body attesting
+      to a specific skill or qualification. CPR certification, electrical license, painting
+      certification, medical training, harassment awareness, etc. The issuing entity is
+      also the verifier.
+    issuer_role: credential_provider
+    holder_role: individual
+    verifier_roles: [service_platform, grassroots_org, individual, kyv_provider]
+    schema_fields:
+      - { name: "skill_name", type: "string", required: true }
+      - { name: "skill_category", type: "string", required: true }
+      - { name: "issuing_institution", type: "string", required: true }
+      - { name: "issue_date", type: "date", required: true }
+      - { name: "expiration_date", type: "date", required: false }
+      - { name: "skill_level", type: "string", required: false }
+    disclosure_mode: full
+    chained_from: null
+
+  - id: service_record
+    name: "Verified Service Record"
+    description: >-
+      Credential attesting that a volunteer performed a specific service. Issued by the
+      party that received the service or the platform that coordinated it. Accumulates
+      over time to build portable reputation. Includes verification method metadata
+      (geolocation, biometric, digital tool, manual attestation) so verifiers can assess
+      proof strength.
+    issuer_role: service_platform
+    holder_role: individual
+    verifier_roles: [service_platform, grassroots_org, government_agency, individual]
+    schema_fields:
+      - { name: "service_description", type: "string", required: true }
+      - { name: "service_date", type: "date", required: true }
+      - { name: "hours_served", type: "number", required: true }
+      - { name: "service_category", type: "string", required: true }
+      - { name: "verification_method", type: "string", required: true }
+      - { name: "verification_strength", type: "string", required: true }
+      - { name: "location", type: "string", required: false }
+      - { name: "requester_satisfaction", type: "string", required: false }
+      - { name: "skills_applied", type: "string[]", required: false }
+    disclosure_mode: selective
+    chained_from: proof_of_service
+
+  - id: equipment_inventory
+    name: "Equipment/Tool Availability"
+    description: >-
+      Self-asserted credential listing tools and equipment a volunteer has access to —
+      from gloves and shovels to backhoes and heavy equipment. Can be endorsed by
+      organizations that have witnessed the equipment in use, which increases trust.
+    issuer_role: individual
+    holder_role: individual
+    verifier_roles: [service_platform, grassroots_org, individual]
+    schema_fields:
+      - { name: "equipment_name", type: "string", required: true }
+      - { name: "equipment_category", type: "string", required: true }
+      - { name: "availability", type: "string", required: true }
+      - { name: "endorsements", type: "string[]", required: false }
+    disclosure_mode: full
+    chained_from: null
+
+  - id: org_membership
+    name: "Organization Membership"
+    description: >-
+      Credential attesting that an individual is a member of a service organization or
+      grassroots group. Enables cross-platform discovery and attribution tracking.
+    issuer_role: service_platform
+    holder_role: individual
+    verifier_roles: [service_platform, grassroots_org, individual]
+    schema_fields:
+      - { name: "organization_name", type: "string", required: true }
+      - { name: "membership_type", type: "string", required: true }
+      - { name: "join_date", type: "date", required: true }
+      - { name: "status", type: "string", required: true }
+    disclosure_mode: full
+    chained_from: null
+
+  - id: service_need
+    name: "Service Need Publication"
+    description: >-
+      Declarative credential publishing a need for service. Issued by an individual,
+      grassroots org, or service platform. Uses selective disclosure to protect requester
+      vulnerability — only qualified volunteers see full details. Publication scope
+      follows the graduated model: friends/family, neighborhood, community, city,
+      organizations. AI assists with formality gap-filling.
+    issuer_role: individual
+    holder_role: individual
+    verifier_roles: [service_platform, grassroots_org, individual]
+    schema_fields:
+      - { name: "need_description", type: "string", required: true }
+      - { name: "service_category", type: "string", required: true }
+      - { name: "location", type: "string", required: true }
+      - { name: "timeframe", type: "string", required: true }
+      - { name: "required_skills", type: "string[]", required: false }
+      - { name: "required_credentials", type: "string[]", required: false }
+      - { name: "required_kyv_level", type: "string", required: false }
+      - { name: "publication_scope", type: "string", required: true }
+      - { name: "formality_level", type: "string", required: true }
+      - { name: "estimated_hours", type: "number", required: false }
+      - { name: "volunteers_needed", type: "number", required: false }
+    disclosure_mode: selective
+    chained_from: null
+
+  - id: service_commitment
+    name: "Service Commitment Agreement"
+    description: >-
+      Contractual credential where a volunteer commits to meeting a published service
+      need. Binds the volunteer to the terms of the service need. Forms the basis for
+      proof-of-service verification — you cannot prove you did something you did not
+      agree to do.
+    issuer_role: individual
+    holder_role: individual
+    verifier_roles: [service_platform, grassroots_org, individual]
+    schema_fields:
+      - { name: "service_need_said", type: "string", required: true }
+      - { name: "volunteer_aid", type: "string", required: true }
+      - { name: "commitment_date", type: "date", required: true }
+      - { name: "agreed_terms", type: "string", required: true }
+      - { name: "verification_plan", type: "string", required: true }
+    disclosure_mode: full
+    chained_from: service_need
+
+  - id: proof_of_service
+    name: "Proof of Service"
+    description: >-
+      Automated or manual proof that service was rendered. Multi-modal verification:
+      geolocation + barometric + biometric (phone KEL logs), digital tool interaction
+      logs, or manual sponsor attestation. Each method produces a different verification
+      strength. Chains from service_commitment.
+    issuer_role: verification_service
+    holder_role: individual
+    verifier_roles: [service_platform, grassroots_org, individual, government_agency]
+    schema_fields:
+      - { name: "service_commitment_said", type: "string", required: true }
+      - { name: "verification_method", type: "string", required: true }
+      - { name: "verification_strength", type: "string", required: true }
+      - { name: "start_time", type: "datetime", required: true }
+      - { name: "end_time", type: "datetime", required: true }
+      - { name: "location_proofs", type: "string[]", required: false }
+      - { name: "biometric_confirmed", type: "boolean", required: false }
+      - { name: "digital_tool_logs", type: "string[]", required: false }
+      - { name: "manual_attestation_aid", type: "string", required: false }
+    disclosure_mode: selective
+    chained_from: service_commitment
+
+  - id: platform_registration
+    name: "Platform Registration"
+    description: >-
+      Government-issued credential recognizing a service platform as a registered
+      nonprofit or service organization. Not required for grassroots participation
+      but necessary for formal organizations seeking tax-exempt status and
+      government reporting integration.
+    issuer_role: government_agency
+    holder_role: service_platform
+    verifier_roles: [government_agency, service_platform, individual]
+    schema_fields:
+      - { name: "organization_name", type: "string", required: true }
+      - { name: "registration_number", type: "string", required: true }
+      - { name: "jurisdiction", type: "string", required: true }
+      - { name: "registration_type", type: "string", required: true }
+      - { name: "registration_date", type: "date", required: true }
+      - { name: "tax_exempt_status", type: "string", required: false }
+    disclosure_mode: full
+    chained_from: null
+
+  - id: kyv_standard
+    name: "KYV Standard Definition"
+    description: >-
+      Published definition of a Know Your Volunteer standard — specifying what component
+      credentials are required, what verification methods are accepted, and what governance
+      processes must be followed. Multiple standards coexist. Organizations can adopt
+      existing standards or define their own.
+    issuer_role: service_platform
+    holder_role: kyv_provider
+    verifier_roles: [kyv_provider, individual, service_platform]
+    schema_fields:
+      - { name: "standard_name", type: "string", required: true }
+      - { name: "version", type: "string", required: true }
+      - { name: "required_components", type: "string[]", required: true }
+      - { name: "accepted_verification_methods", type: "string[]", required: true }
+      - { name: "in_person_required", type: "boolean", required: true }
+      - { name: "renewal_period", type: "string", required: true }
+    disclosure_mode: full
+    chained_from: null
+
+  - id: interop_agreement
+    name: "Interoperability Agreement"
+    description: >-
+      Mutual credential between service platforms establishing cross-platform
+      interoperability — shared service need publication, volunteer credential
+      recognition, and service record portability. Defines which KYV standards
+      each platform recognizes from the other.
+    issuer_role: service_platform
+    holder_role: service_platform
+    verifier_roles: [service_platform, grassroots_org]
+    schema_fields:
+      - { name: "partner_platform_aid", type: "string", required: true }
+      - { name: "agreement_date", type: "date", required: true }
+      - { name: "recognized_kyv_standards", type: "string[]", required: true }
+      - { name: "shared_service_categories", type: "string[]", required: true }
+      - { name: "attribution_terms", type: "string", required: true }
+    disclosure_mode: full
+    chained_from: null
+
+  - id: background_check
+    name: "Background Check Result"
+    description: >-
+      Credential issued by a verification service attesting to the results of a
+      background check. A component credential that feeds into KYV credentials.
+      Uses selective disclosure — the KYV provider sees what they need, but the
+      full details are not exposed beyond that.
+    issuer_role: verification_service
+    holder_role: individual
+    verifier_roles: [kyv_provider]
+    schema_fields:
+      - { name: "check_type", type: "string", required: true }
+      - { name: "check_date", type: "date", required: true }
+      - { name: "result", type: "string", required: true }
+      - { name: "jurisdiction", type: "string", required: true }
+      - { name: "expiration_date", type: "date", required: true }
+    disclosure_mode: selective
+    chained_from: null
+
+  - id: guardian_delegation
+    name: "Guardian Delegation Authority"
+    description: >-
+      Credential establishing a guardian's authority to manage a delegated AID on behalf
+      of a ward (minor, elderly, person with disabilities). The ward retains their own
+      AID — the guardian's delegated AID operates within a cryptographically bounded
+      scope. May originate from the individual, a family agreement, or a court order.
+      Revocable when the ward gains capacity.
+    issuer_role: individual
+    holder_role: guardian
+    verifier_roles: [service_platform, grassroots_org, government_agency]
+    schema_fields:
+      - { name: "ward_aid", type: "string", required: true }
+      - { name: "guardian_aid", type: "string", required: true }
+      - { name: "scope", type: "string", required: true }
+      - { name: "authority_source", type: "string", required: true }
+      - { name: "effective_date", type: "date", required: true }
+      - { name: "expiration_date", type: "date", required: false }
+      - { name: "revocation_conditions", type: "string", required: true }
+    disclosure_mode: selective
+    chained_from: null
+
+  - id: attribution_agreement
+    name: "Service Attribution Agreement"
+    description: >-
+      Contractual credential between platforms defining how service hours are attributed
+      when volunteers cross organizational boundaries. Based on the social graph of
+      contribution — who published the need, who matched the volunteer, where credentials
+      came from, who verified completion. Ensures fair recognition without double-counting.
+    issuer_role: service_platform
+    holder_role: service_platform
+    verifier_roles: [service_platform, government_agency]
+    schema_fields:
+      - { name: "partner_platform_aid", type: "string", required: true }
+      - { name: "attribution_model", type: "string", required: true }
+      - { name: "attribution_factors", type: "string[]", required: true }
+      - { name: "reporting_method", type: "string", required: true }
+      - { name: "effective_date", type: "date", required: true }
+    disclosure_mode: full
+    chained_from: interop_agreement
+
+delegation_trees:
+  # Government as trust root for formal organizations
+  - root_role: government_agency
+    delegates:
+      - role: service_platform
+        scope: "Operate as recognized service marketplace with tax-exempt and regulatory reporting"
+        depth_limit: 2
+      - role: credential_provider
+        scope: "Issue skill and training credentials within licensed domain"
+        depth_limit: 1
+      - role: kyv_provider
+        scope: "Administer KYV programs per approved standards"
+        depth_limit: 1
+
+  # Service platform as ecosystem trust anchor
+  - root_role: service_platform
+    delegates:
+      - role: kyv_provider
+        scope: "Issue KYV credentials per platform's published standard"
+        depth_limit: 1
+      - role: verification_service
+        scope: "Perform background checks and identity verification for platform participants"
+        depth_limit: 1
+      - role: grassroots_org
+        scope: "Coordinate volunteers and publish service needs within platform ecosystem"
+        depth_limit: 1
+
+  # Individual as self-sovereign root for guardianship
+  # Note: the ward (person being guarded) retains their own AID.
+  # The guardian holds a delegated AID that acts within bounded scope.
+  # When the ward gains capacity, delegation is revoked and they take full control.
+  - root_role: individual
+    delegates:
+      - role: guardian
+        scope: "Manage delegated AID and authorize service interactions on behalf of ward"
+        depth_limit: 1
+
+interoperability:
+  - target_ecosystem: "transportation"
+    bridge_credentials:
+      - "driver_credential"
+      - "vehicle_credential"
+    data_flows:
+      - "Volunteers and requesters access ride-sharing for service-related transportation"
+      - "Transportation providers verify volunteer status for priority or subsidized rides"
+
+  - target_ecosystem: "tool-sharing"
+    bridge_credentials:
+      - "tool_listing_credential"
+      - "borrower_reputation"
+    data_flows:
+      - "Volunteers discover and borrow tools needed for service work"
+      - "Tool owners verify volunteer KYV status before lending high-value equipment"
+
+  - target_ecosystem: "sedi-digital-identity"
+    bridge_credentials:
+      - "sedi_identity"
+    data_flows:
+      - "State-endorsed digital identity serves as gold-standard root of trust for the ecosystem"
+      - "SEDI credentials bootstrap trust for new participants without existing ecosystem reputation"
+
+  - target_ecosystem: "insurance"
+    bridge_credentials:
+      - "liability_coverage_credential"
+      - "workers_comp_credential"
+    data_flows:
+      - "Formal service platforms verify liability coverage for high-risk volunteer activities"
+      - "Insurance providers consume verified service records for risk assessment"
+
+  - target_ecosystem: "tax-reporting"
+    bridge_credentials:
+      - "service_hour_aggregation"
+      - "tax_deduction_certificate"
+    data_flows:
+      - "Government agencies receive aggregated, auditable volunteer hour roll-ups"
+      - "Individuals claim tax deductions backed by cryptographically verified service records"
+
+systems:
+  # Populated by C1 skill (/keri-c1-system). Lists services built within
+  # this ecosystem. Leave empty during C0 design.
+  []
