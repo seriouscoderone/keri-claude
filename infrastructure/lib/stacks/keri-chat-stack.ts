@@ -92,14 +92,14 @@ export class KeriChatStack extends cdk.Stack {
 
     const embeddingModelId = new cdk.CfnParameter(this, 'EmbeddingModelId', {
       type: 'String',
-      default: 'amazon.titan-embed-text-v2:0',
+      default: 'amazon.nova-2-multimodal-embeddings-v1:0',
       allowedValues: [...ALLOWED_MODELS],
       description: 'Bedrock embedding model ID for the knowledge base',
     });
 
     const embeddingDimension = new cdk.CfnParameter(this, 'EmbeddingDimension', {
       type: 'String',
-      default: '1024',
+      default: '3072',
       allowedValues: [...ALLOWED_DIMENSIONS],
       description: 'Embedding vector dimension (must be compatible with chosen model)',
     });
@@ -221,7 +221,8 @@ export class KeriChatStack extends cdk.Stack {
       writer: rds.ClusterInstance.serverlessV2('Writer'),
       enableDataApi: true,
       storageEncrypted: true,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      deletionProtection: false,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     // =================================================================
@@ -265,6 +266,7 @@ export class KeriChatStack extends cdk.Stack {
         resourceArn: cluster.clusterArn,
         secretArn: cluster.secret!.secretArn,
         database: databaseName,
+        embeddingDimension: embeddingDimension.valueAsString,
       },
     });
 
@@ -275,11 +277,11 @@ export class KeriChatStack extends cdk.Stack {
     // =================================================================
 
     const documentBucket = new s3.Bucket(this, 'DocumentBucket', {
-      bucketName: `${cdk.Aws.ACCOUNT_ID}-keri-chat-documents`,
+      bucketName: `${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}-keri-chat-documents`,
       versioned: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-      autoDeleteObjects: false,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
       encryption: s3.BucketEncryption.S3_MANAGED,
     });
 
@@ -303,7 +305,7 @@ export class KeriChatStack extends cdk.Stack {
       description: 'Role for KERI Chat Bedrock Knowledge Base',
     });
 
-    documentBucket.grantRead(kbRole);
+    documentBucket.grantReadWrite(kbRole);
 
     kbRole.addToPolicy(
       new iam.PolicyStatement({
@@ -350,6 +352,16 @@ export class KeriChatStack extends cdk.Stack {
         type: 'VECTOR',
         vectorKnowledgeBaseConfiguration: {
           embeddingModelArn,
+          supplementalDataStorageConfiguration: {
+            supplementalDataStorageLocations: [
+              {
+                supplementalDataStorageLocationType: 'S3',
+                s3Location: {
+                  uri: documentBucket.s3UrlForObject(),
+                },
+              },
+            ],
+          },
         },
       },
       storageConfiguration: {
@@ -556,11 +568,43 @@ export class KeriChatStack extends cdk.Stack {
     });
 
     // =================================================================
+    // 10a. MCP Lambda — stateless MCP-over-HTTP endpoint
+    // =================================================================
+
+    const mcpFn = new lambda.NodejsFunction(this, 'McpHandler', {
+      entry: path.join(__dirname, '../../lambda/mcp-handler/index.ts'),
+      handler: 'handler',
+      runtime: lambdaBase.Runtime.NODEJS_22_X,
+      memorySize: 256,
+      timeout: cdk.Duration.minutes(2),
+      environment: {
+        CHAT_FN_URL: chatFnUrl.url,
+      },
+      bundling: {
+        externalModules: ['@aws-sdk/*'],
+      },
+    });
+
+    // =================================================================
+    // 10b. MCP Function URL — buffered JSON response
+    // =================================================================
+
+    const mcpFnUrl = mcpFn.addFunctionUrl({
+      authType: lambdaBase.FunctionUrlAuthType.NONE,
+      invokeMode: lambdaBase.InvokeMode.BUFFERED,
+      cors: {
+        allowedOrigins: ['*'],
+        allowedMethods: [lambdaBase.HttpMethod.POST],
+        allowedHeaders: ['Content-Type', 'Accept'],
+      },
+    });
+
+    // =================================================================
     // 11. Frontend S3 bucket — hosts built React app
     // =================================================================
 
     const frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
-      bucketName: `${cdk.Aws.ACCOUNT_ID}-keri-chat-frontend`,
+      bucketName: `${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}-keri-chat-frontend`,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
@@ -594,8 +638,9 @@ export class KeriChatStack extends cdk.Stack {
     // 13. CloudFront distribution — S3 default + /api/* API behavior
     // =================================================================
 
-    // Extract domain from Function URL (https://xxx.lambda-url.region.on.aws/)
+    // Extract domains from Function URLs (https://xxx.lambda-url.region.on.aws/)
     const fnUrlDomain = cdk.Fn.select(2, cdk.Fn.split('/', chatFnUrl.url));
+    const mcpFnUrlDomain = cdk.Fn.select(2, cdk.Fn.split('/', mcpFnUrl.url));
 
     let certificate: acm.ICertificate | undefined;
     let domainNames: string[] | undefined;
@@ -633,6 +678,22 @@ export class KeriChatStack extends cdk.Stack {
           origin: new origins.HttpOrigin(fnUrlDomain, {
             protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
             readTimeout: cdk.Duration.seconds(60),
+          }),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+          functionAssociations: [
+            {
+              function: ipFilterFunction,
+              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            },
+          ],
+        },
+        '/mcp': {
+          origin: new origins.HttpOrigin(mcpFnUrlDomain, {
+            protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
+            readTimeout: cdk.Duration.seconds(90),
           }),
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
@@ -733,6 +794,11 @@ export class KeriChatStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'ChatFunctionUrl', {
       value: chatFnUrl.url,
       description: 'Lambda Function URL (streaming)',
+    });
+
+    new cdk.CfnOutput(this, 'McpEndpointUrl', {
+      value: `https://${distribution.distributionDomainName}/mcp`,
+      description: 'MCP endpoint URL (Streamable HTTP)',
     });
 
     if (fullDomain) {
