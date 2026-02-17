@@ -1,0 +1,127 @@
+version: "1.0"
+
+stack:
+  name: "locked-in-witness-pool"
+  type: "witness-pool"
+  system: "locked-in"
+  ecosystem: "humanitarian-service-marketplace"
+
+# NOTE: Serverless witness — Rust Lambda + DynamoDB.
+# No Fargate, no ALB. Scales to zero.
+
+parameters:
+  environment: "dev"
+  region: "us-west-2"
+  witness_aid_prefix: ""              # TODO: fill after AID inception at deployment
+  witness_threshold: 2                # KAACE threshold — LockedIn default witness tier
+  allowed_controllers: []             # Empty = public witness (any AID can use)
+
+# Architecture:
+#
+#   API Gateway REST (witness API — event submission, receipt queries, OOBI)
+#       |
+#   Lambda (Rust — stateless witness logic, receipt generation)
+#       |
+#   DynamoDB (KEL storage + receipt storage, PAY_PER_REQUEST)
+#       |
+#   EventBridge (receipt notifications)
+
+aws_resources:
+  - logical_name: WitnessAPI
+    type: AWS::ApiGateway::RestApi
+    purpose: REST API for witness operations
+    properties:
+      endpoints:
+        - "POST /events"              # Submit event for receipting
+        - "GET  /events/{said}"       # Query event by SAID
+        - "GET  /receipts/{said}"     # Query receipts for event
+        - "GET  /oobi/{aid}"          # OOBI endpoint for witness discovery
+        - "GET  /health"              # Health check
+      authorization: IAM
+
+  - logical_name: WitnessFunction
+    type: AWS::Lambda::Function
+    purpose: Rust Lambda — stateless witness logic, receipt generation
+    properties:
+      runtime: provided.al2023
+      architecture: arm64
+      memory: 256
+      timeout: 30
+      environment:
+        KEL_TABLE: "{WitnessKELTable}"
+        RECEIPT_TABLE: "{WitnessReceiptTable}"
+        EVENT_BUS: "{WitnessEventBus}"
+        WITNESS_AID: ""               # TODO: fill after AID inception
+        WITNESS_THRESHOLD: "2"
+
+  - logical_name: WitnessKELTable
+    type: AWS::DynamoDB::Table
+    purpose: Append-only KEL storage for presence events
+    properties:
+      billing_mode: PAY_PER_REQUEST
+      point_in_time_recovery: true
+      key_schema:
+        hash: prefix                  # AID prefix (S)
+        range: sn                     # Sequence number (N)
+      gsi:
+        - name: SAIDIndex
+          hash: said                  # Event SAID for receipt lookups
+      deletion_protection: false      # dev
+
+  - logical_name: WitnessReceiptTable
+    type: AWS::DynamoDB::Table
+    purpose: Receipt storage indexed by event SAID
+    properties:
+      billing_mode: PAY_PER_REQUEST
+      key_schema:
+        hash: event_said              # Receipted event SAID (S)
+        range: witness_aid            # Witness AID (S)
+      point_in_time_recovery: true
+      deletion_protection: false      # dev
+
+  - logical_name: WitnessEventBus
+    type: AWS::Events::EventBus
+    purpose: Receipt notification events
+    properties:
+      name: "locked-in-witness-pool-events"
+
+networking:
+  vpc: default
+  subnets: [private]
+  security_groups:
+    - name: WitnessLambdaSG
+      purpose: Lambda outbound to DynamoDB (via VPC endpoints)
+  load_balancer: none                 # API Gateway handles routing
+
+monitoring:
+  dashboards:
+    - "locked-in-witness-pool-operations"
+  alarms:
+    - name: LambdaErrors
+      metric: Errors
+      threshold: "> 0 (5min)"
+      action: CloudWatch only         # dev
+    - name: APILatency
+      metric: Latency (API Gateway)
+      threshold: "> 200ms (p99)"
+      action: CloudWatch only
+    - name: DynamoDBThrottling
+      metric: ThrottledRequests
+      threshold: "> 0"
+      action: CloudWatch only
+  log_groups:
+    - "/aws/lambda/locked-in-witness"
+    - "/aws/apigateway/locked-in-witness"
+
+outputs:
+  - name: WitnessOOBIUrl
+    value: "https://{WitnessAPI}.execute-api.us-west-2.amazonaws.com/prod/oobi/{witness_aid_prefix}"
+    description: Witness OOBI URL for controller discovery
+  - name: WitnessApiUrl
+    value: "https://{WitnessAPI}.execute-api.us-west-2.amazonaws.com/prod"
+    description: Witness REST API URL
+  - name: EventBusArn
+    value: "{WitnessEventBus.Arn}"
+    description: EventBridge bus for receipt notifications
+
+domain_components: []

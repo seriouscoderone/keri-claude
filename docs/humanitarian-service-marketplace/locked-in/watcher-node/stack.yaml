@@ -1,0 +1,136 @@
+version: "1.0"
+
+stack:
+  name: "locked-in-watcher"
+  type: "watcher-node"
+  system: "locked-in"
+  ecosystem: "humanitarian-service-marketplace"
+
+parameters:
+  environment: "dev"
+  region: "us-west-2"
+  watched_aid_list: []                # Empty = public watcher (watches any AID)
+  first_seen_policy: "strict"         # Reject late duplicates — presence proofs must be truthful
+  alert_destinations: []              # TODO: fill with SNS topic ARNs for duplicity alerts
+  data_retention_days: 365            # 1 year retention for presence verification history
+
+# Architecture:
+#
+#   API Gateway WebSocket (real-time event streaming)
+#       |
+#   Lambda (stateless KEL validation, duplicity detection)
+#       |
+#   DynamoDB (KEL + first-seen tracking, conditional writes for atomicity)
+#       |
+#   SNS (duplicity alerts, multi-protocol delivery)
+
+aws_resources:
+  - logical_name: WatcherWebSocketAPI
+    type: AWS::ApiGatewayV2::Api
+    purpose: WebSocket API for real-time event streaming
+    properties:
+      protocol: WEBSOCKET
+      route_selection: "$request.body.action"
+      routes:
+        - "$connect"
+        - "$disconnect"
+        - "submitEvent"
+        - "queryKEL"
+        - "queryDuplicity"
+
+  - logical_name: WatcherFunction
+    type: AWS::Lambda::Function
+    purpose: Stateless KEL validation and duplicity detection
+    properties:
+      runtime: python3.12
+      memory: 512
+      timeout: 30
+      environment:
+        KEL_TABLE: "{WatcherKELTable}"
+        FIRST_SEEN_TABLE: "{WatcherFirstSeenTable}"
+        DUPLICITY_TABLE: "{WatcherDuplicityTable}"
+        ALERT_TOPIC_ARN: "{WatcherAlertTopic.Arn}"
+        FIRST_SEEN_POLICY: "strict"
+
+  - logical_name: WatcherKELTable
+    type: AWS::DynamoDB::Table
+    purpose: KEL storage — watched AID event logs
+    properties:
+      billing_mode: PAY_PER_REQUEST
+      key_schema:
+        hash: prefix              # AID prefix (S)
+        range: sn                 # Sequence number (N)
+      gsi:
+        - name: SAIDIndex
+          hash: said              # Event SAID for lookups
+      point_in_time_recovery: true
+      deletion_protection: false  # dev
+
+  - logical_name: WatcherFirstSeenTable
+    type: AWS::DynamoDB::Table
+    purpose: First-seen tracking — atomic conditional writes prevent duplicates
+    properties:
+      billing_mode: PAY_PER_REQUEST
+      key_schema:
+        hash: event_said          # Event SAID (S) — unique constraint via conditional PutItem
+      ttl:
+        attribute: expires_at     # Auto-expire after data_retention_days
+      point_in_time_recovery: true
+      deletion_protection: false  # dev
+      # First-seen atomicity: PutItem with condition "attribute_not_exists(event_said)"
+      # If the write succeeds, this is the first time we've seen this event.
+      # If it fails (ConditionalCheckFailedException), a duplicate was detected.
+
+  - logical_name: WatcherDuplicityTable
+    type: AWS::DynamoDB::Table
+    purpose: Duplicity evidence storage — conflicting events for the same AID+sn
+    properties:
+      billing_mode: PAY_PER_REQUEST
+      key_schema:
+        hash: prefix              # AID prefix (S)
+        range: detection_time     # When duplicity was detected (N)
+      point_in_time_recovery: true
+      deletion_protection: false  # dev
+
+  - logical_name: WatcherAlertTopic
+    type: AWS::SNS::Topic
+    purpose: Duplicity alert notifications
+    properties:
+      subscriptions: []           # TODO: fill with alert destinations
+
+networking:
+  vpc: default
+  subnets: [private]
+  security_groups:
+    - name: WatcherLambdaSG
+      purpose: Lambda outbound to DynamoDB (via VPC endpoints)
+  load_balancer: none
+
+monitoring:
+  dashboards:
+    - "locked-in-watcher-operations"
+  alarms:
+    - name: LambdaErrors
+      metric: Errors
+      threshold: "> 0 (5min)"
+      action: CloudWatch only         # dev
+    - name: DuplicityDetected
+      metric: Custom/DuplicityCount
+      threshold: "> 0"
+      action: CloudWatch only
+    - name: DynamoDBThrottling
+      metric: ThrottledRequests
+      threshold: "> 0"
+      action: CloudWatch only
+  log_groups:
+    - "/aws/lambda/locked-in-watcher"
+
+outputs:
+  - name: WatcherApiUrl
+    value: "wss://{WatcherWebSocketAPI}.execute-api.us-west-2.amazonaws.com/prod"
+    description: WebSocket API URL for event streaming
+  - name: AlertTopicArn
+    value: "{WatcherAlertTopic.Arn}"
+    description: SNS topic ARN for duplicity alerts
+
+domain_components: []

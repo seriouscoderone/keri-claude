@@ -1,0 +1,92 @@
+version: "1.0"
+
+stack:
+  name: "locked-in-frontend"
+  type: "frontend"
+  system: "locked-in"
+  ecosystem: "humanitarian-service-marketplace"
+
+parameters:
+  environment: "dev"
+  region: "us-west-2"
+  domain_name: ""                     # No custom domain (dev)
+  acm_certificate_arn: ""             # Not needed without custom domain
+
+# Architecture:
+#
+#   CloudFront (CDN, HTTPS, caching, SPA routing)
+#       |
+#   S3 (static site files, private — OAC access only)
+
+aws_resources:
+  - logical_name: FrontendBucket
+    type: AWS::S3::Bucket
+    purpose: Static site file storage (HTML, JS, CSS, assets)
+    properties:
+      block_public_access: true
+      encryption: AES256
+      versioning: false
+      lifecycle_rules:
+        - expire_noncurrent: 30
+
+  - logical_name: FrontendCDN
+    type: AWS::CloudFront::Distribution
+    purpose: CDN with HTTPS, SPA routing, caching
+    properties:
+      origins:
+        - domain: "{FrontendBucket.RegionalDomainName}"
+          access: OAC
+      default_cache_behavior:
+        viewer_protocol_policy: redirect-to-https
+        cache_policy: CachingOptimized
+        compress: true
+      custom_error_responses:
+        - error_code: 403
+          response_code: 200
+          response_page: /index.html
+        - error_code: 404
+          response_code: 200
+          response_page: /index.html
+      default_root_object: index.html
+
+  - logical_name: FrontendOAC
+    type: AWS::CloudFront::OriginAccessControl
+    purpose: Secure S3 access from CloudFront only
+    properties:
+      signing_protocol: sigv4
+      signing_behavior: always
+      origin_type: s3
+
+networking:
+  vpc: none
+  subnets: []
+  security_groups: []
+  load_balancer: none
+
+monitoring:
+  dashboards:
+    - "locked-in-frontend-cdn"
+  alarms:
+    - name: High4xxRate
+      metric: 4xxErrorRate (CloudFront)
+      threshold: "> 5%"
+      action: CloudWatch only         # dev
+    - name: High5xxRate
+      metric: 5xxErrorRate (CloudFront)
+      threshold: "> 1%"
+      action: CloudWatch only
+  log_groups:
+    - "/aws/cloudfront/locked-in-frontend"
+
+outputs:
+  - name: SiteUrl
+    value: "https://{FrontendCDN.DomainName}"
+    description: Website URL
+  - name: CloudFrontDistributionId
+    value: "{FrontendCDN.Id}"
+    description: CloudFront distribution ID (for cache invalidation during deploys)
+  - name: DeployBucketName
+    value: "{FrontendBucket.Name}"
+    description: S3 bucket name for deploying site files
+
+domain_components: []
