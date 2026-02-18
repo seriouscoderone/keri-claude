@@ -22,9 +22,12 @@ export default function App() {
             href="https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://keri-host-chat-stack.s3.us-east-1.amazonaws.com/keri-chat/template.yaml&stackName=KeriChat"
             target="_blank"
             rel="noopener noreferrer"
+            className="flex items-center gap-2"
+            title="Deploy in your own AWS account"
           >
+            <span className="text-xs text-keri-text-muted hidden sm:inline">Deploy in your own AWS?</span>
             <img
-              src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"
+              src="https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg"
               alt="Launch Stack"
               className="h-8"
             />

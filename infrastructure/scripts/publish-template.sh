@@ -101,7 +101,7 @@ echo "Launch Stack URL:"
 echo "$LAUNCH_URL"
 echo ""
 echo "Markdown badge:"
-echo "[![Launch Stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)]($LAUNCH_URL)"
+echo "[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)]($LAUNCH_URL)"
 
 # Clean up
 rm -rf "$CDK_OUT"
