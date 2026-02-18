@@ -139,16 +139,49 @@ When using the Rust KERI skills (keriox, cesride, parside), consider also instal
 
 The `infrastructure/` directory contains a one-click CDK stack for a KERI knowledge base chat system — Aurora Serverless v2 (pgvector), Bedrock Knowledge Base, Lambda chat with streaming, and CloudFront.
 
+### Configuration
+
+All deployment parameters are driven by a single `parameters.json` file. Copy the template and fill in your values:
+
+```bash
+cd infrastructure
+cp parameters.template.json parameters.json
+```
+
+Edit `parameters.json` with your settings:
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `region` | AWS region to deploy into | `"us-east-1"` |
+| `hostedZoneId` | Route53 Hosted Zone ID (leave empty to skip DNS/TLS) | `""` |
+| `hostedZoneDomainName` | Base domain (e.g. `keri.host`) | `""` |
+| `chatSubdomain` | Subdomain prefix (e.g. `chat` -> `chat.keri.host`) | `"chat"` |
+| `allowedIpCidrs` | Comma-separated IPv4 CIDR list for IP whitelist (no spaces) | `"0.0.0.0/0"` |
+| `embeddingModelId` | Bedrock embedding model ID | `"amazon.nova-2-multimodal-embeddings-v1:0"` |
+| `embeddingDimension` | Embedding vector dimension | `"1024"` |
+| `lambdaConcurrencyLimit` | Lambda reserved concurrency (0 = unreserved) | `0` |
+| `billingAlarmThreshold` | CloudWatch billing alarm USD threshold (0 = no alarm) | `0` |
+
+> `parameters.json` is gitignored — it contains your private deployment configuration and is never committed.
+
 ### Deploy
 
 ```bash
 # 1. Populate scripts/staging/ with KERI documents
 ./scripts/download-whitepapers.sh
 
-# 2. Deploy — documents are packaged as CDK assets and deployed to S3 automatically
+# 2. Configure your deployment
 cd infrastructure
-npx cdk deploy --profile personal
+cp parameters.template.json parameters.json
+# Edit parameters.json with your values
+
+# 3. Deploy — documents are packaged as CDK assets and deployed to S3 automatically
+npx cdk deploy
 ```
+
+### Launch Stack
+
+[![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://keri-host-chat-stack.s3.us-east-1.amazonaws.com/keri-chat/template.yaml&stackName=KeriChat)
 
 ### Publish for Launch Stack
 

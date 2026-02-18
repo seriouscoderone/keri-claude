@@ -17,12 +17,25 @@ export default function App() {
             chat
           </span>
         </div>
-        <button
-          onClick={reset}
-          className="px-3 py-1.5 text-sm rounded-md bg-keri-surface hover:bg-keri-surface-light text-keri-text-muted hover:text-keri-text transition-colors"
-        >
-          New Chat
-        </button>
+        <div className="flex items-center gap-3">
+          <a
+            href="https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://keri-host-chat-stack.s3.us-east-1.amazonaws.com/keri-chat/template.yaml&stackName=KeriChat"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"
+              alt="Launch Stack"
+              className="h-8"
+            />
+          </a>
+          <button
+            onClick={reset}
+            className="px-3 py-1.5 text-sm rounded-md bg-keri-surface hover:bg-keri-surface-light text-keri-text-muted hover:text-keri-text transition-colors"
+          >
+            New Chat
+          </button>
+        </div>
       </header>
 
       {/* Main chat area */}

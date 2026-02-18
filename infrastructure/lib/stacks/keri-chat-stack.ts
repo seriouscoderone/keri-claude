@@ -16,6 +16,7 @@ import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as route53Targets from 'aws-cdk-lib/aws-route53-targets';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import { Construct } from 'constructs';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -45,44 +46,33 @@ export class KeriChatStack extends cdk.Stack {
     super(scope, id, props);
 
     // -----------------------------------------------------------------
-    // Build-time config from CDK context
-    // -----------------------------------------------------------------
-    // These values are baked into the template at synth time because
-    // CloudFront Functions and cross-region certificates require
-    // resolved values (not CloudFormation tokens).
-
-    const allowedIpCidrs = this.node.tryGetContext('allowedIpCidrs') ?? '0.0.0.0/0';
-    const hostedZoneId = this.node.tryGetContext('hostedZoneId') ?? '';
-    const hostedZoneDomainName = this.node.tryGetContext('hostedZoneDomainName') ?? '';
-    const chatSubdomain = this.node.tryGetContext('chatSubdomain') ?? 'chat';
-
-    // -----------------------------------------------------------------
     // CfnParameters — Network & Access Control
     // -----------------------------------------------------------------
+    // All parameters are CfnParameters so they work in both CDK deploy
+    // (via parameters.json context) and Launch Stack (via CloudFormation console).
 
-    new cdk.CfnParameter(this, 'AllowedIpCidrs', {
+    const allowedIpCidrs = new cdk.CfnParameter(this, 'AllowedIpCidrs', {
       type: 'String',
-      default: '0.0.0.0/0',
-      description:
-        'Comma-separated CIDR list for IP whitelist (build-time setting — requires CDK redeploy to change)',
+      default: this.node.tryGetContext('allowedIpCidrs') ?? '0.0.0.0/1,128.0.0.0/1',
+      description: 'Comma-separated IPv4 CIDR list for IP whitelist (no spaces). Use 0.0.0.0/1,128.0.0.0/1 to allow all (WAF does not support /0).',
     });
 
-    new cdk.CfnParameter(this, 'HostedZoneId', {
+    const hostedZoneId = new cdk.CfnParameter(this, 'HostedZoneId', {
       type: 'String',
-      default: '',
-      description: 'Route53 Hosted Zone ID (leave empty to skip DNS/TLS — requires CDK deploy)',
+      default: this.node.tryGetContext('hostedZoneId') ?? '',
+      description: 'Route53 Hosted Zone ID (leave empty to skip DNS/TLS)',
     });
 
-    new cdk.CfnParameter(this, 'HostedZoneDomainName', {
+    const hostedZoneDomainName = new cdk.CfnParameter(this, 'HostedZoneDomainName', {
       type: 'String',
-      default: '',
-      description: 'Base domain (e.g. keri.host — requires CDK deploy)',
+      default: this.node.tryGetContext('hostedZoneDomainName') ?? '',
+      description: 'Base domain (e.g. keri.host)',
     });
 
-    new cdk.CfnParameter(this, 'ChatSubdomain', {
+    const chatSubdomain = new cdk.CfnParameter(this, 'ChatSubdomain', {
       type: 'String',
-      default: 'chat',
-      description: 'Subdomain prefix (e.g. chat → chat.keri.host — requires CDK deploy)',
+      default: this.node.tryGetContext('chatSubdomain') ?? 'chat',
+      description: 'Subdomain prefix (e.g. chat → chat.keri.host)',
     });
 
     // -----------------------------------------------------------------
@@ -91,14 +81,14 @@ export class KeriChatStack extends cdk.Stack {
 
     const embeddingModelId = new cdk.CfnParameter(this, 'EmbeddingModelId', {
       type: 'String',
-      default: 'amazon.nova-2-multimodal-embeddings-v1:0',
+      default: this.node.tryGetContext('embeddingModelId') ?? 'amazon.nova-2-multimodal-embeddings-v1:0',
       allowedValues: [...ALLOWED_MODELS],
       description: 'Bedrock embedding model ID for the knowledge base',
     });
 
     const embeddingDimension = new cdk.CfnParameter(this, 'EmbeddingDimension', {
       type: 'String',
-      default: '1024',
+      default: this.node.tryGetContext('embeddingDimension') ?? '1024',
       allowedValues: [...ALLOWED_DIMENSIONS],
       description: 'Embedding vector dimension (must be compatible with chosen model)',
     });
@@ -110,13 +100,13 @@ export class KeriChatStack extends cdk.Stack {
 
     const lambdaConcurrencyLimit = new cdk.CfnParameter(this, 'LambdaConcurrencyLimit', {
       type: 'Number',
-      default: 0,
+      default: this.node.tryGetContext('lambdaConcurrencyLimit') ?? 0,
       description: 'Lambda reserved concurrency (0=unreserved)',
     });
 
     const billingAlarmThreshold = new cdk.CfnParameter(this, 'BillingAlarmThreshold', {
       type: 'Number',
-      default: 0,
+      default: this.node.tryGetContext('billingAlarmThreshold') ?? 0,
       description: 'CloudWatch billing alarm USD threshold (0=no alarm)',
     });
 
@@ -181,6 +171,12 @@ export class KeriChatStack extends cdk.Stack {
     const hasBillingAlarm = new cdk.CfnCondition(this, 'HasBillingAlarm', {
       expression: cdk.Fn.conditionNot(
         cdk.Fn.conditionEquals(billingAlarmThreshold.valueAsNumber, 0),
+      ),
+    });
+
+    const hasCustomDomain = new cdk.CfnCondition(this, 'HasCustomDomain', {
+      expression: cdk.Fn.conditionNot(
+        cdk.Fn.conditionEquals(hostedZoneId.valueAsString, ''),
       ),
     });
 
@@ -293,29 +289,17 @@ export class KeriChatStack extends cdk.Stack {
       encryption: s3.BucketEncryption.S3_MANAGED,
     });
 
-    // Deploy KERI documents from staging/ into the document bucket
+    // Deploy all KERI documents + images into the document bucket.
+    // Images live alongside text so the data source can ingest both.
     const documentDeployment = new s3deploy.BucketDeployment(this, 'DocumentDeployment', {
       sources: [s3deploy.Source.asset(path.join(__dirname, '../../../scripts/staging'), {
-        exclude: ['.DS_Store', 'distill-*', '*.py', 'images', 'images/*'],
+        exclude: ['.DS_Store', 'distill-*', '*.py'],
       })],
       destinationBucket: documentBucket,
       prune: false,
       memoryLimit: 3008,
       ephemeralStorageSize: cdk.Size.mebibytes(1024),
     });
-
-    // Deploy images into the multimodal storage bucket (separate from documents)
-    const imagesPath = path.join(__dirname, '../../../scripts/staging/images');
-    if (fs.existsSync(imagesPath)) {
-      const imageDeployment = new s3deploy.BucketDeployment(this, 'ImageDeployment', {
-        sources: [s3deploy.Source.asset(imagesPath, {
-          exclude: ['.DS_Store'],
-        })],
-        destinationBucket: multimodalStorageBucket,
-        prune: false,
-      });
-      imageDeployment.node.addDependency(documentDeployment);
-    }
 
     // =================================================================
     // 5. Bedrock KB IAM role — S3 + RDS + Bedrock model access
@@ -354,11 +338,18 @@ export class KeriChatStack extends cdk.Stack {
       { modelId: embeddingModelId.valueAsString },
     );
 
+    // Parsing model used to describe images during multimodal ingestion
+    // Use Amazon Nova Lite (no marketplace subscription required, unlike Anthropic models)
+    const parsingModelArn = `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/amazon.nova-lite-v1:0`;
+
     kbRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: ['bedrock:InvokeModel'],
-        resources: [embeddingModelArn],
+        resources: [
+          embeddingModelArn,
+          parsingModelArn,
+        ],
       }),
     );
 
@@ -367,30 +358,38 @@ export class KeriChatStack extends cdk.Stack {
     //    CFN handler which doesn't support Nova multimodal embeddings)
     // =================================================================
 
+    // Nova multimodal embeddings require supplementalDataStorageConfiguration;
+    // text-only models (Titan, Cohere) fail if it's present.
+    const resolvedModelId = this.node.tryGetContext('embeddingModelId') ?? 'amazon.nova-2-multimodal-embeddings-v1:0';
+    const isMultimodal = resolvedModelId.includes('nova') || resolvedModelId.includes('image');
+
+    const vectorKbConfig: Record<string, unknown> = {
+      embeddingModelArn,
+      embeddingModelConfiguration: {
+        bedrockEmbeddingModelConfiguration: {
+          dimensions: cdk.Token.asNumber(embeddingDimension.valueAsString),
+        },
+      },
+    };
+
+    if (isMultimodal) {
+      vectorKbConfig.supplementalDataStorageConfiguration = {
+        storageLocations: [
+          {
+            type: 'S3',
+            s3Location: { uri: `s3://${multimodalStorageBucket.bucketName}/` },
+          },
+        ],
+      };
+    }
+
     const kbCreateParams = {
       name: 'keri-chat-knowledge-base',
       description: 'KERI ecosystem chat knowledge base',
       roleArn: kbRole.roleArn,
       knowledgeBaseConfiguration: {
         type: 'VECTOR',
-        vectorKnowledgeBaseConfiguration: {
-          embeddingModelArn,
-          embeddingModelConfiguration: {
-            bedrockEmbeddingModelConfiguration: {
-              dimensions: cdk.Token.asNumber(embeddingDimension.valueAsString),
-            },
-          },
-          supplementalDataStorageConfiguration: {
-            storageLocations: [
-              {
-                type: 'S3',
-                s3Location: {
-                  uri: multimodalStorageBucket.s3UrlForObject(),
-                },
-              },
-            ],
-          },
-        },
+        vectorKnowledgeBaseConfiguration: vectorKbConfig,
       },
       storageConfiguration: {
         type: 'RDS',
@@ -459,8 +458,39 @@ export class KeriChatStack extends cdk.Stack {
     knowledgeBase.node.addDependency(dbInitResource);
 
     // =================================================================
-    // 7. Bedrock Data Source — hierarchical chunking (1500/300/60)
+    // 7. Bedrock Data Source — hierarchical chunking + multimodal parsing
     // =================================================================
+
+    // When using a multimodal embedding model, enable foundation model
+    // parsing so images (PNG, JPG, PDF diagrams) are described by Claude
+    // and embedded alongside text content.
+    const dataSourceVectorConfig: Record<string, unknown> = {
+      chunkingConfiguration: {
+        chunkingStrategy: 'HIERARCHICAL',
+        hierarchicalChunkingConfiguration: {
+          levelConfigurations: [
+            { maxTokens: 1500 },
+            { maxTokens: 300 },
+          ],
+          overlapTokens: 60,
+        },
+      },
+    };
+
+    if (isMultimodal) {
+      dataSourceVectorConfig.parsingConfiguration = {
+        parsingStrategy: 'BEDROCK_FOUNDATION_MODEL',
+        bedrockFoundationModelConfiguration: {
+          modelArn: parsingModelArn,
+          parsingPrompt: {
+            parsingPromptText:
+              'Describe this image in detail. Focus on any diagrams, architecture, ' +
+              'protocols, data flows, cryptographic operations, or technical concepts shown. ' +
+              'Include all labels, arrows, and relationships visible in the diagram.',
+          },
+        },
+      };
+    }
 
     const dataSource = new cr.AwsCustomResource(this, 'DataSource', {
       onCreate: {
@@ -476,18 +506,7 @@ export class KeriChatStack extends cdk.Stack {
               bucketArn: documentBucket.bucketArn,
             },
           },
-          vectorIngestionConfiguration: {
-            chunkingConfiguration: {
-              chunkingStrategy: 'HIERARCHICAL',
-              hierarchicalChunkingConfiguration: {
-                levelConfigurations: [
-                  { maxTokens: 1500 },
-                  { maxTokens: 300 },
-                ],
-                overlapTokens: 60,
-              },
-            },
-          },
+          vectorIngestionConfiguration: dataSourceVectorConfig,
         },
         physicalResourceId: cr.PhysicalResourceId.fromResponse('dataSource.dataSourceId'),
       },
@@ -703,67 +722,90 @@ export class KeriChatStack extends cdk.Stack {
     });
 
     // =================================================================
-    // 12. CloudFront IP filter function — viewer-request JS function
+    // 12. WAF WebACL — IP whitelist via CfnParameter-driven IPSet
     // =================================================================
+    // Replaces the previous CloudFront Function approach so that IP
+    // CIDRs can be changed at deploy time via CloudFormation parameters
+    // (CF Functions require values baked at synth time).
 
-    const cidrList = allowedIpCidrs.split(',').map((c: string) => c.trim());
-    const cidrJson = JSON.stringify(cidrList);
+    const blockedPagePath = path.join(__dirname, '../../edge/blocked-page.html');
+    const blockedPageHtml = fs.readFileSync(blockedPagePath, 'utf-8');
 
-    const landingPagePath = path.join(__dirname, '../../edge/landing-page.html');
-    const landingPageHtml = fs.readFileSync(landingPagePath, 'utf-8');
-    const escapedHtml = JSON.stringify(landingPageHtml);
+    const ipSet = new wafv2.CfnIPSet(this, 'AllowedIpSet', {
+      name: 'keri-chat-allowed-ips',
+      scope: 'CLOUDFRONT',
+      ipAddressVersion: 'IPV4',
+      addresses: cdk.Fn.split(',', allowedIpCidrs.valueAsString),
+    });
 
-    const filterTemplatePath = path.join(__dirname, '../../edge/ip-filter.js');
-    const filterTemplate = fs.readFileSync(filterTemplatePath, 'utf-8');
-
-    const functionCode = filterTemplate
-      .replace('__ALLOWED_CIDRS__', cidrJson)
-      .replace('__LANDING_PAGE_HTML__', escapedHtml);
-
-    const ipFilterFunction = new cloudfront.Function(this, 'IpFilterFunction', {
-      functionName: 'keri-chat-ip-filter',
-      code: cloudfront.FunctionCode.fromInline(functionCode),
-      runtime: cloudfront.FunctionRuntime.JS_2_0,
+    const webAcl = new wafv2.CfnWebACL(this, 'WebAcl', {
+      name: 'keri-chat-ip-filter',
+      scope: 'CLOUDFRONT',
+      defaultAction: { block: {
+        customResponse: {
+          responseCode: 403,
+          customResponseBodyKey: 'blocked-landing-page',
+        },
+      }},
+      customResponseBodies: {
+        'blocked-landing-page': {
+          contentType: 'TEXT_HTML',
+          content: blockedPageHtml,
+        },
+      },
+      visibilityConfig: {
+        cloudWatchMetricsEnabled: true,
+        metricName: 'keri-chat-waf',
+        sampledRequestsEnabled: true,
+      },
+      rules: [
+        {
+          name: 'allow-whitelisted-ips',
+          priority: 0,
+          action: { allow: {} },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: 'keri-chat-ip-allow',
+            sampledRequestsEnabled: true,
+          },
+          statement: {
+            ipSetReferenceStatement: {
+              arn: ipSet.attrArn,
+            },
+          },
+        },
+      ],
     });
 
     // =================================================================
-    // 13. CloudFront distribution — S3 default + /api/* API behavior
+    // 13. CloudFront distribution — S3 default + /api/* + /mcp behaviors
     // =================================================================
 
     // Extract domains from Function URLs (https://xxx.lambda-url.region.on.aws/)
     const fnUrlDomain = cdk.Fn.select(2, cdk.Fn.split('/', chatFnUrl.url));
     const mcpFnUrlDomain = cdk.Fn.select(2, cdk.Fn.split('/', mcpFnUrl.url));
 
-    let certificate: acm.ICertificate | undefined;
-    let domainNames: string[] | undefined;
-    let fullDomain: string | undefined;
+    // Full domain name from CfnParameters (e.g. chat.keri.host)
+    const fullDomain = cdk.Fn.join('.', [
+      chatSubdomain.valueAsString,
+      hostedZoneDomainName.valueAsString,
+    ]);
 
-    if (hostedZoneId && hostedZoneDomainName) {
-      fullDomain = `${chatSubdomain}.${hostedZoneDomainName}`;
-      domainNames = [fullDomain];
-
-      const hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, 'HostedZone', {
-        hostedZoneId,
-        zoneName: hostedZoneDomainName,
-      });
-
-      certificate = new acm.DnsValidatedCertificate(this, 'Certificate', {
+    // ACM certificate — conditional on HasCustomDomain
+    const cfnCert = new acm.CfnCertificate(this, 'Certificate', {
+      domainName: fullDomain,
+      validationMethod: 'DNS',
+      domainValidationOptions: [{
         domainName: fullDomain,
-        hostedZone,
-        region: 'us-east-1',
-      });
-    }
+        hostedZoneId: hostedZoneId.valueAsString,
+      }],
+    });
+    cfnCert.cfnOptions.condition = hasCustomDomain;
 
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(frontendBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        functionAssociations: [
-          {
-            function: ipFilterFunction,
-            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-          },
-        ],
       },
       additionalBehaviors: {
         '/api/*': {
@@ -775,12 +817,6 @@ export class KeriChatStack extends cdk.Stack {
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-          functionAssociations: [
-            {
-              function: ipFilterFunction,
-              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-            },
-          ],
         },
         '/mcp': {
           origin: new origins.HttpOrigin(mcpFnUrlDomain, {
@@ -791,38 +827,48 @@ export class KeriChatStack extends cdk.Stack {
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-          functionAssociations: [
-            {
-              function: ipFilterFunction,
-              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-            },
-          ],
         },
       },
       defaultRootObject: 'index.html',
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
-      ...(certificate && { certificate }),
-      ...(domainNames && { domainNames }),
+      webAclId: webAcl.attrArn,
     });
 
+    // Override distribution properties conditionally for custom domain/cert
+    const cfnDistribution = distribution.node.defaultChild as cloudfront.CfnDistribution;
+    cfnDistribution.addPropertyOverride(
+      'DistributionConfig.Aliases',
+      cdk.Fn.conditionIf(hasCustomDomain.logicalId, [fullDomain], cdk.Aws.NO_VALUE),
+    );
+    cfnDistribution.addPropertyOverride(
+      'DistributionConfig.ViewerCertificate',
+      cdk.Fn.conditionIf(
+        hasCustomDomain.logicalId,
+        {
+          AcmCertificateArn: cfnCert.ref,
+          SslSupportMethod: 'sni-only',
+          MinimumProtocolVersion: 'TLSv1.2_2021',
+        },
+        {
+          CloudFrontDefaultCertificate: true,
+        },
+      ),
+    );
+
     // =================================================================
-    // 14. Certificate + Route53 record — conditional on custom domain
+    // 14. Route53 record — conditional on custom domain
     // =================================================================
 
-    if (hostedZoneId && hostedZoneDomainName && fullDomain) {
-      const hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, 'DnsHostedZone', {
-        hostedZoneId,
-        zoneName: hostedZoneDomainName,
-      });
-
-      new route53.ARecord(this, 'AliasRecord', {
-        zone: hostedZone,
-        recordName: fullDomain,
-        target: route53.RecordTarget.fromAlias(
-          new route53Targets.CloudFrontTarget(distribution),
-        ),
-      });
-    }
+    const cfnARecord = new route53.CfnRecordSet(this, 'AliasRecord', {
+      hostedZoneId: hostedZoneId.valueAsString,
+      name: fullDomain,
+      type: 'A',
+      aliasTarget: {
+        hostedZoneId: 'Z2FDTNDATAQYW2', // CloudFront hosted zone ID (global constant)
+        dnsName: distribution.distributionDomainName,
+      },
+    });
+    cfnARecord.cfnOptions.condition = hasCustomDomain;
 
     // =================================================================
     // 15. Frontend deployment — BucketDeployment from frontend/dist
@@ -893,11 +939,10 @@ export class KeriChatStack extends cdk.Stack {
       description: 'MCP endpoint URL (Streamable HTTP)',
     });
 
-    if (fullDomain) {
-      new cdk.CfnOutput(this, 'ChatUrl', {
-        value: `https://${fullDomain}`,
-        description: 'Chat URL (custom domain)',
-      });
-    }
+    const chatUrlOutput = new cdk.CfnOutput(this, 'ChatUrl', {
+      value: cdk.Fn.join('', ['https://', fullDomain]),
+      description: 'Chat URL (custom domain)',
+      condition: hasCustomDomain,
+    });
   }
 }

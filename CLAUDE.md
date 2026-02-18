@@ -23,7 +23,7 @@ infrastructure/         # KeriChat CDK stack (Bedrock KB + Aurora + CloudFront)
   lib/stacks/           # CDK stack definition
   lambda/               # Lambda handlers (chat, ingestion, db-init)
   frontend/             # React chat UI
-  edge/                 # CloudFront Function (IP filter)
+  edge/                 # WAF blocked page + landing page HTML
   scripts/
     publish-template.sh # Build + publish Launch Stack template
     sync-docs.sh        # Manual doc sync (for updates outside deploy)
@@ -67,16 +67,21 @@ The `infrastructure/` directory contains a CDK stack that deploys a complete KER
 
 ### Deployment workflow
 
-Documents are packaged into the CDK template as assets. You must populate `scripts/staging/` before synthesizing:
+All deployment parameters are driven by `parameters.json` (copied from `parameters.template.json`, gitignored). The deploy will fail with a helpful message if `parameters.json` is missing.
 
 ```bash
 # 1. Download KERI papers, specs, and docs into scripts/staging/
 ./scripts/download-whitepapers.sh
 
-# 2. Deploy (documents are baked into the template and deployed to S3 automatically)
+# 2. Configure deployment
 cd infrastructure
-npx cdk deploy --profile personal
+cp parameters.template.json parameters.json  # edit with your values
+
+# 3. Deploy (documents are baked into the template and deployed to S3 automatically)
+npx cdk deploy
 ```
+
+The stack uses WAF WebACL for IP filtering (driven by `AllowedIpCidrs` CfnParameter), CfnConditions for optional custom domain/TLS, and Nova multimodal embeddings with Claude-powered image parsing. All parameters work at both CDK deploy time and CloudFormation Launch Stack time.
 
 The stack's `BucketDeployment` extracts `scripts/staging/` into the document bucket, then a deploy-time custom resource triggers `StartIngestionJob` so the KB is ready immediately. A daily EventBridge rule handles ongoing re-ingestion.
 
