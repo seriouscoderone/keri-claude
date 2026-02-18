@@ -77,11 +77,13 @@ All deployment parameters are driven by `parameters.json` (copied from `paramete
 cd infrastructure
 cp parameters.template.json parameters.json  # edit with your values
 
-# 3. Deploy (documents are baked into the template and deployed to S3 automatically)
-npx cdk deploy
+# 3. Deploy — builds frontend, passes parameters, and deploys
+./scripts/deploy.sh --profile personal
 ```
 
-The stack uses WAF WebACL for IP filtering (driven by `AllowedIpCidrs` CfnParameter), CfnConditions for optional custom domain/TLS, and Nova multimodal embeddings with Claude-powered image parsing. All parameters work at both CDK deploy time and CloudFormation Launch Stack time.
+The deploy script builds the React frontend, reads `parameters.json`, passes all values as explicit `--parameters` flags to CloudFormation, and runs `cdk deploy`. Extra CDK args pass through (e.g. `--hotswap`).
+
+The stack uses WAF WebACL for IP filtering (driven by `AllowedIpCidrs` CfnParameter), CfnConditions for optional custom domain/TLS, and Nova multimodal embeddings with Nova Lite image parsing. All parameters work at both CDK deploy time and CloudFormation Launch Stack time.
 
 The stack's `BucketDeployment` extracts `scripts/staging/` into the document bucket, then a deploy-time custom resource triggers `StartIngestionJob` so the KB is ready immediately. A daily EventBridge rule handles ongoing re-ingestion.
 

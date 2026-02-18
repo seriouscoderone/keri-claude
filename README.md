@@ -175,11 +175,15 @@ cd infrastructure
 cp parameters.template.json parameters.json
 # Edit parameters.json with your values
 
-# 3. Deploy — documents are packaged as CDK assets and deployed to S3 automatically
-npx cdk deploy
+# 3. Deploy — builds frontend, passes parameters, and deploys
+./scripts/deploy.sh --profile personal
 ```
 
+The deploy script builds the React frontend, reads `parameters.json`, passes all values as explicit `--parameters` flags to CloudFormation, and runs `cdk deploy`. Extra CDK args pass through (e.g. `./scripts/deploy.sh --profile personal --hotswap`).
+
 ### Launch Stack
+
+Deploy your own instance on AWS:
 
 [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://keri-host-chat-stack.s3.us-east-1.amazonaws.com/keri-chat/template.yaml&stackName=KeriChat)
 
