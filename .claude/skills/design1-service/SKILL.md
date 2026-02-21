@@ -1,6 +1,6 @@
 ---
 name: design1-service
-description: Design a human-facing KERI service within an existing ecosystem. Reads ecosystem.yaml from C0 to understand governance context, then guides through service definition including value proposition, user journeys, KERI requirements, and business model. Produces system.yaml and service-design.md.
+description: Design a human-facing KERI service within an existing ecosystem. Reads ecosystem.yaml from C0 — either local or imported via URL from another repo. Guides through service definition including value proposition, user journeys, KERI requirements, and business model. Produces system.yaml and service-design.md.
 command: /keri:design1-service
 user_invocable: true
 ---
@@ -30,19 +30,64 @@ Before starting, read all reference files in this skill:
    Glob: docs/*/ecosystem.yaml
    ```
 
-2. If ecosystems exist, list them with their display names and ask: "Which ecosystem does this service belong to?"
+2. **If ecosystems exist**, list them with their display names and ask:
+   > "Which ecosystem does this service belong to? Or provide a URL to import an external ecosystem (e.g., a GitHub raw URL to an ecosystem.yaml)."
 
-3. If the target ecosystem has existing systems, list them:
+3. **If no ecosystems exist**, tell the user:
+   > "No local ecosystems found. You can:
+   > - Run `/keri:design0-ecosystem` to design one from scratch
+   > - Provide a URL to import an existing ecosystem (e.g., a GitHub raw URL to an ecosystem.yaml)"
+
+4. **If the user provides a URL** → proceed to **Phase 1b: Ecosystem Import**.
+
+5. **If the user selects a local ecosystem**, check for existing systems:
    ```
    Glob: docs/{ecosystem}/*/system.yaml
    ```
    Show existing system names so the user understands what already exists.
 
-4. Ask: "Are we creating a new service or continuing an existing one?"
+6. Ask: "Are we creating a new service or continuing an existing one?"
    - If continuing, read the existing `system.yaml` and `service-design.md` and pick up where it left off.
    - If new, proceed to Phase 2.
 
-5. If no ecosystems exist, tell the user: "No ecosystems found. You should run `/keri-c0-ecosystem` first to define the governance context. Or, if you want to skip C0, I can create a minimal ecosystem scaffold and proceed."
+### Phase 1b: Ecosystem Import (when URL provided)
+
+When the user provides a URL to an external ecosystem.yaml, import it as a local snapshot:
+
+1. **Validate and normalize the URL:**
+   - Must be HTTPS pointing to a YAML file
+   - If it's a GitHub **blob** URL (e.g., `github.com/{owner}/{repo}/blob/main/docs/...`), auto-convert to the **raw** URL (`raw.githubusercontent.com/{owner}/{repo}/main/docs/...`)
+   - Accept GitHub raw URLs and any other HTTPS URL serving YAML content
+
+2. **Fetch ecosystem.yaml** — use WebFetch to retrieve the content. Parse the YAML and extract `ecosystem.name`.
+
+3. **Determine companion file URLs** — derive sibling file URLs from the ecosystem.yaml URL's directory:
+   - `{base_dir}/credential-catalog.md`
+   - `{base_dir}/trust-framework.md`
+
+   Where `{base_dir}` is the URL path up to and including the directory containing ecosystem.yaml.
+
+4. **Fetch companion files** — use WebFetch to retrieve credential-catalog.md and trust-framework.md. These are optional — if either fetch fails, note it and continue.
+
+5. **Write all files locally:**
+   - `docs/{ecosystem-name}/ecosystem.yaml` — prepend an origin comment block:
+     ```yaml
+     # Imported from: {original_url}
+     # Imported on: {YYYY-MM-DD}
+     # This is a local snapshot. Changes to the source are not automatically reflected.
+     ```
+     Then the full ecosystem.yaml content below the comment.
+   - `docs/{ecosystem-name}/credential-catalog.md` (if fetched)
+   - `docs/{ecosystem-name}/trust-framework.md` (if fetched)
+
+6. **Show import summary** — display:
+   - Ecosystem name and description
+   - Number of roles defined
+   - Number of credentials in the catalog
+   - Which companion files were successfully imported
+   - The local path where files were written
+
+7. Ask for confirmation before proceeding to Phase 2.
 
 ### Phase 2: Problem Framing
 
