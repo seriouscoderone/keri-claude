@@ -170,3 +170,51 @@ typical business models, and which C2 stacks are required.
 | Audit trail | KEL/TEL anchoring, event logging | Append-only storage, witness pool |
 | Real-time monitoring | Watcher network, event subscription | Watcher nodes, alert system |
 | Regulatory reporting | Proof generation, graduated disclosure | Report generator, API gateway |
+
+---
+
+## Pattern 5: Credential Issuance & Delivery
+
+**Human-Facing Name:** "Signed Document Issuance" / "Digital Credential Delivery"
+
+### What It Does (Human Terms)
+- A licensed authority (carrier, regulator, institution, employer) issues a signed document to a holder
+- The holder owns the document in their wallet — no need to call the issuer to prove it
+- Amendments and updates create a traceable chain — full history preserved
+- Anyone can verify the document is real, current, and unaltered without contacting the issuer
+
+### What It Provides (KERI Terms)
+- ACDC issuance from issuer AID to holder AID
+- TEL state management for credential lifecycle (active, amended, revoked, superseded)
+- Chained ACDCs for document amendments (endorsements, updates)
+- Agent service for issuer AID management and holder credential delivery
+
+### Business Models
+| Model | Description |
+|-------|-------------|
+| Enterprise SaaS | Issuing institution pays per-seat or per-volume subscription |
+| Per-issuance | Pay-per-credential issued (scales with document volume) |
+| Platform licensing | White-label issuance infrastructure licensed to institutions |
+
+### Required C2 Stacks
+| Stack | Purpose |
+|-------|---------|
+| `agent-service` | KERIA for issuer AID management and holder credential delivery |
+| `acdc-registry` | Credential issuance, TEL state tracking, revocation/amendment |
+| `witness-pool` | Event receipting for issuer's key event log |
+| `frontend` | Issuer staff UI (issuance workflow) + holder wallet/app |
+
+### Service Mapping
+
+| C1 Service | C3 KERI Components | C2 Infrastructure |
+|------------|-------------------|-------------------|
+| Credential issuance | ACDC issuance, TEL inception | ACDC registry, witness pool |
+| Document delivery | OOBI resolution, credential push | Agent service, notification gateway |
+| Amendment / endorsement | Chained ACDC, TEL state update | ACDC registry, chain resolver |
+| Revocation / cancellation | TEL revocation event | ACDC registry, watcher notification |
+| Holder wallet receipt | Credential acceptance, KEL anchoring | Agent service, frontend wallet |
+
+### Design Notes
+- **Distinct from Compliance-as-a-Service:** Pattern 4 is about ongoing monitoring and reporting. Pattern 5 is about the issuance event itself — authority signs, holder receives.
+- **Distinct from Identity Lifecycle:** Pattern 1 is about managing your own identity. Pattern 5 is about receiving a credential from an external authority.
+- **Common domains:** Insurance policies, professional licenses, academic credentials, employment records, prescriptions, real estate titles, financial account statements.

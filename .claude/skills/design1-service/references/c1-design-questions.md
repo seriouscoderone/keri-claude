@@ -37,11 +37,12 @@ in `system.yaml` and follow-up probes to deepen understanding.
 
 **Ask:** "Which of these four service patterns is closest to what you are building?"
 
-Present the four patterns:
+Present the five patterns:
 1. **Identity Lifecycle Service** — "Secure Digital Identity Management" (issue identity, recovery, theft protection, privacy-preserving proof)
 2. **Credential Verification Service** — "Instant Background Checks" (real-time verification, no central DB, privacy-preserving, audit trail)
 3. **Marketplace Trust Service** — "Portable Reputation System" (cross-platform reputation, portable reviews, unfakeable credentials)
 4. **Compliance-as-a-Service** — "Automated Regulatory Compliance" (prove compliance without audits, real-time monitoring, immutable audit trails)
+5. **Credential Issuance & Delivery** — "Signed Document Issuance" (licensed authority issues signed document to holder's wallet; amendments form a traceable chain; anyone can verify without calling the issuer)
 
 **Maps to:** `service.pattern`
 
