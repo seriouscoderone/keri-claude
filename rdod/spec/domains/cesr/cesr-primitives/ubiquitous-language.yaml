@@ -130,7 +130,22 @@ terms:
       - "The SAID is self-referential — it identifies the data structure that contains it"
     examples:
       - "Saider(sad={'d': ''}, code='E') — compute Blake3-256 SAID of a self-addressing data structure"
-    related_terms: ["Diger", "Matter"]
+    related_terms: ["Diger", "Matter", "Saidify"]
+
+  - term: "Saidify"
+    synonyms: ["saidify()", "SAID Derivation Algorithm"]
+    definition: "The algorithm that computes and injects a Self-Addressing Identifier (SAID) into a data structure's 'd' field. Three steps: (1) replace the 'd' field with a dummy string of the correct length for the chosen digest code, (2) serialize the structure (JSON, CBOR, or MGPK), (3) digest the serialization and place the resulting SAID back into 'd'. Recursive — nested SAIDifiable sections (attributes, edges, rules) are saidified depth-first before the top-level SAID."
+    invariants:
+      - "The dummy string must be exactly the qb64 length of the target digest code (e.g., 44 chars for Blake3-256 code 'E')"
+      - "Serialization must use deterministic field ordering (insertion-ordered field maps)"
+      - "The resulting SAID is self-referential — digesting the structure with its own 'd' field reproduces the same SAID"
+      - "Nested saidification is depth-first: inner sections (a, e, r) are saidified before the outer ACDC"
+      - "The -ify suffix follows the KERI transform naming convention (versify, sizeify, saidify)"
+    examples:
+      - "saidify(sad={'d': '', 'i': 'EAID...'}, code='E') → sad['d'] = 'ESAID...'"
+      - "ACDC construction: saidify attributes section → saidify edges section → saidify top-level credential"
+      - "Saider.saidify(sad, label='d') → (original_sad, sad_with_said)"
+    related_terms: ["Saider", "SAID", "Diger", "Sadder"]
 
   - term: "Index"
     synonyms: ["Key Index"]
