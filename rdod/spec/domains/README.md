@@ -79,7 +79,7 @@ graph TD
 | `keri/delegation` | Delegation | subdomain | complete | 15 | Delegated AIDs, hierarchical control, custodial management |
 | `cesr` | CESR Encoding | core | complete | 20 | Composable Event Streaming Representation — encoding layer |
 | `cesr/cesr-primitives` | CESR Primitives | subdomain | complete | 34 | Matter/Indexer traits, Verfer–Cipher, Sadder/Serder/Creder, Tholder |
-| `cesr/cesr-stream` | CESR Stream | subdomain | complete | 13 | Count codes, groups, attachments, cold start, pipelining |
+| `cesr/cesr-stream` | CESR Stream | subdomain | complete | 24 | Count codes, 12 concrete group types, parser dispatch, round-trip serialization |
 | `acdc` | ACDC Credentials | core | complete | 21 | Authentic Chained Data Containers — verifiable credentials |
 | `acdc/disclosure` | Disclosure | subdomain | complete | 16 | Graduated, selective, partial, full, compact disclosure |
 | `acdc/tel` | Transaction Event Log | subdomain | complete | 14 | Credential state tracking — issuance, revocation, registry |
