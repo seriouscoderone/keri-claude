@@ -70,8 +70,17 @@ ubiquitous_language:
     definition: "The process of collecting partial signatures from multiple edge clients for a group AID event, assembling them when the threshold is satisfied"
     invariants:
       - "Each partial signature arrives independently via message router"
-      - "Assembly is threshold-aware — event is complete when kt is satisfied"
-      - "Timeout/escrow for incomplete signature sets"
+      - "Assembly tracked by Counselor; completion detected by Monitor"
+
+  - term: "Long-running Operation"
+    definition: "Async task tracked by Monitor — edge clients poll via GET /operations/{name} until done"
+    invariants:
+      - "Types: witness, delegation, group, credential, registry, endrole, oobi"
+
+  - term: "Doer"
+    definition: "HIO event-driven processing unit with recur() method. Non-blocking cooperative concurrency via Deck queues."
+    invariants:
+      - "Key doers: Witnesser, Delegator, Escrower, ParserDoer"
 
   - term: "Notification"
     definition: "A message queued for the edge client indicating a pending action — multi-sig request, credential offer, exchange message"

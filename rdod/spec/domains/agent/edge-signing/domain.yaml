@@ -17,11 +17,27 @@ source_material:
 
 ubiquitous_language:
   - term: "Signify Client"
-    definition: "Controller-side library that holds private keys, signs operations, and communicates with a KERIA cloud agent"
+    definition: "Controller-side library that holds private keys, signs operations, and communicates with a KERIA cloud agent via KRAM"
     invariants:
       - "Private keys are generated and stored locally — never transmitted"
       - "All requests to the cloud agent are signed via KRAM"
-      - "Client manages its own key material lifecycle (creation, passcode protection, destruction)"
+      - "Exposes resource objects: identifiers, credentials, exchanges, groups, registries, operations"
+
+  - term: "Keeper"
+    definition: "Key management abstraction — three implementations: SaltyKeeper (deterministic from salt), RandyKeeper (random), GroupKeeper (multi-sig proxy)"
+    invariants:
+      - "Common interface: incept(), rotate(), sign()"
+      - "Algo selection at AID creation determines keeper type"
+
+  - term: "Tier"
+    definition: "Security level (low/med/high) controlling argon2 cost for passcode stretching"
+    invariants:
+      - "Set at client construction, affects all key derivation"
+
+  - term: "Operation"
+    definition: "Handle for a long-running KERIA task — polled by edge client until done"
+    invariants:
+      - "Types: witness, delegation, group, credential, registry, endrole, oobi"
 
   - term: "Passcode"
     definition: "User-supplied secret used to encrypt private keys at rest on the controller's device"

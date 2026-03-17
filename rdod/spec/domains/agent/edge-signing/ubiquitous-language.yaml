@@ -106,6 +106,151 @@ terms:
       - "Website calls polaris-web → content script → background script signs with signify-ts → signed headers returned"
     related_terms: ["Signify Client", "Signing Association"]
 
+  - term: "Tier"
+    synonyms: ["Security Tier"]
+    definition: "Security level controlling argon2 CPU/memory cost for passcode stretching. Higher tiers are slower but more resistant to brute-force."
+    invariants:
+      - "Three levels: low, med, high"
+      - "Tier is set at client construction and affects all key derivation"
+      - "Higher tier = more argon2 iterations = slower unlock but stronger protection"
+    examples:
+      - "Tier.low for development/testing; Tier.high for production hardware wallets"
+      - "new SignifyClient(url, bran, Tier.low)"
+    related_terms: ["Passcode", "Salt", "Salter"]
+
+  - term: "Keeper"
+    synonyms: ["Key Keeper"]
+    definition: "Abstraction for key management — holds signing keys and produces signatures. Three implementations: SaltyKeeper (deterministic from salt), RandyKeeper (random keys), GroupKeeper (multi-sig proxy)."
+    invariants:
+      - "All keepers expose the same interface: incept(), rotate(), sign()"
+      - "Keeper type chosen at AID creation via Algos enum (salty | randy | group)"
+      - "SaltyKeeper: deterministic derivation from salt + path — recoverable from passcode"
+      - "RandyKeeper: random keys, encrypted proxies stored — NOT recoverable from passcode alone"
+      - "GroupKeeper: wraps a member AID's keeper, maps group indices to member indices"
+    examples:
+      - "manager.new(Algos.salty, pidx, {stem, tier, ...}) → SaltyKeeper"
+      - "keeper.sign(serialized_event, indexed=true) → [Siger]"
+    related_terms: ["Algos", "Key Derivation Path", "Salt"]
+
+  - term: "Algos"
+    synonyms: ["Key Algorithm"]
+    definition: "Enum selecting the key management strategy for an AID: salty (deterministic from salt), randy (random), or group (multi-sig proxy)."
+    invariants:
+      - "salty: all keys derivable from passcode — full recovery possible"
+      - "randy: random keys stored encrypted — recovery requires encrypted backups"
+      - "group: delegates to a member AID's keeper with index remapping"
+    examples:
+      - "Algos.salty for personal AIDs; Algos.group for multi-sig AIDs"
+    related_terms: ["Keeper", "Salt"]
+
+  - term: "Key Derivation Path"
+    synonyms: ["Derivation Path"]
+    definition: "Deterministic path for deriving a specific key from the master salt. Composed of stem (prefix string), pidx (AID index), ridx (rotation index), and kidx (key index)."
+    invariants:
+      - "Path = stem + hex(ridx) + hex(kidx + offset)"
+      - "stem: string prefix identifying the derivation context (e.g. 'signify:aid', 'signify:controller')"
+      - "pidx: which AID under this passcode (0, 1, 2...)"
+      - "ridx: which rotation (increments on each key rotation)"
+      - "kidx: which key within a rotation (for multi-key thresholds)"
+      - "Same path + same salt always produces the same key"
+    examples:
+      - "stem='signify:aid', ridx=0, kidx=0 → path 'signify:aid00' → first signing key"
+      - "After rotation: ridx=1, kidx=0 → path 'signify:aid10' → new signing key"
+    related_terms: ["Keeper", "Salt", "Tier"]
+
+  - term: "Encrypter"
+    synonyms: []
+    definition: "Encrypts key material at rest using X25519 ECDH-derived symmetric keys. The salt and private key proxies are encrypted before storage."
+    invariants:
+      - "Uses X25519 key agreement + secretbox symmetric encryption"
+      - "Encrypted salt (sxlt) stored on the cloud agent — agent cannot decrypt without passcode"
+      - "Decryption requires the controller's ECDH private key derived from the salt"
+    examples:
+      - "encrypter.encrypt(matter=salter) → Cipher (stored as sxlt on KERIA)"
+    related_terms: ["Passcode", "Salt", "Key Storage"]
+
+  - term: "Operation"
+    synonyms: ["Long-running Operation"]
+    definition: "A handle for tracking an asynchronous KERIA task — witness receipting, delegation approval, credential issuance, OOBI resolution. Edge client polls for completion."
+    invariants:
+      - "Returned by create/rotate/issue calls as a promise"
+      - "Polled via client.operations().get(name) until done=true"
+      - "Has name, done flag, optional error, and response payload"
+      - "Types: witness, delegation, group, query, registry, credential, endrole, oobi"
+    examples:
+      - "const op = await client.identifiers().create(name, config); await op.op() // poll"
+      - "while (!op.done) { op = await client.operations().get(op.name); }"
+    related_terms: ["Signify Client", "Admin API"]
+
+  - term: "Identifier Resource"
+    synonyms: ["Identifiers"]
+    definition: "Client-side resource class for AID lifecycle operations — create, rotate, interact, list, get, add end-roles, list members."
+    invariants:
+      - "Accessed via client.identifiers()"
+      - "create() returns inception event + signatures + operation handle"
+      - "rotate() returns rotation event + operation handle"
+      - "addEndRole() authorizes an endpoint provider for a role"
+    examples:
+      - "await client.identifiers().create('myaid', {wits, toad, ...})"
+      - "await client.identifiers().addEndRole('myaid', 'agent', agentAid)"
+    related_terms: ["Signify Client", "Operation", "End-Role"]
+
+  - term: "Credential Resource"
+    synonyms: ["Credentials"]
+    definition: "Client-side resource class for credential operations — issue, list, get, revoke."
+    invariants:
+      - "Accessed via client.credentials()"
+      - "issue() requires registry, schema SAID, recipient, and credential data"
+      - "Issuance returns a long-running operation (credential + TEL anchoring)"
+    examples:
+      - "await client.credentials().issue(name, registryName, schemaSaid, recipientAid, data)"
+    related_terms: ["Signify Client", "Operation", "Registry"]
+
+  - term: "Exchange Resource"
+    synonyms: ["Exchanges"]
+    definition: "Client-side resource class for IPEX and multi-sig exchange messages — build, send, and track exn messages."
+    invariants:
+      - "Accessed via client.exchanges()"
+      - "createExchangeMessage() builds a signed exn"
+      - "send() delivers to recipients via message router"
+      - "Used for IPEX grant/admit, multi-sig coordination, challenge-response"
+    examples:
+      - "await client.exchanges().send(name, 'credential', sender, '/ipex/grant', payload, embeds, [recipient])"
+    related_terms: ["Signify Client", "IPEX"]
+
+  - term: "Group Resource"
+    synonyms: ["Groups"]
+    definition: "Client-side resource class for multi-sig group operations — send requests to group members, get pending requests."
+    invariants:
+      - "Accessed via client.groups()"
+      - "getRequest() fetches a pending multi-sig request by SAID"
+      - "sendRequest() distributes an exn to all group members"
+    examples:
+      - "await client.groups().sendRequest(name, exn, sigs, atc)"
+    related_terms: ["Signify Client", "Multi-sig Assembly", "Keeper"]
+
+  - term: "Registry Resource"
+    synonyms: ["Registries"]
+    definition: "Client-side resource class for credential registry management — create registries for TEL-based credential state tracking."
+    invariants:
+      - "Accessed via client.registries()"
+      - "create() provisions a new registry anchored to an AID's KEL"
+      - "Each registry gets its own TEL for tracking credential state"
+    examples:
+      - "await client.registries().create({name: 'myaid', registryName: 'myreg'})"
+    related_terms: ["Signify Client", "TEL", "Credential Resource"]
+
+  - term: "End-Role"
+    synonyms: ["Endpoint Role"]
+    definition: "An authorization declaring which endpoints serve specific roles (witness, agent, watcher) for an AID. Published via signed reply messages anchored to the KEL."
+    invariants:
+      - "Roles: witness, controller, agent, watcher, mediator"
+      - "Must be signed by the AID's controller"
+      - "Added via identifiers().addEndRole(name, role, eid)"
+    examples:
+      - "Authorize KERIA as the 'agent' endpoint for myaid"
+    related_terms: ["Identifier Resource", "OOBI"]
+
 events:
   - name: "SessionStarted"
     payload: "controller_aid: AID, agent_url: URL"
@@ -127,6 +272,22 @@ events:
     payload: "controller_aid: AID"
     triggers: "Session ends — all in-memory key material overwritten with zeros"
 
+  - name: "IdentifierCreated"
+    payload: "aid: AID, alias: string, algo: Algos, keeper_type: string"
+    triggers: "Controller creates a new AID via the Signify client"
+
+  - name: "IdentifierRotated"
+    payload: "aid: AID, ridx: int, new_keys: [Verfer]"
+    triggers: "Controller rotates an AID's keys — ridx increments, new derivation path"
+
+  - name: "CredentialIssued"
+    payload: "said: SAID, schema: SAID, recipient: AID, registry: string"
+    triggers: "Controller signs and issues a credential via the Signify client"
+
+  - name: "OperationPolled"
+    payload: "name: string, type: string, done: bool"
+    triggers: "Edge client polls a long-running operation for status"
+
 rules:
   - "Private keys NEVER leave the controller's device under any circumstances"
   - "All key material in memory must be zeroed when the session ends"
@@ -134,3 +295,7 @@ rules:
   - "Passcode must meet minimum entropy (21 chars / 128 bits after stretching)"
   - "Browser extension only signs for websites with established signing associations"
   - "All admin API requests must include KRAM signatures — unsigned requests are rejected"
+  - "Salty keepers are fully recoverable from the passcode — randy keepers require encrypted backup"
+  - "Group keepers delegate signing to a member AID's keeper — they never hold group-level keys directly"
+  - "Long-running operations must be polled — the agent cannot push completion to the edge"
+  - "End-role authorizations must be signed and anchored before other agents/witnesses will accept them"

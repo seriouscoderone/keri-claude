@@ -86,8 +86,8 @@ graph TD
 | `acdc/ipex` | IPEX Exchange | subdomain | complete | 14 | Issuance & Presentation Exchange protocol |
 | `oobi` | Out-of-Band Introduction | adjacent | complete | 6 | Bootstrap discovery, BADA endpoint authorization |
 | `agent` | Agent Infrastructure | client | complete | 4 | Edge/cloud separation, Signify protocol contract |
-| `agent/edge-signing` | Edge Signing (Signify) | subdomain | complete | 9 | Controller-side: holds keys, signs, passcode, sessions |
-| `agent/cloud-hosting` | Cloud Hosting (KERIA) | subdomain | complete | 10 | Server-side: hosts AIDs, coordinates multi-sig, routes messages |
+| `agent/edge-signing` | Edge Signing (Signify) | subdomain | complete | 22 | Controller-side: keepers, tiers, derivation paths, resource API, operations |
+| `agent/cloud-hosting` | Cloud Hosting (KERIA) | subdomain | complete | 20 | Server-side: HIO doers, escrows, long-running ops, seeker, registrar |
 
 ## Source Material
 
