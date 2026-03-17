@@ -1,0 +1,2573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Domain Context Map</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; }
+
+  /* Layout */
+  #app { display: flex; flex-direction: column; height: 100vh; }
+  header {
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 14px; font-weight: 600; color: #f5c518; white-space: nowrap; }
+  #breadcrumb { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 12px; }
+  #breadcrumb .crumb { color: #4a90d9; cursor: pointer; }
+  #breadcrumb .crumb:hover { text-decoration: underline; }
+  #breadcrumb .crumb.current { color: #f5c518; cursor: default; pointer-events: none; }
+  #breadcrumb .sep { color: #555; }
+  #btn-back {
+    margin-left: auto;
+    background: #0f3460;
+    border: 1px solid #4a90d9;
+    color: #4a90d9;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  #btn-back:hover { background: #1a4a7a; }
+  #btn-back:disabled { opacity: 0.3; cursor: default; }
+
+  #layout { display: flex; flex: 1; overflow: hidden; }
+
+  /* Sidebar */
+  aside#sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: #16213e;
+    border-right: 1px solid #0f3460;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #search {
+    margin: 10px 8px 6px;
+    padding: 6px 8px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-size: 12px;
+    outline: none;
+  }
+  #search::placeholder { color: #666; }
+  #search:focus { border-color: #4a90d9; }
+  #domain-list { list-style: none; overflow-y: auto; flex: 1; padding: 4px 0; }
+  #domain-list li {
+    padding: 7px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #bbb;
+  }
+  #domain-list li:hover { background: #0f3460; color: #e0e0e0; }
+  #domain-list li.active { border-left-color: #f5c518; color: #f5c518; background: #0f3460; }
+
+  /* Main content */
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #graph-wrap { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+  #cy { min-height: 100px; flex-shrink: 0; background: #0d1117; }
+  #info-panel { flex: 1; min-height: 60px; overflow-y: auto; padding: 16px 20px; background: #12192b; }
+
+  /* Info panel */
+  #info-panel .domain-title { font-size: 18px; font-weight: 700; color: #f5c518; margin-bottom: 4px; }
+  #info-panel .domain-meta { font-size: 11px; color: #888; margin-bottom: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #info-panel .tag {
+    background: #1a4a7a;
+    color: #8ab4f8;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+  }
+  #info-panel .description { font-size: 13px; color: #ccc; line-height: 1.6; margin-bottom: 14px; }
+
+  .section-header {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #888;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 0;
+    border-bottom: 1px solid #1e2d4a;
+    margin-bottom: 6px;
+    user-select: none;
+  }
+  .section-header .arrow { font-size: 9px; transition: transform 0.15s; }
+  .section-header.collapsed .arrow { transform: rotate(-90deg); }
+  .section-body { margin-bottom: 14px; }
+  .section-body.hidden { display: none; }
+
+  .lang-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .lang-table td { padding: 4px 6px; vertical-align: top; border-bottom: 1px solid #1e2d4a; }
+  .lang-table td:first-child { color: #f5c518; font-weight: 600; width: 30%; white-space: nowrap; }
+  .lang-table td:last-child { color: #ccc; }
+
+  .issue-summary { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .issue-badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .badge-critical { background: #5a1a1a; color: #ff6b6b; }
+  .badge-high { background: #3d2200; color: #ff9f43; }
+  .badge-medium { background: #2d2a00; color: #ffd32a; }
+  .badge-low { background: #0d2d1a; color: #2ed573; }
+
+  .issue-item {
+    background: #0f1a2e;
+    border: 1px solid #1e2d4a;
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+  .issue-item .issue-cat { font-size: 10px; color: #888; margin-bottom: 3px; }
+  .issue-item .issue-rec { color: #ccc; }
+  .issue-item .issue-ev { color: #666; font-style: italic; margin-top: 3px; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .code-loc { display: flex; gap: 8px; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #1a2540; align-items: baseline; }
+  .code-loc .loc-path { color: #4a90d9; font-family: monospace; }
+  .code-loc .loc-type { color: #888; font-size: 10px; }
+
+  .empty-msg { color: #555; font-size: 12px; font-style: italic; }
+
+  /* Legend */
+  #legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 6px 10px;
+    background: #0d1117;
+    border-bottom: 1px solid #0f3460;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  .legend-item { display: flex; align-items: center; gap: 4px; color: #aaa; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-diamond { width: 10px; height: 10px; transform: rotate(45deg); flex-shrink: 0; }
+  .legend-rect { width: 12px; height: 8px; flex-shrink: 0; }
+
+  /* Drag handles */
+  #sidebar-handle {
+    width: 5px;
+    flex-shrink: 0;
+    background: #0f3460;
+    cursor: col-resize;
+    transition: background 0.15s;
+  }
+  #sidebar-handle:hover, #sidebar-handle.active { background: #4a90d9; }
+  #graph-handle {
+    height: 5px;
+    flex-shrink: 0;
+    background: #0f3460;
+    cursor: row-resize;
+    transition: background 0.15s;
+  }
+  #graph-handle:hover, #graph-handle.active { background: #4a90d9; }
+  body.dragging-col { user-select: none; cursor: col-resize !important; }
+  body.dragging-row { user-select: none; cursor: row-resize !important; }
+  body.dragging-col *, body.dragging-row * { cursor: inherit !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Domain Context Map</h1>
+    <div id="breadcrumb"></div>
+    <button id="btn-back" disabled>&#8592; Back</button>
+  </header>
+  <div id="layout">
+    <aside id="sidebar">
+      <input id="search" type="text" placeholder="Search domains…" autocomplete="off">
+      <ul id="domain-list"></ul>
+    </aside>
+    <div id="sidebar-handle"></div>
+    <div id="main">
+      <div id="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#4a90d9"></div>Client</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f5c518;border:2px solid #f5c518"></div>Current</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#5cb85c"></div>Subdomain</div>
+        <div class="legend-item"><div class="legend-diamond" style="background:#9b59b6"></div>Kernel</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#e67e22"></div>Adjacent</div>
+        <div class="legend-item"><div class="legend-rect" style="background:#888"></div>External</div>
+      </div>
+      <div id="graph-wrap">
+        <div id="cy"></div>
+        <div id="graph-handle"></div>
+        <div id="info-panel"><div class="empty-msg">Select a domain to view details.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const RDOD_DATA = [
+  {
+    "template_version": "1.0",
+    "id": "acdc/disclosure",
+    "name": "ACDC Disclosure Mechanisms",
+    "description": "Graduated disclosure mechanisms for ACDCs — providing progressive, incremental revelation of credential data following the principle of least disclosure. Supports compact disclosure (SAID-only), partial disclosure (blinded blocks), selective disclosure (individual attribute revelation via aggregate), full disclosure, and chain-link confidential disclosure with contractual protection. Each mechanism leverages CESR-encoded SAIDs and UUID salty nonces for blinding.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — ACDC protocol specification, Disclosure Mechanisms and Exploitation Protection sections"
+      },
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — ACDC Variants, Aggregate Section, Attribute Section"
+      },
+      {
+        "type": "document",
+        "reference": "keripy — Python reference implementation, vdr/ and vc/ modules"
+      },
+      {
+        "type": "document",
+        "reference": "keriox/teliox — Rust TEL implementation"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Graduated Disclosure",
+        "definition": "The incremental, interactive application of the principle of least disclosure — each disclosure reveals the minimum needed to facilitate further disclosure",
+        "invariants": [
+          "Applies recursively: disclose enough to enable more disclosure",
+          "Mechanisms include compact, metadata, partial, nested partial, full, selective, and bulk-issued"
+        ]
+      },
+      {
+        "term": "Selective Disclosure",
+        "definition": "Mechanism to reveal individual attributes from a set without exposing other attributes, using blinded attribute blocks and an aggregate commitment (AGID)",
+        "invariants": [
+          "Uses the A (aggregate) field, not the a (attribute) field",
+          "Each blinded block has its own d (SAID) and u (UUID) fields",
+          "Disclosure of one block does not leak information about any other block"
+        ]
+      },
+      {
+        "term": "Partial Disclosure",
+        "definition": "Mechanism to reveal the existence and schema of an ACDC without disclosing its detailed content, by presenting only the SAID of a blinded block",
+        "invariants": [
+          "Requires UUID u field for secure blinding against rainbow table attacks",
+          "Disclosure of SAID + schema is not enough to discover content when UUID is present"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://acdc",
+        "relationship": "ACDC core domain drives disclosure mechanisms for credential presentation",
+        "via_port": "port://acdc/disclosure/inbound/disclosure-management"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "Disclosure logic is embedded within ACDC processing. The oneOf composition operators in JSON Schema enable schema validation of both compact and uncompacted variants. Implementations must support the most compact form SAID algorithm for cross-variant verification. The aggregate computation (AGID) requires serialization-kind-aware digest computation.\n"
+    },
+    "issues": [],
+    "tags": [
+      "disclosure",
+      "privacy",
+      "selective",
+      "graduated",
+      "chain-link-confidentiality"
+    ],
+    "_source": "rdod/spec/domains/acdc/disclosure/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "acdc",
+    "name": "ACDC Credential Protocol",
+    "description": "Authentic Chained Data Containers — a protocol for issuing, presenting, and verifying cryptographically authentic, chainable data containers (credentials). ACDCs provide granular provenanced proof-of-authorship via a directed acyclic graph (DAG) of linked containers, graduated disclosure mechanisms, Ricardian contract rule sections, and schema-enforced structure. ACDCs leverage KERI identifiers for issuer authentication and CESR encoding for serialization.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — ACDC protocol specification v1.0 (ToIP/IETF)"
+      },
+      {
+        "type": "document",
+        "reference": "vlei-llm-doc.md — vLEI ecosystem documentation"
+      },
+      {
+        "type": "document",
+        "reference": "KERIArchGroupIssuance.md — KERI architectures for group issuance"
+      },
+      {
+        "type": "document",
+        "reference": "keripy — Python reference implementation, vdr/ and vc/ modules"
+      },
+      {
+        "type": "document",
+        "reference": "keriox/teliox — Rust TEL implementation"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "ACDC",
+        "definition": "Authentic Chained Data Container — a cryptographically verifiable data container bound to an issuer AID, with schema-enforced structure and chainable edges",
+        "invariants": [
+          "Must contain required fields [v, d, i, s] in canonical insertion order",
+          "Top-level field order when present: [v, t, d, u, i, rd, s, a, A, e, r]",
+          "The d field is the SAID of the ACDC in its most compact form"
+        ]
+      },
+      {
+        "term": "Issuer",
+        "definition": "The controller of the AID in the i field who creates and commits to the ACDC via a signature or KEL-anchored seal",
+        "invariants": [
+          "Issuer AID must have verifiable key state via KERI",
+          "Issuer commitment survives key rotation — binding is to key state at issuance time"
+        ]
+      },
+      {
+        "term": "Issuee",
+        "definition": "The controller of the AID designated in the i field of the attribute section, making the ACDC a targeted credential",
+        "invariants": [
+          "Issuee AID must be provably controllable",
+          "Presence of issuee makes the ACDC targeted; absence makes it untargeted"
+        ]
+      },
+      {
+        "term": "SAID",
+        "definition": "Self-Addressing Identifier — a cryptographic digest of the enclosing field map that serves as a content-addressable identifier",
+        "invariants": [
+          "Computed using the most compact form algorithm with depth-first SAIDification",
+          "Provides collision-resistant unique reference with >= 128 bits cryptographic strength"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://agent",
+        "relationship": "Agent infrastructure consumes ACDC to issue credentials, manage registries, and coordinate disclosure exchanges",
+        "via_port": "port://acdc/inbound/credential-lifecycle"
+      }
+    ],
+    "subdomains": [
+      {
+        "ref": "domain://acdc/disclosure",
+        "relationship": "ACDC drives disclosure mechanisms for graduated, selective, partial, and full disclosure of credential content",
+        "via_port": "port://acdc/disclosure/inbound/disclosure-management"
+      },
+      {
+        "ref": "domain://acdc/tel",
+        "relationship": "ACDC drives transaction event logs for tracking credential state (issuance, revocation)",
+        "via_port": "port://acdc/tel/inbound/state-management"
+      },
+      {
+        "ref": "domain://acdc/ipex",
+        "relationship": "ACDC drives the issuance and presentation exchange protocol for credential negotiation and delivery",
+        "via_port": "port://acdc/ipex/inbound/exchange-protocol"
+      }
+    ],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Blake3-256/Blake2b-256/SHA-256 (digests for SAIDs), Ed25519 (signing)",
+        "relationship": "Cryptographic digest and signature types appear directly in ACDC field values — qualified via CESR encoding"
+      }
+    ],
+    "adjacents": [
+      {
+        "ref": "domain://keri",
+        "relationship": "Partnership — ACDC credentials anchor to KERI identifiers for issuer/issuee authentication; credential state is sealed in the issuer's KEL",
+        "via_port": "port://keri/inbound/identifier-lifecycle",
+        "is_cross_cutting": false
+      },
+      {
+        "ref": "domain://cesr",
+        "relationship": "OHS + Published Language — ACDCs are encoded in CESR format (JSON, CBOR, MGPK, or native CESR); all SAIDs use CESR-qualified digests",
+        "via_port": "port://cesr/inbound/encoding",
+        "is_cross_cutting": false
+      }
+    ],
+    "externals": [
+      {
+        "name": "Credential Persistence",
+        "abstraction": "Repository",
+        "ref": "port://acdc/outbound/credential-store",
+        "implementation_notes": "Store for issued ACDCs, their schemas, and associated metadata. Implementations: LMDB (keripy), redb (keriox), DynamoDB (serious-keri)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "package",
+      "language_affinity": "any",
+      "notes": "Reference implementation is in keripy (Python) within the viring and credentialing modules. Production implementations exist in Rust (keriox) and TypeScript (signify-ts for edge signing). All implementations must use CESR encoding, insertion-ordered field maps, and JSON Schema 2020-12 for schema validation. The type-is-schema principle means no explicit type fields — the schema SAID in the s field defines the ACDC's type.\n"
+    },
+    "issues": [],
+    "tags": [
+      "credential",
+      "verifiable",
+      "chained",
+      "disclosure",
+      "authentic-data"
+    ],
+    "_source": "rdod/spec/domains/acdc/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "acdc/ipex",
+    "name": "Issuance and Presentation Exchange (IPEX)",
+    "description": "Issuance and Presentation Exchange Protocol — a uniform mechanism for the issuance and presentation of ACDCs in a securely attributable manner. IPEX models all exchanges (both issuance and presentation) as the disclosure of information by a Discloser to a Disclosee using KERI exchange (exn) messages. The protocol supports graduated disclosure negotiation with contractual protection, leveraging SAIDs, CESR-Path proofs, and Ricardian contracts. Message routes: apply, offer, agree, grant, admit, spurn.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — Issuance and Presentation Exchange (IPEX) section"
+      },
+      {
+        "type": "document",
+        "reference": "KERIArchGroupIssuance.md — KERI architectures for group issuance, IPEX and KRAM sections"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/app/ipexing.py (ipexApplyExn, ipexOfferExn, ipexAgreeExn, ipexGrantExn, ipexAdmitExn, ipexSpurnExn: IPEX message construction functions)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/exchanging.py (Exchanger: generic EXN message router and handler dispatcher)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "IPEX",
+        "definition": "Issuance and Presentation Exchange Protocol — a standard set of KERI exchange (exn) message routes for credential issuance and presentation",
+        "invariants": [
+          "All exchanges modeled as disclosure from Discloser to Disclosee",
+          "Protocol routes: apply, offer, agree, grant, admit, spurn",
+          "A single protocol works for both issuance and presentation exchanges"
+        ]
+      },
+      {
+        "term": "Grant",
+        "definition": "IPEX message route by which the Discloser provides full or selective disclosure of an ACDC to the Disclosee",
+        "invariants": [
+          "Contains the ACDC (full or selective disclosure variant)",
+          "Includes discloser's signature on the grant or its SAID",
+          "Disclosee responds with admit to confirm receipt"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://acdc",
+        "relationship": "ACDC core domain drives IPEX for credential issuance and presentation exchange",
+        "via_port": "port://acdc/ipex/inbound/exchange-protocol"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "IPEX is implemented using KERI exchange (exn) messages with specific route values. The protocol is non-normative in the ACDC spec and is being developed as a separate detailed specification. Implementations must support both the full negotiation flow (apply -> offer -> agree -> grant -> admit) and the direct issuance shortcut (grant -> admit). Group multisig issuance requires coordination of IPEX messages across group members.\n"
+    },
+    "issues": [],
+    "tags": [
+      "exchange",
+      "issuance",
+      "presentation",
+      "disclosure",
+      "protocol"
+    ],
+    "_source": "rdod/spec/domains/acdc/ipex/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "acdc/tel",
+    "name": "Transaction Event Log (TEL)",
+    "description": "Transaction Event Log — a hash-chained data structure of sealed transaction events that tracks the dynamic state of ACDCs (e.g., issuance, revocation). TEL events are sealed (anchored) in the issuer's KEL via transaction event seals, binding ACDC state to the issuer's key state at the time of each state change. This makes ACDC state verifiable and non-repudiable without requiring the TEL events themselves to be signed. TELs support both public (unblinded) and private (blinded) state registries.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — Transaction Event Logs (TELs) as ACDC State Registries section"
+      },
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — Binding to Key State at Time of ACDC State Change section"
+      },
+      {
+        "type": "document",
+        "reference": "KERIArchGroupIssuance.md — KERI architectures for group issuance"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/vdr/viring.py (Reger: TEL database), src/keri/vdr/eventing.py (Tever/Tevery: TEL state/processor, Regery: registry collection)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox/teliox — src/state.rs (TelState, ManagerTelState), src/processor.rs (TelEventProcessor), src/event/verifiable_event.rs (VerifiableEvent), src/database/mod.rs (TelEventDatabase trait)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "TEL",
+        "definition": "Transaction Event Log — a hash-chained log of sealed transaction events tracking ACDC state, anchored to the issuer's KEL",
+        "invariants": [
+          "Events are hash-chained via prior event SAID (p field)",
+          "Each event is sealed in the issuer's KEL via a transaction event seal",
+          "TEL events do not need to be signed — the KEL seal provides equivalent commitment"
+        ]
+      },
+      {
+        "term": "Registry",
+        "definition": "A TEL serving as a Verifiable Container/Credential Registry (VCR), tracking the issuance and revocation state of ACDCs",
+        "invariants": [
+          "Initialized by a registry inception (rip) event",
+          "SAID of the rip event serves as the registry's unique identifier (REGID)",
+          "Registry SAID appears as the rd field in associated ACDCs"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://acdc",
+        "relationship": "ACDC core domain drives TEL for credential state management",
+        "via_port": "port://acdc/tel/inbound/state-management"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "TEL Persistence",
+        "abstraction": "Repository",
+        "ref": "port://acdc/tel/outbound/tel-store",
+        "implementation_notes": "Append-only store for TEL events. Implementations: LMDB (keripy), redb (keriox), DynamoDB (serious-keri)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "The TEL is implemented alongside the KEL in KERI infrastructure. Registry events use ACDC protocol version strings and message types (rip, bup, upd). The key insight is that TEL events derive their non-repudiability from the KEL seal, not from direct signatures. Blinded registries require a shared secret salt between issuer and discloser for hierarchically deterministic UUID derivation.\n"
+    },
+    "issues": [],
+    "tags": [
+      "state",
+      "registry",
+      "revocation",
+      "issuance",
+      "event-log"
+    ],
+    "_source": "rdod/spec/domains/acdc/tel/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "agent/cloud-hosting",
+    "name": "Cloud Hosting (KERIA)",
+    "description": "Server-side cloud agent that hosts KERI identifiers on behalf of controllers. Manages AIDs, processes events, coordinates multi-sig, stores credentials, routes protocol messages — but never holds private signing keys. All signing is delegated to the controller's edge client via the Signify protocol. Three service endpoints: boot (agency), admin API, message router.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "KERIArchGroupIssuance.md — group issuance and multi-sig coordination"
+      },
+      {
+        "type": "document",
+        "reference": "keridoc-llms-full.md — KERIA architecture documentation"
+      },
+      {
+        "type": "user-input",
+        "reference": "CLAUDE.md — KERIA service architecture (ports 3901/3902/3903)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "KERIA",
+        "definition": "Cloud agent hosting service — the server-side component that manages AIDs, processes events, and coordinates operations without ever holding private keys",
+        "invariants": [
+          "Zero access to private signing or decryption keys",
+          "Can store, forward, and assemble — but never sign",
+          "One agent instance per controller AID"
+        ]
+      },
+      {
+        "term": "Agency",
+        "definition": "The boot service (port 3903) that provisions and destroys agent instances for Signify clients",
+        "invariants": [
+          "Handles POST /boot to create agent instances",
+          "Each provisioning requires a valid inception event from the edge client",
+          "One-time operation per controller — idempotent on retry"
+        ]
+      },
+      {
+        "term": "Admin API",
+        "definition": "The management endpoint (port 3901) for all agent operations — identifier lifecycle, credential management, OOBI resolution, state queries",
+        "invariants": [
+          "All requests authenticated via KRAM — unsigned requests rejected",
+          "Scoped to the authenticated controller's agent instance"
+        ]
+      },
+      {
+        "term": "Message Router",
+        "definition": "The protocol endpoint (port 3902) receiving external KERI messages from other agents, witnesses, and watchers",
+        "invariants": [
+          "Handles inbound multi-sig coordination, credential exchange, event receipts",
+          "Routes messages to the correct agent instance based on the target AID",
+          "No KRAM required — messages are protocol-authenticated (KERI signatures)"
+        ]
+      },
+      {
+        "term": "Agent Instance",
+        "definition": "A provisioned agent representing a single controller — contains the controller's managed AIDs, credential wallet, contact book, and pending operations",
+        "invariants": [
+          "Bound to exactly one controller AID (the authentication anchor)",
+          "Isolated from other agent instances"
+        ]
+      },
+      {
+        "term": "Credential Wallet",
+        "definition": "Server-hosted storage of credentials held by the controller — received ACDCs, their schemas, and presentation history",
+        "invariants": [
+          "Credential content is not secret to the agent (ACDC metadata is readable)",
+          "Credential presentation requires edge-signed authorization",
+          "Wallet is scoped to the agent instance"
+        ]
+      },
+      {
+        "term": "Contact Book",
+        "definition": "Agent-managed directory of resolved OOBIs — known AIDs with their verified key state and endpoint URLs",
+        "invariants": [
+          "Populated by OOBI resolution via admin API",
+          "Entries include AID, key state snapshot, and endpoint URLs",
+          "Used for addressing protocol messages and verifying signatures"
+        ]
+      },
+      {
+        "term": "Multi-sig Assembly",
+        "definition": "The process of collecting partial signatures from multiple edge clients for a group AID event, assembling them when the threshold is satisfied",
+        "invariants": [
+          "Each partial signature arrives independently via message router",
+          "Assembly tracked by Counselor; completion detected by Monitor"
+        ]
+      },
+      {
+        "term": "Long-running Operation",
+        "definition": "Async task tracked by Monitor — edge clients poll via GET /operations/{name} until done",
+        "invariants": [
+          "Types: witness, delegation, group, credential, registry, endrole, oobi"
+        ]
+      },
+      {
+        "term": "Doer",
+        "definition": "HIO event-driven processing unit with recur() method. Non-blocking cooperative concurrency via Deck queues.",
+        "invariants": [
+          "Key doers: Witnesser, Delegator, Escrower, ParserDoer"
+        ]
+      },
+      {
+        "term": "Notification",
+        "definition": "A message queued for the edge client indicating a pending action — multi-sig request, credential offer, exchange message",
+        "invariants": [
+          "Notifications are polled by the edge client via admin API",
+          "The agent cannot push to the edge — the edge pulls"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://agent",
+        "relationship": "Parent agent domain drives cloud-hosting as the server-side component of the agent architecture",
+        "via_port": "port://agent/cloud-hosting/inbound/admin-api"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [
+      {
+        "ref": "domain://agent/edge-signing",
+        "relationship": "Customer-Supplier — edge-signing drives cloud-hosting via KRAM-authenticated requests. Cloud-hosting serves edge-signing but cannot initiate.",
+        "via_port": "port://agent/cloud-hosting/inbound/admin-api",
+        "is_cross_cutting": false
+      }
+    ],
+    "externals": [
+      {
+        "name": "Agent Persistence",
+        "abstraction": "Repository",
+        "ref": "port://agent/cloud-hosting/outbound/agent-store",
+        "implementation_notes": "Stores agent instances, credential wallets, contact books, pending operations. Implementations: LMDB (keria), DynamoDB (serious-keri)"
+      },
+      {
+        "name": "HTTP Server",
+        "abstraction": "Adapter",
+        "ref": "port://agent/cloud-hosting/outbound/http-server",
+        "implementation_notes": "Exposes boot (3903), admin (3901), and message router (3902) endpoints. Implementations: Falcon/hio (keria), API Gateway+Lambda (serious-keri)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "service",
+      "language_affinity": "any",
+      "notes": "Reference implementation is keria (Python, Falcon + hio, LMDB). Serverless implementation is serious-keri (TypeScript, AWS Lambda + DynamoDB). The three endpoints (boot, admin, message router) are ports on the same service, not separate services — they share agent state and persistence.\n"
+    },
+    "issues": [],
+    "tags": [
+      "cloud-agent",
+      "keria",
+      "hosting",
+      "multi-sig"
+    ],
+    "_source": "rdod/spec/domains/agent/cloud-hosting/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "agent",
+    "name": "Agent Infrastructure",
+    "description": "Application-level infrastructure for operating KERI identifiers. Separates cloud hosting (KERIA) from edge signing (Signify). The agent manages AIDs, processes events, coordinates multi-sig, delivers credentials, and exposes APIs — but never holds private signing keys. All sensitive operations are signed at the edge by the controller via the Signify protocol.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "KERIArchGroupIssuance.md — group issuance architecture"
+      },
+      {
+        "type": "document",
+        "reference": "keridoc-llms-full.md — KERIA/Signify documentation"
+      },
+      {
+        "type": "user-input",
+        "reference": "CLAUDE.md — KERIA service architecture, Signify protocol"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "KERIA",
+        "definition": "Cloud agent hosting service — manages AIDs, processes events, stores KELs, coordinates multi-sig, but never holds private signing keys",
+        "invariants": [
+          "Never has access to private keys or decryption keys",
+          "All signing operations are delegated to the edge client",
+          "Exposes three endpoints: boot (3903), admin (3901), message router (3902)"
+        ]
+      },
+      {
+        "term": "Signify",
+        "definition": "Edge signing protocol — the controller's client library that holds private keys and performs all cryptographic signing operations",
+        "invariants": [
+          "Private keys never leave the edge client",
+          "All operations are signed at the edge before being sent to the agent",
+          "Implementations: signify-ts (TypeScript), signifypy (Python)"
+        ]
+      },
+      {
+        "term": "Edge Signing",
+        "definition": "The principle that all sensitive cryptographic operations occur on the controller's device, not on the cloud agent",
+        "invariants": [
+          "Signing at the edge is the fundamental security guarantee of the Signify protocol",
+          "The agent is untrusted with respect to key material"
+        ]
+      },
+      {
+        "term": "Signify Protocol",
+        "definition": "The contract between edge signing and cloud hosting — defines how the controller drives the agent via KRAM-authenticated requests while retaining all key material locally",
+        "invariants": [
+          "Edge drives, cloud serves — the agent can never initiate signing",
+          "KRAM authenticates all admin requests",
+          "Protocol messages (via message router) use KERI signatures, not KRAM"
+        ]
+      }
+    ],
+    "domain_clients": [],
+    "subdomains": [
+      {
+        "ref": "domain://agent/edge-signing",
+        "relationship": "Agent drives edge-signing as the controller-side component — holds keys, signs operations",
+        "via_port": "port://agent/edge-signing/inbound/signing-operations"
+      },
+      {
+        "ref": "domain://agent/cloud-hosting",
+        "relationship": "Agent drives cloud-hosting as the server-side component — hosts AIDs, coordinates, routes",
+        "via_port": "port://agent/cloud-hosting/inbound/admin-api"
+      }
+    ],
+    "kernels": [],
+    "adjacents": [
+      {
+        "ref": "domain://keri",
+        "relationship": "Customer-Supplier — agent consumes KERI protocol for identifier lifecycle, event processing, and key state management",
+        "via_port": "port://keri/inbound/identifier-lifecycle",
+        "is_cross_cutting": false
+      },
+      {
+        "ref": "domain://acdc",
+        "relationship": "Customer-Supplier — agent consumes ACDC for credential issuance, presentation, and exchange",
+        "via_port": "port://acdc/inbound/credential-lifecycle",
+        "is_cross_cutting": false
+      },
+      {
+        "ref": "domain://oobi",
+        "relationship": "Customer-Supplier — agent uses OOBIs for discovery and endpoint management",
+        "via_port": "port://oobi/inbound/discovery",
+        "is_cross_cutting": false
+      }
+    ],
+    "externals": [
+      {
+        "name": "Agent Persistence",
+        "abstraction": "Repository",
+        "ref": "port://agent/outbound/agent-store",
+        "implementation_notes": "Stores agent state, credential wallets, contact books. Implementations: LMDB (keria), DynamoDB (serious-keri)"
+      },
+      {
+        "name": "HTTP Server",
+        "abstraction": "Adapter",
+        "ref": "port://agent/outbound/http-server",
+        "implementation_notes": "Exposes boot, admin, and message router endpoints. Implementations: Falcon/hio (keria), Lambda (serious-keri)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "service",
+      "language_affinity": "any",
+      "notes": "Reference implementation is keria (Python, Falcon + hio). Serverless implementation is serious-keri (TypeScript, AWS Lambda + DynamoDB). Edge signing clients: signify-ts (TypeScript), signifypy (Python). Browser integration: signify-browser-extension (React).\n"
+    },
+    "issues": [],
+    "tags": [
+      "infrastructure",
+      "cloud-agent",
+      "edge-signing",
+      "signify"
+    ],
+    "_source": "rdod/spec/domains/agent/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "agent/edge-signing",
+    "name": "Edge Signing (Signify)",
+    "description": "The controller-side signing protocol. Holds private keys on the controller's device, performs all cryptographic signing operations, and communicates with the cloud agent via KRAM-authenticated requests. Private keys never leave this domain. Implementations: signify-ts, signifypy, signify-browser-extension.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keridoc-llms-full.md — Signify protocol documentation"
+      },
+      {
+        "type": "user-input",
+        "reference": "CLAUDE.md — signify-ts, signifypy, browser extension architecture"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Signify Client",
+        "definition": "Controller-side library that holds private keys, signs operations, and communicates with a KERIA cloud agent via KRAM",
+        "invariants": [
+          "Private keys are generated and stored locally — never transmitted",
+          "All requests to the cloud agent are signed via KRAM",
+          "Exposes resource objects: identifiers, credentials, exchanges, groups, registries, operations"
+        ]
+      },
+      {
+        "term": "Keeper",
+        "definition": "Key management abstraction — three implementations: SaltyKeeper (deterministic from salt), RandyKeeper (random), GroupKeeper (multi-sig proxy)",
+        "invariants": [
+          "Common interface: incept(), rotate(), sign()",
+          "Algo selection at AID creation determines keeper type"
+        ]
+      },
+      {
+        "term": "Tier",
+        "definition": "Security level (low/med/high) controlling argon2 cost for passcode stretching",
+        "invariants": [
+          "Set at client construction, affects all key derivation"
+        ]
+      },
+      {
+        "term": "Operation",
+        "definition": "Handle for a long-running KERIA task — polled by edge client until done",
+        "invariants": [
+          "Types: witness, delegation, group, credential, registry, endrole, oobi"
+        ]
+      },
+      {
+        "term": "Passcode",
+        "definition": "User-supplied secret used to encrypt private keys at rest on the controller's device",
+        "invariants": [
+          "Must meet minimum entropy requirements",
+          "Passcode is never sent to the cloud agent",
+          "Key material is inaccessible without the passcode",
+          "Passcode timeout zeroes in-memory key material after inactivity"
+        ]
+      },
+      {
+        "term": "Signing Request",
+        "definition": "A request from the cloud agent for the controller to sign an event or operation — the agent proposes, the edge signs",
+        "invariants": [
+          "The cloud agent can never produce a signature — only request one",
+          "The controller reviews and approves before signing"
+        ]
+      },
+      {
+        "term": "Session",
+        "definition": "An authenticated period between the Signify client and KERIA, initiated by the controller providing their passcode",
+        "invariants": [
+          "Session begins when passcode unlocks key material",
+          "Session ends on timeout or explicit lock",
+          "Key material is zeroed from memory on session end"
+        ]
+      },
+      {
+        "term": "Controller AID",
+        "definition": "The AID that identifies the controller to the cloud agent — used for KRAM authentication of all admin API requests",
+        "invariants": [
+          "Created during initial agent provisioning (boot)",
+          "The controller AID's KEL is the trust anchor for the agent relationship"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://agent",
+        "relationship": "Parent agent domain drives edge-signing as the controller-side component of the agent architecture",
+        "via_port": "port://agent/edge-signing/inbound/signing-operations"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519 (signing), X25519 (key agreement), argon2 (passcode stretching), libsodium (secretbox for key encryption at rest)",
+        "relationship": "Cryptographic algorithm types used directly for key generation, signing, and key-at-rest encryption"
+      }
+    ],
+    "adjacents": [
+      {
+        "ref": "domain://agent/cloud-hosting",
+        "relationship": "Customer-Supplier — edge-signing drives cloud-hosting via KRAM-authenticated requests; cloud-hosting never drives edge-signing",
+        "via_port": "port://agent/cloud-hosting/inbound/admin-api",
+        "is_cross_cutting": false
+      }
+    ],
+    "externals": [
+      {
+        "name": "Key Storage",
+        "abstraction": "Repository",
+        "ref": "port://agent/edge-signing/outbound/key-store",
+        "implementation_notes": "Encrypted key material at rest. Implementations: browser localStorage (signify-browser-extension), filesystem (signify-ts/signifypy), secure enclave (mobile)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "package",
+      "language_affinity": "any",
+      "notes": "signify-ts (TypeScript) for browsers and Node.js. signifypy (Python) for scripting and testing. signify-browser-extension (React) wraps signify-ts in a Chrome/Firefox extension with polaris-web for website integration.\n"
+    },
+    "issues": [],
+    "tags": [
+      "edge-signing",
+      "signify",
+      "private-keys",
+      "controller"
+    ],
+    "_source": "rdod/spec/domains/agent/edge-signing/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "cesr/cesr-primitives",
+    "name": "CESR Primitives",
+    "description": "The subdomain responsible for qualifying raw cryptographic material and data values as self-framing CESR primitives. Defines the Matter base type and its specialized agent-noun subtypes (Verfer, Diger, Siger, etc.), the code table entries that map type codes to cryptographic algorithms and raw sizes, and the three-domain (T, B, R) representation transforms (qb64, qb2, raw). Follows the KERI naming convention: gerund-module, agent-noun class, -Dex code table.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "cesr-specification.md — CESR encoding specification (ToIP/IETF), v1.0, code table annexes"
+      },
+      {
+        "type": "document",
+        "reference": "cesride — Rust CESR primitives library (implementation survey)"
+      },
+      {
+        "type": "document",
+        "reference": "simple-cesr — TypeScript CESR primitives library (implementation survey)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Matter",
+        "definition": "The base class for all CESR primitives — encapsulates a (code, raw) pair and provides domain transforms to/from qb64 and qb2",
+        "invariants": [
+          "Every Matter instance holds a code (text) and raw (bytes) pair",
+          "Supports conversion to qb64 (T domain), qb2 (B domain), and (code, raw) R domain",
+          "Code determines the cryptographic algorithm type and raw size"
+        ]
+      },
+      {
+        "term": "Verfer",
+        "definition": "A public verification key primitive — wraps a public key and provides signature verification",
+        "invariants": [
+          "Code determines the key algorithm (D=Ed25519, 1AAB=ECDSA secp256k1, 1AAJ=ECDSA secp256r1, 1AAD=Ed448)",
+          "Raw value is the public key bytes"
+        ]
+      },
+      {
+        "term": "Diger",
+        "definition": "A cryptographic digest (hash) primitive — wraps a digest value and provides comparison and verification",
+        "invariants": [
+          "Code determines the hash algorithm (E=Blake3-256, F=Blake2b-256, H=SHA3-256, I=SHA2-256)",
+          "Can compute digest from serialized data or wrap an existing digest"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://cesr",
+        "relationship": "CESR core delegates primitive qualification and domain transforms to this subdomain",
+        "via_port": "port://cesr/cesr-primitives/inbound/qualification"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519 (32-byte keys, 64-byte sigs), X25519 (32-byte keys), ECDSA secp256k1 (33-byte pub, 64-byte sig), ECDSA secp256r1 (33-byte pub, 64-byte sig), Ed448 (57-byte keys, 114-byte sigs), Blake3-256/512, Blake2b-256/512, SHA2-256/512, SHA3-256/512",
+        "relationship": "Each cryptographic algorithm output type maps to a specific code table entry — the code IS the algorithm identifier"
+      }
+    ],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Cryptographic Library",
+        "abstraction": "Adapter",
+        "ref": "port://cesr/cesr-primitives/outbound/crypto",
+        "implementation_notes": "Signing, verification, hashing, key generation. Implementations: libsodium (Python/TS/JS), ed25519-dalek/k256/p256 (Rust)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "Reference implementation is keripy coring.py (Matter, Verfer, Diger, Siger, Cigar, Salter, Prefixer, Seqner, Saider classes). Rust implementation is cesride. TypeScript implementation is simple-cesr and the Matter class in signify-ts. All implementations follow the KERI agent-noun naming convention (-er suffix) and code table constant convention (-Dex suffix, e.g., MtrDex, DigDex).\n"
+    },
+    "issues": [],
+    "tags": [
+      "primitives",
+      "cryptographic-material",
+      "encoding",
+      "qualification"
+    ],
+    "_source": "rdod/spec/domains/cesr/cesr-primitives/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "cesr/cesr-stream",
+    "name": "CESR Stream",
+    "description": "The subdomain responsible for composing CESR primitives into hierarchically grouped streams using count codes, managing pipelining and multiplexing, handling cold-start detection and resynchronization, interleaving non-native serializations (JSON, CBOR, MGPK), and structuring messages with attachments. Count codes enable a stream parser to extract and offload entire groups without parsing individual primitives, supporting core-affinity and concurrent processing.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "cesr-specification.md — CESR encoding specification (ToIP/IETF), v1.0, count code tables and stream parsing sections"
+      },
+      {
+        "type": "document",
+        "reference": "parside — Rust CESR stream parser library (implementation survey)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Stream",
+        "definition": "An ordered sequence of self-framing CESR primitives, count code groups, and optionally interleaved non-native serializations that can be parsed and processed incrementally",
+        "invariants": [
+          "Every element in a stream MUST be self-framing",
+          "A stream MUST start with a count code, a JSON/CBOR/MGPK mapping, or an annotated encoding",
+          "Streams support both T-domain and B-domain representations"
+        ]
+      },
+      {
+        "term": "Count Code",
+        "definition": "A special self-framing primitive that counts the number of quadlets/triplets in the following group of primitives, enabling pipelining without parsing group contents",
+        "invariants": [
+          "Small count codes are 4 characters: '-' + type + 2 size chars (up to 4095 quadlets)",
+          "Large count codes are 8 characters: '--' + type + 5 size chars (up to 1,073,741,823 quadlets)",
+          "Count value MUST be invariant between T and B domains"
+        ]
+      },
+      {
+        "term": "Attachment",
+        "definition": "Signatures, receipts, seals, and other cryptographic material appended to a message body — never part of the signed content",
+        "invariants": [
+          "Attachments follow the message body in the stream",
+          "Attachments are grouped by count codes indicating their type and size"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://cesr",
+        "relationship": "CESR core delegates stream composition, group framing, and cold-start parsing to this subdomain",
+        "via_port": "port://cesr/cesr-stream/inbound/stream-composition"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Transport Layer",
+        "abstraction": "Adapter",
+        "ref": "port://cesr/cesr-stream/outbound/transport",
+        "implementation_notes": "Stream delivery over TCP, UDP, HTTP, or WebSocket. The transport provides byte-level delivery; CESR stream provides the framing."
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "Reference implementation is keripy eventing.py and parsing.py (stream parsing, attachment handling, cold-start detection). Rust implementation in keriox_core. Count codes and group handling follow the -Dex naming convention (CtrDex for counter/count code constants). Stream parsers use a tritet-based dispatch table for cold-start resynchronization.\n"
+    },
+    "issues": [],
+    "tags": [
+      "streaming",
+      "pipelining",
+      "count-codes",
+      "attachments",
+      "cold-start"
+    ],
+    "_source": "rdod/spec/domains/cesr/cesr-stream/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "cesr",
+    "name": "CESR Encoding",
+    "description": "Composable Event Streaming Representation — a dual text-binary encoding format with the unique property of text-binary concatenation composability. Enables lossless round-trip conversion between text (T) and binary (B) domain representations of concatenated self-framing primitives. Provides qualified type-length-value encoding for cryptographic primitives, general data types, and hierarchically composed groups with count codes for stream pipelining. Independent encoding layer with no protocol semantics.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "cesr-specification.md — CESR encoding specification (ToIP/IETF), v1.0"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Composability",
+        "definition": "The property that any set of self-framing concatenated primitives in either the Text or Binary domain may be converted as a group to the other domain and back without loss",
+        "invariants": [
+          "T(cat(b[k])) = cat(T(b[k])) and B(cat(t[k])) = cat(B(t[k])) for all k",
+          "All primitives MUST be aligned on 24-bit boundaries",
+          "Text domain primitives MUST be integer multiples of 4 Base64 characters",
+          "Binary domain primitives MUST be integer multiples of 3 bytes"
+        ]
+      },
+      {
+        "term": "Primitive",
+        "definition": "A self-framing atomic unit of encoded data — the fundamental building block of CESR streams, consisting of a type code prefix and a value",
+        "invariants": [
+          "Every primitive is self-framing — extractable from a stream without delimiters",
+          "Every primitive MUST satisfy the composability property",
+          "Represented in the R domain as a (code, raw) pair"
+        ]
+      },
+      {
+        "term": "Domain",
+        "definition": "One of three representation spaces for CESR data: Text (T) for streamable Base64, Binary (B) for streamable bytes, and Raw (R) for the non-streamable (code, raw) working pair",
+        "invariants": [
+          "Six transformations exist: T(B), B(T), T(R), R(T), B(R), R(B)",
+          "Composability is defined between T and B domains",
+          "Cryptographic operations occur in the R domain"
+        ]
+      },
+      {
+        "term": "Self-Framing",
+        "definition": "The property that a primitive or group encodes its own type and size, allowing extraction from a stream without external delimiters or envelopes",
+        "invariants": [
+          "A parser can determine type and length from the leading code characters/bytes alone",
+          "Concatenated self-framing elements are separable without wrapper structures"
+        ]
+      },
+      {
+        "term": "Code",
+        "definition": "The type prefix prepended to a primitive's value that identifies the cryptographic suite or data type, and implicitly or explicitly encodes the value size",
+        "invariants": [
+          "The code MUST be stable in the Text domain — leading type characters do not change when value changes",
+          "Code size is a function of pad size: ps=0 -> 4*M chars, ps=1 -> 4*M+1 chars, ps=2 -> 4*M+2 chars"
+        ]
+      },
+      {
+        "term": "Serialization Kind",
+        "definition": "One of the four supported serialization formats for field map data interleaved in a CESR stream: JSON, CBOR, MGPK (MessagePack), or CESR native",
+        "invariants": [
+          "Each kind has unique start bits enabling cold-start detection",
+          "Non-native serializations MUST have a Version String as their first field"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri",
+        "relationship": "KERI events are encoded in CESR format; CESR defines the encoding contract for key events, signatures, and receipts",
+        "via_port": "port://cesr/inbound/encoding"
+      },
+      {
+        "ref": "domain://acdc",
+        "relationship": "ACDC credentials are encoded in CESR format; CESR defines the encoding contract for credential data structures",
+        "via_port": "port://cesr/inbound/encoding"
+      }
+    ],
+    "subdomains": [
+      {
+        "ref": "domain://cesr/cesr-primitives",
+        "relationship": "CESR drives primitive qualification — encoding raw cryptographic material and data values with type codes",
+        "via_port": "port://cesr/cesr-primitives/inbound/qualification"
+      },
+      {
+        "ref": "domain://cesr/cesr-stream",
+        "relationship": "CESR drives stream composition — grouping primitives with count codes for pipelining and cold-start parsing",
+        "via_port": "port://cesr/cesr-stream/inbound/stream-composition"
+      }
+    ],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519 (signing/verification), X25519 (encryption), ECDSA secp256k1/secp256r1, Ed448, Blake3-256/512, Blake2b-256/512, SHA2-256/512, SHA3-256/512, argon2 (key stretching)",
+        "relationship": "Cryptographic algorithm output types appear directly as CESR primitive code entries — each algorithm maps to one or more fixed-size code table entries"
+      }
+    ],
+    "adjacents": [
+      {
+        "ref": "domain://keri",
+        "relationship": "OHS + Published Language — KERI events are encoded in CESR; CESR provides the type-qualified encoding that KERI key events, signatures, and receipts require",
+        "via_port": "port://keri/inbound/event-verification",
+        "is_cross_cutting": false
+      },
+      {
+        "ref": "domain://acdc",
+        "relationship": "OHS + Published Language — ACDC credentials are encoded in CESR; CESR provides qualified encoding for credential fields, SAIDs, and signatures",
+        "via_port": "port://acdc/inbound/credential-lifecycle",
+        "is_cross_cutting": false
+      }
+    ],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "library",
+      "language_affinity": "any",
+      "notes": "Reference implementation is the Matter/Indexer classes in keripy (Python, coring.py). Production implementations exist in Rust (cesride, cesrox) and TypeScript (simple-cesr, signify-ts). All implementations follow the KERI naming convention: agent-noun -er suffix for primitive classes (Verfer, Diger, Siger), -Dex suffix for code table constants (MtrDex, NumDex), -ify suffix for transforms (versify, sizeify, saidify).\n"
+    },
+    "issues": [],
+    "tags": [
+      "encoding",
+      "serialization",
+      "composability",
+      "cryptographic-primitives",
+      "streaming"
+    ],
+    "_source": "rdod/spec/domains/cesr/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/delegation",
+    "name": "Delegation",
+    "description": "Cooperative delegation of identifier authority — a mechanism where a delegator AID approves the establishment operations (inception and rotation) of a delegated AID (delegatee). Delegation is implemented as a pair of events: a delegated event (dip or drt) in the delegatee's KEL that references the delegator's AID, and a delegating event in the delegator's KEL containing a seal anchoring the delegated event. This two-way cryptographic binding requires cooperation from both parties. Delegation enables horizontal scaling of signing authority, hierarchical key management, and enhanced recovery from key compromise via the delegator's additional layer of control.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Cooperative Delegation, Delegated Inception Event Message Body, Delegated Rotation Event Message Body, Delegated Event Live-attacks, Superseding Rules B1-B3 and C"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: Delegation, Cooperative Delegation, Custodial Delegation"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_SecurityDeepDive.web.md — sections: Combined Arms, Delegation Security"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/eventing.py (Kevery.processEscrowPartialDels, valSigsWigsDel), src/keri/app/storing.py (.pdes, .aess, .delegables, .udes), src/keri/core/coring.py (deSourceCouple — Seqner + Saider couple)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox — keriox_core/src/event/event_data/delegated.rs (SourceSeal), keriox_core/src/processor/escrow.rs (DelegationEscrow), keriox_core/src/processor/validator.rs (validate_event with delegator verification)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Cooperative Delegation",
+        "definition": "A delegation that requires cooperation between delegator and delegatee — both must participate for a delegated establishment event to be valid",
+        "invariants": [
+          "Delegatee's KEL references delegator's AID (di field)",
+          "Delegator's KEL must contain a seal anchoring the delegated event",
+          "Both bindings required for validity — neither party can unilaterally delegate"
+        ]
+      },
+      {
+        "term": "Delegation Seal",
+        "definition": "An event seal in the delegator's KEL that cryptographically anchors a delegated event",
+        "invariants": [
+          "Contains i (delegatee AID), s (delegated event sn), d (delegated event SAID)",
+          "Must appear in the delegator's KEL before the delegated event can be accepted"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri",
+        "relationship": "Parent domain drives the delegated identifier lifecycle — creation, rotation, and recovery of delegated AIDs",
+        "via_port": "port://keri/delegation/inbound/delegation-lifecycle"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519 (signing both delegator and delegatee events), Blake3-256/SHA-256 (delegation seal digests, delegatee AID derivation)",
+        "relationship": "Delegation verification requires cryptographic verification of both delegator and delegatee signatures and digest verification of the delegation seal — kernel types appear directly"
+      }
+    ],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "Delegation is implemented as part of event processing. In keripy, delegation logic is in the Kevery class, with delegated events processed by verifying the delegator seal. The delegator's KEL must be accessible to validate any delegated event. In keriox, delegation is handled in the event processing pipeline. Multi-level delegation chains require recursive verification up to the root non-delegated KEL.\n"
+    },
+    "issues": [],
+    "tags": [
+      "delegation",
+      "hierarchical",
+      "cooperative",
+      "key-management",
+      "recovery"
+    ],
+    "_source": "rdod/spec/domains/keri/delegation/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri",
+    "name": "KERI Protocol",
+    "description": "Key Event Receipt Infrastructure — a decentralized key management protocol providing self-certifying identifiers, append-only key event logs, witness-based consensus, pre-rotation for post-quantum key compromise recovery, and delegated hierarchical key management. The central orchestrating domain of the ecosystem.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — KERI protocol specification (ToIP/IETF)"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — KERI whitepaper v2.x"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_Overview.web.md — KERI protocol overview"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_SecurityDeepDive.web.md — security analysis"
+      },
+      {
+        "type": "document",
+        "reference": "IdentifierTheory_web.md — universal identifier theory"
+      },
+      {
+        "type": "document",
+        "reference": "keripy — Python reference implementation (implementation survey)"
+      },
+      {
+        "type": "document",
+        "reference": "keriox — Rust production implementation (implementation survey)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "AID",
+        "definition": "Autonomic Identifier — a self-certifying identifier cryptographically bound to a key pair at inception, persistent across key rotations",
+        "invariants": [
+          "Derived from pseudo-random cryptographic material with ≥128 bits entropy",
+          "Universally unique without any registration authority",
+          "Exactly one authoritative KEL per AID"
+        ]
+      },
+      {
+        "term": "Controller",
+        "definition": "Entity holding the private keys for an AID, authorized to create key events",
+        "invariants": [
+          "Only the controller can generate valid signed events",
+          "Control authority is established by the current key state"
+        ]
+      },
+      {
+        "term": "Key Event",
+        "definition": "A cryptographically signed record in the KEL — inception, rotation, or interaction",
+        "invariants": [
+          "Every event is signed by keys authorized in the current key state",
+          "Events are hash-chained to their predecessor",
+          "Sequence numbers are monotonically increasing"
+        ]
+      },
+      {
+        "term": "Key State",
+        "definition": "The current authoritative signing keys, rotation keys, thresholds, and witness set for an AID",
+        "invariants": [
+          "Computed deterministically from the KEL up to the latest establishment event",
+          "Only establishment events (inception, rotation) change key state"
+        ]
+      },
+      {
+        "term": "Validator",
+        "definition": "Entity that receives and cryptographically verifies key events against the KEL",
+        "invariants": [
+          "Validators maintain their own copy of the KEL",
+          "Verification requires no trusted intermediaries (end-verifiable)"
+        ]
+      },
+      {
+        "term": "Witness",
+        "definition": "Designated entity that receipts key events under the first-seen rule, providing availability and consistency",
+        "invariants": [
+          "Witnesses are designated by the controller, not self-selected",
+          "A witness's receipt constitutes a first-seen guarantee"
+        ]
+      },
+      {
+        "term": "Pre-rotation",
+        "definition": "Cryptographic commitment to the next set of rotation keys, published in the current establishment event",
+        "invariants": [
+          "The digest of next keys must appear in the previous establishment event",
+          "Provides post-quantum resistance — attacker must compromise both current and pre-committed keys"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://agent",
+        "relationship": "Agent infrastructure consumes KERI to manage AIDs, process events, and coordinate signing",
+        "via_port": "port://keri/inbound/identifier-lifecycle"
+      }
+    ],
+    "subdomains": [
+      {
+        "ref": "domain://keri/key-state",
+        "relationship": "KERI drives key state computation from the event log",
+        "via_port": "port://keri/key-state/inbound/state-computation"
+      },
+      {
+        "ref": "domain://keri/event-log",
+        "relationship": "KERI drives event creation, validation, and log management",
+        "via_port": "port://keri/event-log/inbound/event-management"
+      },
+      {
+        "ref": "domain://keri/witness-agreement",
+        "relationship": "KERI drives witness receipting and consensus",
+        "via_port": "port://keri/witness-agreement/inbound/receipting"
+      },
+      {
+        "ref": "domain://keri/duplicity-detection",
+        "relationship": "KERI drives duplicity monitoring and evidence handling",
+        "via_port": "port://keri/duplicity-detection/inbound/monitoring"
+      },
+      {
+        "ref": "domain://keri/delegation",
+        "relationship": "KERI drives delegated identifier lifecycle",
+        "via_port": "port://keri/delegation/inbound/delegation-lifecycle"
+      }
+    ],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519 (signing), X25519 (DH), Blake3-256/Blake2b-256/SHA-256 (digests), argon2 (key stretching)",
+        "relationship": "Cryptographic algorithm types appear directly in KERI key state and event structures — no translation layer"
+      }
+    ],
+    "adjacents": [
+      {
+        "ref": "domain://cesr",
+        "relationship": "OHS + Published Language — KERI events are encoded in CESR format; CESR defines the encoding contract",
+        "via_port": "port://cesr/inbound/encoding",
+        "is_cross_cutting": false
+      },
+      {
+        "ref": "domain://acdc",
+        "relationship": "Partnership — ACDC credentials anchor to KERI identifiers for issuer authentication",
+        "via_port": "port://acdc/inbound/credential-lifecycle",
+        "is_cross_cutting": false
+      },
+      {
+        "ref": "domain://oobi",
+        "relationship": "Partnership — OOBIs bootstrap discovery of KERI identifiers and their service endpoints",
+        "via_port": "port://oobi/inbound/discovery",
+        "is_cross_cutting": false
+      }
+    ],
+    "externals": [
+      {
+        "name": "Event Persistence",
+        "abstraction": "Repository",
+        "ref": "port://keri/outbound/event-store",
+        "implementation_notes": "Append-only store for KEL events. Implementations: LMDB (keripy), redb (keriox), DynamoDB (serious-keri)"
+      },
+      {
+        "name": "Network Transport",
+        "abstraction": "Adapter",
+        "ref": "port://keri/outbound/transport",
+        "implementation_notes": "Message delivery for events, receipts, and queries. Implementations: HTTP, TCP, WebSocket"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "package",
+      "language_affinity": "any",
+      "notes": "Reference implementation is keripy (Python). Production implementations exist in Rust (keriox) and TypeScript (signify-ts for edge signing). All implementations must use CESR encoding and follow the KERI specification event processing rules.\n"
+    },
+    "issues": [],
+    "tags": [
+      "protocol",
+      "identity",
+      "decentralized",
+      "key-management"
+    ],
+    "_source": "rdod/spec/domains/keri/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/duplicity-detection",
+    "name": "Duplicity Detection",
+    "description": "Detection and handling of duplicitous events — verified but different versions of an event at the same sequence number in a KEL. Duplicity is the external inconsistency where two different verifiable event histories exist for the same AID. Detection is performed by watchers, jurors, and judges under the validator's control (not the controller's). A validator decides trust based on the presence or absence of duplicity evidence. Recovery from key compromise is possible via superseding rotation using pre-committed keys, which forks the KEL into a recovered trunk and a disputed branch. KERI provides duplicity-evident DKMI — duplicity may not be prevented, but it is always detectable.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Duplicity, Superseding Recovery and Reconciliation, First Seen Policy, Superseding Rules, Dead-Attacks, Live-Attacks, Validation Rules"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: Duplicity Detection, Watchers, Jurors, Judges, Recovery"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_SecurityDeepDive.web.md — sections: Inconsistency and Duplicity, Survivability, Ambient Verifiability"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/eventing.py (Kevery.processEscrowLikelyDuplicitous), src/keri/app/storing.py (.ldes, .dels), src/keri/core/eventing.py (processCues, cues deque)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox — keriox_core/src/processor/escrow.rs (DuplicitousEvents escrow), keriox_core/src/processor/notification.rs (NotificationBus, KeyEventAdded)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Duplicity",
+        "definition": "The existence of two or more verified but different versions of an event at the same sequence number in a KEL",
+        "invariants": [
+          "Both versions are cryptographically verifiable but mutually inconsistent",
+          "Indicates either key compromise or malicious controller behavior",
+          "Always detectable given access to both versions"
+        ]
+      },
+      {
+        "term": "Watcher",
+        "definition": "An entity under the validator's control that monitors for duplicity by collecting and comparing KEL copies from multiple sources",
+        "invariants": [
+          "Under the validator's control, not the controller's",
+          "Watches for inconsistent event histories"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri",
+        "relationship": "Parent domain drives duplicity monitoring and evidence handling",
+        "via_port": "port://keri/duplicity-detection/inbound/monitoring"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519 (signature verification on conflicting events), Blake3-256/SHA-256 (event digest comparison)",
+        "relationship": "Duplicity detection requires verifying signatures on both conflicting events — cryptographic verification is a kernel operation"
+      }
+    ],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "Duplicity detection is implemented by observer components. In keripy, the Watcher class polls multiple witnesses and compares KERLs. The Duplicate Event Log (DEL) stores evidence of conflicting events. Superseding recovery logic is in the Kevery event processing pipeline. In keriox, the watcher component lives under components/watcher/.\n"
+    },
+    "issues": [],
+    "tags": [
+      "duplicity",
+      "security",
+      "recovery",
+      "watcher",
+      "monitoring"
+    ],
+    "_source": "rdod/spec/domains/keri/duplicity-detection/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/event-log",
+    "name": "Event Log",
+    "description": "The append-only, hash-chained, cryptographically signed Key Event Log (KEL) that serves as the authoritative record of an AID's control history. Events are of five types: inception (icp), rotation (rot), interaction (ixn), delegated inception (dip), and delegated rotation (drt). Each event is signed by keys authorized in the current key state, contains a SAID (d field), is hash-chained to its predecessor via the prior event digest (p field), and has a monotonically increasing sequence number (s field). Event field ordering is normative. The KEL is the sole source of truth for an AID's control authority.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Key event messages, Inception Event Message Body, Rotation Event Message Body, Interaction Event Message Body, Delegated Inception/Rotation, Event Types and Classes, Labelling key events in a KEL"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: Key Event Log, Event Streaming, Append-Only Log"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_SecurityDeepDive.web.md — sections: Establishment Subsequence, Inconsistency and Duplicity"
+      },
+      {
+        "type": "document",
+        "reference": "keripy — Python reference implementation (SerderKERI, eventing module, Baser storage)"
+      },
+      {
+        "type": "document",
+        "reference": "keriox — Rust production implementation (KeriEvent, SignedEventMessage, EventStorage)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "KEL",
+        "definition": "The append-only, hash-chained, cryptographically signed event log for a single AID",
+        "invariants": [
+          "Exactly one authoritative KEL per AID",
+          "Append-only — events cannot be modified or deleted",
+          "Hash-chained — each event includes digest of prior event"
+        ]
+      },
+      {
+        "term": "Key Event",
+        "definition": "A cryptographically signed, hash-chained record in the KEL",
+        "invariants": [
+          "Signed by keys authorized in the current key state",
+          "Contains SAID (d field) and prior event digest (p field)",
+          "Sequence numbers are monotonically increasing"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri",
+        "relationship": "Parent domain drives event creation, validation, and log management",
+        "via_port": "port://keri/event-log/inbound/event-management"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519 (event signing), Blake3-256/SHA-256 (SAID computation, prior event digest, seal digests)",
+        "relationship": "Cryptographic algorithm types appear directly in event fields — signatures, digests, and public keys are kernel types"
+      }
+    ],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Event Persistence",
+        "abstraction": "Repository",
+        "ref": "port://keri/event-log/outbound/event-store",
+        "implementation_notes": "Append-only store for KEL events with first-seen ordering. Implementations: LMDB (keripy), redb (keriox), DynamoDB (serious-keri)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "The event log is the central data structure of KERI. In keripy, the Kevery class handles event processing and the Baser class handles persistence. In keriox, the EventProcessor and Database handle these roles. All implementations must enforce normative field ordering and SAID computation per the specification.\n"
+    },
+    "issues": [],
+    "tags": [
+      "event-log",
+      "kel",
+      "hash-chain",
+      "append-only",
+      "event-sourcing"
+    ],
+    "_source": "rdod/spec/domains/keri/event-log/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/key-state",
+    "name": "Key State",
+    "description": "The current authoritative configuration of an AID — signing keys, next key digests, signing threshold, rotation threshold, witness list, witness threshold, and configuration traits. Key state is computed deterministically from the establishment subsequence of the KEL. Only establishment events (inception and rotation) modify key state; interaction events do not. Key state is the central output of event log verification and the primary input to any signature validation against an AID.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Pre-rotation, Key State, Inception Event Message Body, Rotation Event Message Body"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: Key State, Pre-rotation, Establishment Events"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_SecurityDeepDive.web.md — sections: Establishment Subsequence, Combined Arms"
+      },
+      {
+        "type": "document",
+        "reference": "keripy — Python reference implementation (Kever, Tholder, key state classes)"
+      },
+      {
+        "type": "document",
+        "reference": "keriox — Rust production implementation (IdentifierState, KeyConfig, WitnessConfig)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Key State",
+        "definition": "The current authoritative configuration for an AID derived from its KEL's establishment subsequence",
+        "invariants": [
+          "Deterministically computed from the KEL up to the latest establishment event",
+          "Only establishment events (icp, rot, dip, drt) modify key state",
+          "Includes: signing keys (k), next key digests (n), signing threshold (kt), rotation threshold (nt), witness list (b), witness threshold (bt), configuration traits (c)"
+        ]
+      },
+      {
+        "term": "Pre-rotation Commitment",
+        "definition": "Cryptographic commitment to the next set of rotation keys via publishing their digests in the current establishment event",
+        "invariants": [
+          "Next key digests must appear in the establishment event preceding their use",
+          "Pre-committed keys are never exposed until the rotation that activates them"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri",
+        "relationship": "Parent domain drives key state computation from the event log",
+        "via_port": "port://keri/key-state/inbound/state-computation"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519 public keys (signing/verification), Blake3-256/SHA-256 digests (next key commitments), threshold arithmetic",
+        "relationship": "Cryptographic algorithm types appear directly in key state structures — public keys, digests, and threshold expressions are kernel types"
+      }
+    ],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "Key state is a pure computation — given a KEL prefix (up to the latest establishment event), the key state is deterministic. Implementations typically cache the current key state per AID and update it on each new establishment event. In keripy this is the Kever class; in keriox it is the IdentifierState struct.\n"
+    },
+    "issues": [],
+    "tags": [
+      "key-management",
+      "establishment",
+      "pre-rotation",
+      "threshold"
+    ],
+    "_source": "rdod/spec/domains/keri/key-state/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/witness-agreement",
+    "name": "Witness Agreement",
+    "description": "KERI's Algorithm for Witness Agreement (KAWA) — a Byzantine Fault Tolerant agreement algorithm that uses a designated set of N witnesses to provide highly available, consistent promulgation of an AID's key event history. Unlike multi-phase BFT consensus, KAWA uses single-phase agreement because the controller is the sole source of truth for event creation. Witnesses verify, receipt (sign), store, and disseminate events under the first-seen rule. The controller designates a threshold M of N witnesses for accountability, ensuring that at most one sufficient agreement exists despite faulty witnesses. The resulting Key Event Receipt Log (KERL) is the receipted form of the KEL used in indirect mode.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: KERI's Algorithm for Witness Agreement (KAWA), Witness Designation, Witnessing Policy, Immunity and Availability, Security Properties"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: KAWA, Witnesses, Indirect Mode, KERL"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_SecurityDeepDive.web.md — sections: KERI Ecosystem Components, Witnesses and Watchers, Ambient Verifiability"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/coring.py (Toader, Cigar, Siger), src/keri/core/eventing.py (Kevery.processEscrowUnverWitness, processEscrowUnverNonTrans, processEscrowUnverTrans), src/keri/app/storing.py (.rcts, .vrcs, .wigs, .uwes, .ures, .vres), src/keri/core/eventing.py (Receiptor), src/keri/core/eventing.py (ample())"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox — keriox_core/src/event/sections/threshold.rs (tally), components/witness/src/witness_receipt_generator.rs (WitnessReceiptGenerator), keriox_core/src/processor/notification.rs (KeyEventAdded notification)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "KAWA",
+        "definition": "KERI's Algorithm for Witness Agreement — single-phase BFT agreement by designated witnesses",
+        "invariants": [
+          "Single-phase agreement — no multi-phase commit required",
+          "The controller is the sole source of truth for event creation",
+          "Witnesses are designated by the controller, not self-selected"
+        ]
+      },
+      {
+        "term": "First-seen Rule",
+        "definition": "The rule that the first verified version of an event accepted by a witness wins — first seen, always seen, never unseen",
+        "invariants": [
+          "Once accepted, an event cannot be unseen or replaced (except by superseding recovery)",
+          "All subsequent versions of the same event at the same location are discarded"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri",
+        "relationship": "Parent domain drives witness receipting and consensus for indirect mode",
+        "via_port": "port://keri/witness-agreement/inbound/receipting"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519 (witness receipt signatures), Blake3-256/SHA-256 (event verification)",
+        "relationship": "Witness receipt signatures and event digest verification use kernel cryptographic types directly"
+      }
+    ],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Network Transport",
+        "abstraction": "Adapter",
+        "ref": "port://keri/witness-agreement/outbound/transport",
+        "implementation_notes": "Message delivery for events, receipts, and gossip between controller, witnesses, and validators. Implementations: HTTP, TCP, WebSocket, round-robin, gossip protocol"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "KAWA is implemented by the witness component. In keripy, witnessing is handled by the Witness class and the receipting logic in Kevery. In keriox, the witness component lives under components/witness/. Receipt dissemination may use round-robin (2*N exchanges) or gossip (N*log(N) bandwidth) protocols. The immune constraint M > (N+F+1)/2 should be documented but enforcement is at the controller's discretion.\n"
+    },
+    "issues": [],
+    "tags": [
+      "witness",
+      "consensus",
+      "bft",
+      "receipt",
+      "availability",
+      "indirect-mode"
+    ],
+    "_source": "rdod/spec/domains/keri/witness-agreement/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "oobi",
+    "name": "Out-of-Band Introduction",
+    "description": "Bootstrap discovery for KERI identifiers. OOBIs provide URLs that resolve to service endpoints for an AID, enabling initial contact without prior KEL access. BADA (Best Available Data Accepted) policy governs endpoint authorization.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — OOBI and BADA sections"
+      },
+      {
+        "type": "document",
+        "reference": "keridoc-llms-full.md — OOBI documentation"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "OOBI",
+        "definition": "Out-of-Band Introduction — a URL that associates an AID with a network endpoint, enabling bootstrap discovery",
+        "invariants": [
+          "An OOBI is not a trust statement — it merely introduces an endpoint to query",
+          "Trust is established only after resolving the OOBI and verifying the KEL"
+        ]
+      },
+      {
+        "term": "BADA",
+        "definition": "Best Available Data Accepted — policy for accepting endpoint authorization data, preferring the most recent and most authoritative",
+        "invariants": [
+          "Signed endpoint authorizations supersede unsigned ones",
+          "More recent authorizations supersede older ones"
+        ]
+      },
+      {
+        "term": "Endpoint Authorization",
+        "definition": "A signed statement by an AID's controller designating network endpoints for that AID",
+        "invariants": [
+          "Must be anchored in the AID's KEL via a seal or rotation event"
+        ]
+      },
+      {
+        "term": "Well-Known OOBI",
+        "definition": "An OOBI discoverable at a standard URL path (/.well-known/keri/oobi/{aid})",
+        "invariants": [
+          "Follows the RFC 8615 .well-known URI convention"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri",
+        "relationship": "KERI uses OOBIs to bootstrap identifier discovery and resolve endpoints",
+        "via_port": "port://oobi/inbound/discovery"
+      },
+      {
+        "ref": "domain://agent",
+        "relationship": "Agents use OOBIs to establish initial contact with other agents",
+        "via_port": "port://oobi/inbound/discovery"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [
+      {
+        "ref": "domain://keri",
+        "relationship": "Partnership — OOBIs resolve to KERI endpoints; BADA authorizations are anchored in KELs",
+        "is_cross_cutting": false
+      }
+    ],
+    "externals": [
+      {
+        "name": "URL Resolution",
+        "abstraction": "Adapter",
+        "ref": "port://oobi/outbound/url-resolution",
+        "implementation_notes": "HTTP GET to OOBI URLs to retrieve endpoint data and KEL bootstraps"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "Typically implemented as a module within the KERI agent, not a standalone service."
+    },
+    "issues": [],
+    "tags": [
+      "discovery",
+      "bootstrap",
+      "endpoints"
+    ],
+    "_source": "rdod/spec/domains/oobi/domain.yaml"
+  }
+];
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function stripPrefix(ref) {
+  if (!ref) return ref;
+  return String(ref).replace(/^[a-z-]+:\/\//, '');
+}
+
+function getDomain(id) {
+  const clean = stripPrefix(id);
+  return RDOD_DATA.find(d => stripPrefix(d.id) === clean) || null;
+}
+
+function getList(domain, key) {
+  const v = domain[key];
+  if (!v) return [];
+  if (Array.isArray(v)) return v.map(x => typeof x === 'string' ? x : (x.ref || x.id || '')).filter(Boolean);
+  return [];
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+
+let currentId = null;
+let navHistory = [];
+let cy = null;
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+
+function navigateTo(id) {
+  const clean = stripPrefix(id);
+  if (currentId) navHistory.push(currentId);
+  currentId = clean;
+  renderSidebar();
+  renderBreadcrumb();
+  const domain = getDomain(clean);
+  if (domain) {
+    renderGraph(domain);
+    renderInfo(domain);
+  } else {
+    renderGraph(null);
+    renderInfo(null);
+  }
+  document.getElementById('btn-back').disabled = navHistory.length === 0;
+}
+
+function goBack() {
+  if (navHistory.length === 0) return;
+  const prev = navHistory.pop();
+  currentId = null; // prevent push in navigateTo
+  const saved = navHistory.slice();
+  navigateTo(prev);
+  navHistory = saved; // restore — navigateTo pushed again
+  navHistory.pop();   // undo the extra push
+  document.getElementById('btn-back').disabled = navHistory.length === 0;
+}
+
+document.getElementById('btn-back').addEventListener('click', goBack);
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+
+function renderSidebar(filter) {
+  const list = document.getElementById('domain-list');
+  const q = (filter || '').toLowerCase();
+  const items = RDOD_DATA
+    .filter(d => !q || (d.id || '').toLowerCase().includes(q) || (d.name || '').toLowerCase().includes(q))
+    .sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+
+  list.innerHTML = '';
+  items.forEach(d => {
+    const li = document.createElement('li');
+    const clean = stripPrefix(d.id);
+    li.textContent = d.name || clean;
+    li.title = clean;
+    if (clean === currentId) li.classList.add('active');
+    li.addEventListener('click', () => navigateTo(d.id));
+    list.appendChild(li);
+  });
+}
+
+document.getElementById('search').addEventListener('input', e => {
+  renderSidebar(e.target.value);
+});
+
+// ── Breadcrumb ────────────────────────────────────────────────────────────────
+
+function renderBreadcrumb() {
+  const el = document.getElementById('breadcrumb');
+  el.innerHTML = '';
+  const all = [...navHistory, currentId];
+  all.forEach((id, i) => {
+    if (i > 0) {
+      const sep = document.createElement('span');
+      sep.className = 'sep';
+      sep.textContent = '›';
+      el.appendChild(sep);
+    }
+    const span = document.createElement('span');
+    const d = getDomain(id);
+    span.className = 'crumb' + (i === all.length - 1 ? ' current' : '');
+    span.textContent = (d && d.name) ? d.name : id;
+    span.title = id;
+    if (i < all.length - 1) {
+      span.addEventListener('click', () => {
+        // Jump to this crumb: restore history up to i
+        const targetHistory = all.slice(0, i);
+        navHistory = targetHistory;
+        currentId = null;
+        navigateTo(id);
+        navHistory = targetHistory;
+      });
+    }
+    el.appendChild(span);
+  });
+}
+
+// ── Graph ─────────────────────────────────────────────────────────────────────
+
+function buildElements(domain) {
+  const nodes = [];
+  const edges = [];
+
+  const cx = 500, cy2 = 350;
+  const currentClean = stripPrefix(domain.id);
+
+  nodes.push({
+    data: { id: currentClean, label: domain.name || currentClean, nodeType: 'current' },
+    position: { x: cx, y: cy2 }
+  });
+
+  function spread(ids, baseX, baseY, axis) {
+    const N = ids.length;
+    const delta = N > 8 ? 80 : N > 5 ? 90 : 140;
+    ids.forEach((ref, i) => {
+      const id = stripPrefix(ref);
+      const offset = (i - (N - 1) / 2) * delta;
+      const pos = axis === 'x'
+        ? { x: baseX, y: baseY + offset }
+        : { x: baseX + offset, y: baseY };
+      const d = getDomain(id);
+      nodes.push({
+        data: { id, label: (d && d.name) || id, nodeType: axis === 'x' ? '_side' : '_row' }
+      });
+      // will override nodeType below
+      nodes[nodes.length - 1].data.nodeType = '_pending';
+      nodes[nodes.length - 1].position = pos;
+    });
+  }
+
+  const clients = getList(domain, 'domain_clients');
+  const subdomains = getList(domain, 'subdomains');
+  const kernels = getList(domain, 'kernels');
+  const adjacents = (domain.adjacents || []).map(a => typeof a === 'string' ? { ref: a } : a);
+  const externals = getList(domain, 'externals');
+
+  const clientY = clients.length > 0 ? cy2 - 190 : cy2;
+  const subY = cy2 + 190;
+  const extY = cy2 + 310;
+  const kernelX = cx - 270;
+  const adjX = cx + 270;
+
+  // Clients (top)
+  const Nc = clients.length;
+  clients.forEach((ref, i) => {
+    const id = stripPrefix(ref);
+    const delta = Nc > 8 ? 80 : Nc > 5 ? 90 : 140;
+    const d = getDomain(id);
+    nodes.push({
+      data: { id, label: (d && d.name) || id, nodeType: 'client' },
+      position: { x: cx + (i - (Nc - 1) / 2) * delta, y: clientY }
+    });
+    edges.push({ data: { source: id, target: currentClean, edgeType: 'client' } });
+  });
+
+  // Subdomains (bottom)
+  const Ns = subdomains.length;
+  subdomains.forEach((ref, i) => {
+    const id = stripPrefix(ref);
+    const delta = Ns > 8 ? 80 : Ns > 5 ? 90 : 140;
+    const d = getDomain(id);
+    nodes.push({
+      data: { id, label: (d && d.name) || id, nodeType: 'subdomain' },
+      position: { x: cx + (i - (Ns - 1) / 2) * delta, y: subY }
+    });
+    edges.push({ data: { source: currentClean, target: id, edgeType: 'subdomain' } });
+  });
+
+  // Kernels (left)
+  const Nk = kernels.length;
+  kernels.forEach((ref, i) => {
+    const id = stripPrefix(ref);
+    const delta = Nk > 8 ? 80 : Nk > 5 ? 90 : 140;
+    const d = getDomain(id);
+    nodes.push({
+      data: { id, label: (d && d.name) || id, nodeType: 'kernel' },
+      position: { x: kernelX, y: cy2 + (i - (Nk - 1) / 2) * delta }
+    });
+    edges.push({ data: { source: currentClean, target: id, edgeType: 'kernel' } });
+  });
+
+  // Adjacents (right)
+  const Na = adjacents.length;
+  adjacents.forEach((adj, i) => {
+    const id = stripPrefix(adj.ref || adj);
+    const delta = Na > 8 ? 80 : Na > 5 ? 90 : 140;
+    const d = getDomain(id);
+    const isCross = (adj.pattern || '').toLowerCase().includes('cross');
+    nodes.push({
+      data: { id, label: (d && d.name) || id, nodeType: isCross ? 'adjacent-cross' : 'adjacent', pattern: adj.pattern || '' },
+      position: { x: adjX, y: cy2 + (i - (Na - 1) / 2) * delta }
+    });
+    edges.push({ data: { source: currentClean, target: id, edgeType: 'adjacent', pattern: adj.pattern || '' } });
+  });
+
+  // Externals (far bottom)
+  const Ne = externals.length;
+  externals.forEach((ref, i) => {
+    const id = stripPrefix(ref);
+    const delta = Ne > 8 ? 80 : Ne > 5 ? 90 : 140;
+    const d = getDomain(id);
+    nodes.push({
+      data: { id, label: (d && d.name) || id, nodeType: 'external' },
+      position: { x: cx + (i - (Ne - 1) / 2) * delta, y: extY }
+    });
+    edges.push({ data: { source: currentClean, target: id, edgeType: 'external' } });
+  });
+
+  // Deduplicate nodes (a domain may appear in multiple roles)
+  const seen = new Set();
+  const dedupedNodes = nodes.filter(n => {
+    if (seen.has(n.data.id)) return false;
+    seen.add(n.data.id);
+    return true;
+  });
+
+  return [...dedupedNodes, ...edges];
+}
+
+function renderGraph(domain) {
+  const container = document.getElementById('cy');
+
+  if (cy) { cy.destroy(); cy = null; }
+
+  if (!domain) return;
+
+  const elements = buildElements(domain);
+
+  cy = cytoscape({
+    container,
+    elements,
+    layout: { name: 'preset' },
+    style: [
+      // Base node
+      {
+        selector: 'node',
+        style: {
+          'label': 'data(label)',
+          'font-size': '11px',
+          'color': '#ffffff',
+          'text-valign': 'bottom',
+          'text-halign': 'center',
+          'text-margin-y': 4,
+          'text-wrap': 'wrap',
+          'text-max-width': '80px',
+          'width': 55,
+          'height': 55,
+        }
+      },
+      // Current
+      {
+        selector: 'node[nodeType="current"]',
+        style: {
+          'background-color': '#f5c518',
+          'border-width': 3,
+          'border-color': '#f5c518',
+          'width': 80,
+          'height': 80,
+          'color': '#ffffff',
+          'font-weight': 'bold',
+        }
+      },
+      // Client
+      {
+        selector: 'node[nodeType="client"]',
+        style: { 'background-color': '#4a90d9', 'border-width': 1, 'border-color': '#6aafff' }
+      },
+      // Subdomain
+      {
+        selector: 'node[nodeType="subdomain"]',
+        style: { 'background-color': '#5cb85c', 'border-width': 1, 'border-color': '#7dd87d' }
+      },
+      // Kernel
+      {
+        selector: 'node[nodeType="kernel"]',
+        style: {
+          'background-color': '#9b59b6',
+          'border-width': 1,
+          'border-color': '#b980d4',
+          'shape': 'diamond',
+        }
+      },
+      // Adjacent
+      {
+        selector: 'node[nodeType="adjacent"]',
+        style: {
+          'background-color': '#e67e22',
+          'border-width': 2,
+          'border-color': '#ff9f43',
+          'border-style': 'dashed',
+        }
+      },
+      // Adjacent cross-cutting
+      {
+        selector: 'node[nodeType="adjacent-cross"]',
+        style: {
+          'background-color': '#e67e22',
+          'border-width': 2,
+          'border-color': '#ff9f43',
+          'border-style': 'dotted',
+        }
+      },
+      // External
+      {
+        selector: 'node[nodeType="external"]',
+        style: {
+          'background-color': '#555',
+          'border-width': 1,
+          'border-color': '#888',
+          'shape': 'rectangle',
+          'cursor': 'default',
+        }
+      },
+      // Edges
+      {
+        selector: 'edge',
+        style: {
+          'width': 1.5,
+          'line-color': '#444',
+          'target-arrow-color': '#444',
+          'curve-style': 'bezier',
+        }
+      },
+      {
+        selector: 'edge[edgeType="client"]',
+        style: {
+          'line-color': '#4a90d9',
+          'target-arrow-color': '#4a90d9',
+          'target-arrow-shape': 'triangle',
+        }
+      },
+      {
+        selector: 'edge[edgeType="subdomain"]',
+        style: {
+          'line-color': '#5cb85c',
+          'target-arrow-color': '#5cb85c',
+          'target-arrow-shape': 'triangle',
+        }
+      },
+      {
+        selector: 'edge[edgeType="kernel"]',
+        style: {
+          'line-color': '#9b59b6',
+          'target-arrow-shape': 'none',
+        }
+      },
+      {
+        selector: 'edge[edgeType="adjacent"]',
+        style: {
+          'line-color': '#e67e22',
+          'line-style': 'dashed',
+          'target-arrow-shape': 'none',
+          'mid-target-arrow-shape': 'none',
+        }
+      },
+      {
+        selector: 'edge[edgeType="external"]',
+        style: {
+          'line-color': '#666',
+          'line-style': 'dotted',
+          'target-arrow-shape': 'none',
+        }
+      },
+    ],
+    userPanningEnabled: true,
+    userZoomingEnabled: true,
+    minZoom: 0.3,
+    maxZoom: 3,
+  });
+
+  cy.on('tap', 'node', e => {
+    const d = e.target.data();
+    const type = d.nodeType;
+    if (['client', 'subdomain', 'adjacent', 'adjacent-cross'].includes(type)) {
+      const target = getDomain(d.id);
+      if (target) {
+        navigateTo(d.id);
+      } else {
+        // Not in data — show tooltip
+        e.target.flashClass('unknown-flash', 600);
+      }
+    }
+  });
+
+  cy.fit(undefined, 40);
+}
+
+// ── Info Panel ────────────────────────────────────────────────────────────────
+
+function makeSection(title, content, startCollapsed) {
+  const wrap = document.createElement('div');
+
+  const header = document.createElement('div');
+  header.className = 'section-header' + (startCollapsed ? ' collapsed' : '');
+  header.innerHTML = `<span class="arrow">▼</span>${title}`;
+
+  const body = document.createElement('div');
+  body.className = 'section-body' + (startCollapsed ? ' hidden' : '');
+  body.appendChild(content);
+
+  header.addEventListener('click', () => {
+    const collapsed = header.classList.toggle('collapsed');
+    body.classList.toggle('hidden', collapsed);
+  });
+
+  wrap.appendChild(header);
+  wrap.appendChild(body);
+  return wrap;
+}
+
+function renderInfo(domain) {
+  const panel = document.getElementById('info-panel');
+  panel.innerHTML = '';
+
+  if (!domain) {
+    panel.innerHTML = '<div class="empty-msg">Domain not found in loaded data.</div>';
+    return;
+  }
+
+  // Title + meta
+  const title = document.createElement('div');
+  title.className = 'domain-title';
+  title.textContent = domain.name || domain.id || '(unnamed)';
+  panel.appendChild(title);
+
+  const meta = document.createElement('div');
+  meta.className = 'domain-meta';
+  if (domain.version) {
+    const v = document.createElement('span');
+    v.textContent = `v${domain.version}`;
+    meta.appendChild(v);
+  }
+  (domain.tags || []).forEach(tag => {
+    const pill = document.createElement('span');
+    pill.className = 'tag';
+    pill.textContent = tag;
+    meta.appendChild(pill);
+  });
+  panel.appendChild(meta);
+
+  if (domain.description) {
+    const desc = document.createElement('div');
+    desc.className = 'description';
+    desc.textContent = domain.description;
+    panel.appendChild(desc);
+  }
+
+  // Ubiquitous language
+  const lang = (domain.ubiquitous_language || []).filter(t => t && t.term);
+  if (lang.length > 0) {
+    const table = document.createElement('table');
+    table.className = 'lang-table';
+    lang.forEach(entry => {
+      const tr = document.createElement('tr');
+      const td1 = document.createElement('td');
+      td1.textContent = entry.term;
+      const td2 = document.createElement('td');
+      td2.textContent = entry.definition || '';
+      tr.appendChild(td1);
+      tr.appendChild(td2);
+      table.appendChild(tr);
+    });
+    panel.appendChild(makeSection(`UBIQUITOUS LANGUAGE (${lang.length} terms)`, table, false));
+  }
+
+  // Issues
+  const issues = (domain.issues || []).filter(i => i && i.category);
+  if (issues.length > 0) {
+    const wrap = document.createElement('div');
+
+    const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+    issues.forEach(i => { if (counts[i.severity] !== undefined) counts[i.severity]++; });
+
+    const summary = document.createElement('div');
+    summary.className = 'issue-summary';
+    ['critical','high','medium','low'].forEach(sev => {
+      if (counts[sev] > 0) {
+        const badge = document.createElement('span');
+        badge.className = `issue-badge badge-${sev}`;
+        badge.textContent = `● ${counts[sev]} ${sev}`;
+        summary.appendChild(badge);
+      }
+    });
+    wrap.appendChild(summary);
+
+    issues.forEach(iss => {
+      const item = document.createElement('div');
+      item.className = 'issue-item';
+      item.innerHTML = `
+        <div class="issue-cat">${iss.category || ''} | ${iss.severity || ''}</div>
+        <div class="issue-rec">${iss.recommendation || iss.description || ''}</div>
+        ${iss.evidence ? `<div class="issue-ev">${iss.evidence}</div>` : ''}
+      `;
+      wrap.appendChild(item);
+    });
+
+    panel.appendChild(makeSection(`ISSUES (${issues.length})`, wrap, true));
+  }
+
+  // Code locations
+  const locs = (domain.code_locations || []).filter(l => l);
+  if (locs.length > 0) {
+    const locWrap = document.createElement('div');
+    locs.forEach(loc => {
+      const p = typeof loc === 'string' ? loc : (loc.path || '');
+      const t = typeof loc === 'object' ? (loc.type || '') : '';
+      const row = document.createElement('div');
+      row.className = 'code-loc';
+      row.innerHTML = `<span class="loc-path">${p}</span><span class="loc-type">${t}</span>`;
+      locWrap.appendChild(row);
+    });
+    panel.appendChild(makeSection('CODE LOCATIONS', locWrap, false));
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+function init() {
+  if (RDOD_DATA.length === 0) {
+    document.getElementById('info-panel').innerHTML = '<div class="empty-msg">No domain data loaded.</div>';
+    return;
+  }
+  renderSidebar();
+  // Navigate to first domain
+  const first = RDOD_DATA[0];
+  navHistory = [];
+  navigateTo(first.id);
+}
+
+init();
+
+// ── Drag Handles ──────────────────────────────────────────────────────────────
+
+(function() {
+  const sidebar = document.getElementById('sidebar');
+  const sidebarHandle = document.getElementById('sidebar-handle');
+  const cyEl = document.getElementById('cy');
+  const graphHandle = document.getElementById('graph-handle');
+
+  // Set initial graph height
+  cyEl.style.height = Math.max(300, window.innerHeight * 0.55) + 'px';
+
+  // ── Sidebar resize ──
+  let dragSidebar = false;
+
+  sidebarHandle.addEventListener('mousedown', e => {
+    e.preventDefault();
+    dragSidebar = true;
+    sidebarHandle.classList.add('active');
+    document.body.classList.add('dragging-col');
+  });
+
+  // ── Graph/info resize ──
+  let dragGraph = false;
+  let graphStartY = 0;
+  let graphStartH = 0;
+
+  graphHandle.addEventListener('mousedown', e => {
+    e.preventDefault();
+    dragGraph = true;
+    graphStartY = e.clientY;
+    graphStartH = cyEl.offsetHeight;
+    graphHandle.classList.add('active');
+    document.body.classList.add('dragging-row');
+  });
+
+  // ── Shared move/up ──
+  document.addEventListener('mousemove', e => {
+    if (dragSidebar) {
+      const w = Math.max(120, Math.min(e.clientX, 600));
+      sidebar.style.width = w + 'px';
+    }
+    if (dragGraph) {
+      const newH = Math.max(100, graphStartH + (e.clientY - graphStartY));
+      cyEl.style.height = newH + 'px';
+      if (cy) cy.resize();
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (dragSidebar) {
+      dragSidebar = false;
+      sidebarHandle.classList.remove('active');
+      document.body.classList.remove('dragging-col');
+    }
+    if (dragGraph) {
+      dragGraph = false;
+      graphHandle.classList.remove('active');
+      document.body.classList.remove('dragging-row');
+      if (cy) cy.resize();
+    }
+  });
+})();
+</script>
+</body>
+</html>
