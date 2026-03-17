@@ -190,6 +190,32 @@ terms:
       - "Bulk-issued private ACDCs for repeated presentations to different verifiers"
     related_terms: ["Private ACDC", "Selective Disclosure", "AGID"]
 
+  - term: "Compactor"
+    synonyms: ["Compactor [keripy]"]
+    definition: "Hierarchical graduated partial disclosure engine for nested field maps. Traverses the credential tree, computing SAIDs at each branch. Supports degrees of partial disclosure: full compact (SAIDs only), partial uncompaction (reveal selected branches), full expansion (all data)."
+    invariants:
+      - ".leaves property provides mappers at each leaf node with computed SAIDs"
+      - ".partials property provides partially disclosable variants of the credential"
+      - ".iscompact property indicates whether the current form has leaf-level SAIDs"
+      - "Depth-first traversal computes SAIDs bottom-up through the credential tree"
+    examples:
+      - "Compactor applied to a credential with nested attribute and edge sections, producing compact, partial, and full variants"
+      - "Checking compactor.iscompact to determine if a credential is in compact form before processing"
+    related_terms: ["Most Compact Form", "Partial Disclosure", "Nested Partial Disclosure", "SAID"]
+
+  - term: "SAD Path Signatures"
+    synonyms: ["SadPathSig groups [parside]", ".spsgs/.spcgs [keripy]"]
+    definition: "Signatures over specific paths within a SAD structure, enabling selective disclosure. Indexed signatures stored in .spsgs (quinkey to Siger), non-indexed in .spcgs (couple to Verfer, Cigar). Used with Pather primitives to prove specific attribute disclosures without revealing the entire credential."
+    invariants:
+      - "Indexed SAD path signatures (.spsgs) use quinkey indexing mapped to Siger primitives"
+      - "Non-indexed SAD path signatures (.spcgs) use couple form mapping Verfer to Cigar"
+      - "Each signature is bound to a specific path within the SAD tree via a Pather primitive"
+      - "Enables proof of specific attribute values without disclosing the full credential"
+    examples:
+      - "Signing the path /a/score within a credential to prove the score value without revealing other attributes"
+      - "Verifier checking a SAD path signature against the disclosed attribute and the issuer's key state"
+    related_terms: ["Selective Disclosure", "Partial Disclosure", "SAID", "Most Compact Form"]
+
 events:
   - name: "PartialDisclosurePerformed"
     payload: "acdc_said: SAID, disclosed_sections: [SectionLabel], discloser: AID, disclosee: AID"

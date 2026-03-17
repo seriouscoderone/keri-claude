@@ -253,6 +253,83 @@ terms:
       - "A website verifying a presented credential before granting access"
     related_terms: ["Discloser", "Graduated Disclosure", "IPEX"]
 
+  - term: "Credential Serializer"
+    synonyms: ["SerderACDC [keripy]", "Creder [keripy/keriox]"]
+    definition: "Serializer/deserializer for ACDC credential packets. Extends Sadder with ACDC-specific field accessors: issuer (i), schema (s), attribute section (a), edge section (e), rule section (r), registry ID (ri/rd), UUID nonce (u). Validates ident=='ACDC'. Provides .issuee accessor from nested a.i field."
+    invariants:
+      - "Must validate that the protocol identifier is 'ACDC' on construction"
+      - "Provides typed accessors for all top-level ACDC fields (i, s, a, e, r, rd, u)"
+      - "The .issuee accessor extracts the i field from the nested attribute section (a.i)"
+      - "Inherits SAID verification and serialization from the base SAD serializer"
+    examples:
+      - "Deserializing a CESR-encoded credential packet and accessing creder.issuer to get the issuer AID"
+      - "Constructing a Creder from a credential dict, then verifying creder.said matches the d field"
+    related_terms: ["ACDC", "SAD", "SAID", "Version String"]
+
+  - term: "Credential Construction"
+    synonyms: ["credential() [keripy]"]
+    definition: "Module-level function that builds an ACDC credential dict (SAD) from: schema SAID, issuer AID, data dict, optional recipient, status registry, optional edges, optional rules, optional private flag. Computes SAIDs for each section via saidify()."
+    invariants:
+      - "Computes SAIDs depth-first for each section (attributes, edges, rules) before the top-level SAID"
+      - "When private flag is set, generates UUID nonce fields for blinding"
+      - "Output is a complete ACDC SAD dict ready for serialization and signing"
+      - "Field insertion order follows the canonical ACDC order: [v, t, d, u, i, rd, s, a, A, e, r]"
+    examples:
+      - "credential(schema=schema_said, issuer=issuer_aid, data={'score': 96}, recipient=issuee_aid, status=registry_said)"
+    related_terms: ["ACDC", "SAID", "Schema", "Attribute Section", "Edge Section", "Rule Section"]
+
+  - term: "Schema Validator"
+    synonyms: ["Schemer [keripy]", "CacheResolver [keripy]"]
+    definition: "Validates credentials against JSON Schema (Draft 7). Schemer wraps a schema dict with SAID verification. CacheResolver caches schema SAIDs to schema content for resolution during validation. Schema SAID in 's' field must match the actual schema content."
+    invariants:
+      - "Schema SAID must be verified: digest of schema content must equal the $id / SAID value"
+      - "CacheResolver maintains a SAID-to-schema mapping for efficient repeated lookups"
+      - "Validation uses JSON Schema Draft 7 rules against the credential's attribute section"
+      - "Schema must be fully self-contained — no external or dynamic references"
+    examples:
+      - "Schemer constructed from a schema dict, verifying that its $id matches its computed SAID"
+      - "CacheResolver resolving a schema SAID during credential validation to retrieve the full schema"
+    related_terms: ["Schema", "SAID", "Type-is-Schema", "JSON Schema"]
+
+  - term: "Credential Verifier"
+    synonyms: ["Verifier [keripy]"]
+    definition: "Validates TEL events and credentials end-to-end. Verifies: schema match, edge chain integrity (verifyChain), TEL state, signature validity. Escrows credentials missing: registry (.mre), chain (.mce), schema (.mse), signatures (.cmse). Timeout: 3600s per escrow type."
+    invariants:
+      - "Performs full end-to-end verification: signatures, schema, TEL state, and edge chains"
+      - "Escrows credentials that cannot yet be verified due to missing dependencies"
+      - "Four escrow types: missing registry events (.mre), missing chain links (.mce), missing schema (.mse), missing signatures (.cmse)"
+      - "Each escrow type has a 3600-second timeout before the escrowed credential is discarded"
+    examples:
+      - "Verifier receives a credential, finds registry TEL not yet available, escrows in .mre until TEL arrives"
+      - "verifyChain traverses edge section to confirm each linked ACDC satisfies its edge operator constraints"
+    related_terms: ["Edge Section", "Edge Operator", "Registry SAID", "Schema Validator"]
+
+  - term: "Credential Indexing"
+    synonyms: ["Reger credential storage [keripy]"]
+    definition: "Database indexes for efficient credential lookup: by issuer (.issus), by subject (.subjs), by schema (.schms), by SAID (.saved). Enables filtered queries across the credential wallet."
+    invariants:
+      - "Index by issuer AID (.issus) enables listing all credentials from a given issuer"
+      - "Index by subject/issuee AID (.subjs) enables listing all credentials held by a given entity"
+      - "Index by schema SAID (.schms) enables listing all credentials of a given type"
+      - "Index by credential SAID (.saved) enables direct lookup of a specific credential"
+    examples:
+      - "Querying .schms with a vLEI schema SAID to find all vLEI credentials in the wallet"
+      - "Querying .issus with a GLEIF AID to find all credentials issued by GLEIF"
+    related_terms: ["ACDC", "Issuer", "Issuee", "Schema", "SAID"]
+
+  - term: "Credential Artifacts"
+    synonyms: ["sendCredential() [keripy]", "sendArtifacts() [keripy]", "sendRegistry() [keripy]"]
+    definition: "The set of data that must be transmitted alongside a credential for verification: issuer KEL (delegation path), registry TEL (management events), credential TEL (iss/rev events), and the credential itself. All four are needed for end-to-end verification."
+    invariants:
+      - "Must include the issuer's KEL to verify key state at issuance time"
+      - "Must include the registry TEL management events (vcp/vrt) to verify registry state"
+      - "Must include the credential TEL events (iss/rev) to verify credential issuance and revocation status"
+      - "Must include the credential itself (the ACDC SAD)"
+    examples:
+      - "Sending a credential to a verifier: first send issuer KEL, then registry TEL, then credential TEL, then credential"
+      - "A credential exchange that fails because the registry TEL was not transmitted"
+    related_terms: ["Registry SAID", "Issuer", "Credential Verifier"]
+
 events:
   - name: "CredentialIssued"
     payload: "acdc: ACDC, issuer_aid: AID, schema_said: SAID, registry_said: SAID?"
