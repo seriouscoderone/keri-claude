@@ -107,6 +107,19 @@ terms:
       - "Prefixer(qb64='EGK0J...') — self-addressing prefix (Blake3-256 digest of inception event)"
     related_terms: ["Verfer", "Diger", "Matter"]
 
+  - term: "SAD"
+    synonyms: ["Self-Addressing Data", "Self-Addressed Data"]
+    definition: "A data structure that contains a field ('d') whose value is the cryptographic digest of the structure itself. The foundation of KERI's content-addressable design — events, credentials, and schemas are all SADs. The Sadder trait serializes SADs; Saider computes their SAID; Saidify is the derivation algorithm."
+    invariants:
+      - "A SAD MUST contain a 'd' field holding its own SAID"
+      - "The SAID is computed via the saidify algorithm (dummy → serialize → digest → inject)"
+      - "SADs are content-addressable — the SAID uniquely identifies the exact content"
+      - "Nested SADs are saidified depth-first (inner sections before outer)"
+    examples:
+      - "A KERI inception event is a SAD — its 'd' field is its Blake3-256 digest"
+      - "An ACDC credential is a SAD — each section (attributes, edges, rules) is also independently a SAD"
+    related_terms: ["Saider", "Saidify", "Sadder", "Serder", "Creder"]
+
   - term: "Seqner"
     synonyms: ["Sequence Number Primitive"]
     definition: "A sequence number primitive encoding an integer as a CESR qualified value. Used for event sequence numbers, first-seen numbers, and other ordinal values."

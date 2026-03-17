@@ -260,7 +260,29 @@ terms:
     examples:
       - "'KERI10JSON00011c_' — KERI v1.0, JSON serialization, 284 bytes (version 1.XX format)"
       - "'KERICAACAAJSONAABc.' — KERI v2.0, genus 2.0, JSON, size in Base64 (version 2.XX format)"
-    related_terms: ["Serialization Kind", "Protocol Genus", "Cold Start"]
+    related_terms: ["Serialization Kind", "Protocol Genus", "Cold Start", "Versify", "Sizeify"]
+
+  - term: "Versify"
+    synonyms: ["versify()"]
+    definition: "Transform function that constructs a Version String from its components (protocol, version, genus, serialization kind) and injects it into the 'v' field of a data structure. The -ify suffix follows the KERI transform naming convention."
+    invariants:
+      - "Takes protocol identifier, major/minor version, genus version, serialization kind"
+      - "Produces a 17-char (v1) or 19-char (v2) version string"
+      - "The size portion is initially set to zero — sizeify fills it after serialization"
+    examples:
+      - "versify(protocol='KERI', version=(2,0), kind='JSON') → 'KERICAACAAJSONAAAAx.'"
+    related_terms: ["Version String", "Sizeify", "Saidify"]
+
+  - term: "Sizeify"
+    synonyms: ["sizeify()"]
+    definition: "Transform function that serializes a data structure, computes its byte size, and updates the size field (BBBB) in the Version String to reflect the actual serialized length. Called after versify and before saidify."
+    invariants:
+      - "Serializes the structure in the specified kind (JSON, CBOR, MGPK)"
+      - "Replaces the size placeholder in the version string with the actual size in Base64"
+      - "Must be called before saidify — the size is part of the content that gets digested"
+    examples:
+      - "sizeify(sad) → serializes to JSON, measures 284 bytes, updates 'v' field size to '00011c'"
+    related_terms: ["Version String", "Versify", "Saidify"]
 
   - term: "Protocol Genus"
     synonyms: ["Genus"]

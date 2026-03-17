@@ -222,6 +222,29 @@ terms:
       - "A multi-sig event with 1 of 3 required signatures — escrowed as partially-signed until remaining signatures arrive"
     related_terms: ["Event Processor", "Event Database", "Witness Threshold"]
 
+  - term: "Direct Mode"
+    synonyms: ["Direct Exchange"]
+    definition: "Operational mode where the controller sends events directly to the validator without witness involvement. The validator verifies events using only the controller's signatures and the self-certifying properties of the KEL. Simpler but provides no availability or consistency guarantees beyond the pair-wise relationship."
+    invariants:
+      - "No witnesses required — the controller's signatures are sufficient"
+      - "Suitable for one-to-one relationships with direct communication"
+      - "The validator maintains its own KEL copy received directly from the controller"
+    examples:
+      - "Two agents communicating directly over a private channel — each verifies the other's KEL without witnesses"
+    related_terms: ["Indirect Mode", "Validator", "Controller"]
+
+  - term: "Indirect Mode"
+    synonyms: ["Indirect Exchange"]
+    definition: "Operational mode where events are disseminated via witnesses who receipt them under the first-seen rule (KAWA). Provides availability, consistency, and duplicity accountability. Required for one-to-any relationships where multiple validators need access to the same KEL."
+    invariants:
+      - "Events must be receipted by witnesses satisfying the accountability threshold (TOAD)"
+      - "Witnesses provide the KERL (receipted KEL) to validators"
+      - "Duplicity is detectable — a witness receipting two different events at the same sn is accountable"
+      - "Watchers (under validator control) monitor for duplicity across witnesses"
+    examples:
+      - "A public AID with 5 witnesses and TOAD of 3 — any validator can fetch the KERL from witnesses"
+    related_terms: ["Direct Mode", "Witness", "KAWA", "Watcher", "TOAD"]
+
 events:
   - name: "InceptionCreated"
     payload: "aid: AID, key_state: KeyState, witnesses: [WitnessAID], config: [Trait]"

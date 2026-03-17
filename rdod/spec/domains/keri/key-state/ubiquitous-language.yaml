@@ -257,6 +257,32 @@ terms:
       - "A new validator bootstrapping by replaying a full KEL from inception to compute current key state"
     related_terms: ["Key State", "Key Event Verifier", "Establishment Subsequence", "KEL"]
 
+  - term: "Transferable Identifier"
+    synonyms: ["Transferable AID", "Transferable Prefix"]
+    definition: "An AID whose control authority can be transferred via key rotation. Uses transferable prefix codes (D=Ed25519, 1AAB=ECDSA secp256k1, 1AAJ=ECDSA secp256r1, 1AAD=Ed448). Must include pre-rotation commitments (next key digests) in establishment events."
+    invariants:
+      - "Prefix code indicates transferability (D, 1AAB, 1AAJ, 1AAD)"
+      - "Establishment events MUST include next key digests (n field) for pre-rotation"
+      - "Control transfers via rotation events that satisfy the pre-rotation commitment"
+      - "Supports full KERI lifecycle: inception → rotation* → interaction*"
+    examples:
+      - "Prefix starting with 'D' — transferable Ed25519 identifier, can rotate keys"
+      - "Prefix starting with 'E' — self-addressing transferable identifier (Blake3-256 of inception)"
+    related_terms: ["Non-transferable Identifier", "Pre-rotation", "Key State"]
+
+  - term: "Non-transferable Identifier"
+    synonyms: ["Non-transferable AID", "Non-transferable Prefix", "Ephemeral Identifier"]
+    definition: "An AID whose control authority is fixed at inception and cannot be rotated. Uses non-transferable prefix codes (B=Ed25519N, 1AAA=ECDSA secp256k1N, 1AAI=ECDSA secp256r1N, 1AAC=Ed448N). The 'N' suffix in code names indicates non-transferable. Commonly used for witnesses and ephemeral interactions."
+    invariants:
+      - "Prefix code indicates non-transferability (B, 1AAA, 1AAI, 1AAC — the 'N' variants)"
+      - "No next key digests — pre-rotation is not possible"
+      - "Cannot issue rotation events — the inception key is permanent"
+      - "Compromise of the single key is unrecoverable"
+    examples:
+      - "Prefix starting with 'B' — non-transferable Ed25519 identifier, fixed key"
+      - "A witness AID using a non-transferable prefix — witnesses don't rotate keys"
+    related_terms: ["Transferable Identifier", "Key State", "Witness"]
+
 events:
   - name: "KeyStateComputed"
     payload: "aid: AID, key_state: KeyState, from_event: EstablishmentEvent"
