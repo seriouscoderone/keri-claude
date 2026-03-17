@@ -1,0 +1,137 @@
+# ubiquitous-language.yaml
+domain_ref: "agent"
+
+terms:
+  - term: "KERIA"
+    synonyms: ["Cloud Agent", "KERI Agent"]
+    definition: "Cloud hosting service for KERI identifiers. Manages AIDs, processes events, coordinates multi-sig, stores credentials — but never holds private keys."
+    invariants:
+      - "Zero access to private signing or decryption keys"
+      - "Three service endpoints: boot (3903), admin (3901), message router (3902)"
+      - "Provisions one agent instance per controller AID"
+    examples:
+      - "A KERIA deployment hosting 100 agent instances for 100 Signify clients"
+    related_terms: ["Signify", "Edge Signing", "Agency", "Admin API", "Message Router"]
+
+  - term: "Signify"
+    synonyms: ["Signify Client", "Edge Client"]
+    definition: "The controller's client library implementing the Signify protocol — holds private keys, performs all signing, communicates with KERIA."
+    invariants:
+      - "Private keys never transmitted to the agent"
+      - "All operations include edge-signed headers (KRAM)"
+    examples:
+      - "signify-ts: TypeScript implementation used in browsers and Node.js"
+      - "signifypy: Python implementation for scripting and testing"
+    related_terms: ["KERIA", "Edge Signing", "KRAM"]
+
+  - term: "Edge Signing"
+    synonyms: ["Signing at the Edge"]
+    definition: "Security principle: all cryptographic signing occurs on the controller's device, never on the cloud agent."
+    invariants:
+      - "The agent can request a signature but cannot produce one"
+      - "Compromise of the agent does not compromise signing keys"
+    examples:
+      - "Controller signs a rotation event on their phone, sends signed event to KERIA"
+    related_terms: ["Signify", "Controller"]
+
+  - term: "Agency"
+    synonyms: ["Boot Endpoint"]
+    definition: "The KERIA boot service (port 3903) that creates and provisions agent instances."
+    invariants:
+      - "Handles /boot requests to provision new agents"
+      - "One-time provisioning per controller AID"
+    examples:
+      - "POST /boot with inception event to create a new agent"
+    related_terms: ["KERIA", "Admin API"]
+
+  - term: "Admin API"
+    synonyms: ["API Handler"]
+    definition: "The KERIA management endpoint (port 3901) handling agent operations — identifier creation, credential management, state queries."
+    invariants:
+      - "All requests authenticated via KRAM"
+      - "Handles /agent/* requests"
+    examples:
+      - "POST /identifiers to create a new AID"
+      - "GET /credentials to list held credentials"
+    related_terms: ["KERIA", "KRAM"]
+
+  - term: "Message Router"
+    synonyms: ["HTTP Endpoint", "Protocol Endpoint"]
+    definition: "The KERIA endpoint (port 3902) receiving external KERI protocol messages from other agents, witnesses, and watchers."
+    invariants:
+      - "Receives inbound protocol messages (multi-sig coordination, credential exchange, event receipts)"
+      - "Routes messages to the appropriate agent instance"
+    examples:
+      - "Another agent sends a multi-sig partial signature via the message router"
+      - "Witness sends an event receipt via the message router"
+    related_terms: ["KERIA", "Multi-sig Coordination"]
+
+  - term: "KRAM"
+    synonyms: ["KERI Request Authentication Method"]
+    definition: "HTTP signature-based authentication for agent API access. Requests signed by the controller's current keys, verified against their KEL."
+    invariants:
+      - "Signature covers request method, path, and body digest"
+      - "Agent verifies against the controller AID's current key state"
+    examples:
+      - "Signify-ts signs an admin API request with the controller's Ed25519 key"
+    related_terms: ["Signify", "Admin API", "Key State"]
+
+  - term: "Multi-sig Coordination"
+    synonyms: ["Group Signing"]
+    definition: "The process of collecting threshold signatures from multiple controllers for group AID operations."
+    invariants:
+      - "Each participant signs independently at their own edge"
+      - "Agent collects partial signatures via message router"
+      - "Event is complete when signing threshold is satisfied"
+    examples:
+      - "3-of-5 group inception: each of 5 controllers signs independently, agent assembles"
+    related_terms: ["Message Router", "Threshold", "Edge Signing"]
+
+  - term: "Credential Wallet"
+    synonyms: ["Wallet"]
+    definition: "The agent-hosted storage of credentials held by a controller's AID — received ACDCs, presentation history."
+    invariants:
+      - "Credentials stored in the agent, not at the edge"
+      - "Credential content is not secret (ACDC metadata is public to the agent)"
+      - "Presentation requires edge-signed authorization"
+    examples:
+      - "Agent stores a vLEI OOR credential received via IPEX grant"
+    related_terms: ["KERIA", "ACDC"]
+
+  - term: "Contact Book"
+    synonyms: ["Contacts"]
+    definition: "Agent-managed directory of resolved OOBIs — known AIDs and their endpoints."
+    invariants:
+      - "Populated by OOBI resolution"
+      - "Entries include AID, verified key state, and endpoint URLs"
+    examples:
+      - "Resolving an OOBI adds the AID to the contact book with its witness endpoints"
+    related_terms: ["OOBI", "KERIA"]
+
+events:
+  - name: "AgentProvisioned"
+    payload: "agent_id: AID, controller_aid: AID, boot_endpoint: URL"
+    triggers: "Signify client sends boot request with controller inception event"
+
+  - name: "IdentifierCreated"
+    payload: "aid: AID, alias: string, agent_id: AID"
+    triggers: "Controller creates a new AID via the admin API"
+
+  - name: "CredentialReceived"
+    payload: "said: SAID, issuer: AID, schema: SAID, holder: AID"
+    triggers: "Agent receives an IPEX grant and the controller admits the credential"
+
+  - name: "MultisigCompleted"
+    payload: "aid: AID, event_type: string, sequence: int, signers: [AID]"
+    triggers: "All required partial signatures collected, threshold satisfied"
+
+  - name: "OOBIResolved"
+    payload: "aid: AID, endpoint: URL, role: string"
+    triggers: "Agent resolves an OOBI and verifies the discovered AID's KEL"
+
+rules:
+  - "Private keys NEVER leave the edge client — the agent is untrusted with key material"
+  - "All admin API requests must be authenticated via KRAM"
+  - "Agent cannot sign events — it can only store, forward, and assemble"
+  - "Multi-sig coordination happens asynchronously via the message router"
+  - "Credential wallet operations (present, revoke) require edge-signed authorization"

@@ -1,0 +1,33 @@
+# ports.yaml
+domain_ref: "acdc/tel"
+
+ports:
+  # Inbound — what the parent domain calls
+  - id: "port://acdc/tel/inbound/state-management"
+    type: inbound
+    name: "Credential State Management"
+    contract: "create_registry(issuer_aid) -> REGID; issue(regid, acdc_said) -> UpdateEvent; revoke(regid, acdc_said) -> UpdateEvent; get_state(regid, acdc_said) -> CredentialState; get_tel(regid) -> TEL"
+    protocol: "method-call"
+    refs: ["domain://acdc"]
+
+  - id: "port://acdc/tel/inbound/blinded-state"
+    type: inbound
+    name: "Blinded State Management"
+    contract: "create_blinded_update(regid, acdc_said, state, shared_salt, sn) -> BlindableUpdateEvent; unblind_state(blid, shared_salt, sn, possible_states) -> CredentialState; update_blind(regid, sn) -> BlindableUpdateEvent"
+    protocol: "method-call"
+    refs: ["domain://acdc"]
+
+  # Outbound — what TEL calls
+  - id: "port://acdc/tel/outbound/tel-store"
+    type: outbound
+    name: "TEL Persistence"
+    contract: "append_event(regid, event) -> Result; get_tel(regid) -> TEL; get_latest_state(regid, acdc_said) -> CredentialState"
+    protocol: "method-call"
+    refs: ["persistence"]
+
+  - id: "port://acdc/tel/outbound/kel-sealing"
+    type: outbound
+    name: "KEL Sealing"
+    contract: "anchor_tel_seal(issuer_aid, event_sn, event_said) -> InteractionEvent; verify_tel_seal(issuer_aid, key_event_sn, seal) -> Result<Valid, SealError>"
+    protocol: "method-call"
+    refs: ["domain://keri"]

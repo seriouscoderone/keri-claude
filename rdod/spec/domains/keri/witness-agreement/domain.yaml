@@ -1,0 +1,70 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/witness-agreement"
+name: "Witness Agreement"
+description: >
+  KERI's Algorithm for Witness Agreement (KAWA) — a Byzantine Fault Tolerant agreement
+  algorithm that uses a designated set of N witnesses to provide highly available, consistent
+  promulgation of an AID's key event history. Unlike multi-phase BFT consensus, KAWA uses
+  single-phase agreement because the controller is the sole source of truth for event creation.
+  Witnesses verify, receipt (sign), store, and disseminate events under the first-seen rule.
+  The controller designates a threshold M of N witnesses for accountability, ensuring that
+  at most one sufficient agreement exists despite faulty witnesses. The resulting Key Event
+  Receipt Log (KERL) is the receipted form of the KEL used in indirect mode.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: KERI's Algorithm for Witness Agreement (KAWA), Witness Designation, Witnessing Policy, Immunity and Availability, Security Properties"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: KAWA, Witnesses, Indirect Mode, KERL"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — sections: KERI Ecosystem Components, Witnesses and Watchers, Ambient Verifiability"
+
+ubiquitous_language:
+  - term: "KAWA"
+    definition: "KERI's Algorithm for Witness Agreement — single-phase BFT agreement by designated witnesses"
+    invariants:
+      - "Single-phase agreement — no multi-phase commit required"
+      - "The controller is the sole source of truth for event creation"
+      - "Witnesses are designated by the controller, not self-selected"
+
+  - term: "First-seen Rule"
+    definition: "The rule that the first verified version of an event accepted by a witness wins — first seen, always seen, never unseen"
+    invariants:
+      - "Once accepted, an event cannot be unseen or replaced (except by superseding recovery)"
+      - "All subsequent versions of the same event at the same location are discarded"
+
+domain_clients:
+  - ref: "domain://keri"
+    relationship: "Parent domain drives witness receipting and consensus for indirect mode"
+    via_port: "port://keri/witness-agreement/inbound/receipting"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519 (witness receipt signatures), Blake3-256/SHA-256 (event verification)"
+    relationship: "Witness receipt signatures and event digest verification use kernel cryptographic types directly"
+
+adjacents: []
+
+externals:
+  - name: "Network Transport"
+    abstraction: "Adapter"
+    ref: "port://keri/witness-agreement/outbound/transport"
+    implementation_notes: "Message delivery for events, receipts, and gossip between controller, witnesses, and validators. Implementations: HTTP, TCP, WebSocket, round-robin, gossip protocol"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    KAWA is implemented by the witness component. In keripy, witnessing is handled by the
+    Witness class and the receipting logic in Kevery. In keriox, the witness component lives
+    under components/witness/. Receipt dissemination may use round-robin (2*N exchanges) or
+    gossip (N*log(N) bandwidth) protocols. The immune constraint M > (N+F+1)/2 should be
+    documented but enforcement is at the controller's discretion.
+
+issues: []
+
+tags: ["witness", "consensus", "bft", "receipt", "availability", "indirect-mode"]

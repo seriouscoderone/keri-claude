@@ -1,0 +1,70 @@
+# domain.yaml
+template_version: "1.0"
+id: "cesr/cesr-primitives"
+name: "CESR Primitives"
+description: >
+  The subdomain responsible for qualifying raw cryptographic material and data
+  values as self-framing CESR primitives. Defines the Matter base type and its
+  specialized agent-noun subtypes (Verfer, Diger, Siger, etc.), the code table
+  entries that map type codes to cryptographic algorithms and raw sizes, and the
+  three-domain (T, B, R) representation transforms (qb64, qb2, raw). Follows
+  the KERI naming convention: gerund-module, agent-noun class, -Dex code table.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "cesr-specification.md — CESR encoding specification (ToIP/IETF), v1.0, code table annexes"
+
+ubiquitous_language:
+  - term: "Matter"
+    definition: "The base class for all CESR primitives — encapsulates a (code, raw) pair and provides domain transforms to/from qb64 and qb2"
+    invariants:
+      - "Every Matter instance holds a code (text) and raw (bytes) pair"
+      - "Supports conversion to qb64 (T domain), qb2 (B domain), and (code, raw) R domain"
+      - "Code determines the cryptographic algorithm type and raw size"
+
+  - term: "Verfer"
+    definition: "A public verification key primitive — wraps a public key and provides signature verification"
+    invariants:
+      - "Code determines the key algorithm (D=Ed25519, 1AAB=ECDSA secp256k1, 1AAJ=ECDSA secp256r1, 1AAD=Ed448)"
+      - "Raw value is the public key bytes"
+
+  - term: "Diger"
+    definition: "A cryptographic digest (hash) primitive — wraps a digest value and provides comparison and verification"
+    invariants:
+      - "Code determines the hash algorithm (E=Blake3-256, F=Blake2b-256, H=SHA3-256, I=SHA2-256)"
+      - "Can compute digest from serialized data or wrap an existing digest"
+
+domain_clients:
+  - ref: "domain://cesr"
+    relationship: "CESR core delegates primitive qualification and domain transforms to this subdomain"
+    via_port: "port://cesr/cesr-primitives/inbound/qualification"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519 (32-byte keys, 64-byte sigs), X25519 (32-byte keys), ECDSA secp256k1 (33-byte pub, 64-byte sig), ECDSA secp256r1 (33-byte pub, 64-byte sig), Ed448 (57-byte keys, 114-byte sigs), Blake3-256/512, Blake2b-256/512, SHA2-256/512, SHA3-256/512"
+    relationship: "Each cryptographic algorithm output type maps to a specific code table entry — the code IS the algorithm identifier"
+
+adjacents: []
+
+externals:
+  - name: "Cryptographic Library"
+    abstraction: "Adapter"
+    ref: "port://cesr/cesr-primitives/outbound/crypto"
+    implementation_notes: "Signing, verification, hashing, key generation. Implementations: libsodium (Python/TS/JS), ed25519-dalek/k256/p256 (Rust)"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    Reference implementation is keripy coring.py (Matter, Verfer, Diger, Siger, Cigar, Salter,
+    Prefixer, Seqner, Saider classes). Rust implementation is cesride. TypeScript implementation
+    is simple-cesr and the Matter class in signify-ts. All implementations follow the KERI
+    agent-noun naming convention (-er suffix) and code table constant convention (-Dex suffix,
+    e.g., MtrDex, DigDex).
+
+issues: []
+
+tags: ["primitives", "cryptographic-material", "encoding", "qualification"]

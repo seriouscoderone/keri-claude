@@ -1,0 +1,63 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/key-state"
+name: "Key State"
+description: >
+  The current authoritative configuration of an AID — signing keys, next key digests,
+  signing threshold, rotation threshold, witness list, witness threshold, and configuration
+  traits. Key state is computed deterministically from the establishment subsequence of the
+  KEL. Only establishment events (inception and rotation) modify key state; interaction
+  events do not. Key state is the central output of event log verification and the primary
+  input to any signature validation against an AID.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Pre-rotation, Key State, Inception Event Message Body, Rotation Event Message Body"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: Key State, Pre-rotation, Establishment Events"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — sections: Establishment Subsequence, Combined Arms"
+
+ubiquitous_language:
+  - term: "Key State"
+    definition: "The current authoritative configuration for an AID derived from its KEL's establishment subsequence"
+    invariants:
+      - "Deterministically computed from the KEL up to the latest establishment event"
+      - "Only establishment events (icp, rot, dip, drt) modify key state"
+      - "Includes: signing keys (k), next key digests (n), signing threshold (kt), rotation threshold (nt), witness list (b), witness threshold (bt), configuration traits (c)"
+
+  - term: "Pre-rotation Commitment"
+    definition: "Cryptographic commitment to the next set of rotation keys via publishing their digests in the current establishment event"
+    invariants:
+      - "Next key digests must appear in the establishment event preceding their use"
+      - "Pre-committed keys are never exposed until the rotation that activates them"
+
+domain_clients:
+  - ref: "domain://keri"
+    relationship: "Parent domain drives key state computation from the event log"
+    via_port: "port://keri/key-state/inbound/state-computation"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519 public keys (signing/verification), Blake3-256/SHA-256 digests (next key commitments), threshold arithmetic"
+    relationship: "Cryptographic algorithm types appear directly in key state structures — public keys, digests, and threshold expressions are kernel types"
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    Key state is a pure computation — given a KEL prefix (up to the latest establishment event),
+    the key state is deterministic. Implementations typically cache the current key state per AID
+    and update it on each new establishment event. In keripy this is the Kever class; in keriox
+    it is the IdentifierState struct.
+
+issues: []
+
+tags: ["key-management", "establishment", "pre-rotation", "threshold"]

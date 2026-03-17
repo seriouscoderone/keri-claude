@@ -1,0 +1,105 @@
+# domain.yaml
+template_version: "1.0"
+id: "cesr"
+name: "CESR Encoding"
+description: >
+  Composable Event Streaming Representation — a dual text-binary encoding
+  format with the unique property of text-binary concatenation composability.
+  Enables lossless round-trip conversion between text (T) and binary (B)
+  domain representations of concatenated self-framing primitives. Provides
+  qualified type-length-value encoding for cryptographic primitives, general
+  data types, and hierarchically composed groups with count codes for
+  stream pipelining. Independent encoding layer with no protocol semantics.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "cesr-specification.md — CESR encoding specification (ToIP/IETF), v1.0"
+
+ubiquitous_language:
+  - term: "Composability"
+    definition: "The property that any set of self-framing concatenated primitives in either the Text or Binary domain may be converted as a group to the other domain and back without loss"
+    invariants:
+      - "T(cat(b[k])) = cat(T(b[k])) and B(cat(t[k])) = cat(B(t[k])) for all k"
+      - "All primitives MUST be aligned on 24-bit boundaries"
+      - "Text domain primitives MUST be integer multiples of 4 Base64 characters"
+      - "Binary domain primitives MUST be integer multiples of 3 bytes"
+
+  - term: "Primitive"
+    definition: "A self-framing atomic unit of encoded data — the fundamental building block of CESR streams, consisting of a type code prefix and a value"
+    invariants:
+      - "Every primitive is self-framing — extractable from a stream without delimiters"
+      - "Every primitive MUST satisfy the composability property"
+      - "Represented in the R domain as a (code, raw) pair"
+
+  - term: "Domain"
+    definition: "One of three representation spaces for CESR data: Text (T) for streamable Base64, Binary (B) for streamable bytes, and Raw (R) for the non-streamable (code, raw) working pair"
+    invariants:
+      - "Six transformations exist: T(B), B(T), T(R), R(T), B(R), R(B)"
+      - "Composability is defined between T and B domains"
+      - "Cryptographic operations occur in the R domain"
+
+  - term: "Self-Framing"
+    definition: "The property that a primitive or group encodes its own type and size, allowing extraction from a stream without external delimiters or envelopes"
+    invariants:
+      - "A parser can determine type and length from the leading code characters/bytes alone"
+      - "Concatenated self-framing elements are separable without wrapper structures"
+
+  - term: "Code"
+    definition: "The type prefix prepended to a primitive's value that identifies the cryptographic suite or data type, and implicitly or explicitly encodes the value size"
+    invariants:
+      - "The code MUST be stable in the Text domain — leading type characters do not change when value changes"
+      - "Code size is a function of pad size: ps=0 -> 4*M chars, ps=1 -> 4*M+1 chars, ps=2 -> 4*M+2 chars"
+
+  - term: "Serialization Kind"
+    definition: "One of the four supported serialization formats for field map data interleaved in a CESR stream: JSON, CBOR, MGPK (MessagePack), or CESR native"
+    invariants:
+      - "Each kind has unique start bits enabling cold-start detection"
+      - "Non-native serializations MUST have a Version String as their first field"
+
+domain_clients:
+  - ref: "domain://keri"
+    relationship: "KERI events are encoded in CESR format; CESR defines the encoding contract for key events, signatures, and receipts"
+    via_port: "port://cesr/inbound/encoding"
+  - ref: "domain://acdc"
+    relationship: "ACDC credentials are encoded in CESR format; CESR defines the encoding contract for credential data structures"
+    via_port: "port://cesr/inbound/encoding"
+
+subdomains:
+  - ref: "domain://cesr/cesr-primitives"
+    relationship: "CESR drives primitive qualification — encoding raw cryptographic material and data values with type codes"
+    via_port: "port://cesr/cesr-primitives/inbound/qualification"
+  - ref: "domain://cesr/cesr-stream"
+    relationship: "CESR drives stream composition — grouping primitives with count codes for pipelining and cold-start parsing"
+    via_port: "port://cesr/cesr-stream/inbound/stream-composition"
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519 (signing/verification), X25519 (encryption), ECDSA secp256k1/secp256r1, Ed448, Blake3-256/512, Blake2b-256/512, SHA2-256/512, SHA3-256/512, argon2 (key stretching)"
+    relationship: "Cryptographic algorithm output types appear directly as CESR primitive code entries — each algorithm maps to one or more fixed-size code table entries"
+
+adjacents:
+  - ref: "domain://keri"
+    relationship: "OHS + Published Language — KERI events are encoded in CESR; CESR provides the type-qualified encoding that KERI key events, signatures, and receipts require"
+    via_port: "port://keri/inbound/event-verification"
+    is_cross_cutting: false
+  - ref: "domain://acdc"
+    relationship: "OHS + Published Language — ACDC credentials are encoded in CESR; CESR provides qualified encoding for credential fields, SAIDs, and signatures"
+    via_port: "port://acdc/inbound/credential-lifecycle"
+    is_cross_cutting: false
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "library"
+  language_affinity: "any"
+  notes: >
+    Reference implementation is the Matter/Indexer classes in keripy (Python, coring.py).
+    Production implementations exist in Rust (cesride, cesrox) and TypeScript (simple-cesr,
+    signify-ts). All implementations follow the KERI naming convention: agent-noun -er suffix
+    for primitive classes (Verfer, Diger, Siger), -Dex suffix for code table constants
+    (MtrDex, NumDex), -ify suffix for transforms (versify, sizeify, saidify).
+
+issues: []
+
+tags: ["encoding", "serialization", "composability", "cryptographic-primitives", "streaming"]

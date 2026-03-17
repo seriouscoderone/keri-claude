@@ -1,0 +1,25 @@
+# ports.yaml
+domain_ref: "keri/delegation"
+
+ports:
+  # Inbound — what clients call
+  - id: "port://keri/delegation/inbound/delegation-lifecycle"
+    type: inbound
+    name: "Delegation Lifecycle"
+    contract: "create_delegated_inception(config: DelegatedInceptionConfig, delegator_aid: AID) -> DelegatedInceptionEvent; create_delegated_rotation(aid: AID, new_keys: [PublicKey], new_next: [PublicKey]) -> DelegatedRotationEvent; approve_delegation(delegator_aid: AID, delegated_event: EstablishmentEvent) -> DelegationSeal"
+    protocol: "method-call"
+    refs: ["domain://keri"]
+
+  - id: "port://keri/delegation/inbound/delegation-verification"
+    type: inbound
+    name: "Delegation Verification"
+    contract: "verify_delegation(delegated_event: EstablishmentEvent) -> Result<Verified, DelegationError>; find_delegation_seal(delegator_aid: AID, delegatee_aid: AID, sn: int) -> Result<DelegationSeal, NotFound>; verify_delegation_chain(aid: AID) -> Result<Verified, DelegationChainError>"
+    protocol: "method-call"
+    refs: ["domain://keri"]
+
+  - id: "port://keri/delegation/inbound/delegation-query"
+    type: inbound
+    name: "Delegation Query"
+    contract: "get_delegator(aid: AID) -> AID; get_delegatees(delegator_aid: AID) -> [AID]; get_delegation_chain(aid: AID) -> [AID]; is_delegated(aid: AID) -> bool"
+    protocol: "method-call"
+    refs: ["domain://keri", "domain://agent"]

@@ -1,0 +1,242 @@
+# ubiquitous-language.yaml
+domain_ref: "keri/duplicity-detection"
+
+terms:
+  - term: "Duplicity"
+    synonyms: ["External Inconsistency"]
+    definition: "The existence of two or more verified but different versions of an event at the same sequence number in a KEL. Acting in two different ways to different parties concerning the same matter."
+    invariants:
+      - "Both versions are independently cryptographically verifiable"
+      - "The versions are mutually inconsistent — different event content at the same location"
+      - "Indicates either key compromise (by an external attacker) or intentional malicious behavior by the controller"
+      - "Always detectable given access to both versions"
+      - "KERI is duplicity-evident — duplicity cannot be prevented but is always detectable"
+    examples:
+      - "Two different rotation events at sn=5, both with valid signatures from the same key state"
+      - "A controller signing one version of an interaction event for some witnesses and a different version for others"
+    related_terms: ["Internal Inconsistency", "Duplicity Evidence", "Watcher", "DEL"]
+
+  - term: "Internal Inconsistency"
+    synonyms: []
+    definition: "A log that fails cryptographic verification — invalid signatures, broken hash chains, or other structural violations. Distinguished from external inconsistency (duplicity)."
+    invariants:
+      - "An internally inconsistent log is not verifiable and is simply rejected"
+      - "Log verification from a self-certifying cryptographic root-of-trust protects against internal inconsistency"
+      - "This is a simpler problem than duplicity — the log is obviously invalid"
+    examples:
+      - "An event with a signature that does not verify against the claimed signing keys"
+      - "An event whose prior event digest (p field) does not match the predecessor's SAID"
+    related_terms: ["Duplicity", "Verification"]
+
+  - term: "Duplicity Evidence"
+    synonyms: ["Conflicting Events"]
+    definition: "The pair of verified but different events at the same sequence number that proves duplicity occurred. Non-repudiable because both events bear valid signatures."
+    invariants:
+      - "Consists of at least two different verified events at the same sn for the same AID"
+      - "Non-repudiable — the signatures on both events are cryptographic proof of duplicity"
+      - "The controller is responsible for any duplicitous events signed by its keys"
+      - "Evidence can be stored and presented to any party for independent verification"
+    examples:
+      - "Event A at sn=3 and Event B at sn=3, both signed by keys authorized at sn=2, but with different content"
+    related_terms: ["Duplicity", "DEL", "Non-repudiation"]
+
+  - term: "Watcher"
+    synonyms: []
+    definition: "An entity under the validator's control that monitors for duplicity by collecting and comparing KEL copies from multiple sources — witnesses, other watchers, or the controller itself."
+    invariants:
+      - "Under the validator's control, NOT the controller's"
+      - "Collects KEL copies from multiple independent sources"
+      - "Compares event histories to detect inconsistencies (different events at the same sn)"
+      - "A sufficient number and diversity of watchers makes duplicity detection ambient"
+      - "Does not need to trust any single source — cross-checks multiple sources"
+    examples:
+      - "A watcher polling 5 witnesses and comparing their KERL copies for a monitored AID"
+      - "A watcher detecting that Witness W1 has event E at sn=5 while Witness W2 has event E' at sn=5"
+    related_terms: ["Juror", "Judge", "Validator", "Ambient Duplicity Detection"]
+
+  - term: "Juror"
+    synonyms: []
+    definition: "An entity that keeps a log of duplicitous evidence (DEL) and can present that evidence when requested. May run in concert with a witness."
+    invariants:
+      - "Maintains a Duplicate Event Log (DEL) of inconsistent receipts and events"
+      - "May be run by a witness to keep track of inconsistent receipts it receives"
+      - "Provides evidence on demand to judges and validators"
+      - "Does not make trust decisions — only collects and presents evidence"
+    examples:
+      - "A juror attached to a witness, logging all inconsistent receipts received for monitored AIDs"
+      - "A juror presenting duplicity evidence to a judge for a trust decision"
+    related_terms: ["Watcher", "Judge", "DEL"]
+
+  - term: "Judge"
+    synonyms: []
+    definition: "An entity that makes trust decisions based on duplicity evidence collected by watchers and jurors. Determines whether an AID should be trusted given the evidence."
+    invariants:
+      - "Under the validator's control"
+      - "Evaluates duplicity evidence to make trust/no-trust decisions"
+      - "May determine which of divergent KERLs is authoritative in case of recovery"
+      - "The final arbiter of trust for the validator"
+    examples:
+      - "A judge receiving evidence of two conflicting events and deciding to stop trusting the associated AID"
+      - "A judge accepting a superseding recovery rotation as legitimate and choosing the recovered trunk"
+    related_terms: ["Watcher", "Juror", "Validator", "Reconciliation"]
+
+  - term: "DEL"
+    synonyms: ["Duplicate Event Log", "Duplicitous Event Log"]
+    definition: "A log maintained by jurors (and optionally witnesses) that stores evidence of duplicitous events — inconsistent receipts and conflicting event versions at the same sequence number."
+    invariants:
+      - "Contains verified but conflicting events at the same sequence number"
+      - "Separate from the KEL/KERL — the DEL tracks evidence of misbehavior"
+      - "May include inconsistent receipts from witnesses for different event versions"
+      - "Used by judges and validators to evaluate trust"
+    examples:
+      - "DEL entry: {aid: 'E...', sn: 5, events: [E_version1, E_version2], receipts: [...]}"
+    related_terms: ["Duplicity Evidence", "Juror", "KEL"]
+
+  - term: "Live Duplicity"
+    synonyms: ["Live Attack"]
+    definition: "Duplicity that occurs against the current key state — the attacker compromises the currently authoritative signing or pre-rotated keys and produces conflicting events before the controller can rotate."
+    invariants:
+      - "Involves compromise of current (live) keys, not stale keys"
+      - "The attacker races against the controller to propagate the compromised event"
+      - "Recovery is possible via rotation using pre-committed keys if the controller acts before the attacker"
+      - "Witness pool provides additional protection — attacker must also compromise M witnesses for full exploit"
+    examples:
+      - "Attacker compromises current signing keys and creates a conflicting interaction event before the controller rotates"
+      - "Attacker compromises pre-rotated keys and attempts a hostile rotation"
+    related_terms: ["Dead Duplicity", "Superseding Recovery", "Pre-rotation Commitment"]
+
+  - term: "Dead Duplicity"
+    synonyms: ["Dead Attack"]
+    definition: "Duplicity that occurs against stale key state — the attacker compromises keys from a past establishment event whose key state has already been rotated away."
+    invariants:
+      - "Involves compromise of stale (already rotated) keys"
+      - "Two subtypes: non-establishment dead-attack (stale signing keys) and establishment dead-attack (stale pre-rotated keys)"
+      - "The more distant in the past, the more difficult to mount (more time for original events to propagate)"
+      - "Protection comes from first-seen rule and ambient verifiability — the original events have already propagated"
+      - "Post-quantum threat: future quantum computers may enable dead attacks on all exposed classical keys"
+    examples:
+      - "An attacker compromises signing keys from 6 months ago and tries to forge an alternate event history"
+      - "Future quantum computer compromises all exposed Ed25519 keys — trusted jurors with post-quantum archives provide protection"
+    related_terms: ["Live Duplicity", "First-seen Rule", "Ambient Verifiability"]
+
+  - term: "Superseding Recovery"
+    synonyms: ["Recovery", "Superseding Rotation"]
+    definition: "The process of recovering control of a KEL after key compromise by issuing a rotation event that supersedes a compromised event at the same sequence number. Creates a fork with a recovered trunk and a disputed branch."
+    invariants:
+      - "A rotation event can supersede an interaction event at the same sn (rule A0)"
+      - "A non-delegated rotation cannot supersede another rotation (rule A1)"
+      - "An interaction event cannot supersede any event (rule A2)"
+      - "Delegated rotations have additional superseding rules (B1, B2, B3) involving delegator approval ordering"
+      - "Superseded events are shunted to a disputed branch — they still exist but are no longer on the trunk"
+      - "The controller is still accountable for harm caused by compromised events"
+    examples:
+      - "Attacker signs a fraudulent ixn at sn=5. Controller issues rot at sn=5 using pre-committed keys — the rot supersedes the ixn"
+      - "After superseding, the KEL forks: trunk continues from the recovery rotation, disputed branch contains the compromised events"
+    related_terms: ["First-seen Rule", "Reconciliation", "Disputed Branch", "Trunk"]
+
+  - term: "Reconciliation"
+    synonyms: []
+    definition: "The process of determining the undisputed path (trunk) through a KEL when superseding events create forks. Applied by validators using the superseding validation acceptance rules."
+    invariants:
+      - "Determines the trunk — the single undisputed path through the KEL DAG"
+      - "Applied by processing superseding events against the existing KEL"
+      - "If every validator cannot universally find the same trunk, the KEL is irreconcilable"
+      - "Recovery (superseding) enables KEL repair — future validators see only the recovered trunk"
+    examples:
+      - "Validator receives a superseding rotation, applies rules, determines the new trunk, shunts compromised events to disputed branch"
+    related_terms: ["Superseding Recovery", "Trunk", "Disputed Branch"]
+
+  - term: "Trunk"
+    synonyms: ["Undisputed Path"]
+    definition: "The single authoritative path through the KEL directed acyclic graph (DAG). All events on the trunk are the accepted, undisputed history of the AID."
+    invariants:
+      - "There is exactly one trunk — the undisputed path"
+      - "Superseding events create the trunk by displacing compromised events to branches"
+      - "All events not on the trunk are in disputed branches"
+    examples:
+      - "After recovery: [icp(s=0), ixn(s=1), rot-recovery(s=2), ixn(s=3)] is the trunk; the compromised ixn at s=2 is on a disputed branch"
+    related_terms: ["Disputed Branch", "Reconciliation", "Superseding Recovery"]
+
+  - term: "Disputed Branch"
+    synonyms: ["Fork", "Superseded Branch"]
+    definition: "A branch of the KEL DAG containing events that have been superseded during recovery. Events on a disputed branch still exist in the database but are no longer on the authoritative trunk."
+    invariants:
+      - "Created when a superseding event displaces the first-seen event at a location"
+      - "Events on disputed branches still exist — viewable via first-seen number ordering"
+      - "The controller remains accountable for events on disputed branches (non-repudiation)"
+      - "Contains all events subsequent to the superseded event in the original chain"
+    examples:
+      - "After rot supersedes ixn at sn=5: the ixn and all events following it form the disputed branch"
+    related_terms: ["Trunk", "Superseding Recovery", "First-seen Number"]
+
+  - term: "Ambient Duplicity Detection"
+    synonyms: ["Ambient Verifiability"]
+    definition: "The property that duplicity detection becomes ubiquitous when the original KERL is distributed among a sufficient number and diversity of watchers. An attacker cannot prevent all validators from accessing authentic copies."
+    invariants:
+      - "The original KERL may be distributed to any number of watchers"
+      - "At sufficient distribution, verifiability becomes ambient — available to anyone, anywhere, at any time"
+      - "Isolation of a validator from all ambient sources is prohibitively expensive for the attacker"
+      - "Provides asymmetry between attacker and defender in favor of the defender"
+    examples:
+      - "Hundreds of independent watchers worldwide holding copies of a KERL — an attacker cannot eclipse them all"
+    related_terms: ["Watcher", "KERL", "Eclipse Attack"]
+
+  - term: "Eclipse Attack"
+    synonyms: []
+    definition: "An attack where the adversary prevents a validator from communicating with any source that has the authentic KERL, enabling the attacker to present a forged alternative KERL as the only available copy."
+    invariants:
+      - "Requires isolating the validator from all ambient sources of the authentic KERL"
+      - "Becomes prohibitively expensive with sufficient watcher diversity and distribution"
+      - "The primary threat model for dead attacks — the attacker must prevent access to authentic copies"
+    examples:
+      - "An attacker controlling the network around a validator, preventing contact with any watcher that has the original KERL"
+    related_terms: ["Ambient Duplicity Detection", "Dead Duplicity", "Watcher"]
+
+  - term: "Superseding Rules"
+    synonyms: ["Superseding Validation Acceptance Rules"]
+    definition: "The formal rules that determine when one event can supersede another at the same sequence number. Organized into rules A (non-delegated), B (delegated), and C (recursive delegation)."
+    invariants:
+      - "A0: Any rotation may supersede an interaction at the same sn (if the ixn is not before another rotation)"
+      - "A1: A non-delegated rotation may NOT supersede another rotation"
+      - "A2: An interaction may NOT supersede any event"
+      - "B1: Delegated rotation supersedes if its delegating event has higher sn in delegator's KEL"
+      - "B2: Same delegating event but superseding seal appears later in the seal list"
+      - "B3: Same sn delegating events but superseding event's delegator event is a rotation superseding an interaction"
+      - "C: Recursive application of A and B up the delegation chain to the root non-delegated KEL"
+    examples:
+      - "Rule A0: rot at sn=5 supersedes ixn at sn=5 — recovery from signing key compromise"
+      - "Rule B1: delegated rot approved at delegator sn=10 supersedes delegated rot approved at delegator sn=8"
+    related_terms: ["Superseding Recovery", "Reconciliation", "Delegation"]
+
+events:
+  - name: "DuplicityDetected"
+    payload: "aid: AID, sn: int, first_seen_event: KeyEvent, conflicting_event: KeyEvent, detected_by: WatcherAID"
+    triggers: "A watcher discovers two different verified events at the same sequence number for the same AID"
+
+  - name: "DuplicityEvidenceStored"
+    payload: "aid: AID, sn: int, evidence: DuplicityEvidence"
+    triggers: "Duplicity evidence is recorded in the DEL"
+
+  - name: "SupersedingRecoveryApplied"
+    payload: "aid: AID, sn: int, superseding_event: RotationEvent, superseded_event: KeyEvent"
+    triggers: "A superseding rotation event is accepted, forking the KEL and creating a recovered trunk"
+
+  - name: "TrustRevoked"
+    payload: "aid: AID, reason: DuplicityEvidence, decided_by: JudgeAID"
+    triggers: "A judge decides to stop trusting an AID based on duplicity evidence"
+
+  - name: "TrustReconciled"
+    payload: "aid: AID, recovery_event: RotationEvent, decided_by: JudgeAID"
+    triggers: "A judge accepts a superseding recovery rotation and reconciles trust in the AID"
+
+rules:
+  - "Duplicity is the existence of two verified but different events at the same sequence number — it is always detectable"
+  - "KERI is duplicity-evident — duplicity cannot be prevented but its detection is guaranteed"
+  - "Watchers are under the validator's control, NOT the controller's"
+  - "A validator should choose not to trust when there is evidence of duplicity"
+  - "A validator may choose to trust when there is no evidence of duplicity"
+  - "Recovery via superseding rotation is possible only if the controller still holds pre-committed keys"
+  - "The controller is accountable for any harm caused by compromised events, even after recovery"
+  - "Non-delegated rotations cannot supersede other rotations — only interactions can be superseded"
+  - "Delegated rotations have additional superseding rules based on delegator event ordering"
+  - "Ambient duplicity detection provides asymmetry favoring the defender over the attacker"

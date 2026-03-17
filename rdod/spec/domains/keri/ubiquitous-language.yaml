@@ -1,0 +1,196 @@
+# ubiquitous-language.yaml
+domain_ref: "keri"
+
+terms:
+  - term: "AID"
+    synonyms: ["Autonomic Identifier", "SCID", "Self-Certifying Identifier"]
+    definition: "A self-certifying identifier cryptographically bound to a key pair at inception. Persistent across key rotations. Universally unique without registration."
+    invariants:
+      - "Derived from ≥128 bits of pseudo-random cryptographic entropy"
+      - "Exactly one authoritative KEL per AID"
+      - "AID prefix is either the public key itself (basic) or a digest of the inception event (self-addressing)"
+    examples:
+      - "Basic prefix: raw Ed25519 public key qualified with 'D' code"
+      - "Self-addressing prefix: Blake3-256 digest of inception event qualified with 'E' code"
+    related_terms: ["Controller", "KEL", "Key State", "Inception Event"]
+
+  - term: "Controller"
+    synonyms: []
+    definition: "The entity holding private keys for an AID and authorized to generate signed key events."
+    invariants:
+      - "Only the controller can produce valid signatures over key events"
+      - "Control authority is defined by the current key state"
+      - "A controller may manage multiple AIDs"
+    examples:
+      - "A person holding a hardware wallet with Ed25519 private keys"
+      - "A software agent holding keys in a secure enclave"
+    related_terms: ["AID", "Key State", "Key Event", "Signing Authority"]
+
+  - term: "Key Event"
+    synonyms: ["Event"]
+    definition: "A cryptographically signed, hash-chained record in the KEL. Three types: inception, rotation, interaction."
+    invariants:
+      - "Signed by keys authorized in the current key state"
+      - "Hash-chained to predecessor via prior event digest (p field)"
+      - "Sequence number (s field) monotonically increasing, hex-encoded"
+      - "Contains SAID (d field) — self-addressing identifier of the event"
+    examples:
+      - "Inception event (icp): creates AID, establishes initial key state"
+      - "Rotation event (rot): changes signing keys, may update witness set"
+      - "Interaction event (ixn): anchors data via seals without changing key state"
+    related_terms: ["KEL", "Key State", "Establishment Event", "Non-Establishment Event"]
+
+  - term: "Establishment Event"
+    synonyms: []
+    definition: "A key event that changes key state — inception (icp) or rotation (rot). Only establishment events modify signing/rotation authority."
+    invariants:
+      - "Must include signing keys (k field) and next key digests (n field)"
+      - "Must include witness set (b field) and threshold (bt field)"
+      - "The establishment subsequence is: icp → (rot* ixn*)* rot*"
+    examples:
+      - "icp: initial establishment with first key set and witness set"
+      - "rot: key rotation with new keys, optionally modified witnesses"
+    related_terms: ["Key Event", "Key State", "Pre-rotation"]
+
+  - term: "KEL"
+    synonyms: ["Key Event Log"]
+    definition: "The append-only, hash-chained, cryptographically signed event log for a single AID. The authoritative record of an identifier's control history."
+    invariants:
+      - "Append-only — events cannot be modified or deleted"
+      - "Hash-chained — each event includes digest of prior event"
+      - "Exactly one authoritative KEL per AID"
+      - "Deterministic key state derivable from any KEL prefix"
+    examples:
+      - "A KEL starting with an inception event followed by rotations and interactions"
+    related_terms: ["KERL", "Key Event", "AID", "Key State"]
+
+  - term: "KERL"
+    synonyms: ["Key Event Receipt Log"]
+    definition: "A KEL augmented with witness receipts — the receipted version used in indirect mode."
+    invariants:
+      - "Contains all KEL events plus witness receipt signatures"
+      - "Receipts must satisfy the accountability threshold (M of N witnesses)"
+    examples:
+      - "A KERL with 3-of-5 witness receipts on each event"
+    related_terms: ["KEL", "Witness", "Receipt", "KAWA"]
+
+  - term: "Key State"
+    synonyms: ["Current Key State"]
+    definition: "The current authoritative configuration for an AID: signing keys, rotation key digests, thresholds, witness set, and configuration traits."
+    invariants:
+      - "Deterministically computed from the KEL up to the latest establishment event"
+      - "Only establishment events modify key state"
+      - "Includes: signing keys (k), next key digests (n), signing threshold (kt), rotation threshold (nt), witness list (b), witness threshold (bt)"
+    examples:
+      - "Key state after inception: initial keys, initial witnesses, initial thresholds"
+      - "Key state after rotation: new signing keys, new next-key commitments"
+    related_terms: ["Establishment Event", "Pre-rotation", "Threshold"]
+
+  - term: "Pre-rotation"
+    synonyms: ["Pre-rotation Commitment"]
+    definition: "The practice of publishing a digest of the next rotation keys in the current establishment event, before those keys are ever used."
+    invariants:
+      - "Next key digests (n field) must appear in the establishment event preceding rotation"
+      - "Provides post-quantum resistance — attacker must compromise both current keys and pre-committed keys"
+      - "Pre-committed keys are never exposed until rotation"
+    examples:
+      - "Inception event commits to first rotation keys via n field"
+      - "Each rotation commits to subsequent rotation keys"
+    related_terms: ["Key State", "Rotation Event", "Establishment Event"]
+
+  - term: "Validator"
+    synonyms: []
+    definition: "An entity that receives key events and verifies them cryptographically against the KEL. Maintains its own KEL copy."
+    invariants:
+      - "Verification requires no trusted intermediaries (end-verifiable)"
+      - "Validators are responsible for their own duplicity detection via watchers"
+    examples:
+      - "A verifier checking an AID's current key state before accepting a signed message"
+    related_terms: ["Controller", "Watcher", "Duplicity"]
+
+  - term: "Witness"
+    synonyms: []
+    definition: "An entity designated by the controller to receipt key events, providing availability and consistency via the first-seen rule."
+    invariants:
+      - "Designated by controller in establishment events (b field)"
+      - "Receipts constitute a first-seen guarantee"
+      - "Witnesses are accountable — duplicitous witnessing is detectable"
+    examples:
+      - "A witness pool of 5 nodes, 3-of-5 threshold for accountability"
+    related_terms: ["KAWA", "Receipt", "KERL", "Accountability Threshold"]
+
+  - term: "Watcher"
+    synonyms: []
+    definition: "An entity under the validator's control that monitors for duplicity by collecting and comparing KEL copies from multiple sources."
+    invariants:
+      - "Under validator's control, NOT the controller's"
+      - "Watches for inconsistent event histories (duplicity evidence)"
+    examples:
+      - "A watcher polling multiple witnesses to compare their KERL copies"
+    related_terms: ["Duplicity", "Validator", "Judge", "Juror"]
+
+  - term: "Seal"
+    synonyms: ["Anchor"]
+    definition: "A cryptographic digest embedded in an interaction or rotation event that binds external data to the KEL without disclosing the data."
+    invariants:
+      - "Commits to external data via digest — the data itself is not in the KEL"
+      - "Types: digest seal, merkle tree root seal, event seal, event location seal"
+    examples:
+      - "An interaction event containing a digest seal anchoring an ACDC credential"
+    related_terms: ["Interaction Event", "Digest"]
+
+  - term: "Threshold"
+    synonyms: ["Signing Threshold", "Rotation Threshold"]
+    definition: "The M-of-N requirement for key agreement. Signing threshold (kt) for signatures; rotation threshold (nt) for rotation authorization."
+    invariants:
+      - "Signing threshold must be satisfied for any valid event signature"
+      - "Rotation threshold must be satisfied to authorize a rotation"
+      - "Can be simple (integer) or fractionally weighted"
+    examples:
+      - "Simple: 2-of-3 multi-sig"
+      - "Weighted: fractional threshold with different key weights"
+    related_terms: ["Key State", "Multi-sig"]
+
+  - term: "Version String"
+    synonyms: []
+    definition: "Protocol version metadata in the v field of every event: protocol, version, serialization kind, size."
+    invariants:
+      - "Format: PPPPVVVKKKKSSSS_ (protocol, version, kind, size, terminator)"
+      - "Provides regex target for cold-start stream detection"
+    examples:
+      - "KERI10JSON00011c_ — KERI v1.0, JSON serialization, 284 bytes"
+    related_terms: ["CESR"]
+
+events:
+  - name: "InceptionCreated"
+    payload: "aid: AID, key_state: KeyState, witnesses: [WitnessAID], config: [Trait]"
+    triggers: "Controller creates a new AID by generating an inception event"
+
+  - name: "RotationPerformed"
+    payload: "aid: AID, new_keys: [PublicKey], new_next_digests: [Digest], witness_changes: WitnessChange"
+    triggers: "Controller rotates keys by generating a rotation event satisfying pre-rotation commitment"
+
+  - name: "InteractionAnchored"
+    payload: "aid: AID, seals: [Seal]"
+    triggers: "Controller anchors external data to the KEL via an interaction event"
+
+  - name: "EventReceived"
+    payload: "aid: AID, event: KeyEvent, source: Endpoint"
+    triggers: "Validator receives a key event for processing"
+
+  - name: "KeyStateChanged"
+    payload: "aid: AID, previous_state: KeyState, new_state: KeyState"
+    triggers: "An establishment event is validated and applied, changing the key state"
+
+  - name: "DuplicityDetected"
+    payload: "aid: AID, evidence: [ConflictingEvent]"
+    triggers: "Watcher discovers inconsistent event histories for the same AID"
+
+rules:
+  - "The KEL is the sole source of truth for an AID's control authority — no external oracle"
+  - "Events are processed in strict sequence order — out-of-order events are escrowed"
+  - "A rotation can only be performed using keys whose digests were pre-committed in the previous establishment event"
+  - "Direct mode: controller sends events directly to validator; no witnesses required"
+  - "Indirect mode: events must be receipted by witnesses satisfying the accountability threshold before acceptance"
+  - "Recovery from key compromise requires rotation using pre-committed keys — if pre-committed keys are also compromised, recovery is impossible"
+  - "Establishment subsequence pattern: icp (rot* ixn*)* rot*"

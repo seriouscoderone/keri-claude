@@ -1,0 +1,232 @@
+# ubiquitous-language.yaml
+domain_ref: "keri/delegation"
+
+terms:
+  - term: "Cooperative Delegation"
+    synonyms: ["Delegation"]
+    definition: "A delegation mechanism requiring cooperation between a delegator and delegatee — implemented as a pair of cryptographically bound events: a delegated event in the delegatee's KEL and a delegating event with a seal in the delegator's KEL."
+    invariants:
+      - "Both parties must participate — neither can act unilaterally"
+      - "Delegatee's inception event references delegator's AID via di field"
+      - "Delegator must anchor a seal in its own KEL approving the delegated event"
+      - "The two-way binding provides cryptographically verifiable proof of mutual agreement"
+      - "A single delegating event may contain multiple delegation seals (batch delegation)"
+    examples:
+      - "Ean (delegator) anchors a seal in its ixn event referencing Fay's (delegatee) dip event. Fay's dip includes di=Ean's AID."
+      - "A corporate root AID delegating departmental AIDs, each requiring mutual approval"
+    related_terms: ["Delegator", "Delegatee", "Delegation Seal", "Two-way Binding"]
+
+  - term: "Delegator"
+    synonyms: []
+    definition: "The controller of the AID that approves delegation by anchoring seals in its own KEL for delegated establishment events. The delegator retains establishment control authority over the delegated identifier."
+    invariants:
+      - "Retains establishment control authority over the delegated AID"
+      - "Must anchor delegation seals in its KEL for each delegated establishment event"
+      - "Can revoke delegation by refusing to approve (seal) subsequent establishment events"
+      - "Recovery of a delegatee's compromise is possible by the delegator"
+      - "The delegator's KEL must be verified to validate any delegated event"
+    examples:
+      - "Ean's AID as delegator — Ean's KEL contains interaction events with seals referencing Fay's delegated events"
+      - "A root organizational AID delegating signing authority to operational AIDs"
+    related_terms: ["Delegatee", "Cooperative Delegation", "Delegation Seal"]
+
+  - term: "Delegatee"
+    synonyms: ["Delegated Identifier", "Delegate"]
+    definition: "The controller of a delegated AID whose establishment events (dip, drt) require approval from the delegator. The delegatee can independently authorize non-establishment events (ixn)."
+    invariants:
+      - "The delegatee's inception event (dip) must include the delegator's AID in the di field"
+      - "The delegatee's AID is a SAID that includes the delegator reference — cryptographically bound"
+      - "May only authorize non-establishment events (ixn) independently"
+      - "All establishment events (dip, drt) require delegator seal approval"
+      - "An exploiter must compromise both delegatee's and delegator's keys for full capture"
+    examples:
+      - "Fay's delegated AID with di='Ean's AID' — Fay can sign interaction events independently but needs Ean's approval for rotations"
+    related_terms: ["Delegator", "Delegated Inception", "Delegated Rotation"]
+
+  - term: "Delegated Inception"
+    synonyms: ["dip", "Delegated Inception Event"]
+    definition: "The inception event for a delegated AID. Identical to a normal inception event (icp) but includes the di field containing the delegator's AID and has type 'dip'. Field order: v, t, d, i, s, kt, k, nt, n, bt, b, c, a, di."
+    invariants:
+      - "Must include di field with the delegator's AID"
+      - "The AID (i field) is a SAID that incorporates the di field — cryptographically binding delegatee to delegator"
+      - "Requires a corresponding delegation seal in the delegator's KEL to be valid"
+      - "All standard inception event invariants also apply"
+      - "There is exactly one delegated inception per delegated KEL"
+    examples:
+      - "dip: {t:'dip', i:'EHqSsH1Im...', di:'EPR7FWsN3t...'} — Fay's AID delegated by Ean"
+      - "Fractional threshold: kt=['1/2','1/2','1/2'] with 3 signing keys"
+    related_terms: ["Delegated Rotation", "Delegator", "Delegation Seal", "di Field"]
+
+  - term: "Delegated Rotation"
+    synonyms: ["drt", "Delegated Rotation Event"]
+    definition: "A rotation event for a delegated AID. Identical to a normal rotation event (rot) in field structure but has type 'drt', signaling validators to apply delegated validation rules. Field order: v, t, d, i, s, p, kt, k, nt, n, bt, br, ba, c, a."
+    invariants:
+      - "Does NOT include the di field — inherits the delegator from the delegated inception event"
+      - "Requires a corresponding delegation seal in the delegator's KEL to be valid"
+      - "The 'drt' type signals validators to verify both delegatee and delegator approval"
+      - "All standard rotation event invariants also apply (dual threshold, pre-rotation, etc.)"
+      - "May be superseded by another delegated rotation under the superseding rules B1-B3"
+    examples:
+      - "drt: {t:'drt', s:'1', ...} — Fay's first key rotation, requires Ean's approval seal"
+    related_terms: ["Delegated Inception", "Delegation Seal", "Superseding Rules"]
+
+  - term: "Delegation Seal"
+    synonyms: ["Delegating Event Seal", "Anchor Seal"]
+    definition: "An event seal embedded in a delegating event in the delegator's KEL that cryptographically anchors a delegated establishment event. Contains the delegatee's AID, sequence number, and SAID of the delegated event."
+    invariants:
+      - "Contains: i (delegatee AID), s (delegated event sn), d (delegated event SAID)"
+      - "The seal digest (d field) commits to the entire content of the delegated event"
+      - "Must appear in the delegator's KEL before the delegated event is accepted by validators"
+      - "A delegating event may contain multiple seals, one for each delegation operation"
+      - "The combination of seal in delegator's KEL and di in delegatee's inception creates a two-way peg"
+    examples:
+      - "Seal: {i:'EHqSsH1Im...', s:'0', d:'EHqSsH1Im...'} in Ean's ixn event — approves Fay's inception"
+      - "Seal in a rotation event: Ean's rot anchoring Fay's drt — both are establishment events"
+    related_terms: ["Cooperative Delegation", "Two-way Binding", "Delegating Event"]
+
+  - term: "Delegating Event"
+    synonyms: []
+    definition: "An event in the delegator's KEL that contains one or more delegation seals approving delegated establishment events. Can be either an interaction event (ixn) or a rotation event (rot)."
+    invariants:
+      - "Contains delegation seal(s) in its data payload (a field)"
+      - "Can be an interaction event or any event with a seal list"
+      - "A single delegating event may perform multiple delegation operations via multiple seals"
+      - "The ordering of seals within the event is significant for superseding recovery (rule B2)"
+    examples:
+      - "Ean's ixn at sn=1 with a=[{i:Fay_AID, s:'0', d:Fay_inception_SAID}] — approves Fay's inception"
+      - "Ean's rot at sn=2 with a=[{i:Fay_AID, s:'1', d:Fay_rotation_SAID}] — approves Fay's rotation"
+    related_terms: ["Delegation Seal", "Delegator", "Interaction Event"]
+
+  - term: "di Field"
+    synonyms: ["Delegator Identifier Field"]
+    definition: "The field in a delegated inception event (dip) that contains the AID of the delegator. This field binds the delegated AID to a specific delegator and is incorporated into the delegatee's AID derivation."
+    invariants:
+      - "Only present in delegated inception events (dip), NOT in delegated rotation events (drt)"
+      - "The value is the delegator's AID (qualified CESR prefix)"
+      - "Incorporated into the delegatee's AID — changing the delegator changes the AID"
+      - "Establishes the delegatee-to-delegator binding of the cooperative delegation"
+    examples:
+      - "di:'EPR7FWsN3tOM8PqfMap2FRfF4MFQ4v3ZXjBUcMVtvhmB' — Ean's AID as delegator"
+    related_terms: ["Delegated Inception", "Cooperative Delegation", "AID"]
+
+  - term: "Two-way Binding"
+    synonyms: ["Two-way Peg"]
+    definition: "The pair of cryptographic references that together prove cooperative delegation: (1) the delegation seal in the delegator's KEL referencing the delegated event, and (2) the di field in the delegatee's inception referencing the delegator's AID."
+    invariants:
+      - "Both references must exist for a valid delegation"
+      - "The seal in the delegator's KEL includes a digest of the delegated event — the delegator commits to the event's exact content"
+      - "The di field in the delegatee's inception is incorporated into the delegatee's AID — cannot be changed without changing the AID"
+      - "Neither party can forge the other's binding"
+    examples:
+      - "Ean's KEL has seal {i:Fay_AID, s:'0', d:Fay_inception_SAID}; Fay's dip has di:Ean_AID — two-way binding established"
+    related_terms: ["Delegation Seal", "di Field", "Cooperative Delegation"]
+
+  - term: "Custodial Delegation"
+    synonyms: []
+    definition: "A special form of delegation where the delegator controls the pre-rotated keys of the delegatee, giving the delegator the ability to rotate the delegatee's keys unilaterally."
+    invariants:
+      - "The delegator holds or controls the delegatee's pre-rotated private keys"
+      - "Provides the delegator with full recovery capability over the delegated AID"
+      - "The delegatee can still sign interaction events independently with its current signing keys"
+      - "The delegator can force a rotation by exercising the pre-rotated keys"
+    examples:
+      - "A custodial wallet service delegating AIDs where the service holds backup rotation keys"
+      - "A parent organization holding recovery keys for employee AIDs"
+    related_terms: ["Cooperative Delegation", "Pre-rotation Commitment", "Delegator"]
+
+  - term: "Delegation Chain"
+    synonyms: ["Delegation Hierarchy", "Multi-level Delegation"]
+    definition: "A chain of delegation where a delegated AID itself acts as a delegator for further delegated AIDs, forming a hierarchical tree of authority."
+    invariants:
+      - "Verification of any delegated event requires walking up the delegation chain to the root"
+      - "The root of any delegation chain must be a non-delegated (self-certifying) AID"
+      - "Superseding recovery rules (rule C) apply recursively up the delegation chain"
+      - "Recovery at any level can be performed by the next higher level in the chain"
+    examples:
+      - "Root AID (non-delegated) -> Department AID (delegated) -> Employee AID (delegated by department)"
+      - "Verifying Employee AID requires verifying Department AID's delegation, which requires verifying Root AID's delegation seal"
+    related_terms: ["Cooperative Delegation", "Superseding Rules", "Root AID"]
+
+  - term: "DID Configuration Trait"
+    synonyms: ["Delegate-Is-Delegator", "DID Trait"]
+    definition: "A configuration trait (c field value 'DID') that instructs validators to treat delegates of this AID as if they were the AID itself."
+    invariants:
+      - "Set in the c field of an establishment event"
+      - "When present, validators may treat delegatees as equivalent to the delegator for authorization purposes"
+      - "Enables transparent delegation — downstream parties see the delegator's authority through the delegatee"
+    examples:
+      - "c:['DID'] in Ean's inception — Fay (Ean's delegate) may be treated as Ean by validators"
+    related_terms: ["Configuration Traits", "Delegation Chain"]
+
+  - term: "Delegation Recovery"
+    synonyms: []
+    definition: "Recovery from key compromise of a delegated AID via the delegator. The delegator's additional layer of authority provides recovery options not available to non-delegated AIDs."
+    invariants:
+      - "An exploiter that compromises only the delegatee's keys cannot fully capture the delegated AID — delegator approval still required"
+      - "An exploiter that compromises only the delegator's signing keys cannot force a delegated rotation without also compromising the delegatee's pre-rotated keys"
+      - "Recovery at any level of a delegation chain is possible from the next higher level"
+      - "Delegated rotations can supersede previous delegated rotations under rules B1-B3"
+      - "The latest-seen constraint limits superseding to only the most recent delegated rotation"
+    examples:
+      - "Attacker compromises Fay's (delegatee) signing keys. Ean (delegator) refuses to seal any compromised rotation, and approves a legitimate recovery rotation instead."
+      - "Attacker must compromise both Fay's pre-rotated keys AND Ean's signing keys simultaneously for full exploit"
+    related_terms: ["Superseding Recovery", "Cooperative Delegation", "Delegation Chain"]
+
+  - term: "Joint Compromise Requirement"
+    synonyms: []
+    definition: "The security property that a successful full exploit of a delegated AID requires simultaneous compromise of both the delegatee's authoritative keys and the delegator's authoritative keys."
+    invariants:
+      - "Merely compromising the delegatee's keys is insufficient — the delegator must also approve"
+      - "Merely compromising the delegator's signing keys is insufficient — the delegatee's pre-rotated keys must also be compromised"
+      - "This joint requirement significantly raises the bar for successful exploitation"
+      - "Extends recursively through delegation chains — each level adds an independent key set"
+    examples:
+      - "To capture Fay's delegated AID, attacker must compromise: (1) Fay's pre-rotated keys AND (2) Ean's signing authority"
+    related_terms: ["Delegation Recovery", "Cooperative Delegation", "Pre-rotation Commitment"]
+
+  - term: "Delegated Superseding Rules"
+    synonyms: ["Rules B1-B3-C"]
+    definition: "The specific superseding recovery rules for delegated rotations, based on the ordering and type of delegating events in the delegator's KEL."
+    invariants:
+      - "B1: Superseding delegation has a higher sn delegating event than the superseded delegation"
+      - "B2: Same delegating event, but superseding seal appears later in the seal list"
+      - "B3: Same sn delegating events, but superseding event's delegating event is a rotation superseding the superseded event's delegating interaction"
+      - "C: Recursive application up the delegation chain to the root non-delegated KEL"
+      - "Only the latest-seen delegated rotation at a given sn can be superseded — earlier ones are final"
+    examples:
+      - "Rule B1: Fay's drt approved by Ean at sn=10 supersedes Fay's drt approved by Ean at sn=8"
+      - "Rule C: if B rules are not satisfied at the immediate delegator, check the delegator's delegator"
+    related_terms: ["Superseding Recovery", "Delegation Chain", "Reconciliation"]
+
+events:
+  - name: "DelegatedInceptionCreated"
+    payload: "delegatee_aid: AID, delegator_aid: AID, key_state: KeyState, seal: DelegationSeal"
+    triggers: "A delegatee creates a delegated inception event and the delegator anchors the corresponding seal"
+
+  - name: "DelegatedRotationPerformed"
+    payload: "delegatee_aid: AID, delegator_aid: AID, new_keys: [PublicKey], seal: DelegationSeal"
+    triggers: "A delegatee creates a delegated rotation event and the delegator anchors the corresponding seal"
+
+  - name: "DelegationSealAnchored"
+    payload: "delegator_aid: AID, delegatee_aid: AID, delegated_event_sn: int, delegated_event_said: SAID, delegating_event_sn: int"
+    triggers: "A delegator anchors a delegation seal in its own KEL approving a delegated establishment event"
+
+  - name: "DelegationRevoked"
+    payload: "delegator_aid: AID, delegatee_aid: AID, reason: RevocationReason"
+    triggers: "A delegator refuses to approve further establishment events for a delegatee, effectively revoking delegation"
+
+  - name: "DelegatedRecoveryPerformed"
+    payload: "delegatee_aid: AID, delegator_aid: AID, superseding_event: DelegatedRotation, superseded_event: DelegatedRotation"
+    triggers: "A delegated rotation supersedes a previous delegated rotation under the delegated superseding rules"
+
+rules:
+  - "Delegation requires cooperation — both the delegator seal and the delegatee's di field must exist"
+  - "The delegatee's AID is a SAID that incorporates the delegator reference — changing the delegator changes the AID"
+  - "Only establishment events (dip, drt) require delegator approval — interaction events are independent"
+  - "A delegating event may contain multiple delegation seals for batch delegation"
+  - "Validators must verify both the delegatee's signatures and the delegator's seal before accepting a delegated event"
+  - "The delegator should not automatically approve a delegated rotation that changes the witness pool beyond its prior threshold"
+  - "Delegated rotations may only supersede the latest-seen delegated rotation at a given sn — earlier rotations are final"
+  - "Superseding rules for delegated events (B1-B3) are based on delegating event ordering in the delegator's KEL"
+  - "Recursive rule C applies up the delegation chain to the root non-delegated KEL"
+  - "An exploiter must compromise both delegatee and delegator keys simultaneously for full control — the joint compromise requirement"

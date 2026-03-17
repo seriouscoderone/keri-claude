@@ -1,0 +1,33 @@
+# ports.yaml
+domain_ref: "acdc"
+
+ports:
+  # Inbound — what clients call
+  - id: "port://acdc/inbound/credential-lifecycle"
+    type: inbound
+    name: "Credential Lifecycle"
+    contract: "issue(issuer_aid, schema, attributes, edges?, rules?) -> ACDC; revoke(acdc_said, registry_said) -> RevocationEvent; get_credential(said) -> ACDC; validate(acdc, schema) -> Result<Valid, ValidationError>"
+    protocol: "method-call"
+    refs: ["domain://agent"]
+
+  - id: "port://acdc/inbound/schema-management"
+    type: inbound
+    name: "Schema Management"
+    contract: "register_schema(schema) -> SAID; get_schema(said) -> JSONSchema; validate_against_schema(acdc, schema) -> Result<Valid, SchemaError>"
+    protocol: "method-call"
+    refs: ["domain://agent"]
+
+  # Outbound — what ACDC calls
+  - id: "port://acdc/outbound/credential-store"
+    type: outbound
+    name: "Credential Persistence"
+    contract: "store_credential(acdc) -> Result; get_credential(said) -> ACDC; list_credentials(issuer_aid?) -> [ACDC]; delete_credential(said) -> Result"
+    protocol: "method-call"
+    refs: ["persistence"]
+
+  - id: "port://acdc/outbound/kel-anchoring"
+    type: outbound
+    name: "KEL Anchoring"
+    contract: "anchor_seal(aid, seal_digest) -> InteractionEvent; verify_seal(aid, event_sn, seal_digest) -> Result<Valid, SealError>"
+    protocol: "method-call"
+    refs: ["domain://keri"]

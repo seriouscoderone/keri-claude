@@ -1,0 +1,115 @@
+# domain.yaml
+template_version: "1.0"
+id: "agent"
+name: "Agent Infrastructure"
+description: >
+  Application-level infrastructure for operating KERI identifiers. Separates cloud
+  hosting (KERIA) from edge signing (Signify). The agent manages AIDs, processes
+  events, coordinates multi-sig, delivers credentials, and exposes APIs — but never
+  holds private signing keys. All sensitive operations are signed at the edge by
+  the controller via the Signify protocol.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "KERIArchGroupIssuance.md — group issuance architecture"
+  - type: document
+    reference: "keridoc-llms-full.md — KERIA/Signify documentation"
+  - type: user-input
+    reference: "CLAUDE.md — KERIA service architecture, Signify protocol"
+
+ubiquitous_language:
+  - term: "KERIA"
+    definition: "Cloud agent hosting service — manages AIDs, processes events, stores KELs, coordinates multi-sig, but never holds private signing keys"
+    invariants:
+      - "Never has access to private keys or decryption keys"
+      - "All signing operations are delegated to the edge client"
+      - "Exposes three endpoints: boot (3903), admin (3901), message router (3902)"
+
+  - term: "Signify"
+    definition: "Edge signing protocol — the controller's client library that holds private keys and performs all cryptographic signing operations"
+    invariants:
+      - "Private keys never leave the edge client"
+      - "All operations are signed at the edge before being sent to the agent"
+      - "Implementations: signify-ts (TypeScript), signifypy (Python)"
+
+  - term: "Edge Signing"
+    definition: "The principle that all sensitive cryptographic operations occur on the controller's device, not on the cloud agent"
+    invariants:
+      - "Signing at the edge is the fundamental security guarantee of the Signify protocol"
+      - "The agent is untrusted with respect to key material"
+
+  - term: "Agency"
+    definition: "The boot endpoint (port 3903) that provisions new agents — creates agent instances for Signify clients"
+    invariants:
+      - "Each agent instance is associated with a single controller AID"
+
+  - term: "Admin API"
+    definition: "The API handler endpoint (port 3901) for agent operations — creating identifiers, managing credentials, querying state"
+    invariants:
+      - "All requests authenticated via KRAM (KERI Request Authentication Method)"
+
+  - term: "Message Router"
+    definition: "The HTTP endpoint (port 3902) receiving external KERI protocol messages — multi-sig coordination, credential exchange, event receipts"
+    invariants:
+      - "Handles inbound protocol messages from other agents and witnesses"
+
+  - term: "KRAM"
+    definition: "KERI Request Authentication Method — HTTP signature-based authentication using KERI identifiers for agent API access"
+    invariants:
+      - "Request headers signed by the controller's current signing keys"
+      - "Agent verifies signatures against the controller's KEL"
+
+  - term: "Multi-sig Coordination"
+    definition: "Process of collecting threshold signatures from multiple controllers for group AIDs — coordinated through the agent's message router"
+    invariants:
+      - "Each participant signs independently at their own edge"
+      - "Agent collects and assembles threshold signatures"
+
+domain_clients: []
+
+subdomains: []
+
+kernels: []
+
+adjacents:
+  - ref: "domain://keri"
+    relationship: "Customer-Supplier — agent consumes KERI protocol for identifier lifecycle, event processing, and key state management"
+    via_port: "port://keri/inbound/identifier-lifecycle"
+    is_cross_cutting: false
+  - ref: "domain://acdc"
+    relationship: "Customer-Supplier — agent consumes ACDC for credential issuance, presentation, and exchange"
+    via_port: "port://acdc/inbound/credential-lifecycle"
+    is_cross_cutting: false
+  - ref: "domain://oobi"
+    relationship: "Customer-Supplier — agent uses OOBIs for discovery and endpoint management"
+    via_port: "port://oobi/inbound/discovery"
+    is_cross_cutting: false
+
+externals:
+  - name: "Agent Persistence"
+    abstraction: "Repository"
+    ref: "port://agent/outbound/agent-store"
+    implementation_notes: "Stores agent state, credential wallets, contact books. Implementations: LMDB (keria), DynamoDB (serious-keri)"
+  - name: "HTTP Server"
+    abstraction: "Adapter"
+    ref: "port://agent/outbound/http-server"
+    implementation_notes: "Exposes boot, admin, and message router endpoints. Implementations: Falcon/hio (keria), Lambda (serious-keri)"
+
+implementation_guidance:
+  suggested_type: "service"
+  language_affinity: "any"
+  notes: >
+    Reference implementation is keria (Python, Falcon + hio). Serverless implementation
+    is serious-keri (TypeScript, AWS Lambda + DynamoDB). Edge signing clients: signify-ts
+    (TypeScript), signifypy (Python). Browser integration: signify-browser-extension (React).
+
+issues:
+  - ref: "domain://agent"
+    category: "modeling-gap"
+    severity: "medium"
+    description: "Agent domain currently modeled as flat — no subdomains for agency (boot), admin API, and message router, which have distinct responsibilities and languages"
+    rationale: "The three KERIA endpoints serve different roles with different authentication models and message types. As the agent spec matures, these may warrant separate subdomains."
+    recommendation: "introduce-concept:agent-endpoint-roles"
+
+tags: ["infrastructure", "cloud-agent", "edge-signing", "signify"]

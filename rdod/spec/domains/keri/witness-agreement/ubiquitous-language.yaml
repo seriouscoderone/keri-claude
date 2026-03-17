@@ -1,0 +1,212 @@
+# ubiquitous-language.yaml
+domain_ref: "keri/witness-agreement"
+
+terms:
+  - term: "KAWA"
+    synonyms: ["KERI's Algorithm for Witness Agreement"]
+    definition: "A Byzantine Fault Tolerant agreement algorithm where a controller's designated set of N witnesses provides highly available, consistent promulgation of key events via single-phase agreement under the first-seen rule."
+    invariants:
+      - "Single-phase agreement — no multi-phase commit required because the controller is the sole source of truth for event ordering"
+      - "Scalability: receipt dissemination scales linearly (2*N round-robin) or N*log(N) (gossip)"
+      - "The controller designates both the witness set and the accountability threshold"
+      - "Provides availability and consistency guarantees comparable to multi-phase BFT but without their latency and cost"
+    examples:
+      - "A controller with 5 witnesses and threshold 3: each witness receipts the first-seen version of each event"
+      - "Round-robin dissemination: controller sends to each witness in turn, collecting and forwarding receipts"
+    related_terms: ["Witness", "First-seen Rule", "Accountability Threshold", "KERL", "Immune Constraint"]
+
+  - term: "Witness"
+    synonyms: []
+    definition: "An entity designated by a controller in establishment events to verify, receipt (sign), store, and optionally disseminate key events. Witnesses enforce the first-seen rule and provide a receipted copy of the KEL (KERL)."
+    invariants:
+      - "Designated by the controller in the b field of establishment events — not self-selected"
+      - "A witness's receipt constitutes a first-seen guarantee for that event"
+      - "Witnesses are accountable — duplicitous witnessing (signing conflicting events) is detectable"
+      - "A witness should only accept local events from the controller (protected channel)"
+      - "A witness should not accept remote (unprotected) events for its controlled AID"
+    examples:
+      - "A witness node running on dedicated infrastructure, receipting events via HTTP"
+      - "A pool of 4 witnesses with threshold 3: ['BGKV6v93...', 'BJfueFAY...', 'BAPv2Mno...', 'BA4PSatf...']"
+    related_terms: ["KAWA", "Receipt", "Witnessing Policy", "Accountability Threshold"]
+
+  - term: "First-seen Rule"
+    synonyms: ["First Seen Policy", "First seen, always seen, never unseen"]
+    definition: "The fundamental witnessing policy that the first verified version of an event at a given sequence number wins. Once accepted as first-seen, an event cannot be unseen or replaced except by superseding recovery."
+    invariants:
+      - "First seen, always seen, never unseen"
+      - "All subsequent different versions of an event at the same location are discarded"
+      - "Consistent receipts (same version) from other witnesses are accepted and stored"
+      - "Inconsistent receipts (different version at same location) are discarded from the KERL but may be logged to a DEL"
+      - "Exception: superseding recovery rotation may replace a first-seen event"
+    examples:
+      - "Witness W1 accepts event E at sn=5. A later different event E' at sn=5 arrives — E' is discarded"
+      - "Receipt from W2 for the same version E at sn=5 — accepted and attached to the KERL entry"
+    related_terms: ["KAWA", "Superseding Recovery", "Duplicity", "KERL"]
+
+  - term: "Receipt"
+    synonyms: ["Witness Receipt", "rct"]
+    definition: "A signed acknowledgment by a witness that it has verified and accepted (first-seen) a specific version of an event. The receipt message type is 'rct' with fields: v, t, d, i, s."
+    invariants:
+      - "Created by a witness after verifying the controller's signatures and event consistency"
+      - "Constitutes the witness's first-seen guarantee"
+      - "Receipt signatures are attached as CESR attachment codes"
+      - "Receipts are stored in the witness's KERL"
+      - "Later receipts from other witnesses for the same event version are appended to the log entry"
+    examples:
+      - "rct message: {v: version, t: 'rct', d: event_SAID, i: event_AID, s: event_sn} with attached witness signature"
+      - "A controller collecting 3 receipts from different witnesses for a single event"
+    related_terms: ["Witness", "KERL", "First-seen Rule", "KAWA"]
+
+  - term: "KERL"
+    synonyms: ["Key Event Receipt Log"]
+    definition: "A KEL augmented with witness receipt signatures — the receipted version of the event log used in indirect mode. An immutable, deletion-proof log maintained by witnesses."
+    invariants:
+      - "Contains all KEL events plus the attached witness receipt signatures"
+      - "Receipts must satisfy the accountability threshold (M of N witnesses) for the event to be considered sufficiently accountable"
+      - "Immutable — later messages or receipts cannot change existing entries (append-only)"
+      - "Made deletion-proof by virtue of being provided by a set of witnesses of which only F may be faulty"
+      - "A proper KERL at a witness implies proper KERLs for all prior events at that witness"
+    examples:
+      - "A KERL with 3-of-5 witness receipts on each event, providing accountability for indirect mode"
+    related_terms: ["KEL", "Receipt", "Accountability Threshold", "Witness"]
+
+  - term: "Accountability Threshold"
+    synonyms: ["Tally", "bt field", "M"]
+    definition: "The minimum number M of the N designated witnesses that must receipt an event for the controller to accept accountability for that event. The controller designates this threshold."
+    invariants:
+      - "Set in the bt field of establishment events"
+      - "M must be no greater than N (the number of witnesses)"
+      - "The controller accepts accountability when any subset of M witnesses confirms an event"
+      - "A validator can require M receipts before accepting an event in indirect mode"
+      - "Can be changed at rotation along with the witness set"
+    examples:
+      - "bt='3' with 5 witnesses means 3-of-5 must receipt for accountability"
+      - "A validator requiring all 3-of-5 receipts before accepting an event"
+    related_terms: ["KAWA", "Witness", "Immune Constraint", "KERL"]
+
+  - term: "Immune Constraint"
+    synonyms: ["Immunity"]
+    definition: "The mathematical constraint on M (accountability threshold), N (total witnesses), and F (potentially faulty witnesses) that guarantees at most one sufficient agreement exists despite faulty witnesses and a dishonest controller."
+    invariants:
+      - "Expressed as: M > (N + F + 1) / 2 where F < M and F* = N - M unavailable"
+      - "When satisfied, the service is immune — cannot produce multiple divergent proper KERLs"
+      - "A controller may choose to use KAWA to achieve immunity"
+      - "Any non-faulty witness with a proper agreement will keep and provide it on demand"
+    examples:
+      - "N=5, F=1: immune when M >= 4 (i.e., M > (5+1+1)/2 = 3.5)"
+      - "N=7, F=2: immune when M >= 6"
+    related_terms: ["KAWA", "Accountability Threshold", "Byzantine Fault Tolerance"]
+
+  - term: "Witness Designation"
+    synonyms: []
+    definition: "The act of a controller specifying its witness set and accountability threshold in establishment events. Initial designation occurs at inception; modifications at rotation."
+    invariants:
+      - "Witnesses are designated by the controller — not self-selected"
+      - "Initial witness set and tally designated in the inception event (b and bt fields)"
+      - "Subsequent rotations may amend witnesses via br (pruned) and ba (grafted) fields and change the tally"
+      - "Designation is a cryptographic commitment via inclusion in a verifiable establishment event"
+    examples:
+      - "Inception with b=['W1', 'W2', 'W3', 'W4'], bt='3'"
+      - "Rotation removing W4 and adding W5: br=['W4'], ba=['W5'], bt='3'"
+    related_terms: ["Witness", "Accountability Threshold", "Establishment Event"]
+
+  - term: "Witnessing Policy"
+    synonyms: []
+    definition: "The operational rules governing how a witness processes events: verify signatures and consistency, apply first-seen rule, sign and store receipts, and optionally disseminate to other witnesses."
+    invariants:
+      - "First verified version of an event is witnessed (signed, stored, acknowledged)"
+      - "All other versions at the same location are discarded"
+      - "Exception: correctly reconcilable superseding events may replace first-seen events"
+      - "Consistent receipts from other witnesses are appended to the KERL entry"
+      - "Inconsistent receipts (different event version at same location) are discarded from KERL"
+    examples:
+      - "Witness receives event E at sn=3, verifies controller signatures, signs receipt, stores in KERL, returns receipt to controller"
+      - "Witness receives different event E' at sn=3 — discards E' (first-seen E wins)"
+    related_terms: ["First-seen Rule", "Receipt", "KERL", "Superseding Recovery"]
+
+  - term: "Round-robin Dissemination"
+    synonyms: []
+    definition: "An efficient receipt dissemination protocol where the controller exchanges events and receipts with each witness in turn, requiring at most 2*N acknowledged exchanges for full dissemination."
+    invariants:
+      - "Controller visits each witness, sending events and collecting receipts"
+      - "On each visit, controller also sends receipts collected from prior witnesses"
+      - "At most two passes through all N witnesses for full dissemination"
+      - "Network load scales linearly with N"
+    examples:
+      - "With 5 witnesses: first pass sends event and collects receipts; second pass ensures all witnesses have all receipts"
+    related_terms: ["KAWA", "Gossip Protocol", "Receipt"]
+
+  - term: "Gossip Protocol"
+    synonyms: []
+    definition: "An alternative receipt dissemination protocol where witnesses forward receipts to each other, providing lower latency than round-robin but higher bandwidth usage."
+    invariants:
+      - "Bandwidth scales with N * log(N) versus 2*N for round-robin"
+      - "May use a directed acyclic graph to determine what needs to be gossiped"
+      - "Provides lower latency than round-robin for large witness sets"
+    examples:
+      - "Witnesses broadcasting receipts to random subsets of other witnesses"
+    related_terms: ["Round-robin Dissemination", "KAWA", "Receipt"]
+
+  - term: "Proper KERL"
+    synonyms: ["Proper Agreement"]
+    definition: "A KERL that has been verified as consistent with all prior events by every non-faulty witness who is a party to the agreement. A proper KERL at a witness implies proper KERLs for all prior events."
+    invariants:
+      - "Verified as consistent by every non-faulty party to the agreement"
+      - "High availability: any non-faulty witness with a proper agreement provides it on demand"
+      - "Availability of a proper event at a witness is tantamount to availability of all prior proper events"
+      - "May be provided by any observer (validator, watcher, juror, judge) who has retained a copy"
+    examples:
+      - "A validator requesting a KERL from a witness and receiving a proper, consistent log"
+    related_terms: ["KERL", "KAWA", "Immune Constraint"]
+
+  - term: "Direct Mode"
+    synonyms: []
+    definition: "Trust modality where the controller sends events directly to the validator without witnesses. The validator acts as an implicit witness."
+    invariants:
+      - "No witness pool required"
+      - "Trust established via direct exchange of verified signatures"
+      - "Suitable for one-to-one interactions"
+      - "The validator verifies controller signatures directly"
+    examples:
+      - "Two parties exchanging signed messages directly over a secure channel"
+    related_terms: ["Indirect Mode", "Validator"]
+
+  - term: "Indirect Mode"
+    synonyms: []
+    definition: "Trust modality where events are receipted by a designated witness pool, creating a KERL as a secondary root-of-trust. Suitable for one-to-any interactions."
+    invariants:
+      - "Requires a designated witness pool and accountability threshold"
+      - "KERL serves as a secondary root-of-trust for validating events"
+      - "Validators may not be among the designated witnesses"
+      - "Provides higher availability and security than direct mode"
+    examples:
+      - "A public AID with 5 witnesses and threshold 3 — any validator can obtain and verify the KERL"
+    related_terms: ["Direct Mode", "KERL", "KAWA", "Witness"]
+
+events:
+  - name: "EventReceipted"
+    payload: "aid: AID, sn: int, event_said: SAID, witness_aid: WitnessAID, receipt_signature: Signature"
+    triggers: "A witness verifies and receipts a first-seen event"
+
+  - name: "AccountabilityThresholdMet"
+    payload: "aid: AID, sn: int, event_said: SAID, receipt_count: int, threshold: int"
+    triggers: "The number of witness receipts for an event meets or exceeds the accountability threshold M"
+
+  - name: "ReceiptDisseminated"
+    payload: "aid: AID, sn: int, from_witness: WitnessAID, to_witness: WitnessAID"
+    triggers: "A receipt is forwarded from one witness to another during dissemination"
+
+  - name: "InconsistentReceiptDetected"
+    payload: "aid: AID, sn: int, witness_aid: WitnessAID, first_seen_said: SAID, inconsistent_said: SAID"
+    triggers: "A witness receives a receipt for a different version of an event at the same sequence number"
+
+rules:
+  - "The first verified version of an event at a given sequence number wins — first seen, always seen, never unseen"
+  - "Witnesses are designated by the controller, not self-selected"
+  - "A witness should only accept local (protected) events from the controller"
+  - "A witness must verify controller signatures and event consistency before receipting"
+  - "Inconsistent receipts (for different event versions at the same location) are discarded from the KERL"
+  - "Network load for receipt dissemination scales linearly (round-robin) or N*log(N) (gossip)"
+  - "The immune constraint (M > (N+F+1)/2) guarantees at most one sufficient agreement despite F faulty witnesses"
+  - "A controller accepts accountability for an event when M of N witnesses confirm it"
+  - "In indirect mode, validators may require M receipts before accepting an event"

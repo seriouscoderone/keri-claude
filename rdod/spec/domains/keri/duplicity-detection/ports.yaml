@@ -1,0 +1,25 @@
+# ports.yaml
+domain_ref: "keri/duplicity-detection"
+
+ports:
+  # Inbound — what clients call
+  - id: "port://keri/duplicity-detection/inbound/monitoring"
+    type: inbound
+    name: "Duplicity Monitoring"
+    contract: "monitor_aid(aid: AID, sources: [Endpoint]) -> MonitorHandle; check_duplicity(aid: AID) -> Result<NoDuplicity, DuplicityEvidence>; get_del(aid: AID) -> DEL"
+    protocol: "method-call"
+    refs: ["domain://keri"]
+
+  - id: "port://keri/duplicity-detection/inbound/recovery"
+    type: inbound
+    name: "Superseding Recovery"
+    contract: "apply_superseding_event(aid: AID, event: RotationEvent) -> Result<RecoveryApplied, SupersedingError>; reconcile(aid: AID) -> Result<Trunk, IrreconcilableError>"
+    protocol: "method-call"
+    refs: ["domain://keri"]
+
+  - id: "port://keri/duplicity-detection/inbound/evidence-query"
+    type: inbound
+    name: "Evidence Query"
+    contract: "get_evidence(aid: AID) -> [DuplicityEvidence]; get_disputed_branches(aid: AID) -> [DisputedBranch]; has_duplicity(aid: AID) -> bool"
+    protocol: "method-call"
+    refs: ["domain://keri", "domain://agent"]

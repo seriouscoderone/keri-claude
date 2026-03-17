@@ -1,0 +1,73 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/event-log"
+name: "Event Log"
+description: >
+  The append-only, hash-chained, cryptographically signed Key Event Log (KEL) that serves as
+  the authoritative record of an AID's control history. Events are of five types: inception (icp),
+  rotation (rot), interaction (ixn), delegated inception (dip), and delegated rotation (drt).
+  Each event is signed by keys authorized in the current key state, contains a SAID (d field),
+  is hash-chained to its predecessor via the prior event digest (p field), and has a monotonically
+  increasing sequence number (s field). Event field ordering is normative. The KEL is the sole
+  source of truth for an AID's control authority.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Key event messages, Inception Event Message Body, Rotation Event Message Body, Interaction Event Message Body, Delegated Inception/Rotation, Event Types and Classes, Labelling key events in a KEL"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: Key Event Log, Event Streaming, Append-Only Log"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — sections: Establishment Subsequence, Inconsistency and Duplicity"
+
+ubiquitous_language:
+  - term: "KEL"
+    definition: "The append-only, hash-chained, cryptographically signed event log for a single AID"
+    invariants:
+      - "Exactly one authoritative KEL per AID"
+      - "Append-only — events cannot be modified or deleted"
+      - "Hash-chained — each event includes digest of prior event"
+
+  - term: "Key Event"
+    definition: "A cryptographically signed, hash-chained record in the KEL"
+    invariants:
+      - "Signed by keys authorized in the current key state"
+      - "Contains SAID (d field) and prior event digest (p field)"
+      - "Sequence numbers are monotonically increasing"
+
+domain_clients:
+  - ref: "domain://keri"
+    relationship: "Parent domain drives event creation, validation, and log management"
+    via_port: "port://keri/event-log/inbound/event-management"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519 (event signing), Blake3-256/SHA-256 (SAID computation, prior event digest, seal digests)"
+    relationship: "Cryptographic algorithm types appear directly in event fields — signatures, digests, and public keys are kernel types"
+
+adjacents:
+  - ref: "domain://cesr"
+    relationship: "OHS + Published Language — KEL events are serialized in CESR format; CESR defines the encoding contract for all event fields"
+    via_port: "port://cesr/inbound/encoding"
+    is_cross_cutting: false
+
+externals:
+  - name: "Event Persistence"
+    abstraction: "Repository"
+    ref: "port://keri/event-log/outbound/event-store"
+    implementation_notes: "Append-only store for KEL events with first-seen ordering. Implementations: LMDB (keripy), redb (keriox), DynamoDB (serious-keri)"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    The event log is the central data structure of KERI. In keripy, the Kevery class handles
+    event processing and the Baser class handles persistence. In keriox, the EventProcessor
+    and Database handle these roles. All implementations must enforce normative field ordering
+    and SAID computation per the specification.
+
+issues: []
+
+tags: ["event-log", "kel", "hash-chain", "append-only", "event-sourcing"]

@@ -1,0 +1,33 @@
+# ports.yaml
+domain_ref: "cesr"
+
+ports:
+  # Inbound — what clients call
+  - id: "port://cesr/inbound/encoding"
+    type: inbound
+    name: "Primitive Encoding"
+    contract: "encode(code, raw) -> qb64 | qb2; decode(qualified) -> (code, raw); convert(primitives, target_domain) -> [Primitive]"
+    protocol: "method-call"
+    refs: ["domain://keri", "domain://acdc"]
+
+  - id: "port://cesr/inbound/code-lookup"
+    type: inbound
+    name: "Code Table Lookup"
+    contract: "lookup(code) -> CodeEntry{type, raw_size, code_size, pad_size, lead_bytes}; list_codes(table_selector) -> [CodeEntry]"
+    protocol: "method-call"
+    refs: ["domain://keri", "domain://acdc"]
+
+  # Subdomain inbound ports
+  - id: "port://cesr/cesr-primitives/inbound/qualification"
+    type: inbound
+    name: "Primitive Qualification"
+    contract: "qualify(raw, code) -> Primitive; extract(qb64 | qb2) -> (code, raw); transform(primitive, target_domain) -> Primitive"
+    protocol: "method-call"
+    refs: ["domain://cesr"]
+
+  - id: "port://cesr/cesr-stream/inbound/stream-composition"
+    type: inbound
+    name: "Stream Composition"
+    contract: "compose(groups) -> Stream; parse(stream) -> [Group]; sniff(stream_start) -> SerializationKind; pipeline(stream) -> [Frame]"
+    protocol: "method-call"
+    refs: ["domain://cesr"]

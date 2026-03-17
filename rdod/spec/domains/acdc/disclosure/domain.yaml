@@ -1,0 +1,65 @@
+# domain.yaml
+template_version: "1.0"
+id: "acdc/disclosure"
+name: "ACDC Disclosure Mechanisms"
+description: >
+  Graduated disclosure mechanisms for ACDCs — providing progressive, incremental
+  revelation of credential data following the principle of least disclosure.
+  Supports compact disclosure (SAID-only), partial disclosure (blinded blocks),
+  selective disclosure (individual attribute revelation via aggregate), full
+  disclosure, and chain-link confidential disclosure with contractual protection.
+  Each mechanism leverages CESR-encoded SAIDs and UUID salty nonces for blinding.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "acdc-specification.md — ACDC protocol specification, Disclosure Mechanisms and Exploitation Protection sections"
+  - type: document
+    reference: "acdc-specification.md — ACDC Variants, Aggregate Section, Attribute Section"
+
+ubiquitous_language:
+  - term: "Graduated Disclosure"
+    definition: "The incremental, interactive application of the principle of least disclosure — each disclosure reveals the minimum needed to facilitate further disclosure"
+    invariants:
+      - "Applies recursively: disclose enough to enable more disclosure"
+      - "Mechanisms include compact, metadata, partial, nested partial, full, selective, and bulk-issued"
+
+  - term: "Selective Disclosure"
+    definition: "Mechanism to reveal individual attributes from a set without exposing other attributes, using blinded attribute blocks and an aggregate commitment (AGID)"
+    invariants:
+      - "Uses the A (aggregate) field, not the a (attribute) field"
+      - "Each blinded block has its own d (SAID) and u (UUID) fields"
+      - "Disclosure of one block does not leak information about any other block"
+
+  - term: "Partial Disclosure"
+    definition: "Mechanism to reveal the existence and schema of an ACDC without disclosing its detailed content, by presenting only the SAID of a blinded block"
+    invariants:
+      - "Requires UUID u field for secure blinding against rainbow table attacks"
+      - "Disclosure of SAID + schema is not enough to discover content when UUID is present"
+
+domain_clients:
+  - ref: "domain://acdc"
+    relationship: "ACDC core domain drives disclosure mechanisms for credential presentation"
+    via_port: "port://acdc/disclosure/inbound/disclosure-management"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    Disclosure logic is embedded within ACDC processing. The oneOf composition operators in
+    JSON Schema enable schema validation of both compact and uncompacted variants.
+    Implementations must support the most compact form SAID algorithm for cross-variant
+    verification. The aggregate computation (AGID) requires serialization-kind-aware
+    digest computation.
+
+issues: []
+
+tags: ["disclosure", "privacy", "selective", "graduated", "chain-link-confidentiality"]

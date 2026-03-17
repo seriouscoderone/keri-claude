@@ -1,0 +1,130 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri"
+name: "KERI Protocol"
+description: >
+  Key Event Receipt Infrastructure — a decentralized key management protocol
+  providing self-certifying identifiers, append-only key event logs, witness-based
+  consensus, pre-rotation for post-quantum key compromise recovery, and delegated
+  hierarchical key management. The central orchestrating domain of the ecosystem.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — KERI protocol specification (ToIP/IETF)"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — KERI whitepaper v2.x"
+  - type: document
+    reference: "KERI_Overview.web.md — KERI protocol overview"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — security analysis"
+  - type: document
+    reference: "IdentifierTheory_web.md — universal identifier theory"
+
+ubiquitous_language:
+  - term: "AID"
+    definition: "Autonomic Identifier — a self-certifying identifier cryptographically bound to a key pair at inception, persistent across key rotations"
+    invariants:
+      - "Derived from pseudo-random cryptographic material with ≥128 bits entropy"
+      - "Universally unique without any registration authority"
+      - "Exactly one authoritative KEL per AID"
+
+  - term: "Controller"
+    definition: "Entity holding the private keys for an AID, authorized to create key events"
+    invariants:
+      - "Only the controller can generate valid signed events"
+      - "Control authority is established by the current key state"
+
+  - term: "Key Event"
+    definition: "A cryptographically signed record in the KEL — inception, rotation, or interaction"
+    invariants:
+      - "Every event is signed by keys authorized in the current key state"
+      - "Events are hash-chained to their predecessor"
+      - "Sequence numbers are monotonically increasing"
+
+  - term: "Key State"
+    definition: "The current authoritative signing keys, rotation keys, thresholds, and witness set for an AID"
+    invariants:
+      - "Computed deterministically from the KEL up to the latest establishment event"
+      - "Only establishment events (inception, rotation) change key state"
+
+  - term: "Validator"
+    definition: "Entity that receives and cryptographically verifies key events against the KEL"
+    invariants:
+      - "Validators maintain their own copy of the KEL"
+      - "Verification requires no trusted intermediaries (end-verifiable)"
+
+  - term: "Witness"
+    definition: "Designated entity that receipts key events under the first-seen rule, providing availability and consistency"
+    invariants:
+      - "Witnesses are designated by the controller, not self-selected"
+      - "A witness's receipt constitutes a first-seen guarantee"
+
+  - term: "Pre-rotation"
+    definition: "Cryptographic commitment to the next set of rotation keys, published in the current establishment event"
+    invariants:
+      - "The digest of next keys must appear in the previous establishment event"
+      - "Provides post-quantum resistance — attacker must compromise both current and pre-committed keys"
+
+domain_clients:
+  - ref: "domain://agent"
+    relationship: "Agent infrastructure consumes KERI to manage AIDs, process events, and coordinate signing"
+    via_port: "port://keri/inbound/identifier-lifecycle"
+
+subdomains:
+  - ref: "domain://keri/key-state"
+    relationship: "KERI drives key state computation from the event log"
+    via_port: "port://keri/key-state/inbound/state-computation"
+  - ref: "domain://keri/event-log"
+    relationship: "KERI drives event creation, validation, and log management"
+    via_port: "port://keri/event-log/inbound/event-management"
+  - ref: "domain://keri/witness-agreement"
+    relationship: "KERI drives witness receipting and consensus"
+    via_port: "port://keri/witness-agreement/inbound/receipting"
+  - ref: "domain://keri/duplicity-detection"
+    relationship: "KERI drives duplicity monitoring and evidence handling"
+    via_port: "port://keri/duplicity-detection/inbound/monitoring"
+  - ref: "domain://keri/delegation"
+    relationship: "KERI drives delegated identifier lifecycle"
+    via_port: "port://keri/delegation/inbound/delegation-lifecycle"
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519 (signing), X25519 (DH), Blake3-256/Blake2b-256/SHA-256 (digests), argon2 (key stretching)"
+    relationship: "Cryptographic algorithm types appear directly in KERI key state and event structures — no translation layer"
+
+adjacents:
+  - ref: "domain://cesr"
+    relationship: "OHS + Published Language — KERI events are encoded in CESR format; CESR defines the encoding contract"
+    via_port: "port://cesr/inbound/encoding"
+    is_cross_cutting: false
+  - ref: "domain://acdc"
+    relationship: "Partnership — ACDC credentials anchor to KERI identifiers for issuer authentication"
+    via_port: "port://acdc/inbound/credential-lifecycle"
+    is_cross_cutting: false
+  - ref: "domain://oobi"
+    relationship: "Partnership — OOBIs bootstrap discovery of KERI identifiers and their service endpoints"
+    via_port: "port://oobi/inbound/discovery"
+    is_cross_cutting: false
+
+externals:
+  - name: "Event Persistence"
+    abstraction: "Repository"
+    ref: "port://keri/outbound/event-store"
+    implementation_notes: "Append-only store for KEL events. Implementations: LMDB (keripy), redb (keriox), DynamoDB (serious-keri)"
+  - name: "Network Transport"
+    abstraction: "Adapter"
+    ref: "port://keri/outbound/transport"
+    implementation_notes: "Message delivery for events, receipts, and queries. Implementations: HTTP, TCP, WebSocket"
+
+implementation_guidance:
+  suggested_type: "package"
+  language_affinity: "any"
+  notes: >
+    Reference implementation is keripy (Python). Production implementations exist in
+    Rust (keriox) and TypeScript (signify-ts for edge signing). All implementations
+    must use CESR encoding and follow the KERI specification event processing rules.
+
+issues: []
+
+tags: ["protocol", "identity", "decentralized", "key-management"]

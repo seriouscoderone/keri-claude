@@ -1,0 +1,18 @@
+# ports.yaml
+domain_ref: "acdc/disclosure"
+
+ports:
+  # Inbound — what the parent domain calls
+  - id: "port://acdc/disclosure/inbound/disclosure-management"
+    type: inbound
+    name: "Disclosure Management"
+    contract: "compact(block) -> SAID; expand(said, sad) -> Result<Block, VerificationError>; compute_agid(said_list) -> AGID; verify_inclusion(block, said_list, agid) -> Result<Valid, InclusionError>; compute_most_compact_form(acdc) -> ACDC"
+    protocol: "method-call"
+    refs: ["domain://acdc"]
+
+  - id: "port://acdc/disclosure/inbound/graduated-disclosure"
+    type: inbound
+    name: "Graduated Disclosure Orchestration"
+    contract: "create_metadata_variant(acdc) -> MetadataACDC; create_compact_variant(acdc) -> CompactACDC; create_partial_variant(acdc, disclosed_sections) -> PartialACDC; create_selective_variant(acdc, disclosed_blocks) -> SelectiveACDC"
+    protocol: "method-call"
+    refs: ["domain://acdc"]

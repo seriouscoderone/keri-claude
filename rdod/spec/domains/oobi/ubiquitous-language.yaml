@@ -1,0 +1,82 @@
+# ubiquitous-language.yaml
+domain_ref: "oobi"
+
+terms:
+  - term: "OOBI"
+    synonyms: ["Out-of-Band Introduction"]
+    definition: "A URL that associates an AID with a network endpoint, enabling initial discovery. The introduction itself carries no trust — trust is established by resolving the OOBI and verifying the AID's KEL."
+    invariants:
+      - "Format: URL containing AID prefix and optional role/endpoint-type"
+      - "An OOBI is a hint, not a proof — always verify the KEL after resolution"
+      - "Multiple OOBIs may exist for the same AID (different endpoints, roles)"
+    examples:
+      - "http://witness1.example.com/oobi/EDP1vHsw... — witness endpoint for an AID"
+      - "http://agent.example.com/.well-known/keri/oobi/EDP1vHsw... — well-known OOBI"
+    related_terms: ["BADA", "Endpoint Authorization", "Well-Known OOBI"]
+
+  - term: "BADA"
+    synonyms: ["Best Available Data Accepted"]
+    definition: "Policy for accepting and superseding endpoint authorization data. Prefers the most recent, most authoritative data available."
+    invariants:
+      - "Signed authorizations supersede unsigned"
+      - "More recent timestamps supersede older"
+      - "Authorizations anchored in KEL supersede unanchored"
+    examples:
+      - "A new endpoint authorization with a later date supersedes a previous one"
+    related_terms: ["Endpoint Authorization", "OOBI"]
+
+  - term: "Endpoint Authorization"
+    synonyms: ["Endpoint Auth", "OKEA"]
+    definition: "A signed declaration by an AID's controller authorizing specific network endpoints for specific roles (witness, agent, watcher, controller)."
+    invariants:
+      - "Signed by the AID's current signing keys"
+      - "Anchored to the KEL via interaction event seal"
+      - "Specifies role, endpoint URL, and optionally the endpoint AID"
+    examples:
+      - "Controller authorizes witness endpoint at ws://witness1.example.com:5632"
+    related_terms: ["BADA", "Seal", "AID"]
+
+  - term: "Well-Known OOBI"
+    synonyms: [".well-known OOBI"]
+    definition: "An OOBI URL discoverable at the RFC 8615 .well-known path convention."
+    invariants:
+      - "Path: /.well-known/keri/oobi/{aid}"
+      - "Enables discovery without prior out-of-band communication"
+    examples:
+      - "https://example.com/.well-known/keri/oobi/EDP1vHsw..."
+    related_terms: ["OOBI"]
+
+  - term: "OOBI Resolution"
+    synonyms: ["Resolution"]
+    definition: "The process of fetching data from an OOBI URL, retrieving the AID's KEL from the discovered endpoint, and verifying it."
+    invariants:
+      - "Resolution is not complete until the KEL is verified"
+      - "Failed verification means the OOBI is untrusted, not that it's invalid"
+    examples:
+      - "Resolve OOBI → GET KEL from witness → verify KEL → establish key state"
+    related_terms: ["OOBI", "Validator"]
+
+  - term: "Role"
+    synonyms: ["Endpoint Role"]
+    definition: "The function an endpoint serves for an AID — witness, controller, agent, watcher, or mediator."
+    invariants:
+      - "Roles constrain what operations the endpoint can perform"
+      - "Role must match the endpoint authorization"
+    examples:
+      - "witness role: endpoint receipts events"
+      - "agent role: endpoint manages AID on behalf of controller"
+    related_terms: ["Endpoint Authorization", "OOBI"]
+
+events:
+  - name: "OOBIResolved"
+    payload: "aid: AID, endpoint: URL, role: Role, kel_verified: bool"
+    triggers: "An OOBI URL is fetched and the AID's KEL is retrieved and verified"
+
+  - name: "EndpointAuthorizationUpdated"
+    payload: "aid: AID, role: Role, new_endpoint: URL, timestamp: DateTime"
+    triggers: "Controller publishes a new endpoint authorization superseding the previous"
+
+rules:
+  - "Never trust an OOBI without verifying the KEL — OOBIs are introductions, not attestations"
+  - "BADA policy: accept the most recent, most authoritative endpoint data available"
+  - "Endpoint authorizations must be signed by the AID's current controller keys"

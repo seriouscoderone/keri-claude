@@ -1,0 +1,319 @@
+# ubiquitous-language.yaml
+domain_ref: "cesr"
+
+terms:
+  - term: "Composability"
+    synonyms: ["Concatenation Composability", "Text-Binary Concatenation Composability"]
+    definition: "The property that any set of self-framing concatenated primitives expressed in either the Text domain or Binary domain may be converted as a group to the other domain and back again without loss."
+    invariants:
+      - "T(cat(b[k])) = cat(T(b[k])) and B(cat(t[k])) = cat(B(t[k])) for all k"
+      - "All primitives MUST be aligned on 24-bit boundaries"
+      - "Text domain primitives MUST be integer multiples of 4 Base64 characters"
+      - "Binary domain primitives MUST be integer multiples of 3 bytes"
+      - "All Count Code groups MUST also be composable"
+    examples:
+      - "Converting a concatenation of two Text domain primitives to Binary and back yields the original concatenation"
+      - "A stream of mixed primitives in the B domain can be converted to T domain en-masse by a stream processor, and reconverted at the other end"
+    related_terms: ["Self-Framing", "Domain", "Primitive", "24-bit Alignment"]
+
+  - term: "Primitive"
+    synonyms: ["CESR Primitive"]
+    definition: "A self-framing atomic unit of encoded data consisting of a prepended type code and a value. The fundamental building block of CESR streams."
+    invariants:
+      - "Every primitive is self-framing — extractable from a stream without external delimiters"
+      - "Every primitive MUST satisfy the composability property"
+      - "In the R domain, represented as a (code, raw) pair where code is text and raw is binary bytes"
+      - "In the T domain, length MUST be an integer multiple of 4 Base64 characters"
+      - "In the B domain, length MUST be an integer multiple of 3 bytes"
+    examples:
+      - "An Ed25519 public key: code 'D' + 43 Base64 value characters = 44 characters total (T domain)"
+      - "A Blake3-256 digest: code 'E' + 43 Base64 value characters = 44 characters total (T domain)"
+      - "A short number: code 'M' + 3 Base64 value characters = 4 characters total (T domain)"
+    related_terms: ["Code", "Self-Framing", "Composability", "Qualification"]
+
+  - term: "Domain"
+    synonyms: ["Representation Domain"]
+    definition: "One of three representation spaces for CESR data. Text (T) uses URL-safe Base64 characters for human readability. Binary (B) uses raw bytes for compact transmission. Raw (R) uses a (code, raw) pair for cryptographic operations."
+    invariants:
+      - "T domain uses only URL/filename-safe Base64 characters (A-Z, a-z, 0-9, -, _) per RFC 4648"
+      - "T domain NEVER uses the '=' pad character — composability eliminates the need"
+      - "Six transformations are defined: T(B), B(T), T(R), R(T), B(R), R(B)"
+      - "Composability is defined between T and B domains"
+      - "Actual cryptographic operations occur in the R domain using the raw binary element"
+    examples:
+      - "T domain: 'DKxy2sgzfplyr-tgwIxS19f2OchFHtLwPWD3v4oYimBx' (Ed25519 public key)"
+      - "B domain: 3 bytes per 4 T-domain characters, for compact wire transmission"
+      - "R domain: ('D', <32 raw bytes>) — used by cryptographic libraries directly"
+    related_terms: ["Composability", "Transformation"]
+
+  - term: "Text Domain"
+    synonyms: ["T Domain", "'T'"]
+    definition: "The streamable text representation of CESR primitives using URL/filename-safe Base64 characters. Optimized for human readability and usability."
+    invariants:
+      - "Uses only the 64 characters: A-Z, a-z, 0-9, -, _"
+      - "Every primitive in the T domain MUST be an integer multiple of 4 characters"
+      - "Type codes are stable — leading characters do not change when value changes"
+      - "Value encoding is stable — trailing characters are right-aligned"
+    examples:
+      - "KERI10JSON00011c_ — a version string in the T domain"
+      - "A# where # is a Base64 index — an indexed Ed25519 signature"
+    related_terms: ["Binary Domain", "Raw Domain", "Composability", "Stable"]
+
+  - term: "Binary Domain"
+    synonyms: ["B Domain", "'B'"]
+    definition: "The streamable binary representation of CESR primitives using raw bytes. Optimized for compact transmission and storage."
+    invariants:
+      - "Every primitive in the B domain MUST be an integer multiple of 3 bytes"
+      - "T(B) is naive Base64 encode; B(T) is naive Base64 decode"
+      - "Count code values are invariant between T and B domains"
+    examples:
+      - "3 bytes in B domain correspond to 4 Base64 characters in T domain (24 bits)"
+    related_terms: ["Text Domain", "Raw Domain", "Composability"]
+
+  - term: "Raw Domain"
+    synonyms: ["R Domain", "'R'"]
+    definition: "The non-streamable working representation of a CESR primitive as a two-tuple: (text code, raw binary). Where cryptographic operations actually occur."
+    invariants:
+      - "Represented as (code, raw) where code is a text string and raw is a byte string"
+      - "The code provides type and size information; the raw provides the cryptographic material"
+      - "Not composable by itself — must be converted to T or B for streaming"
+    examples:
+      - "('D', <32 bytes>) — an Ed25519 public key in the R domain"
+      - "('E', <32 bytes>) — a Blake3-256 digest in the R domain"
+      - "('0B', <64 bytes>) — an Ed25519 signature in the R domain"
+    related_terms: ["Text Domain", "Binary Domain", "Code"]
+
+  - term: "Self-Framing"
+    synonyms: ["Self-Framed"]
+    definition: "The property that an encoded primitive or group contains sufficient information in its leading code to determine its own type and total length, enabling extraction from a stream without delimiters or envelopes."
+    invariants:
+      - "A parser reads the first character/byte to index into a lookup table for the remaining length"
+      - "Concatenated self-framing elements are separable without wrapper structures"
+      - "Both primitives and count code groups MUST be self-framing"
+    examples:
+      - "Code 'D' tells the parser: 1-char code, 43-char value, 44 chars total — extract exactly 44 characters"
+      - "Code '0B' tells the parser: 2-char code, 86-char value, 88 chars total"
+      - "Count code '-A##' tells the parser: 4-char code, then ## quadlets of grouped material"
+    related_terms: ["Primitive", "Code", "Count Code", "Composability"]
+
+  - term: "Code"
+    synonyms: ["Framing Code", "Type Code", "Text Code"]
+    definition: "The prepended prefix of a CESR primitive that identifies the type (cryptographic suite or data type) and implicitly or explicitly encodes the value size. Stable in the Text domain."
+    invariants:
+      - "The first character of any primitive MUST be either a 1-character code or a selector for another code table"
+      - "Code MUST be stable in the T domain — type characters do not change when value changes"
+      - "Code size is determined by pad size: ps=0 -> 4*M chars, ps=1 -> 4*M+1 chars, ps=2 -> 4*M+2 chars"
+      - "Each code table MUST be uniquely indicated by its first character in the T domain"
+    examples:
+      - "'D' — 1-char code for Ed25519 public key (32-byte raw, pad size 1)"
+      - "'0B' — 2-char code for Ed25519 signature (64-byte raw, pad size 2)"
+      - "'1AAG' — 4-char code for DateTime (pad size 0, uses selector '1')"
+      - "'-A' — count code for controller indexed signature group"
+    related_terms: ["Code Table", "Selector", "Pad Size", "Stable"]
+
+  - term: "Code Table"
+    synonyms: ["Master Code Table"]
+    definition: "A lookup table mapping text codes to their primitive types, raw sizes, and encoding parameters. Multiple code tables exist, each optimized for different pad sizes and use cases."
+    invariants:
+      - "Up to 13 standard code tables per protocol genus"
+      - "Selectors 0-9 select extended tables; '-' selects count codes; '_' selects op codes"
+      - "Letters A-Z and a-z are 1-character type codes in the default table (52 codes)"
+      - "Tables are versioned per protocol genus via the genus/version code"
+    examples:
+      - "1-char table: A=Ed25519 seed, B=Ed25519 non-transferable prefix, D=Ed25519 public key, E=Blake3-256 digest"
+      - "2-char table (selector '0'): 0A=random salt 128-bit, 0B=Ed25519 signature, 0C=ECDSA secp256k1 signature"
+      - "4-char table (selector '1'): 1AAA=ECDSA secp256k1 public key, 1AAG=DateTime"
+    related_terms: ["Code", "Selector", "Protocol Genus"]
+
+  - term: "Selector"
+    synonyms: ["Code Table Selector"]
+    definition: "A first character that indicates which code table to use for parsing the remainder of a primitive's code. Characters 0-9, -, and _ are selectors; letters A-Z and a-z are direct 1-character type codes."
+    invariants:
+      - "'-' MUST select the count code table"
+      - "'_' MUST select the op code table"
+      - "'0' through '9' MUST each select an extended code table"
+      - "Letters A-Z and a-z are NOT selectors — they are 1-character type codes in the default table"
+    examples:
+      - "'0' selects the 2-character fixed-size table (64 types, pad size 2)"
+      - "'-' selects count code tables; '-A##' is a small count code"
+      - "'4' selects the small variable-length table with 0 lead bytes"
+    related_terms: ["Code Table", "Code"]
+
+  - term: "Stable"
+    synonyms: ["Invariant"]
+    definition: "The property that the type portion of a framing code does not change when the value portion changes. Stable type coding makes primitives visually recognizable in the T domain."
+    invariants:
+      - "Type portion MUST begin the framing code"
+      - "Type coding MUST consume a fixed integral number of characters in the T domain"
+      - "Value portion MUST be right-aligned (stable value encoding)"
+      - "Any zero padding MUST appear in the middle (mid-padding), after the code but before the value"
+    examples:
+      - "All Ed25519 public keys start with 'D' regardless of key value"
+      - "All Blake3-256 digests start with 'E' regardless of digest value"
+    related_terms: ["Code", "Mid-padding"]
+
+  - term: "Mid-padding"
+    synonyms: ["Pre-padding", "Lead Bytes"]
+    definition: "The approach of prepending zero bytes to the raw binary value before Base64 conversion to achieve 24-bit alignment, placing padding after the code but before the value."
+    invariants:
+      - "Pad size ps = (3 - (N mod 3)) mod 3, where N is raw binary length in bytes"
+      - "Number of lead bytes equals the number of post-pad characters that would be needed in naive Base64"
+      - "Mid-padding preserves stable right-aligned value encoding"
+    examples:
+      - "32-byte raw value: ps=1, 1 lead byte, minimum 1-char code"
+      - "64-byte raw value: ps=2, 2 lead bytes, minimum 2-char code"
+      - "33-byte raw value: ps=0, 0 lead bytes, minimum 4-char code"
+    related_terms: ["Stable", "Composability", "Lead Bytes"]
+
+  - term: "Quadlet"
+    synonyms: []
+    definition: "A group of 4 Base64 characters in the Text domain, equivalent to a triplet of 3 bytes in the Binary domain. The fundamental unit of measure for count code sizes."
+    invariants:
+      - "1 quadlet = 4 T-domain characters = 3 B-domain bytes = 24 bits"
+      - "Count codes measure group sizes in quadlets/triplets"
+      - "The count value is invariant between T and B domains because both measure 24-bit units"
+    examples:
+      - "A count of 11 quadlets = 44 characters in T domain = 33 bytes in B domain"
+    related_terms: ["Triplet", "Count Code", "Composability"]
+
+  - term: "Triplet"
+    synonyms: []
+    definition: "A group of 3 bytes in the Binary domain, equivalent to a quadlet of 4 Base64 characters in the Text domain."
+    invariants:
+      - "1 triplet = 3 B-domain bytes = 4 T-domain characters = 24 bits"
+    examples:
+      - "A count of 11 triplets = 33 bytes in B domain = 44 characters in T domain"
+    related_terms: ["Quadlet", "Count Code"]
+
+  - term: "Tritet"
+    synonyms: []
+    definition: "A group of 3 bits. Used to describe the starting bits of stream elements for cold-start detection and serialization-type discrimination."
+    invariants:
+      - "Eight possible tritets (0b000 through 0b111) partition all stream start bytes"
+      - "Each serialization type (JSON, CBOR, MGPK, CESR T-domain, CESR B-domain) has distinct starting tritets"
+    examples:
+      - "0b001 — CESR T-domain count code (character '-')"
+      - "0b010 — CESR T-domain op code (character '_')"
+      - "0b011 — JSON (character '{')"
+      - "0b111 — CESR B-domain count code or op code"
+    related_terms: ["Cold Start", "Stream"]
+
+  - term: "Qualification"
+    synonyms: ["Fully Qualified"]
+    definition: "The process of combining a raw binary value with its type code to produce a fully qualified CESR primitive in the T, B, or R domain."
+    invariants:
+      - "A qualified primitive includes both type information (code) and value information (raw)"
+      - "Qualification in the T domain produces a qb64 string"
+      - "Qualification in the B domain produces a qb2 byte string"
+    examples:
+      - "Raw 32-byte Ed25519 public key + code 'D' = 44-character qb64 string"
+      - "Raw 64-byte Ed25519 signature + code '0B' = 88-character qb64 string"
+    related_terms: ["Code", "qb64", "qb2", "Primitive"]
+
+  - term: "qb64"
+    synonyms: ["Qualified Base64"]
+    definition: "A fully qualified CESR primitive in the Text domain — the Base64 string consisting of a stable type code prefix followed by the Base64-encoded value."
+    invariants:
+      - "Length MUST be an integer multiple of 4 characters"
+      - "Uses only URL/filename-safe Base64 characters (no '=' padding)"
+      - "First character(s) are the stable type code"
+    examples:
+      - "'DKxy2sgzfplyr-tgwIxS19f2OchFHtLwPWD3v4oYimBx' — a 44-char Ed25519 public key"
+      - "'EGK0JxOCGEIG9ESBpwrz1T1xWn7R3-nLQ0bYBiyoUzFA' — a 44-char Blake3-256 digest"
+    related_terms: ["qb2", "Qualification", "Text Domain"]
+
+  - term: "qb2"
+    synonyms: ["Qualified Binary"]
+    definition: "A fully qualified CESR primitive in the Binary domain — the byte string consisting of the binary-converted code and value."
+    invariants:
+      - "Length MUST be an integer multiple of 3 bytes"
+      - "Obtainable from qb64 via naive Base64 decode: qb2 = B(qb64)"
+      - "Convertible back to qb64 via naive Base64 encode: qb64 = T(qb2)"
+    examples:
+      - "33 bytes for an Ed25519 public key (44 T-domain chars / 4 * 3 = 33 bytes)"
+      - "66 bytes for an Ed25519 signature (88 T-domain chars / 4 * 3 = 66 bytes)"
+    related_terms: ["qb64", "Qualification", "Binary Domain"]
+
+  - term: "Serialization Kind"
+    synonyms: ["Kind", "KKKK"]
+    definition: "One of four supported serialization formats for field map data: JSON, CBOR, MGPK (MessagePack), or CESR (native). Identified by a 4-character code in the Version String."
+    invariants:
+      - "JSON starts with 0b011 (character '{')"
+      - "CBOR starts with 0b101 (map major type 5)"
+      - "MGPK starts with 0b100 (FixMap) or 0b110 (Map16/Map32)"
+      - "CESR native uses count codes -G## or --G##### instead of a version string"
+    examples:
+      - "'JSON' — JavaScript Object Notation serialization"
+      - "'CBOR' — Concise Binary Object Representation serialization"
+      - "'MGPK' — MessagePack serialization"
+      - "'CESR' — CESR native field map serialization (in-memory indicator only)"
+    related_terms: ["Version String", "Cold Start", "Stream"]
+
+  - term: "Version String"
+    synonyms: ["v field"]
+    definition: "Protocol version metadata encoded as the first field (label 'v') of any top-level non-native serialization interleaved in a CESR stream. Format: PPPPMmmGggKKKKBBBB. (19 characters)."
+    invariants:
+      - "MUST be the first field in any top-level JSON, CBOR, or MGPK field map"
+      - "Format: 4-char protocol + 3-char protocol version + 3-char genus version + 4-char serialization kind + 4-char Base64 size + terminator '.'"
+      - "Total length is 19 characters, terminated by '.'"
+      - "Provides regex target for cold-start stream detection"
+    examples:
+      - "'KERI10JSON00011c_' — KERI v1.0, JSON serialization, 284 bytes (version 1.XX format)"
+      - "'KERICAACAAJSONAABc.' — KERI v2.0, genus 2.0, JSON, size in Base64 (version 2.XX format)"
+    related_terms: ["Serialization Kind", "Protocol Genus", "Cold Start"]
+
+  - term: "Protocol Genus"
+    synonyms: ["Genus"]
+    definition: "An identifier for a protocol-specific set of CESR code tables. Different protocol genera may define different code table entries while sharing universal codes."
+    invariants:
+      - "Encoded as 3 Base64 characters (GGG) providing 262,144 possible genera"
+      - "All genera MUST share the universal code tables (genus/version codes, universal count codes)"
+      - "All other table entries MAY vary by protocol genus"
+      - "Genus/version code format: -_GGGVVV (8 characters)"
+    examples:
+      - "'AAA' — the KERI/ACDC protocol stack genus"
+      - "'-_AAACAA' — KERI/ACDC genus AAA at version 2.00"
+    related_terms: ["Code Table", "Version String"]
+
+  - term: "CESRgram"
+    synonyms: []
+    definition: "A CESR-encoded message — a serialized binary or text representation of an event, message, or attachment using the CESR format."
+    invariants:
+      - "Composed of CESR primitives and count code groups"
+      - "Self-framing at every level of composition"
+    examples:
+      - "A KERI inception event serialized as JSON with CESR-encoded signature attachments"
+    related_terms: ["Message", "Stream", "Primitive"]
+
+  - term: "Cryptographic Agility"
+    synonyms: ["Agility"]
+    definition: "The ability to support multiple cryptographic algorithms simultaneously through type-code differentiation. Each code entry specifies the exact algorithm, providing algorithm agility without negotiation."
+    invariants:
+      - "Every cryptographic primitive MUST include a prepended derivation code specifying the algorithm"
+      - "New algorithms can be added via new code table entries without changing existing codes"
+      - "Code table versioning enables forward-compatible algorithm evolution"
+    examples:
+      - "'D' for Ed25519 vs '1AAB' for ECDSA secp256k1 — different algorithms, same role (public key)"
+      - "'E' for Blake3-256 vs 'F' for Blake2b-256 — different digest algorithms"
+    related_terms: ["Code Table", "Protocol Genus"]
+
+events:
+  - name: "PrimitiveEncoded"
+    payload: "code: Code, raw: bytes, domain: Domain"
+    triggers: "Raw cryptographic material or data value is qualified with a type code into a fully qualified primitive"
+
+  - name: "PrimitiveDecoded"
+    payload: "qualified: qb64 | qb2, code: Code, raw: bytes"
+    triggers: "A fully qualified primitive is parsed to extract its type code and raw value"
+
+  - name: "DomainConverted"
+    payload: "source_domain: Domain, target_domain: Domain, primitives: [Primitive]"
+    triggers: "One or more primitives are converted between T, B, or R domains"
+
+rules:
+  - "All primitives MUST be aligned on 24-bit boundaries — no exceptions"
+  - "The T domain MUST use only URL/filename-safe Base64 characters (RFC 4648) — the '=' pad character is never used"
+  - "Mid-padding MUST be used instead of post-padding to preserve stable type and value encoding"
+  - "T(B) MUST be naive Base64 encode; B(T) MUST be naive Base64 decode — standard tooling is sufficient"
+  - "Code table entries are first-needed first-entered; compact tables prioritize 128-bit cryptographic strength"
+  - "Compact code tables include only best-of-class cryptographic operations"

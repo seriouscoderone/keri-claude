@@ -1,0 +1,70 @@
+# domain.yaml
+template_version: "1.0"
+id: "oobi"
+name: "Out-of-Band Introduction"
+description: >
+  Bootstrap discovery for KERI identifiers. OOBIs provide URLs that resolve to
+  service endpoints for an AID, enabling initial contact without prior KEL access.
+  BADA (Best Available Data Accepted) policy governs endpoint authorization.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — OOBI and BADA sections"
+  - type: document
+    reference: "keridoc-llms-full.md — OOBI documentation"
+
+ubiquitous_language:
+  - term: "OOBI"
+    definition: "Out-of-Band Introduction — a URL that associates an AID with a network endpoint, enabling bootstrap discovery"
+    invariants:
+      - "An OOBI is not a trust statement — it merely introduces an endpoint to query"
+      - "Trust is established only after resolving the OOBI and verifying the KEL"
+
+  - term: "BADA"
+    definition: "Best Available Data Accepted — policy for accepting endpoint authorization data, preferring the most recent and most authoritative"
+    invariants:
+      - "Signed endpoint authorizations supersede unsigned ones"
+      - "More recent authorizations supersede older ones"
+
+  - term: "Endpoint Authorization"
+    definition: "A signed statement by an AID's controller designating network endpoints for that AID"
+    invariants:
+      - "Must be anchored in the AID's KEL via a seal or rotation event"
+
+  - term: "Well-Known OOBI"
+    definition: "An OOBI discoverable at a standard URL path (/.well-known/keri/oobi/{aid})"
+    invariants:
+      - "Follows the RFC 8615 .well-known URI convention"
+
+domain_clients:
+  - ref: "domain://keri"
+    relationship: "KERI uses OOBIs to bootstrap identifier discovery and resolve endpoints"
+    via_port: "port://oobi/inbound/discovery"
+  - ref: "domain://agent"
+    relationship: "Agents use OOBIs to establish initial contact with other agents"
+    via_port: "port://oobi/inbound/discovery"
+
+subdomains: []
+
+kernels: []
+
+adjacents:
+  - ref: "domain://keri"
+    relationship: "Partnership — OOBIs resolve to KERI endpoints; BADA authorizations are anchored in KELs"
+    is_cross_cutting: false
+
+externals:
+  - name: "URL Resolution"
+    abstraction: "Adapter"
+    ref: "port://oobi/outbound/url-resolution"
+    implementation_notes: "HTTP GET to OOBI URLs to retrieve endpoint data and KEL bootstraps"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: "Typically implemented as a module within the KERI agent, not a standalone service."
+
+issues: []
+
+tags: ["discovery", "bootstrap", "endpoints"]

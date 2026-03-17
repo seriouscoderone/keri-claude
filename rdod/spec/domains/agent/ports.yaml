@@ -1,0 +1,38 @@
+# ports.yaml
+domain_ref: "agent"
+
+ports:
+  - id: "port://agent/inbound/boot"
+    type: inbound
+    name: "Agency Boot"
+    contract: "provision_agent(inception_event) -> AgentConfig; destroy_agent(agent_id) -> Result"
+    protocol: "REST"
+    refs: []
+
+  - id: "port://agent/inbound/admin"
+    type: inbound
+    name: "Admin API"
+    contract: "create_identifier(config) -> AID; rotate(aid) -> RotationEvent; interact(aid, seals) -> InteractionEvent; list_credentials() -> [Credential]; resolve_oobi(url) -> Result"
+    protocol: "REST"
+    refs: []
+
+  - id: "port://agent/inbound/messages"
+    type: inbound
+    name: "Message Router"
+    contract: "receive_message(message) -> Result — routes KERI protocol messages to agent instances"
+    protocol: "REST"
+    refs: []
+
+  - id: "port://agent/outbound/agent-store"
+    type: outbound
+    name: "Agent Persistence"
+    contract: "store_agent(agent) -> Result; get_agent(id) -> Agent; store_credential(cred) -> Result; get_contacts() -> [Contact]"
+    protocol: "method-call"
+    refs: ["persistence"]
+
+  - id: "port://agent/outbound/http-server"
+    type: outbound
+    name: "HTTP Server"
+    contract: "listen(ports) -> Server; handle_request(req) -> Response"
+    protocol: "method-call"
+    refs: ["transport"]

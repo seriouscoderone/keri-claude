@@ -1,0 +1,201 @@
+# ubiquitous-language.yaml
+domain_ref: "acdc/tel"
+
+terms:
+  - term: "TEL"
+    synonyms: ["Transaction Event Log"]
+    definition: "A hash-chained data structure of sealed transaction events used to track ACDC state (e.g., issuance/revocation). Events are sealed in the issuer's KEL, binding ACDC state to KERI key state without requiring TEL events themselves to be signed."
+    invariants:
+      - "Events are hash-chained via prior event SAID (p field)"
+      - "Each event must be sealed (anchored) in the controlling KEL"
+      - "Sequence numbers (n field) are monotonically increasing, hex-encoded, zero-based"
+      - "TEL events do not need direct signatures — the KEL seal is cryptographically equivalent"
+      - "Verifiability of TEL events persists despite changes in the issuer's key state"
+    examples:
+      - "A revocation registry TEL tracking whether a credential is issued or revoked"
+      - "TEL with events: rip (inception) -> upd (issued) -> upd (revoked)"
+    related_terms: ["Registry", "KEL", "Seal", "ACDC"]
+
+  - term: "Registry"
+    synonyms: ["VCR", "Verifiable Container/Credential Registry", "VDR", "Revocation Registry"]
+    definition: "A TEL serving as a Verifiable Container/Credential Registry that tracks the dynamic issuance and revocation state of ACDCs issued by the KEL controller."
+    invariants:
+      - "Initialized by a registry inception (rip) event"
+      - "SAID of the rip event is the registry's unique identifier (REGID)"
+      - "Registry SAID may appear as the rd field in associated ACDCs"
+      - "Each credential has its own state within the registry"
+      - "Registry is bound to the issuer AID via the i field in the rip event"
+    examples:
+      - "An issuer creates a registry, then issues an ACDC whose rd field references the registry"
+      - "A revocation registry tracking multiple ACDCs from the same issuer"
+    related_terms: ["TEL", "Registry Inception", "REGID", "Credential State"]
+
+  - term: "Registry Inception"
+    synonyms: ["rip event"]
+    definition: "The initialization event for a TEL registry, establishing the registry's unique identifier (REGID) as its SAID and binding it to the issuer AID."
+    invariants:
+      - "Message type t field must be 'rip'"
+      - "Field order: [v, t, d, u, i, n, dt] — all required"
+      - "Sequence number n must be 0"
+      - "SAID of this event becomes the REGID referenced by the rd field in ACDCs"
+      - "Must be anchored (sealed) in the issuer's KEL"
+    examples:
+      - "Registry inception with issuer AID and UUID for unique identification"
+    related_terms: ["Registry", "REGID", "TEL"]
+
+  - term: "Blindable Update"
+    synonyms: ["bup event"]
+    definition: "A registry update event that uses a blinded attribute block to hide the actual ACDC state, enabling private (blinded) state registries."
+    invariants:
+      - "Message type t field must be 'bup'"
+      - "Field order: [v, t, d, rd, n, p, dt, b] — all required"
+      - "The b field value is the BLID (blinding SAID) of the blinded attribute block"
+      - "State can only be discovered by entities holding the shared secret salt"
+      - "New blinding factor per update — prevents correlation between updates and state changes"
+    examples:
+      - "Blinded issuance event where only the issuer and designated discloser can determine the ACDC state"
+      - "Periodic blind updates that decorrelate the time of actual state change"
+    related_terms: ["BLID", "Blinded Attribute Block", "Update Event", "Shared Secret Salt"]
+
+  - term: "Update Event"
+    synonyms: ["upd event"]
+    definition: "A non-blindable registry update event that publicly records the ACDC state, including the transaction ACDC SAID and transaction state."
+    invariants:
+      - "Message type t field must be 'upd'"
+      - "Field order: [v, t, d, rd, n, p, dt, ta, ts] — all required"
+      - "The ta field is the ACDC's top-level SAID"
+      - "The ts field is the state string (e.g., 'issued' or 'revoked')"
+      - "State is always publicly visible — cannot be used in blinded mode"
+    examples:
+      - "Issuance: ts field set to 'issued' with ta pointing to the ACDC SAID"
+      - "Revocation: ts field set to 'revoked', chain-linked to the prior update event"
+    related_terms: ["Blindable Update", "Credential State", "Transaction State"]
+
+  - term: "Credential State"
+    synonyms: ["Transaction State"]
+    definition: "The current state of an ACDC as tracked by its registry TEL, defined by a finite set of state strings (e.g., 'issued', 'revoked')."
+    invariants:
+      - "State values come from a small finite set defined by the registry type"
+      - "For issuance/revocation registries: states are 'issued' or 'revoked'"
+      - "State is determined by the latest transaction event in the TEL"
+      - "State change is bound to the issuer's key state at the time of anchoring"
+    examples:
+      - "ACDC state transitions: inception -> issued -> revoked"
+      - "State encoded in ts field as CESR string: '0Missued' or 'Yrevoked'"
+    related_terms: ["TEL", "Registry", "Update Event", "Blindable Update"]
+
+  - term: "Transaction Event Seal"
+    synonyms: ["Seal", "TEL Seal"]
+    definition: "A cryptographic digest (SAID) of a TEL transaction event embedded in a key event in the issuer's KEL, providing a non-repudiable commitment to the transaction event."
+    invariants:
+      - "Includes the event's sequence number (s) and SAID (d)"
+      - "Appearance in the KEL constitutes a verifiable, non-repudiable commitment"
+      - "The seal makes signing the TEL event itself unnecessary"
+      - "Validators verify the seal's presence in the KEL to validate the transaction event"
+    examples:
+      - "Seal: {\"s\": \"3\", \"d\": \"ELvaU6Z-i0d8JJR2nmwyYAZAoTNZH3UfSVPzhzS6b5CM\"}"
+    related_terms: ["KEL", "Anchor", "Key State"]
+
+  - term: "BLID"
+    synonyms: ["Blinding SAID"]
+    definition: "A cryptographic digest of the concatenated CESR serialization of a blinded attribute block's field values, serving as the value of the b field in a blindable update (bup) event."
+    invariants:
+      - "Computed on the text domain (qb64) CESR serialization of concatenated field values"
+      - "Uses dummy character (#) replacement for self-referential computation (like SAID protocol)"
+      - "Field concatenation order: [d, u, td, ts] for basic blocks; [d, u, td, ts, bn, bd] for bound blocks"
+      - "Typically uses Blake3-256 digest (E code, 44 characters)"
+    examples:
+      - "BLID: ECVr7QWEp_aqVQuz4yprRFXVxJ-9uWLx_d6oDinlHU6J"
+    related_terms: ["Blindable Update", "Blinded Attribute Block", "SAID"]
+
+  - term: "Blinded Attribute Block"
+    synonyms: []
+    definition: "A fixed-field concatenation of CESR-serialized values (BLID, UUID, ACDC SAID, transaction state) whose digest serves as the b field in a blindable update event, hiding the actual ACDC state."
+    invariants:
+      - "Virtual field labels (never serialized): [d, u, td, ts]"
+      - "UUID is the blinding factor — derived from shared secret salt and event sequence number"
+      - "Only entities with the shared secret salt can derive the UUID and discover the state"
+      - "Not part of the bup message itself — provided as a CESR attachment when disclosing"
+      - "CESR group code: BlindedStateQuadruples (-a##)"
+    examples:
+      - "Placeholder block with empty td and ts fields (CESR Empty: 1AAP)"
+      - "Issued block with real ACDC SAID in td and '0Missued' in ts"
+    related_terms: ["BLID", "Blindable Update", "Shared Secret Salt", "Bound Blinded Attribute Block"]
+
+  - term: "Bound Blinded Attribute Block"
+    synonyms: []
+    definition: "A variant of the blinded attribute block that adds bound issuee key event sequence number (bn) and SAID (bd) fields, binding the ACDC state to the issuee's key state at the time of publication."
+    invariants:
+      - "Virtual field labels: [d, u, td, ts, bn, bd]"
+      - "Binds ACDC state to issuee's key state — supports delegation chain verification"
+      - "CESR group code: BoundStateSextuples (-b##)"
+    examples:
+      - "Issued block with issuee key event at sequence number 1: bn=MAAB, bd=EJOnAKX..."
+    related_terms: ["Blinded Attribute Block", "Chain of Authority", "Delegation"]
+
+  - term: "Shared Secret Salt"
+    synonyms: ["Blind Salt"]
+    definition: "A secret shared between issuer and designated discloser, used with a hierarchically deterministic derivation algorithm and the TEL event sequence number to derive the UUID blinding factor for each blindable update."
+    invariants:
+      - "Must have >= 128 bits of cryptographic entropy"
+      - "Derivation path is the sequence number of the transaction event"
+      - "Derived UUID must be twice as long as the salt to preserve cryptographic entropy"
+      - "Only issuer and discloser possess the salt — enables independent state discovery"
+    examples:
+      - "Discloser derives UUID from salt + sequence number, tries finite state combinations to discover current state"
+    related_terms: ["Blinded Attribute Block", "BLID", "Blindable Update"]
+
+  - term: "TEL Registrar"
+    synonyms: ["Registrar"]
+    definition: "A computing component operating under the issuer's auspices that maintains and publishes the registry TEL, processing state updates."
+    invariants:
+      - "Operates under the issuer's control"
+      - "Publishes registry state updates"
+    examples:
+      - "A cloud agent (KERIA) maintaining a revocation registry for an enterprise issuer"
+    related_terms: ["TEL Observer", "Registry", "Issuer"]
+
+  - term: "TEL Observer"
+    synonyms: ["Observer"]
+    definition: "A computing component operating under validator(s) auspices that caches the registry state, allowing validators to check ACDC state without exposing a point of validation (PoV) to the issuer."
+    invariants:
+      - "Under the validator's control, not the issuer's"
+      - "Caches registry state from the registrar"
+      - "Masks usage patterns from the issuer — no forced phone-home validation"
+      - "Updates via periodic polling or pushed state updates from the registrar"
+    examples:
+      - "A watcher node caching revocation registry state and serving validator queries"
+    related_terms: ["TEL Registrar", "Validator", "Point of Validation"]
+
+  - term: "REGID"
+    synonyms: ["Registry Identifier"]
+    definition: "The universally unique identifier for a TEL registry, equal to the SAID of the registry inception (rip) event."
+    invariants:
+      - "Computed as the SAID of the rip event"
+      - "Used as the value of the rd field in associated ACDCs and update events"
+      - "Cryptographically binds the registry to the issuer AID"
+    examples:
+      - "REGID: ECOWJI9kAjpCFYJ7RenpJx2w66-GsGlhyKLO-Or3qOIQ"
+    related_terms: ["Registry Inception", "Registry SAID", "rd field"]
+
+events:
+  - name: "RegistryCreated"
+    payload: "regid: REGID, issuer_aid: AID, dt: DateTime"
+    triggers: "Issuer creates a new registry via a registry inception (rip) event, sealed in the KEL"
+
+  - name: "CredentialStateUpdated"
+    payload: "regid: REGID, acdc_said: SAID, new_state: CredentialState, event_sn: int"
+    triggers: "Issuer publishes an update event (upd or bup) changing the ACDC's state in the registry"
+
+  - name: "BlindUpdated"
+    payload: "regid: REGID, event_sn: int, new_blid: BLID"
+    triggers: "Issuer publishes a new blindable update event with a fresh blinding factor, decorrelating state observation"
+
+rules:
+  - "Every TEL event must be sealed (anchored) in the controlling KEL — the seal provides non-repudiable commitment"
+  - "Registry inception rip event must have sequence number 0"
+  - "Update events must include the registry SAID rd field for verifiable association"
+  - "Events are hash-chained via the prior event SAID p field — backward chaining"
+  - "State verifiability persists despite key rotation — bound to key state at time of seal"
+  - "Blinded registries must use a fresh UUID per update event to prevent state-to-event correlation"
+  - "TEL observers must cache state to avoid forced validator-to-issuer correlation (no phone-home validation)"
