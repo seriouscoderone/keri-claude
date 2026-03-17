@@ -8,7 +8,7 @@ KERI (Key Event Receipt Infrastructure) is a decentralized key management protoc
 
 ```mermaid
 graph TD
-    agent["agent<br/><i>Client: Cloud Agent + Edge Signing</i>"]
+    agent["agent<br/><i>Client: Agent Architecture</i>"]
     keri["keri<br/><i>Core: Key Management Protocol</i>"]
     cesr["cesr<br/><i>Core: Composable Encoding</i>"]
     acdc["acdc<br/><i>Core: Credential Framework</i>"]
@@ -52,8 +52,17 @@ graph TD
     acdc --> tel
     acdc --> ipex
 
+    subgraph "agent subdomains"
+        es["edge-signing<br/><i>(Signify)</i>"]
+        ch["cloud-hosting<br/><i>(KERIA)</i>"]
+    end
+    agent --> es
+    agent --> ch
+    es -. "Customer-Supplier" .-> ch
+
     keri -.-> crypto
     cesr -.-> crypto
+    es -.-> crypto
 
     classDef kernel fill:#f0e6ff,stroke:#7c3aed
 ```
@@ -76,7 +85,9 @@ graph TD
 | `acdc/tel` | Transaction Event Log | subdomain | complete | 14 | Credential state tracking — issuance, revocation, registry |
 | `acdc/ipex` | IPEX Exchange | subdomain | complete | 14 | Issuance & Presentation Exchange protocol |
 | `oobi` | Out-of-Band Introduction | adjacent | complete | 6 | Bootstrap discovery, BADA endpoint authorization |
-| `agent` | Agent Infrastructure | client | complete | 10 | KERIA cloud agent + Signify edge signing |
+| `agent` | Agent Infrastructure | client | complete | 4 | Edge/cloud separation, Signify protocol contract |
+| `agent/edge-signing` | Edge Signing (Signify) | subdomain | complete | 9 | Controller-side: holds keys, signs, passcode, sessions |
+| `agent/cloud-hosting` | Cloud Hosting (KERIA) | subdomain | complete | 10 | Server-side: hosts AIDs, coordinates multi-sig, routes messages |
 
 ## Source Material
 
@@ -106,7 +117,6 @@ graph TD
 
 ## Open Questions
 
-- **Agent subdomains:** The agent domain flags a modeling gap — its three endpoints (boot, admin, message router) have distinct responsibilities that may warrant separate subdomains as the spec matures.
 - **TEL vs KERI relationship:** TEL anchors to the issuer's KEL, creating a tight coupling. Is TEL better modeled as an ACDC subdomain (current) or a KERI-adjacent domain?
 - **OOBI scope:** Currently minimal. As endpoint authorization (BADA) grows in complexity, OOBI may need its own subdomains.
 - **Cross-implementation language drift:** Terms like "Hab" (keripy), "Controller" (keriox), and "SignifyClient" (signify-ts) differ across implementations. The spec uses protocol-level terms; implementation-specific terms are not captured here.

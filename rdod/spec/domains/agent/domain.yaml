@@ -39,36 +39,22 @@ ubiquitous_language:
       - "Signing at the edge is the fundamental security guarantee of the Signify protocol"
       - "The agent is untrusted with respect to key material"
 
-  - term: "Agency"
-    definition: "The boot endpoint (port 3903) that provisions new agents — creates agent instances for Signify clients"
+  - term: "Signify Protocol"
+    definition: "The contract between edge signing and cloud hosting — defines how the controller drives the agent via KRAM-authenticated requests while retaining all key material locally"
     invariants:
-      - "Each agent instance is associated with a single controller AID"
-
-  - term: "Admin API"
-    definition: "The API handler endpoint (port 3901) for agent operations — creating identifiers, managing credentials, querying state"
-    invariants:
-      - "All requests authenticated via KRAM (KERI Request Authentication Method)"
-
-  - term: "Message Router"
-    definition: "The HTTP endpoint (port 3902) receiving external KERI protocol messages — multi-sig coordination, credential exchange, event receipts"
-    invariants:
-      - "Handles inbound protocol messages from other agents and witnesses"
-
-  - term: "KRAM"
-    definition: "KERI Request Authentication Method — HTTP signature-based authentication using KERI identifiers for agent API access"
-    invariants:
-      - "Request headers signed by the controller's current signing keys"
-      - "Agent verifies signatures against the controller's KEL"
-
-  - term: "Multi-sig Coordination"
-    definition: "Process of collecting threshold signatures from multiple controllers for group AIDs — coordinated through the agent's message router"
-    invariants:
-      - "Each participant signs independently at their own edge"
-      - "Agent collects and assembles threshold signatures"
+      - "Edge drives, cloud serves — the agent can never initiate signing"
+      - "KRAM authenticates all admin requests"
+      - "Protocol messages (via message router) use KERI signatures, not KRAM"
 
 domain_clients: []
 
-subdomains: []
+subdomains:
+  - ref: "domain://agent/edge-signing"
+    relationship: "Agent drives edge-signing as the controller-side component — holds keys, signs operations"
+    via_port: "port://agent/edge-signing/inbound/signing-operations"
+  - ref: "domain://agent/cloud-hosting"
+    relationship: "Agent drives cloud-hosting as the server-side component — hosts AIDs, coordinates, routes"
+    via_port: "port://agent/cloud-hosting/inbound/admin-api"
 
 kernels: []
 
@@ -104,12 +90,6 @@ implementation_guidance:
     is serious-keri (TypeScript, AWS Lambda + DynamoDB). Edge signing clients: signify-ts
     (TypeScript), signifypy (Python). Browser integration: signify-browser-extension (React).
 
-issues:
-  - ref: "domain://agent"
-    category: "modeling-gap"
-    severity: "medium"
-    description: "Agent domain currently modeled as flat — no subdomains for agency (boot), admin API, and message router, which have distinct responsibilities and languages"
-    rationale: "The three KERIA endpoints serve different roles with different authentication models and message types. As the agent spec matures, these may warrant separate subdomains."
-    recommendation: "introduce-concept:agent-endpoint-roles"
+issues: []
 
 tags: ["infrastructure", "cloud-agent", "edge-signing", "signify"]

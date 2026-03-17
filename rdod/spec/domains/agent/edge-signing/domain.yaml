@@ -1,0 +1,87 @@
+# domain.yaml
+template_version: "1.0"
+id: "agent/edge-signing"
+name: "Edge Signing (Signify)"
+description: >
+  The controller-side signing protocol. Holds private keys on the controller's
+  device, performs all cryptographic signing operations, and communicates with
+  the cloud agent via KRAM-authenticated requests. Private keys never leave
+  this domain. Implementations: signify-ts, signifypy, signify-browser-extension.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keridoc-llms-full.md — Signify protocol documentation"
+  - type: user-input
+    reference: "CLAUDE.md — signify-ts, signifypy, browser extension architecture"
+
+ubiquitous_language:
+  - term: "Signify Client"
+    definition: "Controller-side library that holds private keys, signs operations, and communicates with a KERIA cloud agent"
+    invariants:
+      - "Private keys are generated and stored locally — never transmitted"
+      - "All requests to the cloud agent are signed via KRAM"
+      - "Client manages its own key material lifecycle (creation, passcode protection, destruction)"
+
+  - term: "Passcode"
+    definition: "User-supplied secret used to encrypt private keys at rest on the controller's device"
+    invariants:
+      - "Must meet minimum entropy requirements"
+      - "Passcode is never sent to the cloud agent"
+      - "Key material is inaccessible without the passcode"
+      - "Passcode timeout zeroes in-memory key material after inactivity"
+
+  - term: "Signing Request"
+    definition: "A request from the cloud agent for the controller to sign an event or operation — the agent proposes, the edge signs"
+    invariants:
+      - "The cloud agent can never produce a signature — only request one"
+      - "The controller reviews and approves before signing"
+
+  - term: "Session"
+    definition: "An authenticated period between the Signify client and KERIA, initiated by the controller providing their passcode"
+    invariants:
+      - "Session begins when passcode unlocks key material"
+      - "Session ends on timeout or explicit lock"
+      - "Key material is zeroed from memory on session end"
+
+  - term: "Controller AID"
+    definition: "The AID that identifies the controller to the cloud agent — used for KRAM authentication of all admin API requests"
+    invariants:
+      - "Created during initial agent provisioning (boot)"
+      - "The controller AID's KEL is the trust anchor for the agent relationship"
+
+domain_clients:
+  - ref: "domain://agent"
+    relationship: "Parent agent domain drives edge-signing as the controller-side component of the agent architecture"
+    via_port: "port://agent/edge-signing/inbound/signing-operations"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519 (signing), X25519 (key agreement), argon2 (passcode stretching), libsodium (secretbox for key encryption at rest)"
+    relationship: "Cryptographic algorithm types used directly for key generation, signing, and key-at-rest encryption"
+
+adjacents:
+  - ref: "domain://agent/cloud-hosting"
+    relationship: "Customer-Supplier — edge-signing drives cloud-hosting via KRAM-authenticated requests; cloud-hosting never drives edge-signing"
+    via_port: "port://agent/cloud-hosting/inbound/admin-api"
+    is_cross_cutting: false
+
+externals:
+  - name: "Key Storage"
+    abstraction: "Repository"
+    ref: "port://agent/edge-signing/outbound/key-store"
+    implementation_notes: "Encrypted key material at rest. Implementations: browser localStorage (signify-browser-extension), filesystem (signify-ts/signifypy), secure enclave (mobile)"
+
+implementation_guidance:
+  suggested_type: "package"
+  language_affinity: "any"
+  notes: >
+    signify-ts (TypeScript) for browsers and Node.js. signifypy (Python) for scripting
+    and testing. signify-browser-extension (React) wraps signify-ts in a Chrome/Firefox
+    extension with polaris-web for website integration.
+
+issues: []
+
+tags: ["edge-signing", "signify", "private-keys", "controller"]

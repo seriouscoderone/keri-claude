@@ -1,0 +1,160 @@
+# ubiquitous-language.yaml
+domain_ref: "agent/cloud-hosting"
+
+terms:
+  - term: "KERIA"
+    synonyms: ["Cloud Agent", "KERI Agent"]
+    definition: "Server-side cloud agent hosting KERI identifiers on behalf of controllers. Manages AIDs, processes events, coordinates multi-sig, stores credentials — never holds private keys."
+    invariants:
+      - "Zero access to private signing or decryption keys"
+      - "Can store, forward, and assemble — but never sign"
+      - "One agent instance per controller AID"
+    examples:
+      - "A KERIA deployment on AWS hosting 500 agent instances"
+      - "keria start --config-dir scripts --config-file demo-witness-oobis"
+    related_terms: ["Agent Instance", "Agency", "Admin API", "Message Router"]
+
+  - term: "Agency"
+    synonyms: ["Boot Service", "Boot Endpoint"]
+    definition: "The provisioning service (port 3903) that creates and destroys agent instances. Entry point for new Signify clients."
+    invariants:
+      - "POST /boot with inception event → provisions new agent instance"
+      - "One-time per controller AID — idempotent on retry"
+      - "Returns agent configuration (endpoints, controller AID confirmation)"
+    examples:
+      - "Signify client calls POST /boot with controller inception event"
+    related_terms: ["Agent Instance", "KERIA"]
+
+  - term: "Admin API"
+    synonyms: ["API Handler"]
+    definition: "The management endpoint (port 3901) for all agent operations. KRAM-authenticated. Scoped to the requesting controller's agent instance."
+    invariants:
+      - "All requests require valid KRAM signatures — unsigned requests rejected"
+      - "Operations scoped to authenticated controller's agent instance"
+      - "Read and write operations: identifiers, credentials, OOBIs, contacts, notifications"
+    examples:
+      - "POST /identifiers — create a new managed AID"
+      - "GET /credentials — list credentials in wallet"
+      - "POST /oobi — resolve an out-of-band introduction"
+      - "GET /notifications — poll for pending actions"
+    related_terms: ["KRAM", "Agent Instance", "Notification"]
+
+  - term: "Message Router"
+    synonyms: ["Protocol Endpoint", "HTTP Endpoint"]
+    definition: "The protocol endpoint (port 3902) receiving external KERI messages from other agents, witnesses, and watchers. Routes to correct agent instance."
+    invariants:
+      - "No KRAM required — messages are KERI-protocol authenticated (event signatures)"
+      - "Routes by target AID to the correct agent instance"
+      - "Handles: multi-sig partial signatures, IPEX exchange, witness receipts, queries"
+    examples:
+      - "Another agent sends a multi-sig partial signature for a group AID"
+      - "Witness sends event receipts after witnessing"
+      - "IPEX grant message delivering a credential"
+    related_terms: ["Multi-sig Assembly", "KERIA"]
+
+  - term: "Agent Instance"
+    synonyms: ["Agent"]
+    definition: "A provisioned agent representing a single controller. Contains managed AIDs, credential wallet, contact book, and pending operation queues."
+    invariants:
+      - "Bound to exactly one controller AID"
+      - "Isolated from other agent instances"
+      - "Persists across KERIA restarts"
+    examples:
+      - "Agent instance for controller EDP1... manages 3 AIDs and 12 credentials"
+    related_terms: ["KERIA", "Agency", "Credential Wallet", "Contact Book"]
+
+  - term: "Credential Wallet"
+    synonyms: ["Wallet"]
+    definition: "Server-hosted storage of ACDC credentials held by the controller's AIDs. Includes received credentials, their schemas, and presentation history."
+    invariants:
+      - "Credential content readable by the agent (not encrypted at rest)"
+      - "Presentation to third parties requires edge-signed authorization"
+      - "Wallet scoped to agent instance"
+    examples:
+      - "Wallet contains 3 vLEI credentials: QVI, LE, OOR"
+    related_terms: ["Agent Instance", "ACDC"]
+
+  - term: "Contact Book"
+    synonyms: ["Contacts"]
+    definition: "Directory of resolved OOBIs — known AIDs with verified key state and endpoint URLs, used for addressing and signature verification."
+    invariants:
+      - "Populated by OOBI resolution via admin API"
+      - "Entries: AID, key state snapshot, endpoint URLs, alias"
+      - "Key state refreshed on subsequent OOBI resolution"
+    examples:
+      - "Resolve OOBI for a QVI → added to contacts with witness endpoints"
+    related_terms: ["OOBI", "Agent Instance"]
+
+  - term: "Multi-sig Assembly"
+    synonyms: ["Signature Assembly", "Group Signing"]
+    definition: "Process of collecting partial signatures from multiple edge clients for group AID events. Assembles when the signing threshold is satisfied."
+    invariants:
+      - "Each partial signature arrives independently via message router"
+      - "Assembly is threshold-aware (kt satisfaction check)"
+      - "Incomplete signature sets escrowed with timeout"
+      - "Assembled event forwarded to witnesses once complete"
+    examples:
+      - "3-of-5 group inception: 5 controllers sign independently, KERIA assembles when 3 arrive"
+      - "Group credential issuance: partial signatures collected, ACDC issued when threshold met"
+    related_terms: ["Message Router", "Threshold"]
+
+  - term: "Notification"
+    synonyms: ["Pending Action"]
+    definition: "A queued message for the edge client indicating an action requiring attention — multi-sig request, credential offer, exchange message."
+    invariants:
+      - "Edge client polls for notifications via GET /notifications"
+      - "Agent cannot push — edge always pulls"
+      - "Notifications have a type, a related resource (AID, SAID), and a read/unread state"
+    examples:
+      - "Notification: multi-sig rotation pending for group AID, 2 of 3 signatures collected"
+      - "Notification: IPEX grant received — credential offered for admission"
+    related_terms: ["Admin API", "Multi-sig Assembly"]
+
+  - term: "Escrow"
+    synonyms: ["Pending Escrow"]
+    definition: "Temporary storage for incomplete or out-of-order operations — partial multi-sig events, unverified receipts, pending IPEX exchanges."
+    invariants:
+      - "Escrowed items have a timeout after which they are discarded"
+      - "Items automatically complete when missing data arrives"
+      - "Multiple escrow types: partial signature, out-of-order event, unverified receipt"
+    examples:
+      - "A multi-sig event with 1 of 3 required signatures is escrowed until others arrive"
+    related_terms: ["Multi-sig Assembly", "Agent Instance"]
+
+events:
+  - name: "AgentProvisioned"
+    payload: "agent_id: string, controller_aid: AID, boot_config: AgentConfig"
+    triggers: "Signify client sends POST /boot with controller inception event"
+
+  - name: "AgentDestroyed"
+    payload: "agent_id: string, controller_aid: AID"
+    triggers: "Controller or operator destroys the agent instance"
+
+  - name: "IdentifierCreated"
+    payload: "aid: AID, alias: string, agent_id: string"
+    triggers: "Controller creates a new managed AID via admin API"
+
+  - name: "CredentialReceived"
+    payload: "said: SAID, issuer: AID, schema: SAID, holder_aid: AID"
+    triggers: "IPEX grant received and admitted — credential added to wallet"
+
+  - name: "MultisigAssembled"
+    payload: "aid: AID, event_type: string, sequence: int, signers: [AID]"
+    triggers: "All required partial signatures collected — threshold satisfied"
+
+  - name: "NotificationQueued"
+    payload: "type: string, resource_aid: AID, resource_said: SAID"
+    triggers: "An external message arrives requiring controller attention"
+
+  - name: "ContactAdded"
+    payload: "aid: AID, alias: string, endpoints: [URL]"
+    triggers: "OOBI successfully resolved and KEL verified"
+
+rules:
+  - "KERIA can NEVER produce a valid signature — all signing delegated to edge"
+  - "All admin API requests must be KRAM-authenticated — no anonymous access"
+  - "Message router accepts protocol-authenticated messages (KERI signatures), not KRAM"
+  - "Agent instances are isolated — one controller's data is inaccessible to another"
+  - "Edge client polls for notifications — agent cannot push to edge"
+  - "Incomplete multi-sig events are escrowed with timeout, not rejected"
+  - "Three endpoints share agent state and persistence — they are ports, not separate services"

@@ -1,0 +1,136 @@
+# ubiquitous-language.yaml
+domain_ref: "agent/edge-signing"
+
+terms:
+  - term: "Signify Client"
+    synonyms: ["Edge Client", "Signify"]
+    definition: "Controller-side library that holds private keys, signs all operations, and communicates with a KERIA cloud agent via KRAM-authenticated HTTP."
+    invariants:
+      - "Private keys generated and stored locally — never transmitted"
+      - "All requests to cloud agent signed via KRAM"
+      - "Client manages key material lifecycle: creation, passcode protection, rotation, destruction"
+    examples:
+      - "signify-ts: `const client = new SignifyClient(url, bran, Tier.low)`"
+      - "signifypy: `client = SignifyClient(url=url, bran=bran)`"
+    related_terms: ["Passcode", "Session", "Controller AID", "KRAM"]
+
+  - term: "Passcode"
+    synonyms: ["Bran", "Salt Passphrase"]
+    definition: "User-supplied secret (21-character base64 string) used to derive the salt for key generation and to encrypt key material at rest."
+    invariants:
+      - "Minimum 21 characters (≥128 bits entropy after stretching)"
+      - "Never sent to the cloud agent"
+      - "Stretched via argon2 to derive the master salt"
+      - "Zeroed from memory on session timeout"
+    examples:
+      - "bran = '0123456789abcdefghijk' — 21-char passphrase"
+      - "Browser extension prompts for passcode on startup, zeroes after 5-minute timeout"
+    related_terms: ["Session", "Salt", "Key Storage"]
+
+  - term: "Salt"
+    synonyms: ["Master Salt"]
+    definition: "The cryptographic seed derived from the passcode via argon2 key stretching. All private keys for the controller are deterministically derived from this salt."
+    invariants:
+      - "Derived from passcode + argon2 — not stored directly"
+      - "All key derivation is deterministic from the salt"
+      - "Salt reconstruction requires the original passcode"
+    examples:
+      - "Salter(raw=stretched_bytes) → deterministic key derivation for all AIDs"
+    related_terms: ["Passcode", "Signify Client"]
+
+  - term: "Signing Request"
+    synonyms: []
+    definition: "A request originating from the cloud agent for the controller to cryptographically sign an event, credential, or exchange message."
+    invariants:
+      - "Cloud agent can never produce a valid signature — only request one"
+      - "Controller reviews the content before signing"
+      - "Signing is asynchronous — the agent waits for the edge response"
+    examples:
+      - "Multi-sig: KERIA assembles partial event, requests each participant's signature"
+      - "Credential issuance: KERIA prepares ACDC, controller signs at edge"
+    related_terms: ["Multi-sig Coordination", "Session"]
+
+  - term: "Session"
+    synonyms: ["Authenticated Session"]
+    definition: "An active period between the Signify client and KERIA, initiated when the controller unlocks key material with their passcode."
+    invariants:
+      - "Begins when passcode unlocks key material in memory"
+      - "Ends on explicit lock, timeout, or app closure"
+      - "Key material zeroed from memory on session end"
+      - "No operations possible outside an active session"
+    examples:
+      - "Browser extension: user enters passcode → session active → 5-min timeout → zeroed"
+    related_terms: ["Passcode", "Signify Client"]
+
+  - term: "Controller AID"
+    synonyms: ["Agent AID"]
+    definition: "The AID created during initial agent provisioning that identifies the controller to KERIA. Used for KRAM authentication of all subsequent requests."
+    invariants:
+      - "Created during boot (agent provisioning)"
+      - "The controller AID's KEL is the trust anchor for the entire agent relationship"
+      - "Rotation of this AID rotates the authentication relationship"
+    examples:
+      - "client.boot() → creates controller AID and provisions agent instance"
+    related_terms: ["KRAM", "Agency"]
+
+  - term: "KRAM"
+    synonyms: ["KERI Request Authentication Method"]
+    definition: "HTTP signature-based authentication using KERI identifiers. Each request includes signed headers that the cloud agent verifies against the controller's KEL."
+    invariants:
+      - "Signature covers HTTP method, path, and body digest"
+      - "Cloud agent verifies against controller AID's current key state"
+      - "Replay protection via nonce and timestamp"
+    examples:
+      - "Signify-TS header: `Signature: keyid=AID;created=timestamp;...`"
+    related_terms: ["Controller AID", "Session"]
+
+  - term: "Signing Association"
+    synonyms: []
+    definition: "A stored mapping between a website origin and a credential/AID, authorizing the browser extension to sign requests for that website."
+    invariants:
+      - "Established by explicit user approval in the extension"
+      - "Scoped to a specific origin (website domain)"
+      - "Stored in Chrome storage, not transmitted"
+    examples:
+      - "User approves signing for example.com with their OOR credential"
+    related_terms: ["Browser Extension", "Session"]
+
+  - term: "Browser Extension"
+    synonyms: ["Signify Browser Extension"]
+    definition: "Chrome/Firefox extension wrapping signify-ts, providing passwordless web authentication via signed HTTP headers."
+    invariants:
+      - "Private keys accessible only to background script and popup — never to websites"
+      - "Websites communicate via polaris-web library (content script bridge)"
+      - "Requires active tab context for all operations"
+    examples:
+      - "Website calls polaris-web → content script → background script signs with signify-ts → signed headers returned"
+    related_terms: ["Signify Client", "Signing Association"]
+
+events:
+  - name: "SessionStarted"
+    payload: "controller_aid: AID, agent_url: URL"
+    triggers: "Controller provides passcode, key material unlocked in memory"
+
+  - name: "SessionEnded"
+    payload: "controller_aid: AID, reason: timeout | explicit | error"
+    triggers: "Timeout expires, user locks, or application closes"
+
+  - name: "SigningRequested"
+    payload: "controller_aid: AID, content: bytes, event_type: string"
+    triggers: "Cloud agent requests a signature for a pending operation"
+
+  - name: "SigningCompleted"
+    payload: "controller_aid: AID, signature: Siger, event_said: SAID"
+    triggers: "Controller approves and signs the requested content"
+
+  - name: "KeyMaterialZeroed"
+    payload: "controller_aid: AID"
+    triggers: "Session ends — all in-memory key material overwritten with zeros"
+
+rules:
+  - "Private keys NEVER leave the controller's device under any circumstances"
+  - "All key material in memory must be zeroed when the session ends"
+  - "The cloud agent is untrusted with respect to key material — it can request but never produce signatures"
+  - "Passcode must meet minimum entropy (21 chars / 128 bits after stretching)"
+  - "Browser extension only signs for websites with established signing associations"
+  - "All admin API requests must include KRAM signatures — unsigned requests are rejected"

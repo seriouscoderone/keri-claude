@@ -1,0 +1,24 @@
+# ports.yaml
+domain_ref: "agent/edge-signing"
+
+ports:
+  - id: "port://agent/edge-signing/inbound/signing-operations"
+    type: inbound
+    name: "Signing Operations"
+    contract: "connect(url, passcode) -> Session; sign(content) -> Signature; create_identifier(config) -> AID; rotate(aid) -> RotationEvent; lock() -> void"
+    protocol: "method-call"
+    refs: ["domain://agent"]
+
+  - id: "port://agent/edge-signing/outbound/key-store"
+    type: outbound
+    name: "Key Storage"
+    contract: "store_encrypted(salt_ciphertext) -> Result; load_encrypted(passcode) -> Salt; destroy() -> Result"
+    protocol: "method-call"
+    refs: ["key-storage"]
+
+  - id: "port://agent/edge-signing/outbound/cloud-agent"
+    type: outbound
+    name: "Cloud Agent Communication"
+    contract: "boot(inception) -> AgentConfig; request(method, path, body, kram_headers) -> Response"
+    protocol: "REST"
+    refs: ["domain://agent/cloud-hosting"]
