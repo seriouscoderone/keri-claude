@@ -252,6 +252,204 @@ terms:
       - "'4B##' — raw bytes, lead size 0"
     related_terms: ["Quadlet", "Triplet", "Code Table"]
 
+  - term: "Indexer"
+    synonyms: ["Indexed Primitive Base"]
+    definition: "The base trait for indexed CESR primitives (parallel to Matter for non-indexed). Encapsulates (code, raw, index, ondex) and provides bidirectional transforms. Used by Siger."
+    invariants:
+      - "Carries two indices: index (main key position) and ondex (other/rotation key position)"
+      - "Soft size (ss) splits into ms (main index size) and os (other index size)"
+      - "BothSigCodex codes: ondex auto-matches index if not provided"
+      - "CurrentSigCodex codes: ondex forbidden (current signing keys only)"
+      - "Index must satisfy: index <= 64^ms - 1"
+    examples:
+      - "Siger with code 'AA' → index=0, ondex=0 (BothSig, auto-matched)"
+      - "Siger with code 'BD' → index=3, ondex forbidden (CurrentSig)"
+      - "Siger with code '2AABAC' → index=1, ondex=2 (Big dual-indexed)"
+    related_terms: ["Matter", "Siger", "Index", "Ondex", "IdrDex"]
+
+  - term: "IdrDex"
+    synonyms: ["Indexer Code Index", "Indexer Code Table Constants"]
+    definition: "The frozen code table for indexed signature primitives. Parallel to MtrDex but for indexed codes."
+    invariants:
+      - "Basic codes (2-char): A/B (Ed25519 both/current), C/D (ECDSA 256k1), E/F (ECDSA 256r1), 0A/0B (Ed448)"
+      - "Big codes (4-char): 2A-2F, 3A-3B — support index/ondex > 63 (up to 64^4)"
+    examples:
+      - "IdrDex.Ed25519 = 'A' — Ed25519 both-same indexed signature"
+      - "IdrDex.Ed25519_Crt = 'B' — Ed25519 current-only indexed signature"
+      - "IdrDex.Ed25519_Big = '2A' — Ed25519 big dual-indexed"
+    related_terms: ["MtrDex", "Indexer", "Siger"]
+
+  - term: "Sizage"
+    synonyms: ["Size Metadata"]
+    definition: "Metadata struct for each code table entry specifying the encoding geometry: hs (hard size), ss (soft size), fs (full size), ls (lead size)."
+    invariants:
+      - "hs: number of hard (type) characters in the code"
+      - "ss: number of soft (index/size) characters in the code"
+      - "fs: full size in T-domain characters (hs + ss + value chars); u32::MAX for variable-length"
+      - "ls: number of lead pad bytes (0, 1, or 2)"
+      - "For variable-length codes: fs = (count * 4) + hs + ss"
+    examples:
+      - "Code 'D' → Sizage { hs: 1, ss: 0, fs: 44, ls: 1 } — 1-char code, 44 total, 1 lead byte"
+      - "Code '0B' → Sizage { hs: 2, ss: 0, fs: 88, ls: 2 } — 2-char code, 88 total, 2 lead bytes"
+      - "Code '4A' → Sizage { hs: 2, ss: 2, fs: MAX, ls: 0 } — variable-length"
+    related_terms: ["Code Table", "Matter", "Qualification"]
+
+  - term: "Sadder"
+    synonyms: ["SAD Serializer"]
+    definition: "Base trait for Self-Addressing Data (SAD) serialization. Provides inhale (raw → ked) and exhale (ked → raw) operations, plus SAID computation. Extended by Serder and Creder."
+    invariants:
+      - "Holds both raw bytes and KED (Key Event Dictionary) representations"
+      - "Provides code(), raw(), ked(), ident(), kind(), size(), version(), saider()"
+      - "inhale: parse raw bytes into structured KED"
+      - "exhale: serialize KED into raw bytes"
+    examples:
+      - "Sadder.new_with_raw(raw_bytes) → parse version string, extract KED"
+      - "Sadder.new_with_ked(ked_value) → serialize, compute SAID"
+    related_terms: ["Serder", "Creder", "Saider", "Version String"]
+
+  - term: "Serder"
+    synonyms: ["Event Serializer"]
+    definition: "KERI event serializer extending Sadder. Validates ident=='KERI'. Provides accessors for event-specific fields: verfers, digers, werfers."
+    invariants:
+      - "ident must equal 'KERI' — rejects non-KERI SADs"
+      - "verfers(): extracts signing public keys from 'k' field as [Verfer]"
+      - "digers(): extracts next key digests from 'n' field as [Diger]"
+      - "werfers(): extracts witness public keys from 'b' field as [Verfer]"
+    examples:
+      - "Serder.new_with_raw(icp_bytes) → parsed inception event with accessible verfers"
+    related_terms: ["Sadder", "Creder", "Verfer", "Diger"]
+
+  - term: "Creder"
+    synonyms: ["Credential Serializer"]
+    definition: "ACDC credential serializer extending Sadder. Validates ident=='ACDC'. Provides accessors for credential-specific fields: issuer, schema, subject, status, chains."
+    invariants:
+      - "ident must equal 'ACDC' — rejects non-ACDC SADs"
+      - "issuer(): extracts 'i' field (issuer AID)"
+      - "schema(): extracts 's' field (schema SAID)"
+      - "subject(): extracts 'a' field (attribute section)"
+      - "status(): extracts 'ri' field (registry identifier)"
+    examples:
+      - "Creder.new_with_raw(acdc_bytes) → parsed credential with accessible issuer/schema"
+    related_terms: ["Sadder", "Serder", "SAID"]
+
+  - term: "Tholder"
+    synonyms: ["Threshold Holder"]
+    definition: "Represents signing/rotation threshold constraints. Supports simple integer thresholds and weighted fractional thresholds with multiple clauses."
+    invariants:
+      - "Simple: integer M-of-N (e.g., 2 of 3 keys)"
+      - "Weighted: list of Rational32 fractions per clause, clauses separated by 'a', weights by 'c'"
+      - "Each clause must sum to >= 1.0 for threshold satisfaction"
+      - "Weighted format: '1/2a1/3a1/3' means clause1=1/2, clause2=1/3, clause3=1/3"
+      - "satisfy(indices) checks whether the given key indices meet the threshold"
+    examples:
+      - "Tholder('2') — simple threshold: 2 of N signatures required"
+      - "Tholder(['1/2', '1/2', '1/2']) — weighted: any 2 of 3 equal-weight keys"
+    related_terms: ["Siger", "Key State"]
+
+  - term: "Number"
+    synonyms: ["Variable-Length Number"]
+    definition: "A variable-length unsigned integer primitive. Auto-selects the smallest code that fits the value: Short (u16), Long (u32), Big (u64), Huge (u128)."
+    invariants:
+      - "Short (code M): 0–65,535 (2 bytes, 4 chars qb64)"
+      - "Long (code 0H): 0–4,294,967,295 (4 bytes, 8 chars qb64)"
+      - "Big (code N): 0–2^64-1 (8 bytes, 12 chars qb64)"
+      - "Huge (code 0A alias): 0–2^128-1 (16 bytes, 24 chars qb64)"
+      - "Constructor auto-selects code based on numeric value"
+    examples:
+      - "Number(num=42) → code 'M', 4 chars qb64"
+      - "Number(num=100000) → code '0H', 8 chars qb64"
+    related_terms: ["Seqner", "NumDex", "Matter"]
+
+  - term: "Dater"
+    synonyms: ["DateTime Primitive"]
+    definition: "An ISO-8601 datetime encoded as a CESR primitive. Special characters substituted for Base64 compatibility: ':' → 'c', '.' → 'd', '+' → 'p'."
+    invariants:
+      - "Code '1AAG' — 32-char ISO-8601 string (36 chars qb64)"
+      - "Character substitution: colon→c, dot→d, plus→p for Base64 safety"
+      - "new() with no args captures current UTC time"
+    examples:
+      - "Dater('2024-01-15T12c30c00d000000p00c00') — 2024-01-15T12:30:00.000000+00:00"
+    related_terms: ["Matter"]
+
+  - term: "Bexter"
+    synonyms: ["Base64 Extended"]
+    definition: "A base64 extended encoding primitive for text strings and byte arrays. Computes lead padding (wrap size) from the code's lead size to achieve proper alignment."
+    invariants:
+      - "Codes: 4A-6A (small StrB64), 7AAA-9AAA (large StrB64), 4B-6B (small Bytes), 7AAB-9AAB (large Bytes)"
+      - "bext(): encodes raw with calculated wrap-size padding"
+      - "rawify(): decodes bext back to raw bytes"
+      - "Used by Pather for encoding JSON path arrays"
+    examples:
+      - "Bexter(bext='some-base64-text') → variable-length CESR primitive"
+    related_terms: ["Pather", "Matter", "Variable-Length Code"]
+
+  - term: "Pather"
+    synonyms: ["Path Primitive"]
+    definition: "A path to a nested value within a SAD structure. Encodes a JSON path array as a Bexter, enabling CESR-qualified references to embedded fields."
+    invariants:
+      - "Constructed from path list: ['a', 'fieldName'] → points to sad['a']['fieldName']"
+      - "Uses Bexter encoding with StrB64 codes"
+      - "Used in pathed material groups (-P##) for selective disclosure"
+    examples:
+      - "Pather(['a', 'i']) → path to the issuer field inside the attribute section"
+      - "Pather(['e', 'qvi']) → path to the QVI edge"
+    related_terms: ["Bexter", "Sadder", "Disclosure"]
+
+  - term: "Encrypter"
+    synonyms: []
+    definition: "Encrypts data using X25519 ECDH key agreement + symmetric encryption (secretbox/sealedbox). Produces Cipher primitives."
+    invariants:
+      - "Uses X25519 public key for ECDH key agreement"
+      - "Symmetric encryption via NaCl secretbox or sealedbox"
+      - "Output is a Cipher (CESR-qualified encrypted data)"
+    examples:
+      - "Encrypter(verkey=x25519_pubkey).encrypt(matter=salter) → Cipher"
+    related_terms: ["Decrypter", "Cipher", "Salter"]
+
+  - term: "Decrypter"
+    synonyms: []
+    definition: "Decrypts Cipher primitives using X25519 private key. Recovers the original Matter primitive from encrypted data."
+    invariants:
+      - "Uses X25519 private key for ECDH key agreement"
+      - "decrypt(cipher) → recovered Matter (e.g., Signer, Salter)"
+    examples:
+      - "Decrypter(seed=x25519_privkey).decrypt(cipher) → Salter"
+    related_terms: ["Encrypter", "Cipher"]
+
+  - term: "Cipher"
+    synonyms: ["Encrypted Primitive"]
+    definition: "A CESR-qualified encrypted data primitive. Holds ciphertext with codes indicating the encryption scheme."
+    invariants:
+      - "Codes: 4C-9AC (X25519 SealedBox variants), 4D-9AD (QB64 variants), 4E-9AE (QB2 variants)"
+      - "Variable-length — size encoded in the code"
+      - "Provides qb64 and qb2 representations like other Matter types"
+    examples:
+      - "Cipher(qb64='4C...') — X25519 SealedBox encrypted salt"
+    related_terms: ["Encrypter", "Decrypter", "Matter"]
+
+  - term: "Tierage"
+    synonyms: ["Security Tier"]
+    definition: "Security classification for salt-based key stretching operations. Controls argon2 CPU/memory cost parameters."
+    invariants:
+      - "Values: 'low', 'med', 'high' (plus reserved 'min')"
+      - "Carried by Salter — determines stretching cost when deriving Signers"
+      - "Higher tier = more argon2 iterations = slower but stronger"
+    examples:
+      - "Salter(tier=Tierage.low) — fast derivation for development"
+      - "Salter(tier=Tierage.high) — production-grade key stretching"
+    related_terms: ["Salter", "Signer"]
+
+  - term: "ZeroizeOnDrop"
+    synonyms: ["Sensitive Material Cleanup"]
+    definition: "Memory safety pattern ensuring private key material is overwritten with zeros when the holding object is destroyed. Applied to Signer and Salter."
+    invariants:
+      - "All bytes of raw key material are zeroed on object destruction"
+      - "Prevents key material from lingering in freed memory"
+      - "Implemented via Rust's Zeroize trait or TypeScript manual zeroing"
+    examples:
+      - "Signer dropped → 32 bytes of Ed25519 seed overwritten with zeros"
+    related_terms: ["Signer", "Salter"]
+
 events:
   - name: "PrimitiveQualified"
     payload: "code: Code, raw: bytes, qb64: str, qb2: bytes"

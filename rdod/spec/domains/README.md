@@ -77,8 +77,8 @@ graph TD
 | `keri/witness-agreement` | Witness Agreement | subdomain | complete | 14 | KAWA: receipting, first-seen rule, accountability threshold |
 | `keri/duplicity-detection` | Duplicity Detection | subdomain | complete | 16 | Inconsistent histories, evidence, judge/juror, recovery |
 | `keri/delegation` | Delegation | subdomain | complete | 15 | Delegated AIDs, hierarchical control, custodial management |
-| `cesr` | CESR Encoding | core | complete | 18 | Composable Event Streaming Representation — encoding layer |
-| `cesr/cesr-primitives` | CESR Primitives | subdomain | complete | 18 | Verfer, Diger, Siger, Cigar, Salter — qualified cryptographic types |
+| `cesr` | CESR Encoding | core | complete | 20 | Composable Event Streaming Representation — encoding layer |
+| `cesr/cesr-primitives` | CESR Primitives | subdomain | complete | 34 | Matter/Indexer traits, Verfer–Cipher, Sadder/Serder/Creder, Tholder |
 | `cesr/cesr-stream` | CESR Stream | subdomain | complete | 13 | Count codes, groups, attachments, cold start, pipelining |
 | `acdc` | ACDC Credentials | core | complete | 21 | Authentic Chained Data Containers — verifiable credentials |
 | `acdc/disclosure` | Disclosure | subdomain | complete | 16 | Graduated, selective, partial, full, compact disclosure |

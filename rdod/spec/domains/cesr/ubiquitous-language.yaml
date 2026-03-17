@@ -275,6 +275,32 @@ terms:
       - "'-_AAACAA' — KERI/ACDC genus AAA at version 2.00"
     related_terms: ["Code Table", "Version String"]
 
+  - term: "Sizage"
+    synonyms: ["Size Metadata", "Code Geometry"]
+    definition: "Metadata for each code table entry specifying the encoding geometry: hs (hard size = type chars), ss (soft size = index/count chars), fs (full size = total T-domain chars), ls (lead size = pad bytes)."
+    invariants:
+      - "hs + ss = code size; fs = total qualified primitive size in T-domain characters"
+      - "fs = u32::MAX indicates variable-length (actual size encoded in soft chars)"
+      - "ls determines mid-padding: 0, 1, or 2 lead bytes prepended to raw before Base64"
+      - "For indexed primitives: ss splits into ms (main index size) + os (other index size)"
+    examples:
+      - "Code 'D': hs=1, ss=0, fs=44, ls=1 — 1-char code, 44 total chars, 1 lead byte"
+      - "Code '0B': hs=2, ss=0, fs=88, ls=2 — 2-char code, 88 total chars"
+      - "Code '4A': hs=2, ss=2, fs=MAX, ls=0 — variable-length, size in soft chars"
+    related_terms: ["Code Table", "Mid-padding", "Qualification"]
+
+  - term: "Infil/Exfil"
+    synonyms: ["Infiltrate/Exfiltrate"]
+    definition: "The encoding/decoding pipeline names in cesride. Infil: (code, raw) → qb64 (qualify). Exfil: qb64 → (code, raw) (dequalify). Binfil/bexfil for the binary domain."
+    invariants:
+      - "infil: add lead bytes, Base64 encode, swap in code prefix → qb64"
+      - "exfil: read code from prefix, Base64 decode, remove lead bytes → (code, raw)"
+      - "binfil/bexfil: same but for qb2 (binary domain)"
+    examples:
+      - "infil('D', <32 bytes>) → 'DKxy2sgzfplyr-tgwIxS19f2OchFHtLwPWD3v4oYimBx'"
+      - "exfil('DKxy2sgz...') → ('D', <32 bytes>)"
+    related_terms: ["Qualification", "qb64", "qb2", "Sizage"]
+
   - term: "CESRgram"
     synonyms: []
     definition: "A CESR-encoded message — a serialized binary or text representation of an event, message, or attachment using the CESR format."
