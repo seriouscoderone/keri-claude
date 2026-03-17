@@ -248,6 +248,23 @@ terms:
       - "A public AID with 5 witnesses and TOAD of 3 — any validator can fetch the KERL from witnesses"
     related_terms: ["Direct Mode", "Witness", "KAWA", "Watcher", "TOAD"]
 
+  - term: "KERI Message Types"
+    synonyms: ["Ilks", "Protocol Messages"]
+    definition: "The complete set of KERI protocol message types, identified by the 't' (type/ilk) field. Organized into key events, receipts, queries/replies, and exchanges. Each type is dispatched to the appropriate handler by the Message Parser."
+    invariants:
+      - "Key Events (→ Event Processor): icp (inception), rot (rotation), ixn (interaction), dip (delegated inception), drt (delegated rotation)"
+      - "Receipts (→ Witness Agreement): rct (non-transferable receipt), vrc (transferable receipt)"
+      - "Queries & Replies (→ query handler): qry (query), rpy (reply), pro (prod/probe), bar (bare reply)"
+      - "Exchanges (→ Exchanger): exn (exchange message — carries IPEX, multi-sig coordination, challenge-response)"
+      - "TEL Events (→ TEL Processor): vcp (registry inception), vrt (registry rotation), iss (issuance), rev (revocation), bis (backed issuance), brv (backed revocation)"
+      - "The ilk field determines which processing pipeline handles the message"
+    examples:
+      - "t='icp' → Kevery.processEvent()"
+      - "t='rct' → Kevery.processReceipt()"
+      - "t='exn' → Exchanger.processEvent() (routes by inner 'r' field to IPEX, multisig, etc.)"
+      - "t='iss' → Tevery.processEvent()"
+    related_terms: ["Message Parser", "Event Processor", "Key Event", "Witness", "IPEX"]
+
 events:
   - name: "InceptionCreated"
     payload: "aid: AID, key_state: KeyState, witnesses: [WitnessAID], config: [Trait]"
