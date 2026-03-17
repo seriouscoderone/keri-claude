@@ -102,18 +102,6 @@ adjacents:
     relationship: "Customer-Supplier — edge-signing drives cloud-hosting via KRAM-authenticated requests. Cloud-hosting serves edge-signing but cannot initiate."
     via_port: "port://agent/cloud-hosting/inbound/admin-api"
     is_cross_cutting: false
-  - ref: "domain://keri"
-    relationship: "Customer-Supplier — cloud-hosting consumes KERI for event processing, key state verification, and KEL management"
-    via_port: "port://keri/inbound/identifier-lifecycle"
-    is_cross_cutting: false
-  - ref: "domain://acdc"
-    relationship: "Customer-Supplier — cloud-hosting consumes ACDC for credential storage, exchange, and TEL state tracking"
-    via_port: "port://acdc/inbound/credential-lifecycle"
-    is_cross_cutting: false
-  - ref: "domain://oobi"
-    relationship: "Customer-Supplier — cloud-hosting uses OOBIs for contact discovery and endpoint resolution"
-    via_port: "port://oobi/inbound/discovery"
-    is_cross_cutting: false
 
 externals:
   - name: "Agent Persistence"

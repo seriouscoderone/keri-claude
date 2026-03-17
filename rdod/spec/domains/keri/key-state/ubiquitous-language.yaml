@@ -108,19 +108,19 @@ terms:
     related_terms: ["Witness List", "KAWA", "Immune Constraint"]
 
   - term: "Configuration Traits"
-    synonyms: ["Modes", "c field"]
-    definition: "A list of configuration options set in establishment events that modify the behavior and interpretation of an AID's key state."
+    synonyms: ["c field", "config traits"]
+    definition: "Flags set in the 'c' field of establishment events that constrain AID behavior. Cumulative across establishment events — once set, a trait cannot be removed."
     invariants:
-      - "Set in the c field of establishment events"
-      - "Currently defined traits include: EO (establishment only), DND (do not delegate), DID (delegate is delegator)"
-      - "EO means only establishment events are allowed — no interaction events"
-      - "DND means the AID cannot delegate to other AIDs"
-      - "Traits are cumulative across establishment events"
+      - "EstOnly (EO): only establishment events allowed — interaction events are invalid"
+      - "DoNotDelegate (DND): the AID cannot serve as a delegator for other AIDs"
+      - "NoBackers: no backers/witnesses required for this AID"
+      - "DID (Delegated Identifier Delegator): validators may treat delegates as the AID itself"
+      - "Traits are cumulative — set at inception and carried forward in all subsequent key state"
     examples:
-      - "['EO'] — establishment-only mode, no interaction events permitted"
-      - "['DND'] — delegation not allowed from this AID"
-      - "['DID'] — validators may treat delegates of this AID as the AID itself"
-    related_terms: ["Key State", "Establishment Event"]
+      - "c=['EO'] — establishment-only AID, cannot create interaction events"
+      - "c=['DND'] — AID is prohibited from delegating"
+      - "c=['EO', 'DND'] — locked-down AID: no interactions, no delegation"
+    related_terms: ["Key State", "Establishment Event", "Inception Event"]
 
   - term: "Establishment Subsequence"
     synonyms: ["Establishment Event Sequence"]
@@ -230,19 +230,6 @@ terms:
       - "In keripy: wits=['BGKV...', 'BJfu...', 'BAPv...'] with toader=Tholder(sith='2') requiring 2-of-3 receipts"
       - "In keriox: WitnessConfig with witness list and toad threshold"
     related_terms: ["Witness List", "Witness Threshold", "Key State", "KAWA"]
-
-  - term: "Configuration Traits"
-    synonyms: ["c field", "config traits"]
-    definition: "Boolean flags set at inception that constrain AID behavior. Set via the 'c' field in inception events and carried forward in key state."
-    invariants:
-      - "EstOnly (EO): only establishment events allowed, interaction events are invalid"
-      - "DoNotDelegate (DND): the AID cannot serve as a delegator for other AIDs"
-      - "NoBackers: no backers/witnesses required for this AID"
-      - "Traits are set at inception and are cumulative across establishment events"
-    examples:
-      - "c=['EO'] — establishment-only AID, cannot create interaction events"
-      - "c=['DND'] — AID is prohibited from delegating to other identifiers"
-    related_terms: ["Key State", "Establishment Event", "Inception Event"]
 
   - term: "State Reconstruction"
     synonyms: []

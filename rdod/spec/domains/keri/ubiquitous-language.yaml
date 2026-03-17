@@ -42,15 +42,18 @@ terms:
 
   - term: "Establishment Event"
     synonyms: []
-    definition: "A key event that changes key state — inception (icp) or rotation (rot). Only establishment events modify signing/rotation authority."
+    definition: "A key event that changes key state. Four types: inception (icp), rotation (rot), delegated inception (dip), and delegated rotation (drt). Only establishment events modify signing/rotation authority."
     invariants:
       - "Must include signing keys (k field) and next key digests (n field)"
       - "Must include witness set (b field) and threshold (bt field)"
-      - "The establishment subsequence is: icp → (rot* ixn*)* rot*"
+      - "Delegated variants (dip, drt) additionally include the delegator prefix (di field)"
+      - "The establishment subsequence is: icp|dip → (rot|drt* ixn*)* rot|drt*"
     examples:
       - "icp: initial establishment with first key set and witness set"
       - "rot: key rotation with new keys, optionally modified witnesses"
-    related_terms: ["Key Event", "Key State", "Pre-rotation"]
+      - "dip: delegated inception — same as icp but references delegator via di field"
+      - "drt: delegated rotation — same as rot but requires delegator approval seal"
+    related_terms: ["Key Event", "Key State", "Pre-rotation", "Delegation"]
 
   - term: "KEL"
     synonyms: ["Key Event Log"]
