@@ -182,6 +182,81 @@ terms:
       - "Prior next has 5 keys with threshold 3; rotation uses 3 as signing keys and discards the other 2"
     related_terms: ["Pre-rotation Commitment", "Dual Threshold", "Dead-Attack"]
 
+  - term: "Key Event Verifier"
+    synonyms: ["Kever", "IdentifierState"]
+    definition: "State machine tracking one AID's current key state. Computed deterministically from the KEL's establishment subsequence. Holds current signing keys, signing threshold, next key digests, next threshold, witness list, witness threshold, and last establishment event location."
+    invariants:
+      - "One Key Event Verifier instance per AID being tracked"
+      - "State is updated only by establishment events (icp, rot, dip, drt)"
+      - "Provides signature verification against the current signing keys and threshold"
+      - "Tracks the last establishment event location for rotation validation"
+    examples:
+      - "A Kever (keripy) initialized from an inception event, then updated by each subsequent rotation"
+      - "An IdentifierState (keriox) struct reconstructed by replaying the KEL"
+    related_terms: ["Key State", "Establishment Event", "Last Establishment Data", "Signing Keys"]
+
+  - term: "Last Establishment Data"
+    synonyms: ["lastEst", "LastEstablishmentData"]
+    definition: "Snapshot of the most recent establishment event: sequence number, event digest, witnesses removed, and witnesses added. Used for rotation validation — the next rotation must reference this data."
+    invariants:
+      - "Updated each time an establishment event is processed"
+      - "Contains the sequence number and SAID of the last establishment event"
+      - "Stores witness changes (broken/added) from the last establishment event"
+      - "Required input for validating the next rotation event"
+    examples:
+      - "After a rotation at sn=4: lastEst holds {sn: 4, digest: 'EABC...', br: ['Bxyz...'], ba: ['Bdef...']}"
+    related_terms: ["Key Event Verifier", "Rotation Event", "Establishment Event"]
+
+  - term: "Key Configuration"
+    synonyms: ["KeyConfig"]
+    definition: "The current set of signing keys paired with the next key hash commitment. Represents the cryptographic material portion of key state — the keys authorized to sign now and the digests constraining the next rotation."
+    invariants:
+      - "Current signing keys (verfers in keripy) are qualified public keys ready for signature verification"
+      - "Next key digests (ndigers in keripy) are one-way commitments to future rotation keys"
+      - "Both lists are ordered — index position matters for indexed signatures and thresholds"
+    examples:
+      - "In keripy: verfers=[Verfer(qb64='DABC...'), Verfer(qb64='DDEF...')] + ndigers=[Diger(qb64='EABC...')]"
+      - "In keriox: KeyConfig struct with current public keys and next key commitment fields"
+    related_terms: ["Key State", "Signing Keys", "Next Key Digests", "Key Event Verifier"]
+
+  - term: "Witness Configuration"
+    synonyms: ["WitnessConfig"]
+    definition: "The current witness list paired with the receipt threshold (TOAD — Threshold of Accountable Duplicity). Provides the accountability layer of key state — which witnesses must receipt events and how many receipts are required."
+    invariants:
+      - "Witness list is an ordered set of witness AIDs"
+      - "TOAD must be satisfiable given the witness count"
+      - "Provides enough_receipts() check — whether the witness threshold is met for a given event"
+    examples:
+      - "In keripy: wits=['BGKV...', 'BJfu...', 'BAPv...'] with toader=Tholder(sith='2') requiring 2-of-3 receipts"
+      - "In keriox: WitnessConfig with witness list and toad threshold"
+    related_terms: ["Witness List", "Witness Threshold", "Key State", "KAWA"]
+
+  - term: "Configuration Traits"
+    synonyms: ["c field", "config traits"]
+    definition: "Boolean flags set at inception that constrain AID behavior. Set via the 'c' field in inception events and carried forward in key state."
+    invariants:
+      - "EstOnly (EO): only establishment events allowed, interaction events are invalid"
+      - "DoNotDelegate (DND): the AID cannot serve as a delegator for other AIDs"
+      - "NoBackers: no backers/witnesses required for this AID"
+      - "Traits are set at inception and are cumulative across establishment events"
+    examples:
+      - "c=['EO'] — establishment-only AID, cannot create interaction events"
+      - "c=['DND'] — AID is prohibited from delegating to other identifiers"
+    related_terms: ["Key State", "Establishment Event", "Inception Event"]
+
+  - term: "State Reconstruction"
+    synonyms: []
+    definition: "The process of recomputing current key state by replaying the KEL from inception through all establishment events. Enables stateless verification — any validator can reconstruct state from the log alone without relying on cached state."
+    invariants:
+      - "Replaying the same KEL always produces the same key state (deterministic)"
+      - "Only establishment events in the replay affect the resulting key state"
+      - "Interaction events are traversed for hash-chain validation but do not modify state"
+      - "Any validator can independently reconstruct key state from a KEL copy"
+    examples:
+      - "In keriox: EventStorage.get_state() replays the KEL to reconstruct IdentifierState"
+      - "A new validator bootstrapping by replaying a full KEL from inception to compute current key state"
+    related_terms: ["Key State", "Key Event Verifier", "Establishment Subsequence", "KEL"]
+
 events:
   - name: "KeyStateComputed"
     payload: "aid: AID, key_state: KeyState, from_event: EstablishmentEvent"

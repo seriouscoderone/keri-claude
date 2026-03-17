@@ -229,6 +229,99 @@ terms:
       - "ba=['BO3cCAfQiq...', 'BPowpltoeF...'] adds two new witnesses during rotation"
     related_terms: ["Witness Prune List", "Rotation Event", "Witness List"]
 
+  - term: "Event Serializer"
+    synonyms: ["SerderKERI", "KeriEvent<KeyEvent>"]
+    definition: "Serializes and deserializes KERI events to/from bytes with version string, SAID computation, and field validation. Validates field order per event type (ilk). Supports JSON, CBOR, and MessagePack serialization kinds."
+    invariants:
+      - "Enforces normative field ordering for each event type"
+      - "Computes and validates the SAID (d field) on serialization and deserialization"
+      - "Parses and validates the version string (v field) including size and serialization kind"
+      - "Provides access to event fields (ilk, AID prefix, sequence number, prior digest, etc.)"
+    examples:
+      - "SerderKERI(raw=bytes) in keripy — deserializes bytes and validates SAID"
+      - "KeriEvent<KeyEvent> in keriox — typed event wrapper with serialization"
+    related_terms: ["SAID", "Version String", "Event Serialization"]
+
+  - term: "Signed Event Message"
+    synonyms: ["SignedEventMessage"]
+    definition: "An event bundled with its signatures and optional witness receipts. The unit of transmission between agents — contains the serialized event, indexed controller signatures, and optionally witness receipts and delegator seals."
+    invariants:
+      - "Contains the serialized event message and at least one controller signature"
+      - "Controller signatures are indexed (Siger) — index corresponds to key position in the signing key list"
+      - "May include witness receipts (indexed or non-indexed signatures from witnesses)"
+      - "May include a delegator seal for delegated events"
+    examples:
+      - "A SignedEventMessage containing an icp event, 2-of-3 indexed controller signatures, and 3 witness receipts"
+    related_terms: ["Event Serializer", "Seal", "Signing Threshold"]
+
+  - term: "First-Seen Ordering"
+    synonyms: ["FEL", ".fels", ".fons"]
+    definition: "The monotonically increasing ordinal assigned to each event when first accepted into the KEL. Separate from sequence number — the first-seen number (fn) tracks the order events were received and validated, not the order they were created. Supports replay and cloning."
+    invariants:
+      - "First-seen number (fn) is assigned at acceptance time, not at creation time"
+      - "Different KEL copies may assign different fn values to the same event"
+      - "The first-seen log (.fels) maps prefix+fn to event digest; the ordinal index (.fons) maps prefix+digest to fn"
+      - "Enables ordered replay — events can be replayed in the order they were first accepted"
+    examples:
+      - "Event at sn=5 might have fn=7 if two superseded events were accepted at earlier fn values"
+      - "Cloning a KEL: replay events in fn order to replicate the first-seen history"
+    related_terms: ["First-seen Number", "Sequence Number", "KEL Storage Schema"]
+
+  - term: "Event Source Record"
+    synonyms: ["ESR", ".esrs"]
+    definition: "Metadata tracking whether an event was received from a local (protected) or remote (unprotected) source. Local events have higher trust — protected by the controller's own infrastructure. Remote events require additional validation."
+    invariants:
+      - "Each accepted event has an associated source record"
+      - "Local source: event originated from the controller's own device or protected channel"
+      - "Remote source: event received over the network from an external party"
+      - "Validation rules differ based on source — local events may bypass certain witness checks"
+    examples:
+      - "A controller's own inception event marked as local in .esrs"
+      - "An event received from a witness relay marked as remote in .esrs"
+    related_terms: ["Event Locality", "Event Processor", "Validation Rules"]
+
+  - term: "KEL Storage Schema"
+    synonyms: []
+    definition: "Database organization for the Key Event Log. Key subdatabases partition events, signatures, receipts, and metadata into separate indexed stores for efficient access."
+    invariants:
+      - ".evts: events indexed by prefix+digest"
+      - ".kels: KEL index mapping prefix+sn to event digest"
+      - ".fels: first-seen log mapping prefix+fn to event digest"
+      - ".fons: first-seen ordinal mapping prefix+digest to fn"
+      - ".sigs: controller signatures indexed by event"
+      - ".wigs: witness signatures indexed by event"
+    examples:
+      - "Looking up current event at sn=5 for prefix P: query .kels[P+5] to get digest D, then .evts[P+D] to get event bytes"
+      - "Replaying KEL in first-seen order: iterate .fels[P+0], .fels[P+1], ... to get digests, then fetch from .evts"
+    related_terms: ["Event Database", "First-Seen Ordering", "Event Source Record"]
+
+  - term: "Event Creation Functions"
+    synonyms: ["incept()", "rotate()", "interact()", "receipt()"]
+    definition: "Module-level functions that construct event serializer objects. Each takes the required fields for its event type and returns a serialized event ready for signing. Separate from the Key Event Verifier state machine — these are pure construction functions."
+    invariants:
+      - "incept() constructs an inception event from keys, thresholds, witnesses, and config traits"
+      - "rotate() constructs a rotation event from new keys, prior state, and witness changes"
+      - "interact() constructs an interaction event from seals/anchors"
+      - "receipt() constructs a receipt (non-transferable or transferable) for an existing event"
+      - "All functions compute the SAID and version string automatically"
+    examples:
+      - "serder = incept(keys=['DABC...'], ndigs=['EDEF...'], wits=['BGHI...'], toad=1)"
+      - "serder = rotate(pre='EABC...', keys=new_keys, dig=prior_said, sn=2)"
+    related_terms: ["Event Serializer", "Key Event Verifier", "SAID"]
+
+  - term: "Quorum Calculation"
+    synonyms: ["ample()", "simple()"]
+    definition: "Functions computing Byzantine fault-tolerant majority thresholds. Used for witness thresholds and multi-sig quorum determination."
+    invariants:
+      - "simple(n) = n//2 + 1 — simple majority"
+      - "ample(n, f) computes m where (n+f+1)/2 <= m <= n-f, subject to n >= 3f+1"
+      - "Ensures Byzantine fault tolerance — the quorum is large enough to tolerate f faulty participants"
+      - "Used to compute default witness thresholds when not explicitly specified"
+    examples:
+      - "simple(5) = 3 — majority of 5 witnesses"
+      - "ample(7, 2) = 5 — tolerating 2 faulty witnesses out of 7 (7 >= 3*2+1)"
+    related_terms: ["Witness Threshold", "Signing Threshold", "Threshold"]
+
 events:
   - name: "InceptionCreated"
     payload: "aid: AID, key_state: KeyState, witnesses: [WitnessAID], config: [Trait], said: SAID"

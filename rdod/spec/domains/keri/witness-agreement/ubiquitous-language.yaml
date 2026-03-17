@@ -183,6 +183,76 @@ terms:
       - "A public AID with 5 witnesses and threshold 3 — any validator can obtain and verify the KERL"
     related_terms: ["Direct Mode", "KERL", "KAWA", "Witness"]
 
+  - term: "TOAD"
+    synonyms: ["Threshold of Accountable Duplicity", "toader [keripy]", "tally [keriox]"]
+    definition: "The numeric threshold of witness receipts required before an event is considered fully witnessed. Set per AID in establishment events. Must satisfy: TOAD <= witness_count and TOAD >= ample(witness_count). The name emphasizes that this threshold determines when duplicity becomes accountable."
+    invariants:
+      - "Set in the bt field of establishment events, alongside the witness list"
+      - "Must be less than or equal to the total number of designated witnesses"
+      - "Must be at least ample(witness_count), the BFT minimum for the given witness count"
+      - "In keripy, the Toader class (coring module) wraps the TOAD value"
+      - "In keriox, the tally field on establishment events holds this value"
+    examples:
+      - "bt='3' with 5 witnesses: 3 receipts required before the event is fully witnessed"
+      - "Toader(toad=4) in keripy wrapping bt=4 for a 6-witness configuration"
+    related_terms: ["Accountability Threshold", "Witness", "BFT Quorum", "KAWA"]
+
+  - term: "Receipt Types"
+    synonyms: []
+    definition: "Three distinct receipt message types in the KERI protocol, each carrying different signature and identifier structures depending on the signer's transferability and role."
+    invariants:
+      - "Non-transferable Receipt Couple: (Prefixer, Cigar) — witness AID prefix + unindexed signature. Used by non-transferable witness AIDs. Stored in .rcts"
+      - "Transferable Receipt Quadruple: (Prefixer, Seqner, Saider, Siger) — validator prefix + sn + digest + indexed signature. Used by transferable validator/delegator AIDs. Stored in .vrcs"
+      - "Witness Indexed Receipt: (Diger, Siger) — event digest + indexed witness signature. Used in indirect mode. Stored in .wigs"
+      - "Receipt type is determined by the signer's AID type (transferable vs. non-transferable) and role (witness vs. validator)"
+    examples:
+      - "A non-transferable witness receipts via Couple: its AID prefix + Cigar (unindexed Ed25519 signature)"
+      - "A transferable validator receipts via Quadruple: its AID + current sn + event digest + indexed Siger"
+      - "An indexed witness receipt in .wigs: event Diger + Siger with the witness's index in the b list"
+    related_terms: ["Receipt", "Witness", "CESR Attachment Codes"]
+
+  - term: "Receipt Escrows"
+    synonyms: []
+    definition: "Typed escrow queues for receipts that cannot yet be verified because the corresponding key event has not been processed."
+    invariants:
+      - "Unverified Witness Receipts (.uwes): witness receipts for events not yet in the KEL"
+      - "Unverified Non-transferable Receipts (.ures): non-transferable receipts for unknown events"
+      - "Unverified Transferable Receipts (.vres): transferable receipts for unknown events"
+      - "Default timeout: 3600 seconds — escrowed receipts are pruned after expiry"
+      - "Drained by Kevery.processEscrowUnverWitness(), processEscrowUnverNonTrans(), processEscrowUnverTrans() in keripy"
+      - "When the missing event arrives, matching escrowed receipts are promoted to verified storage"
+    examples:
+      - "A witness receipt for sn=5 arrives before the event at sn=5 — escrowed in .uwes until the event is processed"
+      - "After event at sn=5 is accepted, .uwes is drained and matching receipts are attached to the event"
+    related_terms: ["Receipt", "Receipt Types", "Kevery"]
+
+  - term: "Witness Receipt Generator"
+    synonyms: ["WitnessReceiptGenerator [keriox]", "Receiptor [keripy]"]
+    definition: "Component that automatically generates a witness receipt (non-transferable signature) when a new key event is accepted into the KEL."
+    invariants:
+      - "Triggers on new key event acceptance — KeyEventAdded notification in keriox, cues in keripy"
+      - "Generates a non-transferable receipt using the witness's signing keys"
+      - "In keriox: observes KeyEventAdded notification from the NotificationBus"
+      - "In keripy: the Receiptor class processes cues from Kevery to generate receipts"
+      - "The generated receipt is then disseminated to the controller and other witnesses"
+    examples:
+      - "In keriox: WitnessReceiptGenerator subscribes to KeyEventAdded, creates receipt for each accepted event"
+      - "In keripy: Receiptor.processCues() iterates cues, generating receipts for witnessed events"
+    related_terms: ["Receipt", "Witness", "Notification Bus"]
+
+  - term: "BFT Quorum"
+    synonyms: ["ample()"]
+    definition: "Byzantine fault-tolerant majority calculation for witness thresholds. For n witnesses tolerating f faults: m = ceil((n+f+1)/2), subject to n >= 3f+1. Ensures that any two quorums overlap, preventing undetectable duplicity."
+    invariants:
+      - "Implemented as ample() function in keripy (kering module)"
+      - "For n witnesses: the minimum threshold m guarantees that any two sets of m witnesses share at least one honest member"
+      - "The overlap property ensures that a dishonest controller cannot get two different events fully witnessed without detection"
+      - "Used as the floor for TOAD — the controller may choose a higher threshold but not lower"
+    examples:
+      - "ample(5) = 4: with 5 witnesses, at least 4 must receipt to guarantee quorum overlap"
+      - "ample(7) = 5: with 7 witnesses tolerating 2 faults, 5 receipts needed"
+    related_terms: ["TOAD", "Accountability Threshold", "Immune Constraint", "KAWA"]
+
 events:
   - name: "EventReceipted"
     payload: "aid: AID, sn: int, event_said: SAID, witness_aid: WitnessAID, receipt_signature: Signature"

@@ -208,6 +208,63 @@ terms:
       - "Rule B1: delegated rot approved at delegator sn=10 supersedes delegated rot approved at delegator sn=8"
     related_terms: ["Superseding Recovery", "Reconciliation", "Delegation"]
 
+  - term: "Fork Detection"
+    synonyms: []
+    definition: "The process of identifying when multiple events exist at the same (prefix, sequence number) with different digests. A fork is proof of controller duplicity — only the controller can sign events, so two valid events at the same sn means the controller signed both."
+    invariants:
+      - "A fork requires two events with the same AID prefix and sequence number but different SAIDs"
+      - "Both events must have valid signatures against the key state at that sn"
+      - "Only the controller holds signing keys, so a fork is non-repudiable evidence of duplicity (or key compromise)"
+      - "Fork detection occurs during event processing when an incoming event conflicts with an already-accepted event"
+      - "Detected forks trigger escrow to the Likely Duplicitous Escrow for further investigation"
+    examples:
+      - "Event E1 at (AID, sn=5) with SAID=X already accepted; Event E2 at (AID, sn=5) with SAID=Y arrives — fork detected"
+      - "In keripy Kevery: an incoming event at an occupied sn with a different digest triggers duplicity handling"
+    related_terms: ["Duplicity", "Duplicity Evidence", "Likely Duplicitous Escrow"]
+
+  - term: "Likely Duplicitous Escrow"
+    synonyms: ["LDE", ".ldes [keripy]"]
+    definition: "Storage for events that appear duplicitous but haven't been fully confirmed. Events land here when a fork is detected during event processing."
+    invariants:
+      - "Events are placed here when a conflicting event at the same (prefix, sn) is detected"
+      - "Timeout: 3600 seconds — escrowed events are pruned after expiry"
+      - "Events may be promoted to the confirmed Duplicitous Event Log (.dels) after investigation"
+      - "In keripy: stored in .ldes database, processed by Kevery.processEscrowLikelyDuplicitous()"
+      - "Distinguished from the DEL — LDE holds suspected duplicity, DEL holds confirmed duplicity"
+    examples:
+      - "An event at sn=5 arrives that conflicts with the accepted event at sn=5 — placed in .ldes for investigation"
+      - "After timeout or confirmation, event is either promoted to .dels or pruned"
+    related_terms: ["Fork Detection", "Duplicitous Event Log", "Duplicity Evidence"]
+
+  - term: "Duplicitous Event Log"
+    synonyms: ["DEL", ".dels [keripy]", "DuplicitousEvents escrow [keriox]"]
+    definition: "Permanent storage of confirmed duplicitous events. Unlike other escrows, entries are never automatically deleted — they serve as forensic evidence of controller misbehavior. Stored separately from the valid KEL."
+    invariants:
+      - "Contains confirmed duplicitous events — events verified as forks at the same (prefix, sn)"
+      - "Entries are never automatically pruned or timed out — they are permanent evidence"
+      - "Stored separately from the KEL — the DEL is a forensic log, not an event history"
+      - "In keripy: .dels database, distinct from the .ldes (likely duplicitous) escrow"
+      - "In keriox: DuplicitousEvents escrow in the event processor"
+      - "Used by judges and watchers to make trust decisions"
+    examples:
+      - "Two confirmed conflicting rotation events at sn=3, both with valid signatures — stored permanently in .dels"
+      - "A judge queries .dels for an AID and finds confirmed duplicity evidence — revokes trust"
+    related_terms: ["DEL", "Likely Duplicitous Escrow", "Fork Detection", "Judge"]
+
+  - term: "Notification Bus"
+    synonyms: ["NotificationBus [keriox]", "cues [keripy]"]
+    definition: "Pub-sub system enabling escrow reprocessing and component coordination. When an event is accepted (KeyEventAdded), all escrows and dependent components are notified so they can retry their pending items."
+    invariants:
+      - "In keripy: implemented as a cues deque drained by processCues() — components push cue dicts, consumers pop and handle them"
+      - "In keriox: implemented as NotificationBus with observer pattern — components register as observers for specific notification types"
+      - "KeyEventAdded is the primary notification — triggers escrow draining, receipt generation, and delegation processing"
+      - "Decouples event acceptance from downstream processing — the event processor does not need to know about all consumers"
+      - "Other notification types include delegated event notifications and receipt notifications"
+    examples:
+      - "In keriox: NotificationBus.notify(KeyEventAdded {prefix, sn, digest}) triggers WitnessReceiptGenerator, escrow processors"
+      - "In keripy: Kevery pushes {'kin':'eventAdded', 'prefix':..., 'sn':...} to cues; Receiptor drains it to generate receipts"
+    related_terms: ["Witness Receipt Generator", "Receipt Escrows", "Likely Duplicitous Escrow"]
+
 events:
   - name: "DuplicityDetected"
     payload: "aid: AID, sn: int, first_seen_event: KeyEvent, conflicting_event: KeyEvent, detected_by: WatcherAID"

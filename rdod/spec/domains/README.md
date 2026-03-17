@@ -71,12 +71,12 @@ graph TD
 
 | ID | Name | Role | Status | Terms | Description |
 |----|------|------|--------|-------|-------------|
-| `keri` | KERI Protocol | core | complete | 13 | Decentralized key management protocol — AID lifecycle, events, witnesses |
-| `keri/key-state` | Key State | subdomain | complete | 14 | Current signing keys, thresholds, pre-rotation commitments |
-| `keri/event-log` | Event Log | subdomain | complete | 18 | KEL: append-only event stream, hash-chaining, seals |
-| `keri/witness-agreement` | Witness Agreement | subdomain | complete | 14 | KAWA: receipting, first-seen rule, accountability threshold |
-| `keri/duplicity-detection` | Duplicity Detection | subdomain | complete | 16 | Inconsistent histories, evidence, judge/juror, recovery |
-| `keri/delegation` | Delegation | subdomain | complete | 15 | Delegated AIDs, hierarchical control, custodial management |
+| `keri` | KERI Protocol | core | complete | 18 | Hab/Habery, Kevery, Baser, Parser, escrow architecture |
+| `keri/key-state` | Key State | subdomain | complete | 20 | Kever/IdentifierState, KeyConfig, WitnessConfig, state reconstruction |
+| `keri/event-log` | Event Log | subdomain | complete | 25 | SerderKERI, SignedEventMessage, first-seen ordering, KEL storage schema |
+| `keri/witness-agreement` | Witness Agreement | subdomain | complete | 19 | TOAD, receipt types/escrows, WitnessReceiptGenerator, BFT quorum |
+| `keri/duplicity-detection` | Duplicity Detection | subdomain | complete | 20 | Fork detection, LDE/DEL storage, notification bus |
+| `keri/delegation` | Delegation | subdomain | complete | 20 | Seal source, PDE/delegables escrow, approved seals, validation pipeline |
 | `cesr` | CESR Encoding | core | complete | 20 | Composable Event Streaming Representation — encoding layer |
 | `cesr/cesr-primitives` | CESR Primitives | subdomain | complete | 34 | Matter/Indexer traits, Verfer–Cipher, Sadder/Serder/Creder, Tholder |
 | `cesr/cesr-stream` | CESR Stream | subdomain | complete | 24 | Count codes, 12 concrete group types, parser dispatch, round-trip serialization |

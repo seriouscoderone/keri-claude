@@ -161,6 +161,67 @@ terms:
       - "KERI10JSON00011c_ — KERI v1.0, JSON serialization, 284 bytes"
     related_terms: ["CESR"]
 
+  - term: "Habitat"
+    synonyms: ["Hab", "Habery"]
+    definition: "Controller's view of a managed AID. A Habitat represents one AID; a Habitat collection (Habery) is the set of Habitats sharing a database environment. A Habitat wraps a Key Event Verifier with signing capability, and the collection owns the database, key manager, event processor, and message parser."
+    invariants:
+      - "Each Habitat maps to exactly one AID"
+      - "A Habitat collection (Habery) provides a shared database, key manager, and event processor to all its Habitats"
+      - "A Habitat combines key state verification (Kever) with the ability to sign events using the controller's private keys"
+    examples:
+      - "A single Hab managing one Ed25519 AID with its Kever, database, and signing keys"
+      - "A Habery holding multiple Habs for a multi-AID controller, sharing a single Baser and Kevery"
+    related_terms: ["Controller", "AID", "Key Event Verifier", "Event Database", "Event Processor"]
+
+  - term: "Event Database"
+    synonyms: ["Baser"]
+    definition: "Persistent storage for KELs, escrows, receipts, key state, and application data. Organized as named subdatabases (.evts, .kels, .sigs, .wigs, .rcts, etc.)."
+    invariants:
+      - "Provides append-only semantics for KEL events"
+      - "Supports indexed access by prefix, sequence number, digest, and first-seen number"
+      - "Named subdatabases partition events, signatures, receipts, and escrow queues"
+    examples:
+      - "LMDB-based Baser in keripy with subdatabases: .evts (events by prefix+digest), .kels (KEL index), .sigs (controller signatures)"
+      - "DynamoDB-based storage in serious-keri with equivalent partitioning"
+    related_terms: ["KEL", "Habitat", "KEL Storage Schema"]
+
+  - term: "Event Processor"
+    synonyms: ["Kevery"]
+    definition: "The event validation and acceptance pipeline. Processes incoming events against current key state, manages escrow queues, and emits cues for receipting and notification. Operates in lax (promiscuous) or strict mode and tracks local vs remote event sources."
+    invariants:
+      - "Validates event signatures against current key state before acceptance"
+      - "Escrows events that cannot yet be validated (out-of-order, partially signed, partially witnessed)"
+      - "Emits cues (notifications) for receipting and downstream processing"
+      - "Distinguishes local (trusted) from remote (untrusted) event sources"
+    examples:
+      - "A Kevery in lax mode accepting any well-formed event regardless of witness receipts"
+      - "A Kevery in strict mode requiring witness threshold before accepting an event"
+    related_terms: ["Key Event Verifier", "Escrow Architecture", "Event Database", "Message Parser"]
+
+  - term: "Message Parser"
+    synonyms: ["Parser"]
+    definition: "CESR message stream processor that reads serialized messages from a byte stream and dispatches each parsed message to the appropriate protocol handler: Event Processor (KEL events), TEL processor, exchange handler, or reply handler."
+    invariants:
+      - "Detects message boundaries using version string regex (cold-start capable)"
+      - "Dispatches by message type (ilk) to the correct handler"
+      - "Processes attached signatures, witness receipts, and other groups following each message"
+    examples:
+      - "Parser reading a TCP stream, detecting 'KERI10JSON...' version strings, and dispatching icp/rot/ixn to Kevery"
+    related_terms: ["Event Processor", "Version String", "CESR"]
+
+  - term: "Escrow Architecture"
+    synonyms: []
+    definition: "Cross-cutting pattern where events that cannot be immediately validated are held in typed escrow queues with timeouts. Escrows are periodically drained by processing loops that re-attempt validation as new information arrives."
+    invariants:
+      - "Escrow types include: out-of-order, partially-signed, partially-witnessed, partially-delegated, unverified receipts, likely duplicitous"
+      - "Each escrow type has a configurable timeout (default: 3600s for most types, 1200s for out-of-order)"
+      - "Escrow processing is idempotent — re-processing an escrowed event either promotes it to the KEL or leaves it escrowed"
+      - "Timed-out escrow entries are pruned during processing sweeps"
+    examples:
+      - "An event at sn=5 arrives before sn=4 — escrowed as out-of-order until sn=4 is received"
+      - "A multi-sig event with 1 of 3 required signatures — escrowed as partially-signed until remaining signatures arrive"
+    related_terms: ["Event Processor", "Event Database", "Witness Threshold"]
+
 events:
   - name: "InceptionCreated"
     payload: "aid: AID, key_state: KeyState, witnesses: [WitnessAID], config: [Trait]"
