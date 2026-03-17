@@ -295,6 +295,10 @@ events:
     payload: "source: AID, target: AID, type: string"
     triggers: "Message router receives and routes an external KERI protocol message"
 
+  - name: "OOBIResolved"
+    payload: "aid: AID, endpoint: URL, role: string, kel_verified: bool"
+    triggers: "Agent resolves an OOBI URL, retrieves and verifies the discovered AID's KEL"
+
 rules:
   - "KERIA can NEVER produce a valid signature — all signing delegated to edge"
   - "All admin API requests must be KRAM-authenticated — no anonymous access"
@@ -306,3 +310,4 @@ rules:
   - "All async work flows through Decks — producers append, consumer Doers drain in their recur() loop"
   - "Long-running operations are the ONLY mechanism for tracking async completion — no callbacks to edge"
   - "Credential search indexes are rebuilt from schema structure — each scalar attribute becomes a searchable field"
+  - "Credential wallet operations (present, revoke) require edge-signed authorization — the agent cannot present credentials unilaterally"
