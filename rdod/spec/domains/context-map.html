@@ -219,9 +219,78 @@
 const RDOD_DATA = [
   {
     "template_version": "1.0",
+    "id": "acdc/disclosure/aggregation",
+    "name": "Disclosure Aggregation",
+    "description": "The mechanics of selective disclosure via aggregate identifiers — AGID computation, inclusion proofs, schema composition (oneOf/anyOf), the most compact form algorithm, the Compactor engine, and SAD path signatures. This subdomain owns the cryptographic commitment structure that enables proving individual attribute membership in a set without revealing other members, and the algorithms for computing canonical SAIDs across hierarchical credential structures.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — Aggregate Section, AGID Computation, Inclusion Proof, Most Compact Form Algorithm sections"
+      },
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — oneOf/anyOf Composition, SAD Path Signatures, Selective Disclosure Verification"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/coring.py (Compactor class, saidify algorithm), src/keri/vc/proving.py (aggregate computation)"
+      },
+      {
+        "type": "implementation",
+        "reference": "parside — SadPathSig group parsing (spsgs/spcgs)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Aggregate Commitment",
+        "definition": "The cryptographic structure binding a set of blinded attribute block SAIDs into a single verifiable AGID, enabling membership proofs without full set disclosure",
+        "invariants": [
+          "AGID is the sole compact representation of the entire selectively disclosable set",
+          "Modifying any block's SAID invalidates the AGID"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://acdc/disclosure",
+        "relationship": "Parent disclosure domain delegates aggregate computation, inclusion proofs, compaction, and path signatures to this subdomain",
+        "via_port": "port://acdc/disclosure/aggregation/inbound/aggregation-operations"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Blake3-256 for AGID digest computation, SAID computation for most compact form algorithm",
+        "relationship": "Cryptographic algorithm types used for computing the AGID digest over serialized SAID lists and for the depth-first SAID computation in the most compact form algorithm"
+      }
+    ],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "The AGID computation requires serialization-kind-aware digest computation — the SAID list is serialized before digesting, and the zeroth element is the AGID itself (computed via dummy character replacement). The most compact form algorithm is a depth-first traversal that SAIDifies leaves first and works upward. In keripy, the Compactor class implements hierarchical graduated partial disclosure with .leaves, .partials, and .iscompact properties. SAD path signatures (SadPathSig groups) use Pather primitives to bind signatures to specific paths within the SAD tree. Indexed variants use quinkey indexing (.spsgs), non-indexed use couple form (.spcgs).\n"
+    },
+    "issues": [],
+    "tags": [
+      "aggregation",
+      "agid",
+      "inclusion-proof",
+      "compactor",
+      "most-compact-form",
+      "sad-path-signatures",
+      "oneof",
+      "anyof"
+    ],
+    "_source": "rdod/spec/domains/acdc/disclosure/aggregation/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
     "id": "acdc/disclosure",
     "name": "ACDC Disclosure Mechanisms",
-    "description": "Graduated disclosure mechanisms for ACDCs — providing progressive, incremental revelation of credential data following the principle of least disclosure. Supports compact disclosure (SAID-only), partial disclosure (blinded blocks), selective disclosure (individual attribute revelation via aggregate), full disclosure, and chain-link confidential disclosure with contractual protection. Each mechanism leverages CESR-encoded SAIDs and UUID salty nonces for blinding.\n",
+    "description": "Graduated disclosure orchestration for ACDCs — coordinating progressive, incremental revelation of credential data following the principle of least disclosure. This domain orchestrates three subdomains: disclosure modes (the type taxonomy), disclosure privacy (ACDC privacy levels and bulk issuance), and disclosure aggregation (AGID computation, inclusion proofs, compaction, and path signatures).\n",
     "version": "0.1.0",
     "source_material": [
       {
@@ -233,11 +302,11 @@ const RDOD_DATA = [
         "reference": "acdc-specification.md — ACDC Variants, Aggregate Section, Attribute Section"
       },
       {
-        "type": "document",
+        "type": "implementation",
         "reference": "keripy — Python reference implementation, vdr/ and vc/ modules"
       },
       {
-        "type": "document",
+        "type": "implementation",
         "reference": "keriox/teliox — Rust TEL implementation"
       }
     ],
@@ -247,24 +316,7 @@ const RDOD_DATA = [
         "definition": "The incremental, interactive application of the principle of least disclosure — each disclosure reveals the minimum needed to facilitate further disclosure",
         "invariants": [
           "Applies recursively: disclose enough to enable more disclosure",
-          "Mechanisms include compact, metadata, partial, nested partial, full, selective, and bulk-issued"
-        ]
-      },
-      {
-        "term": "Selective Disclosure",
-        "definition": "Mechanism to reveal individual attributes from a set without exposing other attributes, using blinded attribute blocks and an aggregate commitment (AGID)",
-        "invariants": [
-          "Uses the A (aggregate) field, not the a (attribute) field",
-          "Each blinded block has its own d (SAID) and u (UUID) fields",
-          "Disclosure of one block does not leak information about any other block"
-        ]
-      },
-      {
-        "term": "Partial Disclosure",
-        "definition": "Mechanism to reveal the existence and schema of an ACDC without disclosing its detailed content, by presenting only the SAID of a blinded block",
-        "invariants": [
-          "Requires UUID u field for secure blinding against rainbow table attacks",
-          "Disclosure of SAID + schema is not enough to discover content when UUID is present"
+          "Orchestrates modes, privacy, and aggregation subdomains in combination"
         ]
       }
     ],
@@ -275,6 +327,73 @@ const RDOD_DATA = [
         "via_port": "port://acdc/disclosure/inbound/disclosure-management"
       }
     ],
+    "subdomains": [
+      {
+        "ref": "domain://acdc/disclosure/modes",
+        "relationship": "Defines the disclosure type taxonomy — compact, partial, nested partial, full, selective, chain-link confidential"
+      },
+      {
+        "ref": "domain://acdc/disclosure/privacy",
+        "relationship": "Privacy-preserving mechanisms — ACDC privacy levels (public, private, metadata), UUID blinding, bulk issuance"
+      },
+      {
+        "ref": "domain://acdc/disclosure/aggregation",
+        "relationship": "Aggregate computation, inclusion proofs, most compact form algorithm, Compactor engine, SAD path signatures"
+      }
+    ],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "This is an orchestrating domain. Disclosure mode definitions live in modes/, privacy level classification and bulk issuance in privacy/, and aggregate computation, compaction, and path signatures in aggregation/. The parent coordinates graduated disclosure flows that compose all three subdomains.\n"
+    },
+    "issues": [],
+    "tags": [
+      "disclosure",
+      "graduated",
+      "orchestration"
+    ],
+    "_source": "rdod/spec/domains/acdc/disclosure/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "acdc/disclosure/modes",
+    "name": "Disclosure Modes",
+    "description": "The disclosure type taxonomy and their relationships. Defines each mode of graduated disclosure from most private (compact) to most revealing (full), plus the chain-link confidentiality mechanism that gates transitions. This is pure protocol logic — no cryptographic computation, no privacy mechanisms — just the definitions and invariants of each disclosure mode and how they compose within the graduated disclosure framework.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — Compact Disclosure, Partial Disclosure, Full Disclosure, Chain-Link Confidentiality sections"
+      },
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — Nested Partial Disclosure, oneOf Composition for graduated disclosure variants"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/coring.py (compact/expanded SAD handling), src/keri/vc/ (credential variant construction)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Disclosure Mode",
+        "definition": "One of the defined forms in which an ACDC block or credential may be presented — compact, partial, nested partial, full, selective, or chain-link confidential",
+        "invariants": [
+          "Each mode reveals a specific level of information, ordered from least to most",
+          "Modes compose — graduated disclosure applies them in sequence"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://acdc/disclosure",
+        "relationship": "Parent disclosure domain delegates mode definitions and taxonomy to this subdomain",
+        "via_port": "port://acdc/disclosure/modes/inbound/mode-definitions"
+      }
+    ],
     "subdomains": [],
     "kernels": [],
     "adjacents": [],
@@ -282,17 +401,84 @@ const RDOD_DATA = [
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
-      "notes": "Disclosure logic is embedded within ACDC processing. The oneOf composition operators in JSON Schema enable schema validation of both compact and uncompacted variants. Implementations must support the most compact form SAID algorithm for cross-variant verification. The aggregate computation (AGID) requires serialization-kind-aware digest computation.\n"
+      "notes": "This is a leaf domain — pure protocol logic with no kernel or external dependencies. Implementations define the disclosure mode types and their invariants. The oneOf composition operator in JSON Schema enables schema validation of both compact and expanded variants. Chain-link confidentiality is a protocol pattern layered on top of partial and full disclosure modes, gating the transition via contractual acceptance.\n"
     },
     "issues": [],
     "tags": [
-      "disclosure",
-      "privacy",
+      "disclosure-modes",
+      "compact",
+      "partial",
+      "full",
       "selective",
-      "graduated",
-      "chain-link-confidentiality"
+      "chain-link-confidentiality",
+      "oneof"
     ],
-    "_source": "rdod/spec/domains/acdc/disclosure/domain.yaml"
+    "_source": "rdod/spec/domains/acdc/disclosure/modes/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "acdc/disclosure/privacy",
+    "name": "Disclosure Privacy",
+    "description": "Privacy-preserving mechanisms for ACDCs — the three ACDC privacy levels (public, private, metadata), blinding via UUID entropy, and bulk issuance for preventing cross-presentation correlation. Defines how the presence or absence of the top-level UUID u field determines the privacy posture of a credential, and how bulk-issued instances with unique identifiers prevent verifiers from correlating presentations across contexts.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — ACDC Variants (Public, Private, Metadata), UUID Salty Nonce, Bulk Issuance sections"
+      },
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — Blinding, Anti-Correlation, Privacy-Preserving Credentials sections"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/vc/proving.py (UUID handling, bulk issuance), src/keri/core/coring.py (Salter for UUID generation)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "ACDC Privacy Level",
+        "definition": "The privacy posture of an ACDC determined by its top-level UUID u field — public (absent), private (high-entropy), or metadata (empty)",
+        "invariants": [
+          "Three mutually exclusive levels based on the u field",
+          "Privacy level is set at issuance and cannot change"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://acdc/disclosure",
+        "relationship": "Parent disclosure domain delegates privacy level classification and bulk issuance logic to this subdomain",
+        "via_port": "port://acdc/disclosure/privacy/inbound/privacy-mechanisms"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "SAID computation for blinded commitments, UUID entropy requirements (>= 128 bits cryptographic entropy)",
+        "relationship": "Cryptographic algorithm types used for computing blinded SAIDs over UUID-protected blocks and generating high-entropy UUIDs"
+      }
+    ],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "Privacy levels are determined by a single field (the top-level UUID u) and are straightforward to implement. Bulk issuance requires generating multiple instances with unique SAIDs — each instance is a copy of the credential with a different blinded identifier. The kernel dependency is for SAID computation over blinded blocks and UUID generation with sufficient entropy. In keripy, the Salter class provides UUID generation with configurable entropy.\n"
+    },
+    "issues": [],
+    "tags": [
+      "privacy",
+      "public-acdc",
+      "private-acdc",
+      "metadata-acdc",
+      "uuid",
+      "blinding",
+      "bulk-issuance",
+      "anti-correlation"
+    ],
+    "_source": "rdod/spec/domains/acdc/disclosure/privacy/domain.yaml"
   },
   {
     "template_version": "1.0",
@@ -429,7 +615,7 @@ const RDOD_DATA = [
     "template_version": "1.0",
     "id": "acdc/ipex",
     "name": "Issuance and Presentation Exchange (IPEX)",
-    "description": "Issuance and Presentation Exchange Protocol — a uniform mechanism for the issuance and presentation of ACDCs in a securely attributable manner. IPEX models all exchanges (both issuance and presentation) as the disclosure of information by a Discloser to a Disclosee using KERI exchange (exn) messages. The protocol supports graduated disclosure negotiation with contractual protection, leveraging SAIDs, CESR-Path proofs, and Ricardian contracts. Message routes: apply, offer, agree, grant, admit, spurn.\n",
+    "description": "Issuance and Presentation Exchange Protocol — the orchestrating domain that coordinates credential issuance and presentation as disclosure from a Discloser to a Disclosee. IPEX unifies issuance and presentation under a single protocol. Delegates protocol flow to negotiation, cryptographic proof to verification, and message routing to messaging.\n",
     "version": "0.1.0",
     "source_material": [
       {
@@ -439,14 +625,6 @@ const RDOD_DATA = [
       {
         "type": "document",
         "reference": "KERIArchGroupIssuance.md — KERI architectures for group issuance, IPEX and KRAM sections"
-      },
-      {
-        "type": "implementation",
-        "reference": "keripy — src/keri/app/ipexing.py (ipexApplyExn, ipexOfferExn, ipexAgreeExn, ipexGrantExn, ipexAdmitExn, ipexSpurnExn: IPEX message construction functions)"
-      },
-      {
-        "type": "implementation",
-        "reference": "keripy — src/keri/core/exchanging.py (Exchanger: generic EXN message router and handler dispatcher)"
       }
     ],
     "ubiquitous_language": [
@@ -455,17 +633,8 @@ const RDOD_DATA = [
         "definition": "Issuance and Presentation Exchange Protocol — a standard set of KERI exchange (exn) message routes for credential issuance and presentation",
         "invariants": [
           "All exchanges modeled as disclosure from Discloser to Disclosee",
-          "Protocol routes: apply, offer, agree, grant, admit, spurn",
-          "A single protocol works for both issuance and presentation exchanges"
-        ]
-      },
-      {
-        "term": "Grant",
-        "definition": "IPEX message route by which the Discloser provides full or selective disclosure of an ACDC to the Disclosee",
-        "invariants": [
-          "Contains the ACDC (full or selective disclosure variant)",
-          "Includes discloser's signature on the grant or its SAID",
-          "Disclosee responds with admit to confirm receipt"
+          "A single protocol works for both issuance and presentation exchanges",
+          "Delegates protocol flow to negotiation, proof mechanics to verification, message infrastructure to messaging"
         ]
       }
     ],
@@ -476,14 +645,27 @@ const RDOD_DATA = [
         "via_port": "port://acdc/ipex/inbound/exchange-protocol"
       }
     ],
-    "subdomains": [],
+    "subdomains": [
+      {
+        "ref": "domain://acdc/ipex/negotiation",
+        "relationship": "Protocol flow logic — message types, sequencing, exchange patterns"
+      },
+      {
+        "ref": "domain://acdc/ipex/verification",
+        "relationship": "Cryptographic proof mechanics — PoI, PoD, credential artifacts, KRAM"
+      },
+      {
+        "ref": "domain://acdc/ipex/messaging",
+        "relationship": "Message construction, routing, and handler dispatch infrastructure"
+      }
+    ],
     "kernels": [],
     "adjacents": [],
     "externals": [],
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
-      "notes": "IPEX is implemented using KERI exchange (exn) messages with specific route values. The protocol is non-normative in the ACDC spec and is being developed as a separate detailed specification. Implementations must support both the full negotiation flow (apply -> offer -> agree -> grant -> admit) and the direct issuance shortcut (grant -> admit). Group multisig issuance requires coordination of IPEX messages across group members.\n"
+      "notes": "IPEX is an orchestrating domain that coordinates three subdomains: negotiation (protocol flows), verification (cryptographic proofs), and messaging (EXN construction and routing). In keripy, these concerns are co-located in ipexing.py and exchanging.py but are logically separable. Group multisig issuance requires coordination of IPEX messages across group members.\n"
     },
     "issues": [],
     "tags": [
@@ -491,9 +673,279 @@ const RDOD_DATA = [
       "issuance",
       "presentation",
       "disclosure",
-      "protocol"
+      "protocol",
+      "orchestration"
     ],
     "_source": "rdod/spec/domains/acdc/ipex/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "acdc/ipex/messaging",
+    "name": "IPEX Messaging",
+    "description": "The message routing and construction infrastructure for IPEX exchanges. Covers the Exchanger (generic EXN router), IPEX Handler (route-specific processors), message construction functions, and the EXN message format. This subdomain owns HOW IPEX messages are built, dispatched, and processed — not WHAT they mean (negotiation) or WHETHER they are authentic (verification).\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/exchanging.py (Exchanger: generic EXN message router and handler dispatcher)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/app/ipexing.py (ipexApplyExn, ipexOfferExn, ipexAgreeExn, ipexGrantExn, ipexAdmitExn, ipexSpurnExn: IPEX message construction functions)"
+      },
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — Exchange Message format, route field semantics"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "IPEX Messaging Infrastructure",
+        "definition": "The message construction, routing, and handler dispatch layer for IPEX exchange messages",
+        "invariants": [
+          "All IPEX messages use the KERI exchange (exn) message format",
+          "Messages are routed by the route (r) field to registered handlers",
+          "Each IPEX route has a dedicated handler with verify/handle/response methods"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://acdc/ipex",
+        "relationship": "Parent IPEX domain delegates message construction and routing to this subdomain",
+        "via_port": "port://acdc/ipex/messaging/inbound/construct-message"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [
+      {
+        "ref": "domain://keri",
+        "relationship": "EXN message type is defined by the KERI protocol; IPEX messages are a specialization of the generic EXN format"
+      }
+    ],
+    "externals": [
+      {
+        "name": "Transport",
+        "abstraction": "Message delivery between agents",
+        "ref": "port://acdc/ipex/messaging/outbound/message-transport",
+        "implementation_notes": "Delivers constructed EXN messages to recipient agents. Implementations: HTTP, TCP, or agent-to-agent message relay."
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, the Exchanger class in exchanging.py provides the generic EXN router, while the IpexHandler in ipexing.py registers route-specific handlers for '/ipex/*' routes. The ipex*Exn() functions are module-level builders that construct complete EXN messages with the appropriate route and payload. The Exchanger manages exchange escrows for messages awaiting prerequisites (e.g., an admit waiting for its referenced grant to be fully processed).\n"
+    },
+    "issues": [],
+    "tags": [
+      "messaging",
+      "exn",
+      "exchanger",
+      "handler",
+      "message-construction",
+      "routing"
+    ],
+    "_source": "rdod/spec/domains/acdc/ipex/messaging/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "acdc/ipex/negotiation",
+    "name": "IPEX Negotiation",
+    "description": "The protocol flow for credential issuance and presentation exchange. Defines the message types (apply, offer, agree, grant, admit, spurn), the two exchange patterns (direct issuance vs full negotiation), and bespoke issued ACDCs. This is pure protocol logic — no cryptography, no message routing — just the state machine governing how discloser and disclosee negotiate and complete an exchange.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — Issuance and Presentation Exchange (IPEX) section: protocol routes, flow patterns, bespoke issuance"
+      },
+      {
+        "type": "document",
+        "reference": "KERIArchGroupIssuance.md — IPEX protocol flows, direct issuance shortcut"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/app/ipexing.py: protocol flow logic, grant/admit patterns"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "IPEX Negotiation Flow",
+        "definition": "The state machine governing the sequence of IPEX messages between discloser and disclosee — from initiation through completion or rejection",
+        "invariants": [
+          "Two valid patterns: direct issuance (grant -> admit) and full negotiation (apply -> offer -> agree -> grant -> admit)",
+          "Any negotiation step may be spurned, terminating that step but not the relationship",
+          "The protocol is identical for issuance and presentation — only the disclosed content differs"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://acdc/ipex",
+        "relationship": "Parent IPEX domain delegates protocol flow logic to this subdomain",
+        "via_port": "port://acdc/ipex/negotiation/inbound/negotiate"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "This is a leaf domain — pure protocol logic with no kernel or external dependencies. Implementations define the valid message sequences and their semantics. In keripy, the protocol flow is embedded in the ipexing module's message construction functions and the handler dispatch logic. The negotiation domain does not verify signatures or route messages — it defines WHAT messages exist and HOW they sequence.\n"
+    },
+    "issues": [],
+    "tags": [
+      "negotiation",
+      "protocol-flow",
+      "apply",
+      "offer",
+      "agree",
+      "grant",
+      "admit",
+      "spurn",
+      "direct-issuance"
+    ],
+    "_source": "rdod/spec/domains/acdc/ipex/negotiation/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "acdc/ipex/verification",
+    "name": "IPEX Verification",
+    "description": "Proof mechanics for IPEX exchanges — how disclosures are cryptographically verified. Covers Proof of Issuance (PoI), Proof of Disclosure (PoD), credential artifact bundles in grants, and KRAM authentication for exchange messages. This subdomain owns the cryptographic verification logic that the negotiation flow depends on to ensure disclosed credentials are authentic and unaltered.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "acdc-specification.md — Proof of Issuance, Proof of Disclosure, and KRAM sections"
+      },
+      {
+        "type": "document",
+        "reference": "KERIArchGroupIssuance.md — KRAM authentication, grant artifact bundle verification"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/exchanging.py (Exchanger signature validation); src/keri/app/ipexing.py (grant artifact verification)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "IPEX Verification",
+        "definition": "The set of cryptographic proof mechanisms that validate IPEX disclosures — encompassing proof of issuance, proof of disclosure, credential artifact integrity, and message authentication",
+        "invariants": [
+          "Discloser must provide both Proof of Issuance (PoI) and Proof of Disclosure (PoD)",
+          "A signature on the most compact form SAID provides PoI for all schema-authorized variants",
+          "Exchange messages are authenticated via KRAM"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://acdc/ipex",
+        "relationship": "Parent IPEX domain delegates cryptographic verification to this subdomain",
+        "via_port": "port://acdc/ipex/verification/inbound/verify-disclosure"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519/ECDSA signature verification for PoI/PoD, Blake3-256 digest comparison for SAID matching",
+        "relationship": "Signature verification and digest comparison are kernel operations invoked at every verification step"
+      }
+    ],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "Verification logic is invoked by the negotiation flow at grant receipt and by the messaging layer during signature validation. In keripy, PoI/PoD checks are implicit in the grant processing path — the Exchanger validates signatures, then the handler verifies ACDC SAID expansion and TEL/KEL binding. The kernel dependency on cryptographic-algorithms covers the raw Ed25519/ECDSA verify and Blake3 digest operations.\n"
+    },
+    "issues": [],
+    "tags": [
+      "verification",
+      "proof-of-issuance",
+      "proof-of-disclosure",
+      "kram",
+      "credential-artifacts"
+    ],
+    "_source": "rdod/spec/domains/acdc/ipex/verification/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "acdc/tel/blinding",
+    "name": "TEL Blinding",
+    "description": "Privacy-preserving blinded state management for TEL registries. Hides credential state behind blinded attribute blocks using shared secret salts and hierarchical key derivation. Observers cannot determine which update events correspond to actual state changes versus periodic decorrelation updates. Only entities holding the shared secret salt can derive the blinding UUID for each event and discover the current credential state by trying the finite set of possible state values against the BLID.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "acdc-specification.md -- Blinded State Management, Blindable Update Events, Blinded Attribute Blocks sections"
+      },
+      {
+        "type": "document",
+        "reference": "acdc-specification.md -- Shared Secret Salt and Hierarchically Deterministic UUID Derivation section"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy -- src/keri/vdr/viring.py (Reger: blinding-related subdatabases), src/keri/vdr/eventing.py (bup event processing, blind state computation)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox/teliox -- src/event/verifiable_event.rs (blinded event handling), src/state.rs (blinded state transitions)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "BLID",
+        "definition": "Blinding SAID -- a cryptographic digest of the concatenated CESR serialization of a blinded attribute block's field values",
+        "invariants": [
+          "Computed on text domain (qb64) CESR concatenation of field values",
+          "Uses Blake3-256 digest (E code, 44 characters)"
+        ]
+      },
+      {
+        "term": "Blinded Attribute Block",
+        "definition": "Fixed-field CESR concatenation (d, u, td, ts) whose digest serves as the b field in a blindable update event",
+        "invariants": [
+          "UUID is derived from shared secret salt and event sequence number",
+          "Only holders of the shared secret salt can reconstruct and verify"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://acdc/tel",
+        "relationship": "Parent TEL domain delegates blinded state operations -- bup event construction, BLID computation, and state discovery",
+        "via_port": "port://acdc/tel/blinding/inbound/blinded-state"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Blake3-256 (BLID digest computation), argon2/HKDF (salt-based hierarchically deterministic UUID derivation)",
+        "relationship": "Cryptographic algorithm types used for BLID computation and blinding UUID derivation from shared secret salt"
+      }
+    ],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "Blinding is a pure computation subdomain with no persistence of its own. The blinded attribute block is never serialized as a standalone message -- it is a virtual construct whose field values are concatenated and digested to produce the BLID. The bup event carries only the BLID in its b field. State discovery is a brute-force search over the finite state set (e.g., issued/revoked) combined with the derived UUID and candidate ACDC SAIDs. Periodic blind updates with unchanged state are the mechanism for decorrelation -- the observer cannot distinguish a state-changing update from a decorrelation-only update.\n"
+    },
+    "issues": [],
+    "tags": [
+      "blinding",
+      "privacy",
+      "blid",
+      "shared-secret",
+      "decorrelation",
+      "uuid-derivation"
+    ],
+    "_source": "rdod/spec/domains/acdc/tel/blinding/domain.yaml"
   },
   {
     "template_version": "1.0",
@@ -550,17 +1002,27 @@ const RDOD_DATA = [
         "via_port": "port://acdc/tel/inbound/state-management"
       }
     ],
-    "subdomains": [],
-    "kernels": [],
-    "adjacents": [],
-    "externals": [
+    "subdomains": [
       {
-        "name": "TEL Persistence",
-        "abstraction": "Repository",
-        "ref": "port://acdc/tel/outbound/tel-store",
-        "implementation_notes": "Append-only store for TEL events. Implementations: LMDB (keripy), redb (keriox), DynamoDB (serious-keri)"
+        "ref": "domain://acdc/tel/state",
+        "relationship": "Credential and registry state machines — tracks lifecycle (NotIssued -> Issued -> Revoked) and registry management state"
+      },
+      {
+        "ref": "domain://acdc/tel/validation",
+        "relationship": "Multi-step validation pipeline for TEL events — KEL anchor verification, escrow management, notification bus"
+      },
+      {
+        "ref": "domain://acdc/tel/blinding",
+        "relationship": "Privacy-preserving blinded state management — BLID computation, UUID derivation from shared secret salt, state discovery"
+      },
+      {
+        "ref": "domain://acdc/tel/storage",
+        "relationship": "Persistent storage for TEL events, backer signatures, anchor seals, credential/registry metadata, and escrow queues"
       }
     ],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [],
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
@@ -575,6 +1037,246 @@ const RDOD_DATA = [
       "event-log"
     ],
     "_source": "rdod/spec/domains/acdc/tel/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "acdc/tel/state",
+    "name": "TEL State Management",
+    "description": "Credential and registry state machines. Tracks credential lifecycle (NotIssued -> Issued -> Revoked) and registry management state (backer config, sequence number). State is computed deterministically by replaying TEL events from inception through the latest event, analogous to how KEL key state is computed from the establishment subsequence. Each registry has a management state machine (tracking backer configuration and sequence number) plus per-credential state machines (tracking issuance/revocation lifecycle).\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "acdc-specification.md -- Transaction Event Logs (TELs) as ACDC State Registries section"
+      },
+      {
+        "type": "document",
+        "reference": "acdc-specification.md -- Binding to Key State at Time of ACDC State Change section"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy -- src/keri/vdr/eventing.py: Tever class (sn, serder, ilk, baks, toad, vcState(), state()), VcStater.make(), VcStateRecord"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy -- src/keri/vdr/eventing.py: RegStater.make(), RegStateRecord"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox/teliox -- src/state.rs: TelState enum (NotIssued, Issued, Revoked), ManagerTelState struct"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Credential State",
+        "definition": "The finite state machine tracking an ACDC's lifecycle within its registry TEL",
+        "invariants": [
+          "States: NotIssued -> Issued -> Revoked (one-directional, no backtracking)",
+          "State is determined by replaying the credential's TEL events from inception"
+        ]
+      },
+      {
+        "term": "TEL Event Verifier",
+        "definition": "State machine tracking one registry's management TEL state and per-credential state",
+        "invariants": [
+          "One instance per registry, keyed by REGID",
+          "Holds registry management state and exposes per-credential state queries"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://acdc/tel",
+        "relationship": "Parent domain delegates credential and registry state tracking to this subdomain",
+        "via_port": "port://acdc/tel/state/inbound/state-query"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Persistence (state snapshots)",
+        "abstraction": "Repository",
+        "ref": "port://acdc/tel/state/outbound/state-store",
+        "implementation_notes": "Read/write credential and registry state snapshots. Implementations: LMDB subdbs (.tets, .twes) in keripy Reger, TelEventDatabase trait in keriox"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "State computation is a pure function of the TEL event sequence. Given the same TEL events in order, the resulting state is deterministic. In keripy, the Tever class holds both registry management state and per-credential state (via vcState() keyed by credential SAID). In keriox, TelState and ManagerTelState are separate types reflecting the two distinct state machines. State snapshots are persisted for fast lookup but can always be recomputed from the TEL.\n"
+    },
+    "issues": [],
+    "tags": [
+      "state-machine",
+      "credential-lifecycle",
+      "registry-state",
+      "state-reconstruction"
+    ],
+    "_source": "rdod/spec/domains/acdc/tel/state/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "acdc/tel/storage",
+    "name": "TEL Storage",
+    "description": "Persistent storage for TEL events, backer signatures, anchor seals, and credential/registry metadata. Provides indexed access by registry SAID, credential SAID, and sequence number. The storage schema partitions data across separate subdatabases for event serializations (.tvts), TEL log index (.tels), backer signatures (.tibs), backer lists (.baks), anchor seals (.ancs), timestamps (.tets), credential data (.creds, .cancs, .saved, .issus, .subjs, .schms), escrow queues (.oots, .twes, .taes, .cmse, .mre, .mce, .mse), and registry metadata (.regs, .states). Two primary access patterns: (registry_said + sn) for sequential access and (registry_said + event_digest) for content-addressed access.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "implementation",
+        "reference": "keripy -- src/keri/vdr/viring.py (Reger class: TEL subdatabases .tvts, .tels, .tibs, .baks, .ancs, .oots, .twes, .taes, .creds, .cancs, .saved, .issus, .subjs, .schms, .regs, .states)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox/teliox -- src/database/mod.rs (TelEventDatabase trait: add_new_event, get_events, get_management_events, get_tel_state)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "TEL Database",
+        "definition": "Persistent storage for TEL events and credential metadata, partitioned across typed subdatabases",
+        "invariants": [
+          "Stores serialized TEL events, backer signatures, backer lists, and anchor seals",
+          "Maintains separate escrow subdatabases for out-of-order, partial-witness, and anchorless events"
+        ]
+      },
+      {
+        "term": "TEL Storage Schema",
+        "definition": "The subdatabase organization for storing TEL data: events, indexes, signatures, anchors, and timestamps",
+        "invariants": [
+          "Two primary key patterns: (registry_said + sn) and (registry_said + event_digest)",
+          "All write operations are idempotent"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://acdc/tel",
+        "relationship": "Parent TEL domain delegates all persistent storage operations -- event logging, signature accumulation, credential indexing, escrow management, and state caching",
+        "via_port": "port://acdc/tel/storage/inbound/event-logging"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Persistence Engine",
+        "abstraction": "Repository",
+        "ref": "port://acdc/tel/storage/outbound/persistence",
+        "implementation_notes": "Key-value store with ordered iteration and duplicate-key support. Implementations: LMDB (keripy Reger -- memory-mapped B+ tree, named subdatabases, dupsort), redb (keriox TelEventDatabase -- pure Rust embedded database), DynamoDB (serious-keri -- serverless, GSI-based access patterns). The storage subdomain defines the logical schema; the persistence engine provides the physical storage."
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, the Reger class (vdr/viring.py) extends LMDBer and defines all TEL subdatabases as typed attributes. Each subdatabase uses a specific Suber variant matching the KEL storage patterns: Suber for simple key-value, IoSetSuber for insertion-ordered sets (backer signatures), CesrSuber for CESR-typed values. Keys are constructed via dgKey(regid, dig) or snKey(regid, sn) utility functions -- the same patterns used in KEL storage. In keriox, the TelEventDatabase trait defines the storage interface with add_new_event(), get_events(), and get_management_events(). In serious-keri, DynamoDB tables replace LMDB subdatabases with GSI access patterns mapping to the two primary key patterns.\n"
+    },
+    "issues": [],
+    "tags": [
+      "storage",
+      "persistence",
+      "tel-database",
+      "reger",
+      "subdatabases",
+      "credential-index",
+      "escrow-storage"
+    ],
+    "_source": "rdod/spec/domains/acdc/tel/storage/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "acdc/tel/validation",
+    "name": "TEL Validation",
+    "description": "Multi-step validation pipeline for TEL events and escrow management. Verifies KEL anchor seals, registry existence, issuer state, and credential state transitions. When a TEL event cannot be immediately validated (missing registry, missing issuer KEL event, out-of-order sequence number), it is placed in a typed escrow queue and reprocessed when the blocking condition resolves. The validation pipeline is re-entrant: escrowed events pass through the same steps as freshly received events.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "acdc-specification.md -- Transaction Event Logs (TELs) as ACDC State Registries section"
+      },
+      {
+        "type": "document",
+        "reference": "acdc-specification.md -- Binding to Key State at Time of ACDC State Change section"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy -- src/keri/vdr/verifying.py: Verifier class (processCues(), processEscrows()), verification pipeline"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy -- src/keri/vdr/eventing.py: Tevery.processEvent(), Tever.vcState(), escrow subdatabases (.oots, .twes, .taes)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox/teliox -- src/processor.rs: TelEventProcessor.process(), process_management_event(), process_tel_event()"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox/teliox -- src/event/verifiable_event.rs: VerifiableEvent struct (event + attached_seal)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox/teliox -- src/tel/mod.rs: Tel.verify_binding() (KEL anchor check)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "TEL Validation Pipeline",
+        "definition": "The multi-step sequence that validates an incoming TEL event from receipt to acceptance or escrow",
+        "invariants": [
+          "Steps: extract registry ID, compute registry state, verify KEL anchor seal, compute credential state, apply transition",
+          "Failure at any step routes to the appropriate escrow queue for later reprocessing"
+        ]
+      },
+      {
+        "term": "TEL Escrows",
+        "definition": "Typed escrow queues for TEL events that cannot be immediately validated",
+        "invariants": [
+          "Three escrow types: out-of-order, missing registry, missing issuer",
+          "Events are reprocessed when the blocking condition resolves"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://acdc/tel",
+        "relationship": "Parent domain delegates all incoming TEL event validation to this subdomain",
+        "via_port": "port://acdc/tel/validation/inbound/validate-tel-event"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Blake3-256 digest comparison for seal verification (comparing TEL event SAID against the seal digest in the issuer's KEL)",
+        "relationship": "Digest comparison is a kernel operation invoked during KEL anchor verification"
+      }
+    ],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Persistence (read KEL and registry state)",
+        "abstraction": "Repository (read-only)",
+        "ref": "port://acdc/tel/validation/outbound/kel-and-state-lookup",
+        "implementation_notes": "Reads issuer's KEL to verify anchor seals, reads registry state and credential state for validation context. Implementations: Reger + Baser (keripy), TelEventDatabase + EventStorage (keriox)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, the validation pipeline spans Verifier (src/keri/vdr/verifying.py) and Tevery.processEvent() (src/keri/vdr/eventing.py). The Verifier class manages cues (notification messages) and escrow processing. In keriox, TelEventProcessor.process() in src/processor.rs implements the pipeline, with TelNotificationBus providing pub-sub escrow reprocessing. The pipeline is stateless given a registry state snapshot and the issuer's KEL -- it takes a VerifiableEvent and returns accept/reject/escrow-reason.\n"
+    },
+    "issues": [],
+    "tags": [
+      "validation",
+      "pipeline",
+      "escrow",
+      "seal-verification",
+      "kel-anchor"
+    ],
+    "_source": "rdod/spec/domains/acdc/tel/validation/domain.yaml"
   },
   {
     "template_version": "1.0",
@@ -1273,6 +1975,81 @@ const RDOD_DATA = [
   },
   {
     "template_version": "1.0",
+    "id": "keri/delegation/binding",
+    "name": "Delegation Binding",
+    "description": "The cooperative delegation mechanics — how delegator and delegatee create a cryptographically verifiable mutual commitment through seals and the di field. This subdomain owns the two-way binding protocol: the delegatee references the delegator via the di field in its inception event, and the delegator anchors a seal in its own KEL committing to the delegated event's digest. Together these form a cryptographic peg that neither party can forge unilaterally.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Cooperative Delegation, Delegated Inception Event Message Body (di field), Interaction Event Seals"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: Cooperative Delegation, Two-way Binding"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/eventing.py (delegation seal construction, di field handling), src/keri/core/coring.py (deSourceCouple — Seqner + Saider couple)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox — keriox_core/src/event/event_data/delegated.rs (SourceSeal struct with sn and digest fields)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Cooperative Delegation",
+        "definition": "A delegation mechanism requiring cooperation between delegator and delegatee — implemented as a pair of cryptographically bound events",
+        "invariants": [
+          "Both parties must participate — neither can act unilaterally",
+          "The pair of events (delegating + delegated) forms the complete delegation commitment"
+        ]
+      },
+      {
+        "term": "Two-way Binding",
+        "definition": "The cryptographic peg formed by the delegation seal in the delegator's KEL and the di field in the delegatee's inception — together proving mutual agreement",
+        "invariants": [
+          "Both references must exist for a valid delegation",
+          "Neither party can forge the other's binding"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/delegation",
+        "relationship": "Parent delegation domain delegates cooperative binding mechanics — seal construction, di field binding, and source seal coupling",
+        "via_port": "port://keri/delegation/binding/inbound/binding-lifecycle"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Blake3-256/SHA-256 (SAID digest computation for delegation seals — the seal's d field commits to the delegated event's digest), AID derivation incorporating the di field value",
+        "relationship": "Delegation binding relies on digest computation to create the seal commitment and AID derivation that incorporates the delegator reference — kernel types appear directly"
+      }
+    ],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, the delegation seal is constructed as a dict with i (delegatee AID), s (sn), and d (SAID) fields, embedded in the delegator's interaction or rotation event. The delegatee's dip event includes the di field. The deSourceCouple (Seqner + Saider) is attached to delegated events to point validators back to the delegator's anchoring event. In keriox, the SourceSeal struct (sn + digest) serves the same purpose, carried alongside delegated events to enable validator lookup of the delegator's approval.\n"
+    },
+    "issues": [],
+    "tags": [
+      "binding",
+      "cooperative",
+      "seal",
+      "di-field",
+      "two-way-peg",
+      "source-seal"
+    ],
+    "_source": "rdod/spec/domains/keri/delegation/binding/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
     "id": "keri/delegation",
     "name": "Delegation",
     "description": "Cooperative delegation of identifier authority — a mechanism where a delegator AID approves the establishment operations (inception and rotation) of a delegated AID (delegatee). Delegation is implemented as a pair of events: a delegated event (dip or drt) in the delegatee's KEL that references the delegator's AID, and a delegating event in the delegator's KEL containing a seal anchoring the delegated event. This two-way cryptographic binding requires cooperation from both parties. Delegation enables horizontal scaling of signing authority, hierarchical key management, and enhanced recovery from key compromise via the delegator's additional layer of control.\n",
@@ -1301,20 +2078,35 @@ const RDOD_DATA = [
     ],
     "ubiquitous_language": [
       {
-        "term": "Cooperative Delegation",
-        "definition": "A delegation that requires cooperation between delegator and delegatee — both must participate for a delegated establishment event to be valid",
+        "term": "Delegated Inception",
+        "definition": "The inception event for a delegated AID — type 'dip' with di field referencing the delegator",
         "invariants": [
-          "Delegatee's KEL references delegator's AID (di field)",
-          "Delegator's KEL must contain a seal anchoring the delegated event",
-          "Both bindings required for validity — neither party can unilaterally delegate"
+          "Must include di field with the delegator's AID",
+          "Requires a corresponding delegation seal in the delegator's KEL to be valid"
         ]
       },
       {
-        "term": "Delegation Seal",
-        "definition": "An event seal in the delegator's KEL that cryptographically anchors a delegated event",
+        "term": "Delegated Rotation",
+        "definition": "A rotation event for a delegated AID — type 'drt', inherits delegator from inception",
         "invariants": [
-          "Contains i (delegatee AID), s (delegated event sn), d (delegated event SAID)",
-          "Must appear in the delegator's KEL before the delegated event can be accepted"
+          "Does NOT include di field — inherits delegator from the delegated inception",
+          "Requires a corresponding delegation seal in the delegator's KEL to be valid"
+        ]
+      },
+      {
+        "term": "Delegation Chain",
+        "definition": "A chain of delegation where a delegated AID itself acts as a delegator, forming a hierarchical tree of authority",
+        "invariants": [
+          "Verification requires walking up to the root non-delegated AID",
+          "Superseding recovery rules apply recursively up the chain"
+        ]
+      },
+      {
+        "term": "DID Configuration Trait",
+        "definition": "A configuration trait (c field value 'DID') that instructs validators to treat delegates as equivalent to the delegator",
+        "invariants": [
+          "Set in the c field of an establishment event",
+          "Enables transparent delegation for authorization purposes"
         ]
       }
     ],
@@ -1325,7 +2117,23 @@ const RDOD_DATA = [
         "via_port": "port://keri/delegation/inbound/delegation-lifecycle"
       }
     ],
-    "subdomains": [],
+    "subdomains": [
+      {
+        "ref": "keri/delegation/binding",
+        "name": "Delegation Binding",
+        "relationship": "Owns cooperative binding mechanics — seals, di field, source seal couples, two-way peg"
+      },
+      {
+        "ref": "keri/delegation/recovery",
+        "name": "Delegation Recovery",
+        "relationship": "Owns recovery logic — superseding rules B1-B3-C, joint compromise requirement, custodial delegation"
+      },
+      {
+        "ref": "keri/delegation/validation",
+        "name": "Delegation Validation",
+        "relationship": "Owns validation pipeline and escrow queues — .pdes, .delegables, .aess"
+      }
+    ],
     "kernels": [
       {
         "ref": "kernel://cryptographic-algorithms",
@@ -1349,6 +2157,147 @@ const RDOD_DATA = [
       "recovery"
     ],
     "_source": "rdod/spec/domains/keri/delegation/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/delegation/recovery",
+    "name": "Delegation Recovery",
+    "description": "Recovery from key compromise via the delegation hierarchy. Covers the joint compromise requirement (must compromise both delegatee and delegator keys), the delegated superseding rules (B1-B3-C) that govern how one delegated rotation can supersede another based on delegating event ordering, custodial delegation where the delegator controls pre-rotated keys, and the security properties of multi-level delegation chains. This is pure protocol logic — no cryptography, no persistence — just the rules governing delegation-based recovery.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Delegated Event Live-attacks, Superseding Rules B1-B3 and C, Combined Arms"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: Custodial Delegation, Combined Arms, Delegation Security"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_SecurityDeepDive.web.md — sections: Combined Arms, Delegation Security, Multi-level Delegation"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Delegation Recovery",
+        "definition": "Recovery from key compromise of a delegated AID via the delegator's additional layer of authority",
+        "invariants": [
+          "An exploiter that compromises only the delegatee's keys cannot fully capture the delegated AID",
+          "Recovery at any level of a delegation chain is possible from the next higher level"
+        ]
+      },
+      {
+        "term": "Joint Compromise Requirement",
+        "definition": "The security property that full exploit of a delegated AID requires simultaneous compromise of both delegatee and delegator authoritative keys",
+        "invariants": [
+          "Extends recursively through delegation chains — each level adds an independent key set",
+          "Significantly raises the bar for successful exploitation versus non-delegated AIDs"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/delegation",
+        "relationship": "Parent delegation domain delegates recovery logic — superseding rules, joint compromise analysis, and custodial delegation semantics",
+        "via_port": "port://keri/delegation/recovery/inbound/recovery-rules"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "This is a leaf domain — pure protocol logic with no kernel or external dependencies. The superseding rules B1-B3-C define an ordering relation over delegated rotations based on the delegating event's position in the delegator's KEL. Implementations encode these rules in the event processing pipeline: in keripy, the superseding logic is embedded in Kevery's delegation processing; in keriox, it is part of the validator module. Custodial delegation is a deployment pattern (delegator holds pre-rotated keys) rather than a separate code path — the same cooperative delegation mechanics apply.\n"
+    },
+    "issues": [],
+    "tags": [
+      "recovery",
+      "superseding",
+      "joint-compromise",
+      "custodial",
+      "security",
+      "combined-arms"
+    ],
+    "_source": "rdod/spec/domains/keri/delegation/recovery/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/delegation/validation",
+    "name": "Delegation Validation",
+    "description": "The validation pipeline for delegated events and the escrow queues that hold events awaiting delegator approval. Defines the multi-step validation process (verify delegatee signatures, check di field, locate delegator seal, verify seal digest) and the three escrow states that events pass through when the delegator's approval is not yet available: partially-delegated (seal not found), delegable (delegator event not arrived), and approved (seal verified).\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Cooperative Delegation validation, Escrow processing for delegated events"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/eventing.py (Kevery.processEscrowPartialDels, valSigsWigsDel — multi-step delegation validation pipeline)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/app/storing.py (.pdes — partially-delegated escrow, .delegables — delegable event escrow, .aess — approved delegation seals, .udes — unverified delegation seals)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox — keriox_core/src/processor/escrow.rs (DelegationEscrow — notified on KeyEventAdded), keriox_core/src/processor/validator.rs (validate_event with delegator verification)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Delegation Validation",
+        "definition": "The multi-step validation process for delegated events that verifies both the delegatee's authority and the delegator's approval",
+        "invariants": [
+          "Events failing any step are escrowed to the appropriate queue rather than rejected outright",
+          "Validation completes only when both delegatee signatures and delegator seal are verified"
+        ]
+      },
+      {
+        "term": "Partially-Delegated Escrow",
+        "definition": "Holds delegated events that have been received and validated locally but are awaiting the delegator's anchoring seal",
+        "invariants": [
+          "Events are promoted to the KEL when the matching seal is found",
+          "Timeout: 3600 seconds — escrowed events are pruned after expiry"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/delegation",
+        "relationship": "Parent delegation domain delegates validation pipeline and escrow management for delegated events",
+        "via_port": "port://keri/delegation/validation/inbound/delegation-validation"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Persistence",
+        "abstraction": "Repository",
+        "ref": "port://keri/delegation/validation/outbound/escrow-store",
+        "implementation_notes": "Escrow storage for delegation-specific queues. Implementations: LMDB subdatabases .pdes (partially-delegated), .delegables (delegable events), .aess (approved seals), .udes (unverified seals) in keripy; DelegationEscrow in keriox. The validation subdomain defines the escrow lifecycle; the persistence engine provides the physical storage."
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, delegation validation is performed by valSigsWigsDel() which orchestrates the full pipeline: signature verification, di field check, delegator seal lookup, and seal digest verification. Events failing at the seal-lookup step go to .pdes (partially-delegated escrow) or .delegables (if the delegator's event hasn't arrived at all). The processEscrowPartialDels() method sweeps .pdes periodically, promoting events when the delegator's anchoring event is found. In keriox, the DelegationEscrow subscribes to KeyEventAdded notifications and retries escrowed delegated events when the delegator's KEL advances.\n"
+    },
+    "issues": [],
+    "tags": [
+      "validation",
+      "escrow",
+      "partially-delegated",
+      "delegable",
+      "approved-seals",
+      "pipeline"
+    ],
+    "_source": "rdod/spec/domains/keri/delegation/validation/domain.yaml"
   },
   {
     "template_version": "1.0",
@@ -1570,15 +2519,8 @@ const RDOD_DATA = [
         "invariants": [
           "Both versions are cryptographically verifiable but mutually inconsistent",
           "Indicates either key compromise or malicious controller behavior",
-          "Always detectable given access to both versions"
-        ]
-      },
-      {
-        "term": "Watcher",
-        "definition": "An entity under the validator's control that monitors for duplicity by collecting and comparing KEL copies from multiple sources",
-        "invariants": [
-          "Under the validator's control, not the controller's",
-          "Watches for inconsistent event histories"
+          "Always detectable given access to both versions",
+          "KERI is duplicity-evident — duplicity cannot be prevented but is always detectable"
         ]
       }
     ],
@@ -1589,7 +2531,20 @@ const RDOD_DATA = [
         "via_port": "port://keri/duplicity-detection/inbound/monitoring"
       }
     ],
-    "subdomains": [],
+    "subdomains": [
+      {
+        "ref": "domain://keri/duplicity-detection/evidence",
+        "relationship": "Owns fork detection, evidence escrow lifecycle (.ldes -> .dels), and notification bus"
+      },
+      {
+        "ref": "domain://keri/duplicity-detection/recovery",
+        "relationship": "Owns superseding rules (A0-A2, B1-B3, C), reconciliation, and trunk/disputed-branch model"
+      },
+      {
+        "ref": "domain://keri/duplicity-detection/monitoring",
+        "relationship": "Owns watcher/juror/judge roles, ambient verifiability, and eclipse attack modeling"
+      }
+    ],
     "kernels": [
       {
         "ref": "kernel://cryptographic-algorithms",
@@ -1602,7 +2557,7 @@ const RDOD_DATA = [
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
-      "notes": "Duplicity detection is implemented by observer components. In keripy, the Watcher class polls multiple witnesses and compares KERLs. The Duplicate Event Log (DEL) stores evidence of conflicting events. Superseding recovery logic is in the Kevery event processing pipeline. In keriox, the watcher component lives under components/watcher/.\n"
+      "notes": "This is an orchestrating domain decomposed into three subdomains: evidence (fork detection, escrow lifecycle, notification bus), recovery (superseding rules, reconciliation, trunk/branch model), and monitoring (watcher/juror/judge roles, ambient verifiability). The parent domain owns the threat model overview — duplicity vs internal inconsistency, live vs dead attacks — and coordinates the subdomains. Implementation-specific details live in the subdomains.\n"
     },
     "issues": [],
     "tags": [
@@ -1613,6 +2568,221 @@ const RDOD_DATA = [
       "monitoring"
     ],
     "_source": "rdod/spec/domains/keri/duplicity-detection/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/duplicity-detection/evidence",
+    "name": "Duplicity Evidence",
+    "description": "Detection and storage of duplicitous events — fork detection, evidence collection, the Likely Duplicitous Escrow (temporary holding), the Duplicitous Event Log (permanent forensic evidence), and the notification bus for cross-component coordination. When an incoming event conflicts with an already-accepted event at the same (prefix, sn), this subdomain detects the fork, stages the evidence in .ldes, promotes confirmed duplicity to .dels, and notifies dependent components.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Duplicity, First Seen Policy, Validation Rules"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: Duplicity Detection, Recovery"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/eventing.py (Kevery.processEscrowLikelyDuplicitous), src/keri/app/storing.py (.ldes, .dels), src/keri/core/eventing.py (processCues, cues deque)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox — keriox_core/src/processor/escrow.rs (DuplicitousEvents escrow), keriox_core/src/processor/notification.rs (NotificationBus, KeyEventAdded)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Duplicity Evidence",
+        "definition": "The pair of verified but different events at the same sequence number that proves duplicity occurred",
+        "invariants": [
+          "Non-repudiable — both events bear valid signatures from the controller's keys",
+          "Evidence can be stored and presented to any party for independent verification"
+        ]
+      },
+      {
+        "term": "Fork Detection",
+        "definition": "Identifying when multiple events exist at the same (prefix, sequence number) with different digests",
+        "invariants": [
+          "Both events must have valid signatures against the key state at that sn",
+          "Detected forks trigger escrow to the Likely Duplicitous Escrow"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/duplicity-detection",
+        "relationship": "Parent domain drives evidence collection when duplicity is suspected during event processing",
+        "via_port": "port://keri/duplicity-detection/evidence/inbound/evidence-management"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "ref": "external://persistence",
+        "source": "Escrow storage (.ldes temporary, .dels permanent)",
+        "relationship": "Evidence lifecycle requires persistent storage — temporary escrow with timeout for likely duplicitous events, permanent append-only storage for confirmed duplicity evidence"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, fork detection occurs in Kevery when an incoming event at an occupied sn has a different digest. Likely duplicitous events are stored in .ldes and processed by Kevery.processEscrowLikelyDuplicitous() with a 3600s timeout. Confirmed duplicity is promoted to .dels. The cues deque provides the notification bus — components push cue dicts and consumers pop and handle them. In keriox, the DuplicitousEvents escrow and NotificationBus with observer pattern serve the same roles.\n"
+    },
+    "issues": [],
+    "tags": [
+      "evidence",
+      "fork-detection",
+      "escrow",
+      "notification",
+      "ldes",
+      "dels"
+    ],
+    "_source": "rdod/spec/domains/keri/duplicity-detection/evidence/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/duplicity-detection/monitoring",
+    "name": "Duplicity Monitoring",
+    "description": "The infrastructure for detecting duplicity — watchers that cross-check KEL copies from multiple independent sources, jurors that collect and present evidence, judges that make trust/no-trust decisions, and the ambient verifiability property that arises from sufficient watcher diversity. Monitoring components are always under the validator's control, not the controller's.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Duplicity, Validation Rules, Watchers"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: Watchers, Jurors, Judges, Ambient Verifiability"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_SecurityDeepDive.web.md — sections: Inconsistency and Duplicity, Ambient Verifiability, Eclipse Attacks"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox — components/watcher/ (watcher node)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Watcher",
+        "definition": "An entity under the validator's control that monitors for duplicity by collecting and comparing KEL copies from multiple sources",
+        "invariants": [
+          "Under the validator's control, NOT the controller's",
+          "Cross-checks KEL copies from witnesses, other watchers, or the controller"
+        ]
+      },
+      {
+        "term": "Judge",
+        "definition": "An entity that makes trust decisions based on duplicity evidence",
+        "invariants": [
+          "The final arbiter of trust for the validator",
+          "Evaluates evidence to decide trust or no-trust"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/duplicity-detection",
+        "relationship": "Parent domain delegates monitoring lifecycle — watcher enrollment, evidence queries, trust decisions",
+        "via_port": "port://keri/duplicity-detection/monitoring/inbound/monitoring-lifecycle"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "ref": "external://transport",
+        "source": "Watcher network — polling witnesses, cross-checking KERL copies",
+        "relationship": "Watchers require network transport to poll witnesses and other watchers for KEL copies; this is external infrastructure not owned by the monitoring domain"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, the Watcher class polls multiple witnesses and compares KERLs. In keriox, the watcher component lives under components/watcher/. Jurors and judges are logical roles that may be implemented as separate services or combined with watchers. The ambient verifiability property emerges from deployment — sufficient watcher diversity and distribution makes eclipse attacks prohibitively expensive.\n"
+    },
+    "issues": [],
+    "tags": [
+      "monitoring",
+      "watcher",
+      "juror",
+      "judge",
+      "ambient-verifiability",
+      "eclipse-attack"
+    ],
+    "_source": "rdod/spec/domains/keri/duplicity-detection/monitoring/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/duplicity-detection/recovery",
+    "name": "Superseding Recovery",
+    "description": "The mechanics of recovering from key compromise via superseding rotation. Defines the superseding rules (A0-A2 for non-delegated, B1-B3 for delegated, C for recursive delegation), the reconciliation process that determines the authoritative trunk, and the trunk/disputed-branch model that preserves both the recovered path and the forensic record of compromised events. This is pure protocol logic — no cryptography, no persistence, no networking.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Superseding Recovery and Reconciliation, Superseding Rules, Dead-Attacks, Live-Attacks"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: Recovery, Superseding Rotation"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_SecurityDeepDive.web.md — sections: Survivability, Superseding Recovery"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Superseding Recovery",
+        "definition": "Recovery from key compromise by issuing a rotation event that supersedes a compromised event at the same sequence number",
+        "invariants": [
+          "Creates a fork with a recovered trunk and a disputed branch",
+          "The controller is still accountable for harm caused by compromised events"
+        ]
+      },
+      {
+        "term": "Superseding Rules",
+        "definition": "The formal rules determining when one event can supersede another at the same sn",
+        "invariants": [
+          "A0-A2 for non-delegated events, B1-B3 for delegated events, C for recursive delegation",
+          "Non-delegated rotations cannot supersede other rotations"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/duplicity-detection",
+        "relationship": "Parent domain invokes superseding recovery when a validator receives a superseding rotation event",
+        "via_port": "port://keri/duplicity-detection/recovery/inbound/superseding-rules"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "This is a leaf domain — pure protocol logic with no kernel or external dependencies. The superseding rules define an ordering relation over events at the same sn. In keripy, the superseding logic is embedded in Kevery's event processing pipeline. In keriox, it is part of the validator module. Reconciliation applies the superseding rules to determine which path through the KEL DAG is the undisputed trunk. The trunk/disputed-branch model is a logical partitioning — implementations may store both paths and mark branch membership.\n"
+    },
+    "issues": [],
+    "tags": [
+      "recovery",
+      "superseding",
+      "reconciliation",
+      "trunk",
+      "disputed-branch",
+      "protocol-logic"
+    ],
+    "_source": "rdod/spec/domains/keri/duplicity-detection/recovery/domain.yaml"
   },
   {
     "template_version": "1.0",
@@ -2059,6 +3229,84 @@ const RDOD_DATA = [
   },
   {
     "template_version": "1.0",
+    "id": "keri/key-state/commitment",
+    "name": "Key Commitment",
+    "description": "Pre-rotation mechanics and key lifecycle. Manages the forward-blinded commitment to next rotation keys, the key configuration (current signing keys + next key digests), and the transferable/non-transferable distinction. This subdomain owns the cryptographic binding between establishment events: each event publishes digests of the keys that will authorize the next rotation, creating an unbroken chain of forward commitments. It also owns the paired structure of current keys and next digests (key configuration) and the prefix-code-level distinction between transferable AIDs (which can rotate) and non-transferable AIDs (which cannot).\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Pre-rotation, Key State, Inception Event Message Body, Rotation Event Message Body, Prefix Codes"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: Pre-rotation, Key State, Transferability"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_SecurityDeepDive.web.md — sections: Combined Arms, Establishment Dead-Attack, Reserve Rotation"
+      },
+      {
+        "type": "document",
+        "reference": "keripy eventing.py — Kever (verfers, digers, ndigers), key state update on rotation, partial rotation logic"
+      },
+      {
+        "type": "document",
+        "reference": "keriox keriox_core/src/event/sections/key_config.rs — KeyConfig, NextKeysData, verify_next()"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Pre-rotation Commitment",
+        "definition": "Cryptographic commitment to the next set of rotation keys via publishing their digests in the current establishment event",
+        "invariants": [
+          "Next key digests must appear in the establishment event preceding their use",
+          "Pre-committed keys are never exposed until the rotation that activates them"
+        ]
+      },
+      {
+        "term": "Key Configuration",
+        "definition": "The current set of signing keys paired with the next key hash commitment",
+        "invariants": [
+          "Current keys and next digests are both ordered — index position matters",
+          "Represents the cryptographic material portion of key state"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/key-state",
+        "relationship": "Parent domain delegates key commitment management, key configuration pairing, and transferability classification to this subdomain",
+        "via_port": "port://keri/key-state/commitment/inbound/key-commitment"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519/ECDSA key types for signing keys (Verfer construction), Blake3-256/SHA-256 for computing next key digests (Diger construction), prefix code classification for transferability",
+        "relationship": "Public key qualification and digest computation are kernel operations — this subdomain uses them to build key configurations and verify pre-rotation bindings"
+      }
+    ],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, key commitment state lives in the Kever class: verfers (current signing keys as Verfer instances), digers/ndigers (next key digests as Diger instances). Rotation updates both: the previous ndigers become the basis for verifying the new signing keys, and new ndigers are committed. Partial rotation uses only a threshold-satisficing subset of the pre-committed keys. In keriox, KeyConfig holds current_public_keys and next_keys_data (NextKeysData). The verify_next() method enforces pre-rotation binding during rotation validation.\n"
+    },
+    "issues": [],
+    "tags": [
+      "pre-rotation",
+      "key-configuration",
+      "transferability",
+      "commitment",
+      "key-lifecycle"
+    ],
+    "_source": "rdod/spec/domains/keri/key-state/commitment/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
     "id": "keri/key-state",
     "name": "Key State",
     "description": "The current authoritative configuration of an AID — signing keys, next key digests, signing threshold, rotation threshold, witness list, witness threshold, and configuration traits. Key state is computed deterministically from the establishment subsequence of the KEL. Only establishment events (inception and rotation) modify key state; interaction events do not. Key state is the central output of event log verification and the primary input to any signature validation against an AID.\n",
@@ -2111,7 +3359,23 @@ const RDOD_DATA = [
         "via_port": "port://keri/key-state/inbound/state-computation"
       }
     ],
-    "subdomains": [],
+    "subdomains": [
+      {
+        "ref": "domain://keri/key-state/commitment",
+        "relationship": "Owns pre-rotation mechanics, key configuration (signing keys + next key digests), partial rotation, and transferable/non-transferable classification",
+        "via_port": "port://keri/key-state/commitment/inbound/key-commitment"
+      },
+      {
+        "ref": "domain://keri/key-state/thresholds",
+        "relationship": "Owns signing threshold (kt), rotation threshold (nt), dual threshold enforcement, fractionally weighted thresholds, witness threshold (bt/TOAD), and witness configuration",
+        "via_port": "port://keri/key-state/thresholds/inbound/threshold-satisfaction"
+      },
+      {
+        "ref": "domain://keri/key-state/tracking",
+        "relationship": "Owns the Kever state machine — per-AID state tracking, state reconstruction from the KEL, establishment subsequence management, last establishment data, configuration trait enforcement, and the authoritative answer to 'what is this AID's current key state?'",
+        "via_port": "port://keri/key-state/tracking/inbound/state-tracking"
+      }
+    ],
     "kernels": [
       {
         "ref": "kernel://cryptographic-algorithms",
@@ -2137,6 +3401,341 @@ const RDOD_DATA = [
   },
   {
     "template_version": "1.0",
+    "id": "keri/key-state/thresholds",
+    "name": "Threshold Logic",
+    "description": "Signing, rotation, dual, and weighted threshold mechanics. Determines when a set of signatures or witness receipts satisfies the required quorum. This subdomain owns the Tholder abstraction that parses threshold expressions (simple integer or fractionally weighted), the satisfy() check that tests whether a set of indices meets a threshold, and the three threshold roles in KERI key state: signing threshold (kt), rotation threshold (nt), and witness threshold (bt/TOAD). It also owns the witness configuration — the witness list paired with the witness threshold — and the dual threshold requirement that rotation events must satisfy both kt and nt.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Signing Threshold, Next Threshold, Witness Threshold, Fractionally Weighted Threshold, Rotation Event Validation"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: Thresholds, Witness Accountability, TOAD"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_SecurityDeepDive.web.md — sections: Combined Arms, Immune Constraint"
+      },
+      {
+        "type": "document",
+        "reference": "keripy eventing.py — Tholder class (sith parsing, satisfy(), limen, size, weighted), Kever (tholder, ntholder, toader, wits)"
+      },
+      {
+        "type": "document",
+        "reference": "keriox keriox_core/src/event/sections/key_config.rs — SignatureThreshold (Simple/Weighted), enough() method; state/ — WitnessConfig, toad"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Signing Threshold",
+        "definition": "The threshold expression that determines the minimum satisficing subset of current signing keys required for a valid signature",
+        "invariants": [
+          "Must be satisfiable given the number of keys in the signing key list",
+          "Can be a simple integer M (M-of-N) or a fractionally weighted threshold"
+        ]
+      },
+      {
+        "term": "Witness Threshold",
+        "definition": "The minimum number of witness receipts required for an event to be considered sufficiently accountable",
+        "invariants": [
+          "Must be an integer no greater than the number of witnesses",
+          "Determines the M in M-of-N witness accountability"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/key-state",
+        "relationship": "Parent domain delegates threshold satisfaction checking, threshold parsing, and witness configuration management to this subdomain",
+        "via_port": "port://keri/key-state/thresholds/inbound/threshold-satisfaction"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cesr-primitives",
+        "source": "Tholder type for threshold representation (simple integer and fractionally weighted), satisfaction checking via satisfy() / enough()",
+        "relationship": "The Tholder/SignatureThreshold type is a kernel primitive that parses threshold expressions and evaluates them against index sets — this subdomain uses it for all three threshold roles"
+      }
+    ],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, the Tholder class encapsulates threshold logic. It parses a sith parameter (either an integer string like '2' or a list of fraction strings like ['1/2', '1/2', '1/2']), exposes a satisfy(indices) method, and provides size (minimum keys to satisfy) and weighted (bool) properties. The Kever class holds three Tholder instances: tholder (signing), ntholder (next/rotation), and toader (witness). In keriox, SignatureThreshold is an enum with Simple(u64) and Weighted(Vec<Vec<(u64, u64)>>) variants, providing an enough() method. WitnessConfig pairs the witness list with the toad threshold.\n"
+    },
+    "issues": [],
+    "tags": [
+      "threshold",
+      "signing-threshold",
+      "rotation-threshold",
+      "witness-threshold",
+      "weighted-threshold",
+      "dual-threshold"
+    ],
+    "_source": "rdod/spec/domains/keri/key-state/thresholds/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/key-state/tracking",
+    "name": "Key State Tracking",
+    "description": "The Kever state machine that tracks one AID's current key state. Manages state reconstruction from the KEL, the establishment subsequence, last establishment data, and configuration traits. Provides the authoritative answer to \"what is this AID's current key state?\" Each tracked AID has exactly one Key Event Verifier instance whose state is updated deterministically by processing establishment events (icp, rot, dip, drt) in sequence. Interaction events pass through the state machine without modifying key state. The state machine supports both incremental update (processing one new event) and full reconstruction (replaying the KEL from inception).\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keripy eventing.py — Kever class (incept, update, rotate, reload, config, state methods), LastEstLoc namedtuple, KeyStateRecord"
+      },
+      {
+        "type": "document",
+        "reference": "keriox keriox_core/src/state/mod.rs — IdentifierState struct, LastEstablishmentData, WitnessConfig, EventSemantics trait, apply_to() implementations"
+      },
+      {
+        "type": "document",
+        "reference": "keriox keriox_core/src/processor/event_storage.rs — compute_state_at_sn() replay-based reconstruction, get_state() cached lookup"
+      },
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Key State, Establishment Events, Pre-rotation, Configuration Traits"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: Key State, Establishment Subsequence"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Key Event Verifier",
+        "definition": "State machine tracking one AID's current key state, computed deterministically from the KEL's establishment subsequence",
+        "invariants": [
+          "One instance per AID being tracked",
+          "State is updated only by establishment events (icp, rot, dip, drt)",
+          "Provides the authoritative current key state for signature verification and rotation validation"
+        ]
+      },
+      {
+        "term": "Last Establishment Data",
+        "definition": "Snapshot of the most recent establishment event — sequence number, event digest, witnesses removed, and witnesses added — used for rotation validation",
+        "invariants": [
+          "Updated each time an establishment event is processed",
+          "Required input for validating the next rotation event"
+        ]
+      },
+      {
+        "term": "Configuration Traits",
+        "definition": "Cumulative behavioral constraints (EO, DND, NoBackers, DID) set in establishment events' c field",
+        "invariants": [
+          "Once set, a trait cannot be removed — traits are cumulative across the AID's lifetime",
+          "Enforced on every subsequent event processed by the state machine"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/key-state",
+        "relationship": "Parent domain delegates per-AID state tracking, state reconstruction, establishment subsequence management, and configuration trait enforcement to this subdomain",
+        "via_port": "port://keri/key-state/tracking/inbound/state-tracking"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519/ECDSA public keys (Verfer) for signing key lists, Blake3-256/SHA-256 digests (Diger) for next key commitment lists, SAID computation for event digest tracking",
+        "relationship": "Cryptographic primitives appear directly in state machine fields — the tracker stores and compares qualified public keys, digests, and SAIDs as kernel types"
+      }
+    ],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Persistence",
+        "abstraction": "Repository",
+        "ref": "port://keri/key-state/tracking/outbound/persistence",
+        "implementation_notes": "State cache (.states subdatabase) for fast key state lookup by prefix, and KEL access for state reconstruction via replay. In keripy, the Kever holds a reference to db (Baser) for reading events and caching state. In keriox, EventStorage wraps the EventDatabase trait. The tracking subdomain reads from the KEL and writes to the state cache."
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, the Kever class IS the Key Event Verifier. It is initialized from either an inception event (incept method) or a cached KeyStateRecord (reload method). The update method processes subsequent events: for establishment events (rot/drt), it calls rotate() to validate the rotation and then updates all state fields (verfers, ndigers, tholder, ntholder, wits, toader, lastEst, config traits). For interaction events (ixn), it updates only the sn and serder without modifying key state. The config() method enforces cumulative traits. The state() property serializes the current Kever state to a KeyStateRecord. In keriox, IdentifierState is an immutable struct that produces a new instance on each apply(). The EventSemantics trait's apply_to() method is implemented per event type — RotationEvent.apply_to() verifies the pre-rotation binding via verify_next(), computes new witness lists, and returns a new IdentifierState. State reconstruction via compute_state_at_sn() replays all events from sn=0 through apply() calls, folding into a final IdentifierState.\n"
+    },
+    "issues": [],
+    "tags": [
+      "kever",
+      "state-machine",
+      "state-tracking",
+      "establishment-subsequence",
+      "configuration-traits",
+      "state-reconstruction"
+    ],
+    "_source": "rdod/spec/domains/keri/key-state/tracking/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/witness-agreement/consensus",
+    "name": "Witness Consensus",
+    "description": "The mathematical and algorithmic foundations of witness agreement — the first-seen rule, the immune constraint, accountability thresholds, proper KERL properties, and BFT quorum calculations. This subdomain owns the invariants that make KAWA work: why a single-phase agreement suffices, what threshold guarantees uniqueness of agreement, and what \"proper\" means for a receipted log. It does not handle receipt creation, storage, or network propagation — only the rules and computations that govern correctness.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: KERI's Algorithm for Witness Agreement (KAWA), Immunity and Availability, Security Properties, Proper Agreement"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: KAWA, Immune Constraint, BFT Quorum"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/eventing.py (ample() — BFT quorum calculation)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox — keriox_core/src/event/sections/threshold.rs (tally validation)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "First-seen Rule",
+        "definition": "The first verified version of an event at a given sequence number wins — first seen, always seen, never unseen",
+        "invariants": [
+          "Once accepted, an event cannot be unseen or replaced (except by superseding recovery)",
+          "All subsequent versions of the same event at the same location are discarded"
+        ]
+      },
+      {
+        "term": "Immune Constraint",
+        "definition": "M > (N + F + 1) / 2 — the mathematical guarantee that at most one sufficient agreement exists despite F faulty witnesses",
+        "invariants": [
+          "When satisfied, the service cannot produce multiple divergent proper KERLs",
+          "Any non-faulty witness with a proper agreement will keep and provide it on demand"
+        ]
+      },
+      {
+        "term": "Accountability Threshold",
+        "definition": "The minimum M of N designated witnesses that must receipt an event for the controller to accept accountability",
+        "invariants": [
+          "Set in the bt field of establishment events",
+          "M must be no greater than N (the number of witnesses)",
+          "Can be changed at rotation along with the witness set"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/witness-agreement",
+        "relationship": "Parent orchestrates witness agreement; consensus provides the mathematical rules, quorum calculation, and proper-KERL invariants",
+        "via_port": "port://keri/witness-agreement/consensus/inbound/quorum-evaluation"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519/ECDSA signature verification for receipt validation, Blake3-256/SHA-256 for event digest verification",
+        "relationship": "Receipt validation requires verifying witness signatures against their public keys — kernel cryptographic primitives appear directly in quorum checks"
+      }
+    ],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, the ample() function in the kering module computes BFT quorum floors. The immune constraint is a documented property enforced at the controller's discretion (the protocol defines it; the controller chooses whether to satisfy it). Proper KERL verification is implicit in the event processing pipeline — a KERL is proper when every event has been verified against controller signatures and prior state.\n"
+    },
+    "issues": [],
+    "tags": [
+      "consensus",
+      "bft",
+      "quorum",
+      "first-seen",
+      "immunity",
+      "proper-kerl",
+      "accountability"
+    ],
+    "_source": "rdod/spec/domains/keri/witness-agreement/consensus/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/witness-agreement/dissemination",
+    "name": "Witness Dissemination",
+    "description": "How events and receipts propagate through the witness network — round-robin and gossip protocols, witness designation mechanics, witnessing policy, and the direct/indirect operational modes. This subdomain owns the network-facing propagation logic: how the controller distributes events to witnesses, how witnesses exchange receipts among themselves, and how the choice of direct vs. indirect mode determines the dissemination strategy. It does not own the consensus rules or receipt creation — only the movement of events and receipts through the witness network.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Witness Designation, Witnessing Policy, Direct Mode, Indirect Mode, Receipt Dissemination"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: Witnesses, Direct Mode, Indirect Mode, Dissemination"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/eventing.py (witness designation via b/br/ba fields), src/keri/app/habbing.py (witness management)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox — components/witness/src/ (witness node implementation), keriox_core/src/event/event_data/inception.rs (witness_config)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Round-robin Dissemination",
+        "definition": "An efficient receipt dissemination protocol where the controller exchanges events and receipts with each witness in turn, requiring at most 2*N acknowledged exchanges",
+        "invariants": [
+          "Network load scales linearly with N",
+          "At most two passes through all N witnesses for full dissemination"
+        ]
+      },
+      {
+        "term": "Witness Designation",
+        "definition": "The act of a controller specifying its witness set and accountability threshold in establishment events",
+        "invariants": [
+          "Witnesses are designated by the controller — not self-selected",
+          "Initial witness set in inception (b and bt fields); modifications at rotation (br, ba)"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/witness-agreement",
+        "relationship": "Parent orchestrates witness agreement; dissemination provides the propagation protocols, witness designation mechanics, and operational mode selection",
+        "via_port": "port://keri/witness-agreement/dissemination/inbound/event-propagation"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Transport",
+        "abstraction": "Adapter",
+        "ref": "port://keri/witness-agreement/dissemination/outbound/transport",
+        "implementation_notes": "HTTP/TCP/WebSocket for receipt delivery between controller, witnesses, and validators. Implementations vary: direct HTTP in keripy, async messaging in keriox"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "Dissemination strategy is chosen by the controller. Round-robin (2*N exchanges) is simpler and used in most implementations. Gossip (N*log(N) bandwidth, lower latency) is an alternative for large witness sets. Witness designation is embedded in establishment events: b field for initial set, br/ba for pruning/grafting at rotation. Direct mode bypasses witnesses entirely — the controller sends events directly to the validator who acts as an implicit witness. Indirect mode uses the full witness pool.\n"
+    },
+    "issues": [],
+    "tags": [
+      "dissemination",
+      "round-robin",
+      "gossip",
+      "witness-designation",
+      "direct-mode",
+      "indirect-mode"
+    ],
+    "_source": "rdod/spec/domains/keri/witness-agreement/dissemination/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
     "id": "keri/witness-agreement",
     "name": "Witness Agreement",
     "description": "KERI's Algorithm for Witness Agreement (KAWA) — a Byzantine Fault Tolerant agreement algorithm that uses a designated set of N witnesses to provide highly available, consistent promulgation of an AID's key event history. Unlike multi-phase BFT consensus, KAWA uses single-phase agreement because the controller is the sole source of truth for event creation. Witnesses verify, receipt (sign), store, and disseminate events under the first-seen rule. The controller designates a threshold M of N witnesses for accountability, ensuring that at most one sufficient agreement exists despite faulty witnesses. The resulting Key Event Receipt Log (KERL) is the receipted form of the KEL used in indirect mode.\n",
@@ -2156,11 +3755,11 @@ const RDOD_DATA = [
       },
       {
         "type": "implementation",
-        "reference": "keripy — src/keri/core/coring.py (Toader, Cigar, Siger), src/keri/core/eventing.py (Kevery.processEscrowUnverWitness, processEscrowUnverNonTrans, processEscrowUnverTrans), src/keri/app/storing.py (.rcts, .vrcs, .wigs, .uwes, .ures, .vres), src/keri/core/eventing.py (Receiptor), src/keri/core/eventing.py (ample())"
+        "reference": "keripy — src/keri/core/coring.py (Toader), src/keri/core/eventing.py (ample())"
       },
       {
         "type": "implementation",
-        "reference": "keriox — keriox_core/src/event/sections/threshold.rs (tally), components/witness/src/witness_receipt_generator.rs (WitnessReceiptGenerator), keriox_core/src/processor/notification.rs (KeyEventAdded notification)"
+        "reference": "keriox — keriox_core/src/event/sections/threshold.rs (tally), components/witness/src/"
       }
     ],
     "ubiquitous_language": [
@@ -2174,11 +3773,20 @@ const RDOD_DATA = [
         ]
       },
       {
-        "term": "First-seen Rule",
-        "definition": "The rule that the first verified version of an event accepted by a witness wins — first seen, always seen, never unseen",
+        "term": "Witness",
+        "definition": "An entity designated by a controller to verify, receipt, store, and disseminate key events",
         "invariants": [
-          "Once accepted, an event cannot be unseen or replaced (except by superseding recovery)",
-          "All subsequent versions of the same event at the same location are discarded"
+          "Designated by the controller in establishment events — not self-selected",
+          "A witness's receipt constitutes a first-seen guarantee",
+          "Accountable — duplicitous witnessing is detectable"
+        ]
+      },
+      {
+        "term": "TOAD",
+        "definition": "Threshold of Accountable Duplicity — the numeric threshold of witness receipts required before an event is fully witnessed",
+        "invariants": [
+          "Set in the bt field of establishment events",
+          "Must be at least ample(witness_count), the BFT minimum"
         ]
       }
     ],
@@ -2189,7 +3797,20 @@ const RDOD_DATA = [
         "via_port": "port://keri/witness-agreement/inbound/receipting"
       }
     ],
-    "subdomains": [],
+    "subdomains": [
+      {
+        "ref": "domain://keri/witness-agreement/consensus",
+        "relationship": "Mathematical and algorithmic foundations — first-seen rule, immune constraint, accountability thresholds, proper KERL properties, BFT quorum calculations"
+      },
+      {
+        "ref": "domain://keri/witness-agreement/receipting",
+        "relationship": "Receipt lifecycle — receipt creation, receipt types, receipt escrows, witness receipt generator, KERL as receipted KEL"
+      },
+      {
+        "ref": "domain://keri/witness-agreement/dissemination",
+        "relationship": "Event and receipt propagation — round-robin and gossip protocols, witness designation, witnessing policy, direct/indirect operational modes"
+      }
+    ],
     "kernels": [
       {
         "ref": "kernel://cryptographic-algorithms",
@@ -2209,7 +3830,7 @@ const RDOD_DATA = [
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
-      "notes": "KAWA is implemented by the witness component. In keripy, witnessing is handled by the Witness class and the receipting logic in Kevery. In keriox, the witness component lives under components/witness/. Receipt dissemination may use round-robin (2*N exchanges) or gossip (N*log(N) bandwidth) protocols. The immune constraint M > (N+F+1)/2 should be documented but enforcement is at the controller's discretion.\n"
+      "notes": "This domain orchestrates three subdomains: consensus (rules and quorum math), receipting (receipt creation/storage/escrow), and dissemination (network propagation). KAWA is implemented by the witness component. In keripy, witnessing is handled by the Witness class and the receipting logic in Kevery. In keriox, the witness component lives under components/witness/. The TOAD (Toader in keripy, tally in keriox) bridges all three subdomains — it is the accountability threshold that consensus validates, receipting counts against, and dissemination targets.\n"
     },
     "issues": [],
     "tags": [
@@ -2221,6 +3842,84 @@ const RDOD_DATA = [
       "indirect-mode"
     ],
     "_source": "rdod/spec/domains/keri/witness-agreement/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/witness-agreement/receipting",
+    "name": "Witness Receipting",
+    "description": "The receipt lifecycle — receipt creation, receipt types (non-transferable couple, transferable quadruple, witness indexed), receipt escrows for premature receipts, the witness receipt generator, and the KERL as the receipted KEL. This subdomain owns everything about how receipts are produced, typed, escrowed, and attached to events. It does not own the consensus rules (first-seen, quorum) or the network propagation of receipts.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Receipt Message, Receipt Types, KERL, Witness Receipting"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md — sections: KERL, Witness Receipts, Escrows"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/eventing.py (Receiptor, Kevery.processEscrowUnverWitness, processEscrowUnverNonTrans, processEscrowUnverTrans), src/keri/core/coring.py (Cigar, Siger), src/keri/app/storing.py (.rcts, .vrcs, .wigs, .uwes, .ures, .vres)"
+      },
+      {
+        "type": "implementation",
+        "reference": "keriox — components/witness/src/witness_receipt_generator.rs (WitnessReceiptGenerator), keriox_core/src/processor/notification.rs (KeyEventAdded notification)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Receipt",
+        "definition": "A signed acknowledgment by a witness that it has verified and accepted (first-seen) a specific version of an event — message type 'rct'",
+        "invariants": [
+          "Created after verifying controller signatures and event consistency",
+          "Constitutes the witness's first-seen guarantee",
+          "Signatures attached as CESR attachment codes"
+        ]
+      },
+      {
+        "term": "KERL",
+        "definition": "Key Event Receipt Log — a KEL augmented with witness receipt signatures, the receipted form of the event log",
+        "invariants": [
+          "Contains all KEL events plus attached witness receipt signatures",
+          "Immutable and append-only",
+          "Made deletion-proof by distribution across the witness set"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/witness-agreement",
+        "relationship": "Parent orchestrates witness agreement; receipting provides the receipt creation, typing, escrowing, and KERL assembly mechanics",
+        "via_port": "port://keri/witness-agreement/receipting/inbound/receipt-lifecycle"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Persistence",
+        "abstraction": "Adapter",
+        "ref": "port://keri/witness-agreement/receipting/outbound/persistence",
+        "implementation_notes": "Receipt storage across typed databases: .rcts (non-transferable receipt couples), .vrcs (transferable receipt quadruples), .wigs (witness indexed receipts), .uwes (unverified witness escrow), .ures (unverified non-transferable escrow), .vres (unverified transferable escrow)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, the Receiptor class processes cues from Kevery to generate receipts for witnessed events. Receipt escrows are drained by Kevery.processEscrowUnverWitness(), processEscrowUnverNonTrans(), and processEscrowUnverTrans(). In keriox, the WitnessReceiptGenerator subscribes to KeyEventAdded notifications from the NotificationBus and creates non-transferable receipts using the witness's signing keys. Receipt type selection depends on the signer's AID type (transferable vs. non-transferable) and role (witness vs. validator).\n"
+    },
+    "issues": [],
+    "tags": [
+      "receipt",
+      "kerl",
+      "escrow",
+      "rct",
+      "witness-receipt",
+      "receipt-types"
+    ],
+    "_source": "rdod/spec/domains/keri/witness-agreement/receipting/domain.yaml"
   },
   {
     "template_version": "1.0",
