@@ -2,6 +2,24 @@
 domain_ref: "keri/event-log/storage"
 
 terms:
+  - term: "Subdatabase Pattern"
+    synonyms: ["Named Subdatabase Structure"]
+    definition: "The common structure shared by all LMDB/redb subdatabases in the KEL storage layer. Every subdatabase is defined by four elements: (1) a key pattern (dgKey = prefix+digest, or snKey = prefix+sn) determining the primary access path, (2) a value type (serialized event, CESR primitive, composite tuple, or index pointer), (3) an access semantic (append-only, put-if-not-exists, or put-with-overwrite), and (4) a multiplicity (single value per key, or set/duplicate values per key)."
+    invariants:
+      - "Key pattern is either dgKey (prefix + event digest — content-addressed) or snKey (prefix + sequence number — position-addressed)"
+      - "Value types are CESR primitives (Siger, Diger, Prefixer, Dater), serialized events (SerderKERI bytes), or composite tuples (e.g., Prefixer+Cigar for receipts)"
+      - "Append-only: .evts, .kels, .fels — events and indexes never overwritten"
+      - "Put-if-not-exists: .fons — first-seen ordinal set once, never changed"
+      - "Put-with-overwrite: .esrs — event source record can escalate from remote to local"
+      - "Single-value: .evts (one event per digest), .fons (one fn per event)"
+      - "Set/duplicates: .sigs (multiple signatures per event), .kels (multiple digests at same sn during recovery)"
+    examples:
+      - ".evts: key=dgKey(prefix,digest), value=SerderKERI bytes, access=append-only, multiplicity=single"
+      - ".sigs: key=dgKey(prefix,digest), value=Siger list, access=append, multiplicity=set (accumulates)"
+      - ".kels: key=snKey(prefix,sn), value=digest pointer, access=append, multiplicity=duplicates (recovery forks)"
+      - ".fons: key=dgKey(prefix,digest), value=Seqner(fn), access=put-if-not-exists, multiplicity=single"
+    related_terms: ["KEL Storage Schema", "Database Key Patterns", "Idempotent Logging"]
+
   - term: "KEL Storage Schema"
     synonyms: ["Baser subdatabases [keripy]", "EventDatabase [keriox]"]
     definition: "The partitioned database organization for the Key Event Log. Separates events, indexes, signatures, receipts, and metadata into distinct subdatabases, each optimized for its access pattern. The schema provides both content-addressed (by digest) and sequence-ordered (by sn) access."

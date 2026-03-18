@@ -2,6 +2,22 @@
 domain_ref: "acdc/ipex/negotiation"
 
 terms:
+  - term: "IPEX Message Type Pattern"
+    synonyms: ["Exchange Step Structure"]
+    definition: "The common structure shared by all IPEX message types. Every IPEX message is defined by five elements: (1) a sender role (Discloser or Disclosee), (2) a receiver role (the other party), (3) a payload content specific to the message type, (4) a set of valid responses (which message types may follow), and (5) a signature requirement (sender must sign for non-repudiable attribution)."
+    invariants:
+      - "Every IPEX message uses KERI exchange (exn) format with an '/ipex/*' route"
+      - "Sender role is either Discloser (holds/issues credential) or Disclosee (requests/verifies)"
+      - "Payload varies by type: schema SAIDs (apply), metadata ACDC (offer), signature on offer (agree), full ACDC + TEL + seal (grant), confirmation signature (admit), rejection (spurn)"
+      - "Valid responses are constrained: apply → offer|spurn, offer → agree|spurn, agree → grant|spurn, grant → admit"
+      - "All messages are signed by the sender via KRAM for secure attribution"
+      - "Exception: spurn has no constrained response — it terminates the current step but not the exchange"
+    examples:
+      - "Apply: sender=Disclosee, receiver=Discloser, payload=schema+labels, responses=offer|spurn, sig=required"
+      - "Grant: sender=Discloser, receiver=Disclosee, payload=ACDC+TEL+seal, responses=admit, sig=required"
+      - "Spurn: sender=either, receiver=either, payload=rejection+spurned_said, responses=none, sig=required"
+    related_terms: ["Apply", "Offer", "Agree", "Grant", "Admit", "Spurn", "Exchange Message"]
+
   - term: "Apply"
     synonyms: []
     definition: "An IPEX message from the Disclosee to the Discloser that defines the wanted disclosure — specifying the schema, desired attribute field labels, aggregate element labels, and a signature on the apply."

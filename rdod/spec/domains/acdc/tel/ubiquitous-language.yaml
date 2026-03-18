@@ -30,6 +30,22 @@ terms:
       - "A revocation registry tracking multiple ACDCs from the same issuer"
     related_terms: ["TEL", "Registry Inception", "REGID", "Credential State"]
 
+  - term: "TEL Event Type Pattern"
+    synonyms: ["Transaction Event Structure"]
+    definition: "The common structure shared by all TEL event types. Every TEL event is defined by five elements: (1) an event ilk (t field: rip, upd, bup), (2) a normative field structure with required fields, (3) a state transition it produces (e.g., NotIssued → Issued), (4) a mode variant (backed with EventSeal or backerless without), and (5) a KEL anchor requirement (every TEL event must be sealed in the issuer's KEL)."
+    invariants:
+      - "Every TEL event has a t field (ilk), d field (SAID), and rd field (registry SAID)"
+      - "Every TEL event must be sealed (anchored) in the issuer's KEL — the seal provides non-repudiable commitment"
+      - "Events are hash-chained via prior event SAID (p field) — except registry inception which has no predecessor"
+      - "Backed variants (bis, brv) include an EventSeal referencing the management TEL and require backer signatures"
+      - "Backerless variants (iss, rev) reference only the registry ID — simpler, no backer infrastructure"
+      - "Each event type produces exactly one state transition: rip creates registry, upd/bup changes credential state"
+    examples:
+      - "Registry Inception (rip): ilk=rip, fields=[v,t,d,u,i,n,dt], transition=creates registry, mode=N/A, anchor=required"
+      - "Update (upd): ilk=upd, fields=[v,t,d,rd,n,p,dt,ta,ts], transition=changes credential state, mode=backerless, anchor=required"
+      - "Blindable Update (bup): ilk=bup, fields=[v,t,d,rd,n,p,dt,b], transition=changes blinded state, mode=backerless, anchor=required"
+    related_terms: ["Registry Inception", "Update Event", "Blindable Update", "Backed vs Backerless", "Transaction Event Seal"]
+
   - term: "Registry Inception"
     synonyms: ["rip event"]
     definition: "The initialization event for a TEL registry, establishing the registry's unique identifier (REGID) as its SAID and binding it to the issuer AID."

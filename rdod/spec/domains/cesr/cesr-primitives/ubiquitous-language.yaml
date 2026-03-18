@@ -2,6 +2,23 @@
 domain_ref: "cesr/cesr-primitives"
 
 terms:
+  - term: "CESR Primitive Pattern"
+    synonyms: ["Primitive Structure"]
+    definition: "The common structure shared by all CESR primitive types. Every primitive is defined by five elements: (1) a base trait (Matter for non-indexed, Indexer for indexed), (2) a code from the code table identifying the algorithm and raw size, (3) raw binary material of the size specified by the code, (4) three domain representations (qb64, qb2, raw) with lossless conversion, and (5) a Sizage entry (hs/ss/fs/ls) governing the encoding geometry."
+    invariants:
+      - "Every primitive extends Matter (non-indexed) or Indexer (indexed signatures)"
+      - "The code determines the algorithm — there is no separate algorithm parameter"
+      - "Raw size must match the size specified by the code's Sizage entry"
+      - "All three domain representations (qb64, qb2, raw) are derivable from any one"
+      - "Agent-noun naming convention: class names end in -er suffix (Verfer, Diger, Siger, Salter)"
+      - "Specialized primitives add domain-specific methods (verify for Verfer, sign for Signer, compare for Diger)"
+    examples:
+      - "Verfer: Matter + code D (Ed25519) + 32-byte raw + verify(sig, ser) method"
+      - "Diger: Matter + code E (Blake3-256) + 32-byte raw + compare(ser, diger) method"
+      - "Siger: Indexer + code A (Ed25519 indexed) + 64-byte raw + index + ondex"
+      - "Salter: Matter + code 0A (Salt_128) + 16-byte raw + signer(path, code) method"
+    related_terms: ["Matter", "Indexer", "Sizage", "Code Table"]
+
   - term: "Matter"
     synonyms: ["CESR Matter", "Base Primitive"]
     definition: "The base type for all non-indexed CESR primitives. Encapsulates a (code, raw) pair and provides bidirectional domain transforms to qb64, qb2, and (code, raw)."

@@ -2,6 +2,22 @@
 domain_ref: "acdc/tel/storage"
 
 terms:
+  - term: "TEL Subdatabase Pattern"
+    synonyms: ["TEL Storage Structure"]
+    definition: "The common structure shared by all subdatabases in the TEL storage layer. Mirrors the KEL subdatabase pattern with four elements: (1) a key pattern (registry SAID + sn, or registry SAID + event digest), (2) a value type (serialized TEL event, CESR primitive, or composite tuple), (3) an access semantic (append-only for events, accumulate for signatures), and (4) a purpose category (event storage, signature storage, anchor storage, escrow storage, or credential index)."
+    invariants:
+      - "Event storage (.tvts, .tels): append-only, keyed by registry SAID + digest or sn"
+      - "Signature storage (.tibs): accumulates backer signatures, keyed by event digest"
+      - "Anchor storage (.ancs): links TEL events to KEL seals, keyed by event digest"
+      - "Escrow storage (.oots, .twes, .taes): temporary, pruned on resolution or timeout"
+      - "Credential indexes (.issus, .subjs, .schms, .saved): enable filtered lookup by issuer, subject, or schema"
+      - "Same key pattern conventions as KEL storage: dgKey for content-addressed, snKey for position-addressed"
+    examples:
+      - ".tvts: key=dgKey(registry,digest), value=TEL event bytes, access=append-only, purpose=event storage"
+      - ".tibs: key=dgKey(registry,digest), value=Siger list, access=accumulate, purpose=signature storage"
+      - ".issus: key=issuer_aid, value=Saider list, access=append, purpose=credential index"
+    related_terms: ["TEL Storage Schema", "Credential Storage", "Escrow Storage", "TEL Key Patterns"]
+
   - term: "TEL Database"
     synonyms: ["Reger [keripy]", "TelEventDatabase trait [keriox]"]
     definition: "Persistent storage for TEL events and credential metadata. In keripy: Reger class extending LMDBer with typed subdatabase attributes. In keriox: TelEventDatabase trait with add_new_event/get_events/get_management_events."
