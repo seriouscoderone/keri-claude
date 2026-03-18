@@ -2,6 +2,23 @@
 domain_ref: "keri/event-log/escrow"
 
 terms:
+  - term: "Escrow Type Pattern"
+    synonyms: ["Escrow Structure"]
+    definition: "The common structure shared by all escrow types. Every escrow is defined by four elements: (1) a trigger condition that causes an event to enter the escrow, (2) a storage location (subdatabase) where the escrowed event is held, (3) a timeout after which the event is pruned, and (4) a reprocessing trigger that causes the event to be re-validated through the pipeline."
+    invariants:
+      - "Trigger condition: the specific validation failure that diverts an event into this escrow (e.g., sn > expected for OOE, insufficient sigs for PSE)"
+      - "Storage: a named subdatabase (.ooes, .pses, .pwes, .pdes, .ldes, .delegables, .misfits) indexed by prefix + sn or prefix + digest"
+      - "Timeout: a configurable duration (default 1200s for OOE, 3600s for most others) after which the event is pruned"
+      - "Reprocessing trigger: the external event that causes re-validation — either a notification (keriox: KeyEventAdded, PartiallyWitnessed, etc.) or a periodic sweep (keripy: processEscrow*() methods)"
+      - "On reprocessing: the event is fully re-validated — not assumed valid. It may be accepted, remain escrowed, or cascade to a different escrow type."
+      - "Exception: Likely Duplicitous Escrow has no reprocessing trigger — events are permanent forensic evidence"
+      - "Exception: Misfit Event Escrow has no automatic reprocessing — events must be re-submitted from a local source"
+    examples:
+      - "OOE pattern: trigger=sn>expected, storage=.ooes, timeout=1200s, reprocess=when prior event accepted"
+      - "PSE pattern: trigger=insufficient sigs, storage=.pses, timeout=3600s, reprocess=when new signature arrives for same SAID"
+      - "PWE pattern: trigger=insufficient witness receipts, storage=.pwes, timeout=3600s, reprocess=when witness receipt arrives"
+    related_terms: ["Escrow Cascade", "Escrow Timeout", "Escrow Processing Order"]
+
   - term: "Escrow Cascade"
     synonyms: ["Escrow State Machine"]
     definition: "The flow of events between escrow queues based on what validation step fails. Events progress through escrows as their blocking conditions resolve, potentially visiting multiple escrow types before final acceptance."
