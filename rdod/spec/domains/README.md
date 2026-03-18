@@ -81,7 +81,10 @@ graph TD
 | `keri/event-log/escrow` | Event Escrow | sub-subdomain | complete | 11 | Cascade, 7 escrow types, processing order, timeouts, sig accumulation |
 | `keri/event-log/serialization` | Event Serialization | sub-subdomain | complete | 9 | SerderKERI, field structure, creation functions, seal types, quorum |
 | `keri/event-log/storage` | Event Storage | sub-subdomain | complete | 10 | KEL schema, first-seen ordering, idempotent logging, key patterns |
-| `keri/witness-agreement` | Witness Agreement | subdomain | complete | 19 | TOAD, receipt types/escrows, WitnessReceiptGenerator, BFT quorum |
+| `keri/witness-agreement` | Witness Agreement | subdomain | complete | 3 | KAWA, Witness, TOAD (delegates to 3 sub-subdomains) |
+| `keri/witness-agreement/consensus` | Witness Consensus | sub-subdomain | complete | 5 | First-seen rule, immune constraint, accountability, proper KERL, BFT quorum |
+| `keri/witness-agreement/receipting` | Witness Receipting | sub-subdomain | complete | 5 | Receipt types, escrows, receipt generator, KERL |
+| `keri/witness-agreement/dissemination` | Witness Dissemination | sub-subdomain | complete | 6 | Round-robin, gossip, designation, policy, direct/indirect mode |
 | `keri/duplicity-detection` | Duplicity Detection | subdomain | complete | 5 | Duplicity, internal inconsistency, live/dead attacks (delegates to 3 sub-subdomains) |
 | `keri/duplicity-detection/evidence` | Duplicity Evidence | sub-subdomain | complete | 5 | Fork detection, LDE/DEL, notification bus |
 | `keri/duplicity-detection/recovery` | Superseding Recovery | sub-subdomain | complete | 5 | Superseding rules A0-C, reconciliation, trunk/branch |

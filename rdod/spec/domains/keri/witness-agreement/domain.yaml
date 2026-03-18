@@ -21,9 +21,9 @@ source_material:
   - type: document
     reference: "KERI_SecurityDeepDive.web.md — sections: KERI Ecosystem Components, Witnesses and Watchers, Ambient Verifiability"
   - type: implementation
-    reference: "keripy — src/keri/core/coring.py (Toader, Cigar, Siger), src/keri/core/eventing.py (Kevery.processEscrowUnverWitness, processEscrowUnverNonTrans, processEscrowUnverTrans), src/keri/app/storing.py (.rcts, .vrcs, .wigs, .uwes, .ures, .vres), src/keri/core/eventing.py (Receiptor), src/keri/core/eventing.py (ample())"
+    reference: "keripy — src/keri/core/coring.py (Toader), src/keri/core/eventing.py (ample())"
   - type: implementation
-    reference: "keriox — keriox_core/src/event/sections/threshold.rs (tally), components/witness/src/witness_receipt_generator.rs (WitnessReceiptGenerator), keriox_core/src/processor/notification.rs (KeyEventAdded notification)"
+    reference: "keriox — keriox_core/src/event/sections/threshold.rs (tally), components/witness/src/"
 
 ubiquitous_language:
   - term: "KAWA"
@@ -33,18 +33,31 @@ ubiquitous_language:
       - "The controller is the sole source of truth for event creation"
       - "Witnesses are designated by the controller, not self-selected"
 
-  - term: "First-seen Rule"
-    definition: "The rule that the first verified version of an event accepted by a witness wins — first seen, always seen, never unseen"
+  - term: "Witness"
+    definition: "An entity designated by a controller to verify, receipt, store, and disseminate key events"
     invariants:
-      - "Once accepted, an event cannot be unseen or replaced (except by superseding recovery)"
-      - "All subsequent versions of the same event at the same location are discarded"
+      - "Designated by the controller in establishment events — not self-selected"
+      - "A witness's receipt constitutes a first-seen guarantee"
+      - "Accountable — duplicitous witnessing is detectable"
+
+  - term: "TOAD"
+    definition: "Threshold of Accountable Duplicity — the numeric threshold of witness receipts required before an event is fully witnessed"
+    invariants:
+      - "Set in the bt field of establishment events"
+      - "Must be at least ample(witness_count), the BFT minimum"
 
 domain_clients:
   - ref: "domain://keri"
     relationship: "Parent domain drives witness receipting and consensus for indirect mode"
     via_port: "port://keri/witness-agreement/inbound/receipting"
 
-subdomains: []
+subdomains:
+  - ref: "domain://keri/witness-agreement/consensus"
+    relationship: "Mathematical and algorithmic foundations — first-seen rule, immune constraint, accountability thresholds, proper KERL properties, BFT quorum calculations"
+  - ref: "domain://keri/witness-agreement/receipting"
+    relationship: "Receipt lifecycle — receipt creation, receipt types, receipt escrows, witness receipt generator, KERL as receipted KEL"
+  - ref: "domain://keri/witness-agreement/dissemination"
+    relationship: "Event and receipt propagation — round-robin and gossip protocols, witness designation, witnessing policy, direct/indirect operational modes"
 
 kernels:
   - ref: "kernel://cryptographic-algorithms"
@@ -63,11 +76,13 @@ implementation_guidance:
   suggested_type: "module"
   language_affinity: "any"
   notes: >
+    This domain orchestrates three subdomains: consensus (rules and quorum math),
+    receipting (receipt creation/storage/escrow), and dissemination (network propagation).
     KAWA is implemented by the witness component. In keripy, witnessing is handled by the
     Witness class and the receipting logic in Kevery. In keriox, the witness component lives
-    under components/witness/. Receipt dissemination may use round-robin (2*N exchanges) or
-    gossip (N*log(N) bandwidth) protocols. The immune constraint M > (N+F+1)/2 should be
-    documented but enforcement is at the controller's discretion.
+    under components/witness/. The TOAD (Toader in keripy, tally in keriox) bridges all
+    three subdomains — it is the accountability threshold that consensus validates,
+    receipting counts against, and dissemination targets.
 
 issues: []
 
