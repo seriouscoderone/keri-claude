@@ -1,0 +1,54 @@
+# domain.yaml
+template_version: "1.0"
+id: "acdc/ipex/negotiation"
+name: "IPEX Negotiation"
+description: >
+  The protocol flow for credential issuance and presentation exchange. Defines the
+  message types (apply, offer, agree, grant, admit, spurn), the two exchange patterns
+  (direct issuance vs full negotiation), and bespoke issued ACDCs. This is pure protocol
+  logic — no cryptography, no message routing — just the state machine governing how
+  discloser and disclosee negotiate and complete an exchange.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "acdc-specification.md — Issuance and Presentation Exchange (IPEX) section: protocol routes, flow patterns, bespoke issuance"
+  - type: document
+    reference: "KERIArchGroupIssuance.md — IPEX protocol flows, direct issuance shortcut"
+  - type: implementation
+    reference: "keripy — src/keri/app/ipexing.py: protocol flow logic, grant/admit patterns"
+
+ubiquitous_language:
+  - term: "IPEX Negotiation Flow"
+    definition: "The state machine governing the sequence of IPEX messages between discloser and disclosee — from initiation through completion or rejection"
+    invariants:
+      - "Two valid patterns: direct issuance (grant -> admit) and full negotiation (apply -> offer -> agree -> grant -> admit)"
+      - "Any negotiation step may be spurned, terminating that step but not the relationship"
+      - "The protocol is identical for issuance and presentation — only the disclosed content differs"
+
+domain_clients:
+  - ref: "domain://acdc/ipex"
+    relationship: "Parent IPEX domain delegates protocol flow logic to this subdomain"
+    via_port: "port://acdc/ipex/negotiation/inbound/negotiate"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    This is a leaf domain — pure protocol logic with no kernel or external dependencies.
+    Implementations define the valid message sequences and their semantics. In keripy,
+    the protocol flow is embedded in the ipexing module's message construction functions
+    and the handler dispatch logic. The negotiation domain does not verify signatures
+    or route messages — it defines WHAT messages exist and HOW they sequence.
+
+issues: []
+
+tags: ["negotiation", "protocol-flow", "apply", "offer", "agree", "grant", "admit", "spurn", "direct-issuance"]

@@ -3,13 +3,11 @@ template_version: "1.0"
 id: "acdc/ipex"
 name: "Issuance and Presentation Exchange (IPEX)"
 description: >
-  Issuance and Presentation Exchange Protocol — a uniform mechanism for the
-  issuance and presentation of ACDCs in a securely attributable manner. IPEX
-  models all exchanges (both issuance and presentation) as the disclosure of
-  information by a Discloser to a Disclosee using KERI exchange (exn) messages.
-  The protocol supports graduated disclosure negotiation with contractual
-  protection, leveraging SAIDs, CESR-Path proofs, and Ricardian contracts.
-  Message routes: apply, offer, agree, grant, admit, spurn.
+  Issuance and Presentation Exchange Protocol — the orchestrating domain that
+  coordinates credential issuance and presentation as disclosure from a Discloser
+  to a Disclosee. IPEX unifies issuance and presentation under a single protocol.
+  Delegates protocol flow to negotiation, cryptographic proof to verification,
+  and message routing to messaging.
 version: "0.1.0"
 
 source_material:
@@ -17,32 +15,27 @@ source_material:
     reference: "acdc-specification.md — Issuance and Presentation Exchange (IPEX) section"
   - type: document
     reference: "KERIArchGroupIssuance.md — KERI architectures for group issuance, IPEX and KRAM sections"
-  - type: implementation
-    reference: "keripy — src/keri/app/ipexing.py (ipexApplyExn, ipexOfferExn, ipexAgreeExn, ipexGrantExn, ipexAdmitExn, ipexSpurnExn: IPEX message construction functions)"
-  - type: implementation
-    reference: "keripy — src/keri/core/exchanging.py (Exchanger: generic EXN message router and handler dispatcher)"
 
 ubiquitous_language:
   - term: "IPEX"
     definition: "Issuance and Presentation Exchange Protocol — a standard set of KERI exchange (exn) message routes for credential issuance and presentation"
     invariants:
       - "All exchanges modeled as disclosure from Discloser to Disclosee"
-      - "Protocol routes: apply, offer, agree, grant, admit, spurn"
       - "A single protocol works for both issuance and presentation exchanges"
-
-  - term: "Grant"
-    definition: "IPEX message route by which the Discloser provides full or selective disclosure of an ACDC to the Disclosee"
-    invariants:
-      - "Contains the ACDC (full or selective disclosure variant)"
-      - "Includes discloser's signature on the grant or its SAID"
-      - "Disclosee responds with admit to confirm receipt"
+      - "Delegates protocol flow to negotiation, proof mechanics to verification, message infrastructure to messaging"
 
 domain_clients:
   - ref: "domain://acdc"
     relationship: "ACDC core domain drives IPEX for credential issuance and presentation exchange"
     via_port: "port://acdc/ipex/inbound/exchange-protocol"
 
-subdomains: []
+subdomains:
+  - ref: "domain://acdc/ipex/negotiation"
+    relationship: "Protocol flow logic — message types, sequencing, exchange patterns"
+  - ref: "domain://acdc/ipex/verification"
+    relationship: "Cryptographic proof mechanics — PoI, PoD, credential artifacts, KRAM"
+  - ref: "domain://acdc/ipex/messaging"
+    relationship: "Message construction, routing, and handler dispatch infrastructure"
 
 kernels: []
 
@@ -54,13 +47,12 @@ implementation_guidance:
   suggested_type: "module"
   language_affinity: "any"
   notes: >
-    IPEX is implemented using KERI exchange (exn) messages with specific route
-    values. The protocol is non-normative in the ACDC spec and is being developed
-    as a separate detailed specification. Implementations must support both the
-    full negotiation flow (apply -> offer -> agree -> grant -> admit) and the
-    direct issuance shortcut (grant -> admit). Group multisig issuance requires
-    coordination of IPEX messages across group members.
+    IPEX is an orchestrating domain that coordinates three subdomains: negotiation
+    (protocol flows), verification (cryptographic proofs), and messaging (EXN
+    construction and routing). In keripy, these concerns are co-located in
+    ipexing.py and exchanging.py but are logically separable. Group multisig
+    issuance requires coordination of IPEX messages across group members.
 
 issues: []
 
-tags: ["exchange", "issuance", "presentation", "disclosure", "protocol"]
+tags: ["exchange", "issuance", "presentation", "disclosure", "protocol", "orchestration"]

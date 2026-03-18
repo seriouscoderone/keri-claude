@@ -1,0 +1,143 @@
+# ubiquitous-language.yaml
+domain_ref: "acdc/ipex/negotiation"
+
+terms:
+  - term: "Apply"
+    synonyms: []
+    definition: "An IPEX message from the Disclosee to the Discloser that defines the wanted disclosure — specifying the schema, desired attribute field labels, aggregate element labels, and a signature on the apply."
+    invariants:
+      - "Initiated by the Disclosee (the party requesting information)"
+      - "Contains schema or its SAID defining what is wanted"
+      - "May include attribute field label list and aggregate element label list"
+      - "Includes signature on the apply or its SAID"
+      - "Discloser may respond with offer or spurn"
+    examples:
+      - "Verifier sends apply requesting a credential matching a specific schema SAID"
+      - "Verifier requests specific selectively disclosable attributes by label"
+    related_terms: ["Offer", "Spurn", "Full Negotiation"]
+
+  - term: "Offer"
+    synonyms: []
+    definition: "An IPEX message from the Discloser to the Disclosee that proposes an acceptable disclosure — presenting a metadata ACDC, partial disclosure, and the contractual terms for full disclosure."
+    invariants:
+      - "Initiated by the Discloser (the party proposing to share information)"
+      - "Contains metadata ACDC or its SAID, schema or its SAID, partial disclosure"
+      - "May include aggregate element label list"
+      - "Includes signature on the offer or its SAID"
+      - "Disclosee may respond with agree or spurn"
+    examples:
+      - "Issuer offers a metadata credential with schema and terms of use before issuance"
+      - "Holder offers partial disclosure of a credential to a verifier"
+    related_terms: ["Apply", "Agree", "Spurn", "Metadata ACDC", "Partial Disclosure"]
+
+  - term: "Agree"
+    synonyms: []
+    definition: "An IPEX message from the Disclosee to the Discloser accepting the offered terms — providing a signature and/or anchored seal on the offer or its SAID as contractual acceptance."
+    invariants:
+      - "Response to an offer"
+      - "Contains signature and/or anchored seal on the offer or its SAID"
+      - "Constitutes non-repudiable acceptance of the contractual terms in the offer"
+      - "Discloser may respond with grant or spurn"
+    examples:
+      - "Issuee agrees to the terms of a credential offer, accepting contractual obligations"
+      - "Verifier agrees to chain-link confidentiality terms before receiving full disclosure"
+    related_terms: ["Offer", "Grant", "Spurn", "Chain-Link Confidentiality"]
+
+  - term: "Grant"
+    synonyms: []
+    definition: "An IPEX message from the Discloser to the Disclosee that provides the actual full or selective disclosure of the ACDC, fulfilling the agreed-upon offer."
+    invariants:
+      - "Contains the ACDC in full or selective disclosure variant"
+      - "Includes discloser's signature on the grant or its SAID"
+      - "May be sent directly without prior negotiation (direct issuance shortcut)"
+      - "Disclosee must respond with admit to confirm receipt"
+    examples:
+      - "Issuer grants a fully disclosed credential to the issuee after agreement"
+      - "Direct issuance: issuer sends grant without prior apply/offer/agree negotiation"
+    related_terms: ["Agree", "Admit", "Full Disclosure", "Selective Disclosure", "Direct Issuance"]
+
+  - term: "Admit"
+    synonyms: []
+    definition: "An IPEX message from the Disclosee to the Discloser confirming receipt of the grant disclosure — providing a signature and/or anchored seal on the grant or its SAID."
+    invariants:
+      - "Response to a grant"
+      - "Contains signature and/or anchored seal on the grant or its SAID"
+      - "Constitutes non-repudiable confirmation of receipt"
+    examples:
+      - "Issuee admits receipt of an issued credential"
+      - "Verifier admits receipt of a presented credential"
+    related_terms: ["Grant", "Direct Issuance"]
+
+  - term: "Spurn"
+    synonyms: ["Reject"]
+    definition: "An IPEX message rejecting the preceding message in the exchange — may be sent by either party in response to apply, offer, or agree."
+    invariants:
+      - "Can reject: apply (by discloser), offer (by disclosee), agree (by discloser)"
+      - "Terminates the current negotiation step"
+      - "Does not terminate the entire exchange — parties may restart negotiation"
+    examples:
+      - "Discloser spurns an apply because the requested schema is not available"
+      - "Disclosee spurns an offer because the terms of use are unacceptable"
+    related_terms: ["Apply", "Offer", "Agree"]
+
+  - term: "Direct Issuance"
+    synonyms: ["Grant-Admit Shortcut"]
+    definition: "A simplified IPEX flow where the Discloser sends a grant directly to the Disclosee without prior negotiation (apply/offer/agree), and the Disclosee confirms with admit."
+    invariants:
+      - "Flow: grant -> admit (two messages only)"
+      - "Appropriate when terms are pre-agreed or no negotiation is needed"
+      - "The grant contains the full or selective disclosure ACDC"
+    examples:
+      - "An issuer directly granting a credential to a known issuee without negotiation"
+    related_terms: ["Grant", "Admit", "Full Negotiation"]
+
+  - term: "Full Negotiation"
+    synonyms: []
+    definition: "The complete IPEX exchange flow with all negotiation steps: the Disclosee applies, the Discloser offers, the Disclosee agrees, the Discloser grants, and the Disclosee admits."
+    invariants:
+      - "Flow: apply -> offer -> agree -> grant -> admit"
+      - "Any step may be spurned, terminating that negotiation step"
+      - "Supports contractually protected disclosure via chain-link confidentiality"
+    examples:
+      - "Verifier applies for a specific credential, holder offers with terms, verifier agrees, holder grants, verifier admits"
+    related_terms: ["Direct Issuance", "Apply", "Offer", "Agree", "Grant", "Admit"]
+
+  - term: "Bespoke Issued ACDC"
+    synonyms: ["Disclosure-Specific ACDC"]
+    definition: "An ACDC issued specifically for a particular disclosure context, where the discloser is the issuer and the disclosee is the issuee, with context-specific rules and edges referencing other ACDCs."
+    invariants:
+      - "Issuer is the discloser, issuee is the disclosee"
+      - "Rules section includes context-specific anti-assimilation clauses"
+      - "Edges reference source ACDCs that provide the underlying authority or data"
+      - "Enables rich presentations combining multiple source ACDCs"
+    examples:
+      - "Admission ACDC: issuer/discloser creates a one-time credential referencing a coupon ACDC for restaurant admittance"
+    related_terms: ["Chain-Link Confidentiality", "Edge Section", "Rule Section"]
+
+events:
+  - name: "ExchangeInitiated"
+    payload: "route: Route, initiator_aid: AID, recipient_aid: AID, content_said: SAID"
+    triggers: "Either party initiates an IPEX exchange by sending an apply (disclosee) or offer (discloser)"
+
+  - name: "OfferAccepted"
+    payload: "offer_said: SAID, disclosee_aid: AID, agreement_signature: Signature"
+    triggers: "Disclosee sends agree message accepting the contractual terms of the offer"
+
+  - name: "DisclosureGranted"
+    payload: "acdc: ACDC, variant: DisclosureVariant, discloser_aid: AID, grant_said: SAID"
+    triggers: "Discloser sends grant message with the disclosed ACDC variant"
+
+  - name: "DisclosureAdmitted"
+    payload: "grant_said: SAID, disclosee_aid: AID, admit_signature: Signature"
+    triggers: "Disclosee sends admit message confirming receipt of the granted disclosure"
+
+  - name: "ExchangeSpurned"
+    payload: "spurned_message_said: SAID, spurning_aid: AID, reason: string?"
+    triggers: "Either party rejects a step in the negotiation via spurn message"
+
+rules:
+  - "The difference between issuance and presentation is the information disclosed, not the protocol"
+  - "Contractual terms in the rule section must be agreed to (via agree) before permissioned full disclosure (via grant)"
+  - "Direct issuance (grant -> admit) may be used when negotiation is not required"
+  - "Spurn terminates the current negotiation step but does not prevent restarting the exchange"
+  - "Each negotiation step produces a non-repudiable signature binding the party to that step"

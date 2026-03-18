@@ -1,0 +1,18 @@
+# ports.yaml
+domain_ref: "acdc/ipex/verification"
+
+ports:
+  # Inbound -- what clients call
+  - id: "port://acdc/ipex/verification/inbound/verify-disclosure"
+    type: inbound
+    name: "Disclosure Verification"
+    contract: "verify_proof_of_issuance(acdc_said: SAID, issuer_commitment: Signature, issuer_key_state: KeyState) -> Result<bool, VerificationError>; verify_proof_of_disclosure(compact_sad: SAD, expanded_sad: SAD) -> Result<bool, VerificationError>; verify_credential_artifacts(acdc: ACDC, tel_event: TELEvent, kel_seal: EventSeal) -> Result<bool, VerificationError>"
+    protocol: "method-call"
+    refs: ["domain://acdc/ipex"]
+
+  - id: "port://acdc/ipex/verification/inbound/authenticate-message"
+    type: inbound
+    name: "KRAM Authentication"
+    contract: "authenticate_exn(exn_message: ExchangeMessage, sender_key_state: KeyState) -> Result<bool, AuthenticationError>"
+    protocol: "method-call"
+    refs: ["domain://acdc/ipex"]

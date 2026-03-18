@@ -94,7 +94,10 @@ graph TD
 | `acdc/tel/validation` | TEL Validation | sub-subdomain | complete | 6 | Validation pipeline, verifiable events, escrows, KEL anchor check |
 | `acdc/tel/blinding` | TEL Blinding | sub-subdomain | complete | 8 | BLID, blinded blocks, shared secret, UUID derivation, decorrelation |
 | `acdc/tel/storage` | TEL Storage | sub-subdomain | complete | 6 | Reger schema, credential/escrow storage, key patterns, registry metadata |
-| `acdc/ipex` | IPEX Exchange | subdomain | complete | 18 | IpexHandler, Exchanger, message construction, grant artifacts |
+| `acdc/ipex` | IPEX Exchange | subdomain | complete | 1 | IPEX orchestrating concept (delegates to 3 sub-subdomains) |
+| `acdc/ipex/negotiation` | IPEX Negotiation | sub-subdomain | complete | 9 | Apply/offer/agree/grant/admit/spurn, direct vs full flow |
+| `acdc/ipex/verification` | IPEX Verification | sub-subdomain | complete | 4 | PoI, PoD, credential artifacts, KRAM authentication |
+| `acdc/ipex/messaging` | IPEX Messaging | sub-subdomain | complete | 4 | Exchanger, IPEX Handler, message construction, EXN format |
 | `oobi` | Out-of-Band Introduction | adjacent | complete | 6 | Bootstrap discovery, BADA endpoint authorization |
 | `agent` | Agent Infrastructure | client | complete | 4 | Edge/cloud separation, Signify protocol contract |
 | `agent/edge-signing` | Edge Signing (Signify) | subdomain | complete | 22 | Controller-side: keepers, tiers, derivation paths, resource API, operations |
