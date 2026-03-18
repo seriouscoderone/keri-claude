@@ -32,19 +32,20 @@ ubiquitous_language:
       - "Both versions are cryptographically verifiable but mutually inconsistent"
       - "Indicates either key compromise or malicious controller behavior"
       - "Always detectable given access to both versions"
-
-  - term: "Watcher"
-    definition: "An entity under the validator's control that monitors for duplicity by collecting and comparing KEL copies from multiple sources"
-    invariants:
-      - "Under the validator's control, not the controller's"
-      - "Watches for inconsistent event histories"
+      - "KERI is duplicity-evident — duplicity cannot be prevented but is always detectable"
 
 domain_clients:
   - ref: "domain://keri"
     relationship: "Parent domain drives duplicity monitoring and evidence handling"
     via_port: "port://keri/duplicity-detection/inbound/monitoring"
 
-subdomains: []
+subdomains:
+  - ref: "domain://keri/duplicity-detection/evidence"
+    relationship: "Owns fork detection, evidence escrow lifecycle (.ldes -> .dels), and notification bus"
+  - ref: "domain://keri/duplicity-detection/recovery"
+    relationship: "Owns superseding rules (A0-A2, B1-B3, C), reconciliation, and trunk/disputed-branch model"
+  - ref: "domain://keri/duplicity-detection/monitoring"
+    relationship: "Owns watcher/juror/judge roles, ambient verifiability, and eclipse attack modeling"
 
 kernels:
   - ref: "kernel://cryptographic-algorithms"
@@ -59,10 +60,11 @@ implementation_guidance:
   suggested_type: "module"
   language_affinity: "any"
   notes: >
-    Duplicity detection is implemented by observer components. In keripy, the Watcher class
-    polls multiple witnesses and compares KERLs. The Duplicate Event Log (DEL) stores evidence
-    of conflicting events. Superseding recovery logic is in the Kevery event processing pipeline.
-    In keriox, the watcher component lives under components/watcher/.
+    This is an orchestrating domain decomposed into three subdomains: evidence (fork detection,
+    escrow lifecycle, notification bus), recovery (superseding rules, reconciliation, trunk/branch
+    model), and monitoring (watcher/juror/judge roles, ambient verifiability). The parent domain
+    owns the threat model overview — duplicity vs internal inconsistency, live vs dead attacks —
+    and coordinates the subdomains. Implementation-specific details live in the subdomains.
 
 issues: []
 

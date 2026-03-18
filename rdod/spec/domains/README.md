@@ -82,7 +82,10 @@ graph TD
 | `keri/event-log/serialization` | Event Serialization | sub-subdomain | complete | 9 | SerderKERI, field structure, creation functions, seal types, quorum |
 | `keri/event-log/storage` | Event Storage | sub-subdomain | complete | 10 | KEL schema, first-seen ordering, idempotent logging, key patterns |
 | `keri/witness-agreement` | Witness Agreement | subdomain | complete | 19 | TOAD, receipt types/escrows, WitnessReceiptGenerator, BFT quorum |
-| `keri/duplicity-detection` | Duplicity Detection | subdomain | complete | 20 | Fork detection, LDE/DEL storage, notification bus |
+| `keri/duplicity-detection` | Duplicity Detection | subdomain | complete | 5 | Duplicity, internal inconsistency, live/dead attacks (delegates to 3 sub-subdomains) |
+| `keri/duplicity-detection/evidence` | Duplicity Evidence | sub-subdomain | complete | 5 | Fork detection, LDE/DEL, notification bus |
+| `keri/duplicity-detection/recovery` | Superseding Recovery | sub-subdomain | complete | 5 | Superseding rules A0-C, reconciliation, trunk/branch |
+| `keri/duplicity-detection/monitoring` | Duplicity Monitoring | sub-subdomain | complete | 5 | Watcher, juror, judge, ambient detection, eclipse attack |
 | `keri/delegation` | Delegation | subdomain | complete | 4 | dip/drt event types, delegation chain, DID trait (delegates to 3 sub-subdomains) |
 | `keri/delegation/binding` | Delegation Binding | sub-subdomain | complete | 8 | Cooperative delegation, seals, di field, two-way binding, seal source |
 | `keri/delegation/recovery` | Delegation Recovery | sub-subdomain | complete | 4 | Joint compromise, superseding rules B1-B3-C, custodial delegation |

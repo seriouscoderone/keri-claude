@@ -1,0 +1,26 @@
+# ports.yaml
+domain_ref: "keri/duplicity-detection/monitoring"
+
+ports:
+  # Inbound — what clients call
+  - id: "port://keri/duplicity-detection/monitoring/inbound/monitoring-lifecycle"
+    type: inbound
+    name: "Monitoring Lifecycle"
+    contract: "monitor_aid(aid: AID, sources: [Endpoint]) -> MonitorHandle; stop_monitoring(handle: MonitorHandle) -> void; check_duplicity(aid: AID) -> Result<NoDuplicity, DuplicityEvidence>"
+    protocol: "method-call"
+    refs: ["domain://keri/duplicity-detection"]
+
+  - id: "port://keri/duplicity-detection/monitoring/inbound/trust-decisions"
+    type: inbound
+    name: "Trust Decisions"
+    contract: "evaluate_trust(aid: AID, evidence: [DuplicityEvidence]) -> TrustDecision; revoke_trust(aid: AID, reason: DuplicityEvidence) -> TrustRevoked; reconcile_trust(aid: AID, recovery_event: RotationEvent) -> TrustReconciled"
+    protocol: "method-call"
+    refs: ["domain://keri/duplicity-detection"]
+
+  # Outbound — what this domain calls
+  - id: "port://keri/duplicity-detection/monitoring/outbound/kel-sources"
+    type: outbound
+    name: "KEL Sources"
+    contract: "poll_witness(witness_aid: AID, monitored_aid: AID) -> KERL; poll_watcher(watcher_aid: AID, monitored_aid: AID) -> KERL; compare_kerls(a: KERL, b: KERL) -> Result<Consistent, [Discrepancy]>"
+    protocol: "network"
+    refs: ["external://transport"]

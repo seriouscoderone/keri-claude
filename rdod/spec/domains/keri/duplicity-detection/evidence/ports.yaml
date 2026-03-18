@@ -1,0 +1,26 @@
+# ports.yaml
+domain_ref: "keri/duplicity-detection/evidence"
+
+ports:
+  # Inbound — what clients call
+  - id: "port://keri/duplicity-detection/evidence/inbound/evidence-management"
+    type: inbound
+    name: "Evidence Management"
+    contract: "detect_fork(aid: AID, sn: int, incoming_event: KeyEvent, accepted_event: KeyEvent) -> ForkDetected; escrow_likely_duplicitous(aid: AID, sn: int, event: KeyEvent) -> Escrowed; promote_to_del(aid: AID, sn: int, evidence: DuplicityEvidence) -> Promoted; get_evidence(aid: AID) -> [DuplicityEvidence]"
+    protocol: "method-call"
+    refs: ["domain://keri/duplicity-detection"]
+
+  - id: "port://keri/duplicity-detection/evidence/inbound/notification"
+    type: inbound
+    name: "Notification Bus"
+    contract: "subscribe(notification_type: NotificationType, observer: Observer) -> Subscription; notify(notification: Notification) -> void; drain_cues() -> [Cue]"
+    protocol: "pub-sub"
+    refs: ["domain://keri/duplicity-detection"]
+
+  # Outbound — what this domain calls
+  - id: "port://keri/duplicity-detection/evidence/outbound/escrow-storage"
+    type: outbound
+    name: "Escrow Storage"
+    contract: "put_ldes(aid: AID, sn: int, event: KeyEvent) -> void; get_ldes(aid: AID) -> [KeyEvent]; prune_ldes(timeout_seconds: int) -> int; put_dels(aid: AID, sn: int, evidence: DuplicityEvidence) -> void; get_dels(aid: AID) -> [DuplicityEvidence]"
+    protocol: "repository"
+    refs: ["external://persistence"]

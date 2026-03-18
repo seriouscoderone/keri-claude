@@ -1,0 +1,92 @@
+# ubiquitous-language.yaml
+domain_ref: "keri/duplicity-detection/recovery"
+
+terms:
+  - term: "Superseding Recovery"
+    synonyms: ["Recovery", "Superseding Rotation"]
+    definition: "The process of recovering control of a KEL after key compromise by issuing a rotation event that supersedes a compromised event at the same sequence number. Creates a fork with a recovered trunk and a disputed branch."
+    invariants:
+      - "A rotation event can supersede an interaction event at the same sn (rule A0)"
+      - "A non-delegated rotation cannot supersede another rotation (rule A1)"
+      - "An interaction event cannot supersede any event (rule A2)"
+      - "Delegated rotations have additional superseding rules (B1, B2, B3) involving delegator approval ordering"
+      - "Superseded events are shunted to a disputed branch — they still exist but are no longer on the trunk"
+      - "The controller is still accountable for harm caused by compromised events"
+    examples:
+      - "Attacker signs a fraudulent ixn at sn=5. Controller issues rot at sn=5 using pre-committed keys — the rot supersedes the ixn"
+      - "After superseding, the KEL forks: trunk continues from the recovery rotation, disputed branch contains the compromised events"
+    related_terms: ["Superseding Rules", "Reconciliation", "Trunk", "Disputed Branch"]
+
+  - term: "Superseding Rules"
+    synonyms: ["Superseding Validation Acceptance Rules"]
+    definition: "The formal rules that determine when one event can supersede another at the same sequence number. Organized into rules A (non-delegated), B (delegated), and C (recursive delegation)."
+    invariants:
+      - "A0: Any rotation may supersede an interaction at the same sn (if the ixn is not before another rotation)"
+      - "A1: A non-delegated rotation may NOT supersede another rotation"
+      - "A2: An interaction may NOT supersede any event"
+      - "B1: Delegated rotation supersedes if its delegating event has higher sn in delegator's KEL"
+      - "B2: Same delegating event but superseding seal appears later in the seal list"
+      - "B3: Same sn delegating events but superseding event's delegator event is a rotation superseding an interaction"
+      - "C: Recursive application of A and B up the delegation chain to the root non-delegated KEL"
+    examples:
+      - "Rule A0: rot at sn=5 supersedes ixn at sn=5 — recovery from signing key compromise"
+      - "Rule B1: delegated rot approved at delegator sn=10 supersedes delegated rot approved at delegator sn=8"
+    related_terms: ["Superseding Recovery", "Reconciliation"]
+
+  - term: "Reconciliation"
+    synonyms: []
+    definition: "The process of determining the undisputed path (trunk) through a KEL when superseding events create forks. Applied by validators using the superseding validation acceptance rules."
+    invariants:
+      - "Determines the trunk — the single undisputed path through the KEL DAG"
+      - "Applied by processing superseding events against the existing KEL"
+      - "If every validator cannot universally find the same trunk, the KEL is irreconcilable"
+      - "Recovery (superseding) enables KEL repair — future validators see only the recovered trunk"
+    examples:
+      - "Validator receives a superseding rotation, applies rules, determines the new trunk, shunts compromised events to disputed branch"
+    related_terms: ["Superseding Recovery", "Trunk", "Disputed Branch"]
+
+  - term: "Trunk"
+    synonyms: ["Undisputed Path"]
+    definition: "The single authoritative path through the KEL directed acyclic graph (DAG). All events on the trunk are the accepted, undisputed history of the AID."
+    invariants:
+      - "There is exactly one trunk — the undisputed path"
+      - "Superseding events create the trunk by displacing compromised events to branches"
+      - "All events not on the trunk are in disputed branches"
+    examples:
+      - "After recovery: [icp(s=0), ixn(s=1), rot-recovery(s=2), ixn(s=3)] is the trunk; the compromised ixn at s=2 is on a disputed branch"
+    related_terms: ["Disputed Branch", "Reconciliation", "Superseding Recovery"]
+
+  - term: "Disputed Branch"
+    synonyms: ["Fork", "Superseded Branch"]
+    definition: "A branch of the KEL DAG containing events that have been superseded during recovery. Events on a disputed branch still exist in the database but are no longer on the authoritative trunk."
+    invariants:
+      - "Created when a superseding event displaces the first-seen event at a location"
+      - "Events on disputed branches still exist — viewable via first-seen number ordering"
+      - "The controller remains accountable for events on disputed branches (non-repudiation)"
+      - "Contains all events subsequent to the superseded event in the original chain"
+    examples:
+      - "After rot supersedes ixn at sn=5: the ixn and all events following it form the disputed branch"
+    related_terms: ["Trunk", "Superseding Recovery"]
+
+events:
+  - name: "SupersedingRecoveryApplied"
+    payload: "aid: AID, sn: int, superseding_event: RotationEvent, superseded_event: KeyEvent, rule_applied: SupersedingRule"
+    triggers: "A superseding rotation event is accepted, forking the KEL and creating a recovered trunk"
+
+  - name: "BranchDisputed"
+    payload: "aid: AID, branch_root_sn: int, superseded_events: [KeyEvent]"
+    triggers: "Events displaced by a superseding rotation are shunted to a disputed branch"
+
+  - name: "TrunkReconciled"
+    payload: "aid: AID, trunk_tip_sn: int, recovery_event: RotationEvent"
+    triggers: "Reconciliation determines the new undisputed trunk path after a superseding recovery"
+
+rules:
+  - "A rotation event can supersede an interaction at the same sn — the primary recovery mechanism (A0)"
+  - "A non-delegated rotation cannot supersede another rotation — rotations are final against rotations (A1)"
+  - "An interaction event cannot supersede any event (A2)"
+  - "Delegated rotations supersede based on delegating event ordering in the delegator's KEL (B1-B3)"
+  - "Recursive rule C applies up the delegation chain to the root non-delegated KEL"
+  - "Superseded events are shunted to disputed branches — they still exist but are not on the trunk"
+  - "The controller remains accountable for harm caused by events on disputed branches"
+  - "If reconciliation cannot determine a universal trunk, the KEL is irreconcilable"

@@ -1,0 +1,88 @@
+# ubiquitous-language.yaml
+domain_ref: "keri/duplicity-detection/monitoring"
+
+terms:
+  - term: "Watcher"
+    synonyms: []
+    definition: "An entity under the validator's control that monitors for duplicity by collecting and comparing KEL copies from multiple sources — witnesses, other watchers, or the controller itself."
+    invariants:
+      - "Under the validator's control, NOT the controller's"
+      - "Collects KEL copies from multiple independent sources"
+      - "Compares event histories to detect inconsistencies (different events at the same sn)"
+      - "A sufficient number and diversity of watchers makes duplicity detection ambient"
+      - "Does not need to trust any single source — cross-checks multiple sources"
+    examples:
+      - "A watcher polling 5 witnesses and comparing their KERL copies for a monitored AID"
+      - "A watcher detecting that Witness W1 has event E at sn=5 while Witness W2 has event E' at sn=5"
+    related_terms: ["Juror", "Judge", "Ambient Duplicity Detection"]
+
+  - term: "Juror"
+    synonyms: []
+    definition: "An entity that keeps a log of duplicitous evidence (DEL) and can present that evidence when requested. May run in concert with a witness."
+    invariants:
+      - "Maintains a Duplicate Event Log (DEL) of inconsistent receipts and events"
+      - "May be run by a witness to keep track of inconsistent receipts it receives"
+      - "Provides evidence on demand to judges and validators"
+      - "Does not make trust decisions — only collects and presents evidence"
+    examples:
+      - "A juror attached to a witness, logging all inconsistent receipts received for monitored AIDs"
+      - "A juror presenting duplicity evidence to a judge for a trust decision"
+    related_terms: ["Watcher", "Judge"]
+
+  - term: "Judge"
+    synonyms: []
+    definition: "An entity that makes trust decisions based on duplicity evidence collected by watchers and jurors. Determines whether an AID should be trusted given the evidence."
+    invariants:
+      - "Under the validator's control"
+      - "Evaluates duplicity evidence to make trust/no-trust decisions"
+      - "May determine which of divergent KERLs is authoritative in case of recovery"
+      - "The final arbiter of trust for the validator"
+    examples:
+      - "A judge receiving evidence of two conflicting events and deciding to stop trusting the associated AID"
+      - "A judge accepting a superseding recovery rotation as legitimate and choosing the recovered trunk"
+    related_terms: ["Watcher", "Juror", "Ambient Duplicity Detection"]
+
+  - term: "Ambient Duplicity Detection"
+    synonyms: ["Ambient Verifiability"]
+    definition: "The property that duplicity detection becomes ubiquitous when the original KERL is distributed among a sufficient number and diversity of watchers. An attacker cannot prevent all validators from accessing authentic copies."
+    invariants:
+      - "The original KERL may be distributed to any number of watchers"
+      - "At sufficient distribution, verifiability becomes ambient — available to anyone, anywhere, at any time"
+      - "Isolation of a validator from all ambient sources is prohibitively expensive for the attacker"
+      - "Provides asymmetry between attacker and defender in favor of the defender"
+    examples:
+      - "Hundreds of independent watchers worldwide holding copies of a KERL — an attacker cannot eclipse them all"
+    related_terms: ["Watcher", "Eclipse Attack"]
+
+  - term: "Eclipse Attack"
+    synonyms: []
+    definition: "An attack where the adversary prevents a validator from communicating with any source that has the authentic KERL, enabling the attacker to present a forged alternative KERL as the only available copy."
+    invariants:
+      - "Requires isolating the validator from all ambient sources of the authentic KERL"
+      - "Becomes prohibitively expensive with sufficient watcher diversity and distribution"
+      - "The primary threat model for dead attacks — the attacker must prevent access to authentic copies"
+    examples:
+      - "An attacker controlling the network around a validator, preventing contact with any watcher that has the original KERL"
+    related_terms: ["Ambient Duplicity Detection", "Watcher"]
+
+events:
+  - name: "DuplicityDetected"
+    payload: "aid: AID, sn: int, first_seen_event: KeyEvent, conflicting_event: KeyEvent, detected_by: WatcherAID"
+    triggers: "A watcher discovers two different verified events at the same sequence number for the same AID"
+
+  - name: "TrustRevoked"
+    payload: "aid: AID, reason: DuplicityEvidence, decided_by: JudgeAID"
+    triggers: "A judge decides to stop trusting an AID based on duplicity evidence"
+
+  - name: "TrustReconciled"
+    payload: "aid: AID, recovery_event: RotationEvent, decided_by: JudgeAID"
+    triggers: "A judge accepts a superseding recovery rotation and reconciles trust in the AID"
+
+rules:
+  - "Watchers are under the validator's control, NOT the controller's"
+  - "A validator should choose not to trust when there is evidence of duplicity"
+  - "A validator may choose to trust when there is no evidence of duplicity"
+  - "Jurors collect and present evidence but do not make trust decisions"
+  - "Judges are the final arbiter — they evaluate evidence and decide trust or no-trust"
+  - "Ambient duplicity detection provides asymmetry favoring the defender over the attacker"
+  - "Eclipse attacks become prohibitively expensive with sufficient watcher diversity and distribution"
