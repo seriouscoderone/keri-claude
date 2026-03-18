@@ -1,0 +1,72 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/event-log/serialization"
+name: "Event Serialization"
+description: >
+  Construction, serialization, and deserialization of KERI key events. Handles field ordering,
+  version strings, SAID computation, and multi-format support (JSON, CBOR, MGPK, CESR native).
+  This subdomain owns the shape of every key event message — the normative field layout per ilk,
+  the allowed/optional/alternate fields, and the seal types that appear in anchor fields. It
+  provides pure construction functions (incept, rotate, interact, receipt) that produce serialized
+  event bodies ready for signing, as well as deserialization that validates version strings, field
+  order, and SAIDs. Quorum computation (ample/simple) for BFT majority thresholds also lives here
+  as it is used during event construction to derive default witness thresholds.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Key event messages, Inception Event Message Body, Rotation Event Message Body, Interaction Event Message Body, Delegated Inception/Rotation, Version String"
+  - type: document
+    reference: "cesr-specification.md — sections: CESR native serialization, Composable Event Streaming"
+  - type: document
+    reference: "keripy eventing.py — incept(), rotate(), interact(), receipt(), Serials, Ilks, FieldDom, TraitCodex, SealDigest/SealEvent/SealLast"
+  - type: document
+    reference: "keriox keriox_core/src/event/ — KeyEvent, EventData, InceptionEvent, RotationEvent, InteractionEvent, event_msg/ serialization"
+
+ubiquitous_language:
+  - term: "Event Serializer"
+    definition: "Serializes and deserializes KERI events to/from bytes with version string, SAID computation, and field validation"
+    invariants:
+      - "Enforces normative field ordering for each event type (ilk)"
+      - "Computes and validates the SAID (d field) on serialization and deserialization"
+      - "Parses and validates the version string (v field) including size and serialization kind"
+
+  - term: "Event Field Structure"
+    definition: "The normative field layout for each KERI key event type — field ordering is significant for deterministic SAID computation"
+    invariants:
+      - "Field ordering must be preserved in serialization"
+      - "Each event type has a fixed set of required and optional fields"
+
+domain_clients:
+  - ref: "domain://keri/event-log"
+    relationship: "Event log delegates event construction and serialization/deserialization to this subdomain"
+    via_port: "port://keri/event-log/serialization/inbound/event-construction"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Blake3-256/SHA-256 (SAID computation via saidify algorithm), digest seal computation"
+    relationship: "SAID computation is a kernel operation — the hash algorithm is selected by the d field's CESR code prefix and applied to the serialized event body with dummy d field"
+
+adjacents:
+  - ref: "domain://cesr"
+    relationship: "Events are CESR-encoded SADs — the encoding layer is adjacent. Serialization produces bytes; CESR wraps them into streams with attached signature groups."
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In keripy, event construction lives in the eventing module as module-level functions (incept,
+    rotate, interact, receipt, deltate, state) and the SerderKERI class handles serialization. Field
+    domain validation uses FieldDom (allowed/optional/alternate fields per ilk). In keriox,
+    KeyEvent<KeyEventType> is a typed wrapper around event data, and InceptionEvent/RotationEvent/
+    InteractionEvent structs hold the typed fields. Seal types are SealDigest, SealEvent, SealLast
+    in keripy; SealDigest, EventSeal, SourceSeal in keriox. All implementations must enforce
+    normative field ordering — the field order directly affects the SAID.
+
+issues: []
+
+tags: ["serialization", "event-construction", "said", "version-string", "field-ordering", "cesr-native"]

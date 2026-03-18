@@ -1,0 +1,193 @@
+# ubiquitous-language.yaml
+domain_ref: "keri/event-log/escrow"
+
+terms:
+  - term: "Escrow Cascade"
+    synonyms: ["Escrow State Machine"]
+    definition: "The flow of events between escrow queues based on what validation step fails. Events progress through escrows as their blocking conditions resolve, potentially visiting multiple escrow types before final acceptance."
+    invariants:
+      - "Out-of-Order -> accepted (when prior event arrives)"
+      - "Partially-Signed -> accepted OR -> Partially-Witnessed (if sigs pass but witness threshold fails) OR -> Partially-Delegated (if sigs pass but delegation missing)"
+      - "Partially-Witnessed -> accepted (when witness receipts arrive)"
+      - "Partially-Delegated -> accepted (when delegator's anchoring event arrives) OR -> Partially-Witnessed (if delegation resolves but witnesses still insufficient)"
+      - "Likely Duplicitous -> permanent storage (forensic evidence, never auto-resolved)"
+      - "Escrow processing order matters: OOE first, then receipt escrows, then PSE, then PWE, then PDE"
+    examples:
+      - "Multi-sig rotation: arrives with 1-of-3 signatures -> PSE. Second sig arrives -> reprocess -> 2-of-3 passes -> now check witnesses -> insufficient -> PWE. Witness receipts arrive -> reprocess -> accept."
+      - "Delegated inception: arrives before delegator's ixn -> PDE. Delegator's ixn arrives with seal -> reprocess -> signatures pass, witnesses pass -> accept."
+    related_terms: ["Escrow Processing Order", "Out-of-Order Escrow", "Partially-Signed Escrow", "Partially-Witnessed Escrow", "Partially-Delegated Escrow", "Likely Duplicitous Escrow"]
+
+  - term: "Out-of-Order Escrow"
+    synonyms: ["OOE", ".ooes [keripy]", "MaybeOutOfOrderEscrow [keriox]"]
+    definition: "Holds events whose prior event in the KEL has not yet been received. The event's sequence number is greater than the next expected sn, so the hash-chain cannot be verified yet. Events are automatically reprocessed when the missing prior event arrives and is accepted to the KEL."
+    invariants:
+      - "Triggered when sn > expected_sn for a known prefix, or when the prefix is unknown and the event is not an inception"
+      - "Indexed by prefix + sn in the .ooes subdatabase (keripy) or MaybeOutOfOrderEscrow storage (keriox)"
+      - "Reprocessed when a KeyEventAdded notification fires for the same prefix (keriox) or during processEscrowOutOfOrders sweep (keripy)"
+      - "Default timeout: 1200 seconds (keripy TimeoutOOE), configurable via EscrowConfig.out_of_order_timeout (keriox)"
+      - "Events are fully re-validated through the pipeline on reprocessing -- not assumed valid"
+    examples:
+      - "Event at sn=5 arrives but sn=4 is missing -> escrow to OOE. When sn=4 is accepted, sn=5 is reprocessed."
+      - "Events at sn=5, sn=6, sn=7 all arrive before sn=4 -> all escrowed to OOE -> accepting sn=4 triggers cascade reprocessing of sn=5, then sn=6, then sn=7"
+    related_terms: ["Escrow Cascade", "Escrow Timeout", "Escrow Processing Order"]
+
+  - term: "Partially-Signed Escrow"
+    synonyms: ["PSE", ".pses [keripy]", "PartiallySignedEscrow [keriox]"]
+    definition: "Holds events that have been verified for sequence order but whose controller signatures do not yet satisfy the signing threshold. Accumulates additional signatures over time as they arrive from other multi-sig participants. Events are reprocessed when new signatures are added."
+    invariants:
+      - "Triggered when signature verification passes for at least one sig but tholder.satisfy(indices) returns False"
+      - "Indexed by prefix + sn in the .pses subdatabase"
+      - "Signatures are accumulated: new arrivals of the same event (same SAID) merge their signatures into the existing escrow entry"
+      - "Default timeout: 3600 seconds (keripy TimeoutPSE), configurable via EscrowConfig.partially_signed_timeout (keriox)"
+      - "On reprocessing, if signatures now satisfy the threshold, the event advances to witness/delegation checks (may cascade to PWE or PDE)"
+    examples:
+      - "3-of-5 multi-sig: first participant submits event with 1 signature -> PSE. Second participant adds signature -> still 2 < 3 -> stays in PSE. Third arrives -> 3 >= 3 -> threshold satisfied -> advance to witness check."
+      - "After threshold satisfaction, witness count is insufficient -> event moves from PSE to PWE"
+    related_terms: ["Escrow Cascade", "Signature Accumulation", "Escrow Timeout", "Threshold Satisfaction"]
+
+  - term: "Partially-Witnessed Escrow"
+    synonyms: ["PWE", ".pwes [keripy]", "PartiallyWitnessedEscrow [keriox]"]
+    definition: "Holds events that pass signature validation but whose witness receipt count does not yet satisfy the witness threshold (TOAD). Events are reprocessed when new witness receipts arrive."
+    invariants:
+      - "Triggered when toader.satisfy(windices) returns False -- insufficient witness receipts"
+      - "Indexed by prefix + sn in the .pwes subdatabase"
+      - "Witness receipts accumulate as they arrive from designated witnesses"
+      - "Default timeout: 3600 seconds (keripy TimeoutPWE), configurable via EscrowConfig.partially_witnessed_timeout (keriox)"
+      - "Reprocessed when PartiallyWitnessed or ReceiptOutOfOrder notifications fire (keriox) or during processEscrowPartialWigs sweep (keripy)"
+      - "On reprocessing, if witness threshold is now met, event is accepted to KEL"
+    examples:
+      - "TOAD=3 with 5 witnesses: event has 2 receipts -> PWE. Third receipt arrives -> 3 >= 3 -> accept to KEL."
+      - "Receipt for an event not yet in PWE arrives first -> stored; when event enters PWE, the pre-existing receipt counts toward threshold"
+    related_terms: ["Escrow Cascade", "Witness Threshold Check", "Escrow Timeout", "TOAD"]
+
+  - term: "Partially-Delegated Escrow"
+    synonyms: ["PDE", ".pdes [keripy]", "DelegationEscrow [keriox]"]
+    definition: "Holds delegated events (dip/drt) that pass signature validation but whose delegator has not yet anchored the approving seal in its own KEL. Events are reprocessed when the delegator's anchoring event arrives."
+    invariants:
+      - "Triggered when the delegator's KEL does not contain a seal committing to this delegated event"
+      - "Indexed by prefix + sn in the .pdes subdatabase"
+      - "Default timeout: 3600 seconds (keripy TimeoutPSE for delegation), configurable via EscrowConfig.delegation_timeout (keriox)"
+      - "Reprocessed when a KeyEventAdded or MissingDelegatingEvent notification fires for the delegator's prefix (keriox) or during processEscrowPartialDels sweep (keripy)"
+      - "On reprocessing, if the delegator's seal is found, event advances to witness check (may cascade to PWE)"
+    examples:
+      - "Delegated inception (dip) arrives before the delegator's approving ixn -> PDE. Delegator's ixn with seal arrives and is accepted -> dip reprocessed -> delegation validated -> accept (or -> PWE if witnesses insufficient)."
+    related_terms: ["Escrow Cascade", "Delegation Validation", "Delegation Seal", "Escrow Timeout"]
+
+  - term: "Delegable Event Escrow"
+    synonyms: [".delegables [keripy]"]
+    definition: "Holds locally-originated delegated events (dip/drt created by this node's delegatee) that are awaiting the delegator's approval. Unlike PDE which holds remote delegated events, this escrow holds the local controller's own delegated events before the delegator has anchored its approving seal."
+    invariants:
+      - "Only applies to events the local node has originated as a delegatee"
+      - "Indexed by prefix + sn in the .delegables subdatabase"
+      - "Cleared when the delegator's anchoring event is detected"
+      - "Distinct from PDE: delegables are local events awaiting external approval, PDE are remote events awaiting external evidence"
+    examples:
+      - "Local node creates a dip for a new delegated AID -> escrowed in .delegables -> waits for delegator to anchor seal -> cleared on approval"
+    related_terms: ["Partially-Delegated Escrow", "Delegation Validation", "Event Locality"]
+
+  - term: "Misfit Event Escrow"
+    synonyms: [".misfits [keripy]"]
+    definition: "Holds events received from remote sources that target locally-owned, locally-witnessed, or locally-delegated identifiers. These events are not rejected but held, requiring re-sourcing through a local protected channel before acceptance."
+    invariants:
+      - "Triggered by Local Source Protection: remote source + local/witnessed/delegated AID"
+      - "Indexed by (prefix, sn) in the .misfits subdatabase"
+      - "Events are not automatically reprocessed -- they must be re-submitted from a local source"
+      - "Prevents network-based injection attacks against locally controlled identifiers"
+    examples:
+      - "A rotation event for our own AID arrives from an external peer -> escrowed as misfit -> controller must re-submit locally"
+      - "An event for an AID we witness arrives from a non-controller source -> misfit escrow"
+    related_terms: ["Local Source Protection", "Event Locality", "Event Source Record"]
+
+  - term: "Likely Duplicitous Escrow"
+    synonyms: ["LDE", ".ldes [keripy]", "DuplicitousEvents [keriox]"]
+    definition: "Permanent storage for events that appear at the same sequence number as an already-accepted event but with a different SAID. This is evidence of duplicity -- the controller has signed two conflicting events at the same position. These events are never automatically resolved; they serve as forensic evidence for duplicity detection."
+    invariants:
+      - "Triggered when sn < expected_sn AND the event's SAID differs from the already-accepted event at that sn"
+      - "Events are NEVER automatically reprocessed or resolved"
+      - "Serves as forensic evidence -- proves the controller signed conflicting events"
+      - "Default timeout: 3600 seconds for pruning old entries (keripy TimeoutLDE), but the evidence is typically preserved"
+      - "Detection of likely duplicitous events may trigger watchers and jurors to investigate"
+    examples:
+      - "Event at sn=3 with SAID=X is already accepted. A different event at sn=3 with SAID=Y arrives -> escrowed to LDE as duplicity evidence."
+      - "A malicious controller signs two different rotation events at sn=5 with different key sets -> both cannot be valid -> the second one seen goes to LDE"
+    related_terms: ["Escrow Cascade", "Duplicity", "Escrow Timeout"]
+
+  - term: "Escrow Processing Order"
+    synonyms: ["processEscrows() [keripy]"]
+    definition: "The defined sequence in which escrow queues are drained during each processing sweep. Order matters because resolving one escrow type may produce events that enter another escrow type."
+    invariants:
+      - "Order: OOE first, then receipt/witness escrows, then PSE, then PWE, then PDE"
+      - "OOE is processed first because it may release events that then need signature/witness/delegation checks"
+      - "Each sweep iterates the full queue for each escrow type before moving to the next type"
+      - "In keriox, the notification bus pattern replaces explicit sweep ordering -- each escrow listens for relevant notifications and processes asynchronously"
+    examples:
+      - "OOE sweep releases event at sn=4 -> this triggers PSE to re-check sn=4 (if it was also partially signed) -> PSE passes -> PWE check -> all pass -> accepted"
+    related_terms: ["Escrow Cascade", "Out-of-Order Escrow", "Partially-Signed Escrow"]
+
+  - term: "Escrow Timeout"
+    synonyms: ["TimeoutOOE [keripy]", "TimeoutPSE [keripy]", "TimeoutPWE [keripy]", "TimeoutLDE [keripy]", "EscrowConfig [keriox]"]
+    definition: "Configurable per-escrow-type duration after which an unresolved escrowed event is pruned (removed) from its queue. Prevents unbounded escrow growth from events whose dependencies will never resolve."
+    invariants:
+      - "OOE default: 1200 seconds (20 minutes) in keripy; configurable in keriox"
+      - "PSE default: 3600 seconds (1 hour) in keripy; configurable in keriox"
+      - "PWE default: 3600 seconds (1 hour) in keripy; configurable in keriox"
+      - "LDE default: 3600 seconds (1 hour) in keripy; typically preserved longer in practice"
+      - "Timeout is checked during each processing sweep: if (now - escrowed_datetime) > timeout, the entry is pruned"
+      - "keriox defaults to 60 seconds for all types (more aggressive), configurable via EscrowConfig"
+    examples:
+      - "Event escrowed to OOE at T=0. At T=1200 (20 min later), processEscrowOutOfOrders finds it expired -> prune."
+      - "Custom timeout: EscrowConfig { out_of_order_timeout: Duration::from_secs(300) } for a 5-minute OOE timeout"
+    related_terms: ["Out-of-Order Escrow", "Partially-Signed Escrow", "Partially-Witnessed Escrow"]
+
+  - term: "Signature Accumulation"
+    synonyms: ["Partial Signature Merge"]
+    definition: "The process of merging newly-arriving signatures into an existing partially-signed escrow entry for the same event. When a multi-sig participant signs and submits the same event (same SAID), their signature is appended to the existing signature set rather than creating a duplicate escrow entry."
+    invariants:
+      - "Signatures are matched by event SAID -- only signatures for the exact same event are merged"
+      - "The signature storage (.sigs) uses append semantics, not replace"
+      - "After accumulation, the updated signature set is re-checked against the threshold"
+      - "Idempotent: re-submitting the same signature from the same index is a no-op"
+      - "Both controller signatures (Sigers) and witness receipts (Wigers) can accumulate over time"
+    examples:
+      - "3-of-5 multi-sig: participant A signs -> .sigs has [sig_A]. Participant B signs -> .sigs has [sig_A, sig_B]. Participant C signs -> .sigs has [sig_A, sig_B, sig_C] -> threshold satisfied."
+      - "Same participant re-submits -> signature at same index already present -> no change"
+    related_terms: ["Partially-Signed Escrow", "Idempotent Logging", "Threshold Satisfaction"]
+
+events:
+  - name: "EventEscrowedOOE"
+    payload: "aid: AID, sn: int, said: SAID, expected_sn: int"
+    triggers: "An event's sequence number exceeds the next expected sn, indicating a missing prior event"
+
+  - name: "EventEscrowedPSE"
+    payload: "aid: AID, sn: int, said: SAID, valid_sig_count: int, required_threshold: Threshold"
+    triggers: "An event has insufficient controller signatures to satisfy the signing threshold"
+
+  - name: "EventEscrowedPWE"
+    payload: "aid: AID, sn: int, said: SAID, receipt_count: int, toad: int"
+    triggers: "An event passes signature validation but has insufficient witness receipts"
+
+  - name: "EventEscrowedPDE"
+    payload: "aid: AID, sn: int, said: SAID, delegator_aid: AID"
+    triggers: "A delegated event's delegator has not yet anchored the approving seal"
+
+  - name: "EventEscrowedLDE"
+    payload: "aid: AID, sn: int, said: SAID, conflicting_said: SAID"
+    triggers: "An event at the same sn as an already-accepted event has a different SAID, indicating duplicity"
+
+  - name: "EscrowResolved"
+    payload: "aid: AID, sn: int, said: SAID, escrow_type: EscrowType"
+    triggers: "An escrowed event's blocking condition resolves and the event is reprocessed successfully"
+
+  - name: "EscrowTimedOut"
+    payload: "aid: AID, sn: int, said: SAID, escrow_type: EscrowType, age_seconds: int"
+    triggers: "An escrowed event exceeds its timeout and is pruned from the queue"
+
+rules:
+  - "Events are escrowed, not rejected -- the blocking condition may resolve later"
+  - "Each escrow type has a specific trigger condition and a specific reprocessing trigger"
+  - "Escrowed events are fully re-validated through the pipeline on reprocessing -- they are not assumed valid"
+  - "Escrow processing order: OOE first, then receipt escrows, then PSE, then PWE, then PDE"
+  - "Likely duplicitous events are never automatically resolved -- they are permanent forensic evidence"
+  - "Escrow timeouts prevent unbounded queue growth from events whose dependencies never resolve"
+  - "Signature accumulation is idempotent -- duplicate signatures at the same index are no-ops"
+  - "An event may visit multiple escrow types in sequence (the cascade) before final acceptance"

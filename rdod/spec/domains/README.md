@@ -73,7 +73,11 @@ graph TD
 |----|------|------|--------|-------|-------------|
 | `keri` | KERI Protocol | core | complete | 18 | Hab/Habery, Kevery, Baser, Parser, escrow architecture |
 | `keri/key-state` | Key State | subdomain | complete | 20 | Kever/IdentifierState, KeyConfig, WitnessConfig, state reconstruction |
-| `keri/event-log` | Event Log | subdomain | complete | 34 | Validation pipeline, dual threshold, pre-rotation binding, escrow cascade, field structure |
+| `keri/event-log` | Event Log | subdomain | complete | 16 | KEL, 5 event types, SAID, seals, field basics (orchestrates 4 sub-subdomains) |
+| `keri/event-log/validation` | Event Validation | sub-subdomain | complete | 8 | Pipeline, dual threshold, pre-rotation binding, delegation validation |
+| `keri/event-log/escrow` | Event Escrow | sub-subdomain | complete | 11 | Cascade, 7 escrow types, processing order, timeouts, sig accumulation |
+| `keri/event-log/serialization` | Event Serialization | sub-subdomain | complete | 9 | SerderKERI, field structure, creation functions, seal types, quorum |
+| `keri/event-log/storage` | Event Storage | sub-subdomain | complete | 10 | KEL schema, first-seen ordering, idempotent logging, key patterns |
 | `keri/witness-agreement` | Witness Agreement | subdomain | complete | 19 | TOAD, receipt types/escrows, WitnessReceiptGenerator, BFT quorum |
 | `keri/duplicity-detection` | Duplicity Detection | subdomain | complete | 20 | Fork detection, LDE/DEL storage, notification bus |
 | `keri/delegation` | Delegation | subdomain | complete | 20 | Seal source, PDE/delegables escrow, approved seals, validation pipeline |

@@ -1,0 +1,75 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/event-log/storage"
+name: "Event Storage"
+description: >
+  Persistent storage for KEL events, signatures, receipts, and metadata. Provides indexed access
+  by prefix, sequence number, digest, and first-seen ordinal. All operations are idempotent —
+  reprocessing a duplicate event or late-arriving signature merges safely without creating
+  duplicates. The storage schema partitions data across separate subdatabases for events (.evts),
+  KEL index (.kels), first-seen log (.fels/.fons), signatures (.sigs/.wigs), receipts (.rcts/.vrcs),
+  timestamps (.dtss), source records (.esrs), and cached key state (.states). Two primary access
+  patterns: dgKey (prefix+digest) for content-addressed lookup and snKey (prefix+sn) for
+  sequence-ordered access.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keripy db/basing.py — Baser class, subdatabase definitions (.evts, .kels, .fels, .fons, .sigs, .wigs, .rcts, .vrcs, .esrs, .dtss, .states), dgKey/snKey patterns"
+  - type: document
+    reference: "keripy db/dbing.py — LMDBer base class, Suber/IoSetSuber/CesrSuber/CesrIoSetSuber/SignerSuber database abstractions"
+  - type: document
+    reference: "keriox keriox_core/src/database/ — EventDatabase trait, EventStorage, LMDB/redb implementations"
+  - type: document
+    reference: "keripy eventing.py — logEvent(), Kevery.process() storage calls"
+  - type: document
+    reference: "keri-specification.md — sections: First-seen policy, Duplicity processing, Event logs"
+
+ubiquitous_language:
+  - term: "KEL Storage Schema"
+    definition: "The partitioned database organization for storing KEL data across separate indexed subdatabases"
+    invariants:
+      - "Events, signatures, receipts, and metadata each have dedicated subdatabases"
+      - "Two primary key patterns: dgKey (prefix+digest) and snKey (prefix+sn)"
+      - "All write operations are idempotent"
+
+  - term: "Idempotent Logging"
+    definition: "The property that logging an already-accepted event is a safe no-op — duplicates and late signatures merge without creating duplicate entries"
+    invariants:
+      - "Event storage uses put-if-not-exists semantics"
+      - "Signature stores append new signatures to existing sets"
+      - "First-seen number is assigned only on initial acceptance"
+
+domain_clients:
+  - ref: "domain://keri/event-log"
+    relationship: "Event log delegates all persistent storage operations to this subdomain — event logging, signature accumulation, receipt storage, state caching"
+    via_port: "port://keri/event-log/storage/inbound/event-logging"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals:
+  - name: "Persistence Engine"
+    abstraction: "Repository"
+    ref: "port://keri/event-log/storage/outbound/persistence"
+    implementation_notes: "Key-value store with ordered iteration and duplicate-key support. Implementations: LMDB (keripy — memory-mapped B+ tree, named subdatabases, dupsort), redb (keriox — pure Rust embedded database), DynamoDB (serious-keri — serverless, GSI-based access patterns). The storage subdomain defines the logical schema; the persistence engine provides the physical storage."
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In keripy, the Baser class (db/basing.py) extends LMDBer and defines all subdatabases as typed
+    attributes. Each subdatabase uses a specific Suber variant: Suber for simple key-value, IoSetSuber
+    for insertion-ordered sets (signatures, receipts), CesrSuber for CESR-typed values, SignerSuber
+    for signer records. Keys are constructed via dgKey(pre, dig) or snKey(pre, sn) utility functions.
+    In keriox, the EventDatabase trait defines the storage interface and EventStorage provides the
+    concrete implementation. In serious-keri, DynamoDB tables replace LMDB subdatabases with GSI
+    access patterns mapping to snKey and dgKey lookups. All implementations must guarantee idempotent
+    writes and ordered iteration for first-seen replay.
+
+issues: []
+
+tags: ["storage", "persistence", "kel-database", "first-seen", "idempotent", "lmdb", "redb"]

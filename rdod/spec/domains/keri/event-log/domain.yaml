@@ -44,7 +44,19 @@ domain_clients:
     relationship: "Parent domain drives event creation, validation, and log management"
     via_port: "port://keri/event-log/inbound/event-management"
 
-subdomains: []
+subdomains:
+  - ref: "domain://keri/event-log/validation"
+    relationship: "Owns the multi-step validation pipeline: signature verification, threshold satisfaction, pre-rotation binding, witness checks, delegation approval"
+    via_port: "port://keri/event-log/validation/inbound/validate-event"
+  - ref: "domain://keri/event-log/escrow"
+    relationship: "Owns typed escrow queues and the escrow cascade: OOE, PSE, PWE, PDE, LDE, delegables, misfits"
+    via_port: "port://keri/event-log/escrow/inbound/escrow-management"
+  - ref: "domain://keri/event-log/serialization"
+    relationship: "Owns event construction, serialization/deserialization, field ordering, SAID computation, and seal types"
+    via_port: "port://keri/event-log/serialization/inbound/event-construction"
+  - ref: "domain://keri/event-log/storage"
+    relationship: "Owns persistent storage schema, idempotent logging, first-seen ordering, signature/receipt accumulation"
+    via_port: "port://keri/event-log/storage/inbound/event-logging"
 
 kernels:
   - ref: "kernel://cryptographic-algorithms"

@@ -1,0 +1,32 @@
+# ports.yaml
+domain_ref: "keri/event-log/serialization"
+
+ports:
+  # Inbound — what the parent event-log domain calls
+  - id: "port://keri/event-log/serialization/inbound/event-construction"
+    type: inbound
+    name: "Event Construction"
+    contract: "incept(keys, ndigs, wits, toad?, code?, cnfg?) -> EventSerializer; rotate(pre, keys, ndigs, dig, sn, cuts?, adds?, toad?, data?) -> EventSerializer; interact(pre, dig, sn, data?) -> EventSerializer; receipt(pre, dig, sn, said?) -> EventSerializer; deltate(keys, ndigs, wits, toad?, delpre, code?, cnfg?) -> EventSerializer"
+    protocol: "method-call"
+    refs: ["domain://keri/event-log"]
+
+  - id: "port://keri/event-log/serialization/inbound/event-deserialization"
+    type: inbound
+    name: "Event Deserialization"
+    contract: "deserialize(raw: bytes) -> EventSerializer; validate_said(serder: EventSerializer) -> bool; validate_fields(serder: EventSerializer) -> Result<(), FieldValidationError>"
+    protocol: "method-call"
+    refs: ["domain://keri/event-log"]
+
+  - id: "port://keri/event-log/serialization/inbound/seal-construction"
+    type: inbound
+    name: "Seal Construction"
+    contract: "seal_digest(d: SAID) -> SealDigest; seal_event(i: AID, s: int, d: SAID) -> SealEvent; seal_last(i: AID) -> SealLast; seal_root(rd: Digest) -> SealRoot"
+    protocol: "method-call"
+    refs: ["domain://keri/event-log"]
+
+  - id: "port://keri/event-log/serialization/inbound/quorum"
+    type: inbound
+    name: "Quorum Calculation"
+    contract: "ample(n: int, f?: int) -> int; simple(n: int) -> int"
+    protocol: "method-call"
+    refs: ["domain://keri/event-log"]

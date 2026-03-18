@@ -1,0 +1,70 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/event-log/validation"
+name: "Event Validation"
+description: >
+  The multi-step validation pipeline for incoming key events. Verifies signatures against
+  the current key list, checks signing threshold satisfaction, enforces pre-rotation binding
+  for rotation events, validates witness receipt counts against the TOAD, and confirms
+  delegation approval via the delegator's anchoring seal. Each validation step either passes
+  (advancing to the next step) or fails with a typed error that routes the event to the
+  appropriate escrow queue for later reprocessing.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md -- sections: Validation, Rotation Event Validation, Delegation Validation, Duplicity Detection"
+  - type: document
+    reference: "KERI_WP_2.x.web.md -- sections: Validation Logic, Pre-rotation, Dual Threshold"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md -- sections: Combined Arms, Establishment Dead-Attack"
+  - type: document
+    reference: "keripy -- eventing.py: Kevery.processEvent(), Kever.valSigsWigsDel(), verifySigs(), exposeds(), validateDelegation(), Kever.validateSigs()"
+  - type: document
+    reference: "keriox -- processor/validator.rs: EventValidator.validate_event(); event/sections/key_config.rs: KeyConfig.verify_next(), NextKeysData.check_threshold()"
+
+ubiquitous_language:
+  - term: "Event Validation Pipeline"
+    definition: "The complete step-by-step sequence that validates an incoming key event from receipt to acceptance or escrow"
+    invariants:
+      - "Multi-step: sequence check, signature verification, threshold satisfaction, pre-rotation binding, witness threshold, delegation approval"
+      - "Re-entrant: escrowed events are reprocessed through the same pipeline when their blocking condition resolves"
+
+  - term: "Dual Threshold Verification"
+    definition: "The core validation logic that checks signatures, witness receipts, and delegation for an event"
+    invariants:
+      - "For rotation events, enforces BOTH the current signing threshold AND the prior next-key threshold"
+      - "Failure at any step routes to the appropriate escrow queue"
+
+domain_clients:
+  - ref: "domain://keri/event-log"
+    relationship: "Parent domain delegates all incoming event validation to this subdomain"
+    via_port: "port://keri/event-log/validation/inbound/validate-event"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519/ECDSA signature verification (verifySigs), Blake3-256 digest comparison (pre-rotation binding)"
+    relationship: "Signature verification and digest comparison are kernel operations invoked at multiple validation steps"
+
+adjacents: []
+
+externals:
+  - name: "Persistence (read)"
+    abstraction: "Repository (read-only)"
+    ref: "port://keri/event-log/validation/outbound/state-lookup"
+    implementation_notes: "Reads current key state and KEL to provide validation context. Implementations: Kever cache (keripy), EventStorage.get_state() (keriox)"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In keripy, validation logic lives in Kever.valSigsWigsDel() and Kevery.processEvent().
+    In keriox, it is EventValidator.validate_event() in processor/validator.rs.
+    The pipeline is stateless given a key state snapshot -- it takes an event, its signatures,
+    and the current key state, and returns accept/reject/escrow-reason.
+
+issues: []
+
+tags: ["validation", "signatures", "threshold", "pre-rotation", "delegation", "pipeline"]

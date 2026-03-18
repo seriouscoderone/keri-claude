@@ -1,0 +1,189 @@
+# ubiquitous-language.yaml
+domain_ref: "keri/event-log/storage"
+
+terms:
+  - term: "KEL Storage Schema"
+    synonyms: ["Baser subdatabases [keripy]", "EventDatabase [keriox]"]
+    definition: "The partitioned database organization for the Key Event Log. Separates events, indexes, signatures, receipts, and metadata into distinct subdatabases, each optimized for its access pattern. The schema provides both content-addressed (by digest) and sequence-ordered (by sn) access."
+    invariants:
+      - ".evts: serialized event bytes indexed by dgKey (prefix+digest) — the primary event store"
+      - ".kels: KEL sequence index mapping snKey (prefix+sn) to event digest — ordered access by sequence number"
+      - ".fels: first-seen log mapping prefix+fn to event digest — reception-order replay"
+      - ".fons: first-seen ordinal index mapping dgKey (prefix+digest) to fn — reverse lookup from event to acceptance order"
+      - ".sigs: controller indexed signatures (Siger) per event, indexed by dgKey — IoSet (insertion-ordered, append-only)"
+      - ".wigs: witness indexed signatures (Siger) per event, indexed by dgKey — IoSet"
+      - ".rcts: non-transferable witness receipts (Cigar) per event, indexed by dgKey — IoSet"
+      - ".vrcs: transferable witness receipts per event, indexed by dgKey — IoSet"
+      - ".esrs: event source records per event, indexed by dgKey — local vs remote classification"
+      - ".dtss: event datetime stamps (Dater) per event, indexed by dgKey"
+      - ".states: cached key state snapshots per AID, indexed by prefix — computed from KEL, cached for fast lookup"
+    examples:
+      - "Looking up event at sn=5 for prefix P: .kels[snKey(P,5)] -> digest D, then .evts[dgKey(P,D)] -> event bytes"
+      - "Replaying KEL in first-seen order: iterate .fels[P+fn] for fn=0,1,2,... to get digests, fetch each from .evts"
+      - "Accumulating signatures: .sigs[dgKey(P,D)].add(siger) — appends to set, idempotent if siger already present"
+    related_terms: ["Database Key Patterns", "First-Seen Ordering", "Idempotent Logging", "Signature Storage"]
+
+  - term: "First-Seen Ordering"
+    synonyms: ["FEL [keripy]", ".fels/.fons [keripy]", "first_seen_log [keriox]"]
+    definition: "The monotonically increasing ordinal (first-seen number, fn) assigned to each event upon its first acceptance into a KEL copy. Tracks the order events were received and validated, independent of the event's sequence number (sn). The first-seen log (.fels) maps fn to digest for ordered replay; the ordinal index (.fons) maps digest to fn for reverse lookup."
+    invariants:
+      - "First-seen number (fn) is assigned at acceptance time, not at event creation time"
+      - "fn is local to each KEL copy — different validators may assign different fn values to the same event"
+      - "fn is strictly monotonically increasing — each newly accepted event gets fn = max_fn + 1"
+      - ".fels maps prefix+fn to event digest — enables sequential replay in acceptance order"
+      - ".fons maps prefix+digest to fn — enables lookup of when a specific event was accepted"
+      - "Consistent KEL copies have the same event version at every sequence number, but may differ in fn assignment"
+    examples:
+      - "Event at sn=5 might have fn=7 if two superseded events were accepted earlier at fn=5 and fn=6"
+      - "Cloning a KEL: replay events from .fels in fn order to replicate the first-seen history"
+      - ".fons[dgKey(P,D)] = 7 tells you event D for prefix P was the 8th event accepted (0-indexed)"
+    related_terms: ["First-Seen Number", "KEL Storage Schema", "Idempotent Logging"]
+
+  - term: "Event Source Record"
+    synonyms: ["ESR", ".esrs [keripy]", "EventSourceRecord"]
+    definition: "Metadata per event tracking whether it was received from a local (protected) or remote (unprotected) source. Local events originate from the controller's own device or a protected channel; remote events arrive over the network from external parties. Affects validation rules and local source protection policies."
+    invariants:
+      - "Each accepted event has an associated source record in .esrs"
+      - "Source classification: local (trusted origin) or remote (untrusted origin)"
+      - "Local source record overwrites remote source record — trust escalation is one-directional"
+      - "A remote source record never overwrites a local source record"
+      - "Used by the event processor to enforce local source protection (misfit event escrow)"
+    examples:
+      - "A controller's own inception event: .esrs[dgKey(P,D)] = {local: true}"
+      - "An event received from a witness relay: .esrs[dgKey(P,D)] = {local: false}"
+      - "Same event later confirmed locally: source record upgraded from remote to local"
+    related_terms: ["KEL Storage Schema", "Idempotent Logging", "Database Key Patterns"]
+
+  - term: "Idempotent Logging"
+    synonyms: ["logEvent() [keripy]", "add_kel_finalized_event() [keriox]"]
+    definition: "The property that logging an already-accepted event is a safe no-op. Late-arriving signatures, witness receipts, or duplicate event messages merge into the existing log entry without creating duplicates or corrupting the KEL. This enables safe reprocessing of events from escrow and safe receipt of duplicate messages from the network."
+    invariants:
+      - "Event storage (.evts) uses put-if-not-exists — writing an existing event is a no-op"
+      - "KEL index (.kels) does not add duplicate entries at the same sn"
+      - "Signature storage (.sigs, .wigs) appends new signatures to the existing set — duplicates are ignored"
+      - "Receipt storage (.rcts, .vrcs) appends new receipts to the existing set — duplicates are ignored"
+      - "First-seen number (.fons) is assigned only once on initial acceptance (first=True flag)"
+      - "Timestamp (.dtss) is recorded only on first acceptance"
+      - "Local source record overwrites remote, but never the reverse"
+    examples:
+      - "Event accepted with 2-of-3 sigs. Third sig arrives later: logEvent() adds third sig to .sigs but event in .evts is unchanged"
+      - "Same event received from two network sources: second logEvent() call is a no-op for .evts and .kels"
+      - "Event reprocessed from escrow after missing witness receipt arrives: signatures already in .sigs are not duplicated"
+    related_terms: ["KEL Storage Schema", "First-Seen Ordering", "Signature Storage", "Receipt Storage"]
+
+  - term: "First-Seen Number"
+    synonyms: ["fn", "first-seen ordinal"]
+    definition: "A strictly monotonically increasing integer ordinal assigned to each event upon its first acceptance into a KEL copy. Unlike the sequence number (sn) which is part of the event itself, the fn is a local database concept — assigned by the storage layer at acceptance time."
+    invariants:
+      - "Assigned by the database upon first acceptance — not part of the event message"
+      - "Starts at 0 for the first accepted event of a given prefix"
+      - "Increments by exactly 1 for each subsequently accepted event"
+      - "Different KEL copies may assign different fn values to the same event"
+      - "fn >= sn always holds (fn accounts for superseded events that occupy fn slots)"
+      - "Stored in .fons (dgKey -> fn) and reverse-indexed in .fels (prefix+fn -> digest)"
+    examples:
+      - "Event at sn=5 might have fn=7 if two superseded events were first-seen at earlier fn values"
+      - "fn=0 is always the inception event (sn=0)"
+    related_terms: ["First-Seen Ordering", "KEL Storage Schema", "Sequence Number"]
+
+  - term: "Event Timestamps"
+    synonyms: [".dtss [keripy]", "Dater records"]
+    definition: "ISO-8601 datetime values (stored as Dater CESR primitives) recording when each event was first seen by this validator. Indexed by dgKey (prefix+digest). Recorded once at first acceptance — not updated on subsequent receipt of the same event."
+    invariants:
+      - "One timestamp per event per KEL copy — recorded at first acceptance time"
+      - "Stored as Dater CESR primitives (code '1AAG', ISO-8601 format)"
+      - "Indexed by dgKey (prefix+digest) in the .dtss subdatabase"
+      - "Timestamps are local to each validator — different validators record different times"
+      - "Never overwritten — the first-seen timestamp is immutable"
+    examples:
+      - ".dtss[dgKey(P,D)] = Dater('2024-06-15T14c22c00d000000p00c00') — event D first seen at this time"
+    related_terms: ["KEL Storage Schema", "First-Seen Ordering", "Idempotent Logging"]
+
+  - term: "Signature Storage"
+    synonyms: [".sigs [keripy]", ".wigs [keripy]", "controller signatures", "witness signatures"]
+    definition: "Insertion-ordered sets of indexed signatures associated with each event. Controller signatures (.sigs) are Siger primitives from the signing keys; witness signatures (.wigs) are indexed Siger primitives from witness keys. Both use dgKey indexing and IoSet (insertion-ordered set) semantics that append new signatures without duplicating existing ones."
+    invariants:
+      - ".sigs: controller signatures — Siger primitives indexed by dgKey, IoSet semantics"
+      - ".wigs: witness signatures — Siger primitives indexed by dgKey, IoSet semantics"
+      - "Append-only within an event — new signatures are added, existing ones are preserved"
+      - "Duplicate signatures (same index, same value) are silently ignored on append"
+      - "Signature accumulation is the mechanism that resolves partially-signed escrow"
+    examples:
+      - ".sigs[dgKey(P,D)] = [Siger(idx=0), Siger(idx=2)] — two controller sigs for event D"
+      - "Third sig arrives: .sigs[dgKey(P,D)].add(Siger(idx=1)) -> now three sigs"
+    related_terms: ["KEL Storage Schema", "Receipt Storage", "Idempotent Logging"]
+
+  - term: "Receipt Storage"
+    synonyms: [".rcts [keripy]", ".vrcs [keripy]", "non-transferable receipts", "transferable receipts"]
+    definition: "Storage for witness and validator receipts associated with KEL events. Non-transferable receipts (.rcts) are Cigar (unindexed) signatures from non-transferable witness AIDs. Transferable receipts (.vrcs) are couplets (prefix+Cigar or prefix+Siger) from transferable witness AIDs. Both use dgKey indexing and IoSet semantics."
+    invariants:
+      - ".rcts: non-transferable witness receipts — Cigar primitives indexed by dgKey, IoSet semantics"
+      - ".vrcs: transferable witness receipts — (prefix, signature) couplets indexed by dgKey, IoSet semantics"
+      - "Escrow subdatabases for unverified receipts: .ures (unverified non-trans), .vres (unverified trans), .uwes (unverified witness)"
+      - "Receipts accumulate — new receipts append, existing ones are not duplicated"
+      - "Receipt accumulation resolves partially-witnessed escrow"
+    examples:
+      - ".rcts[dgKey(P,D)] = [Cigar(verfer=W1), Cigar(verfer=W2)] — two witness receipts for event D"
+      - "Third witness receipts: append to .rcts, now three receipts -> may resolve witness threshold"
+    related_terms: ["KEL Storage Schema", "Signature Storage", "Idempotent Logging"]
+
+  - term: "Database Key Patterns"
+    synonyms: ["dgKey [keripy]", "snKey [keripy]", "key construction"]
+    definition: "The two primary key construction patterns for addressing data in the KEL storage schema. dgKey (digest key) concatenates prefix and event digest for content-addressed lookup. snKey (sequence number key) concatenates prefix and sequence number for sequence-ordered access."
+    invariants:
+      - "dgKey(pre, dig) = pre_bytes + dig_bytes — content-addressed by event identity"
+      - "snKey(pre, sn) = pre_bytes + sn_bytes — sequence-ordered by position in KEL"
+      - "dgKey is used for: .evts, .sigs, .wigs, .rcts, .vrcs, .esrs, .dtss, .fons"
+      - "snKey is used for: .kels (sequence index)"
+      - "prefix+fn is used for: .fels (first-seen log)"
+      - "prefix alone is used for: .states (key state cache)"
+      - "Both patterns produce fixed-length binary keys suitable for B+ tree indexing"
+    examples:
+      - "dgKey('EABC...', 'EDEF...') — lookup event bytes, signatures, or receipts for a specific event"
+      - "snKey('EABC...', 5) — lookup the event digest at sequence number 5 for prefix EABC"
+      - "In keripy: dbing.dgKey(pre=prefixer.qb64b, dig=saider.qb64b)"
+      - "In keripy: dbing.snKey(pre=prefixer.qb64b, sn=5)"
+    related_terms: ["KEL Storage Schema", "First-Seen Ordering"]
+
+  - term: "State Cache"
+    synonyms: [".states [keripy]", "cached key state", "KeyStateRecord"]
+    definition: "Pre-computed key state snapshots cached per AID prefix for fast lookup without replaying the entire KEL. Updated each time an establishment event is accepted. The cache is an optimization — the authoritative key state can always be recomputed from the KEL."
+    invariants:
+      - "Indexed by prefix alone — one cached state per AID"
+      - "Updated on every establishment event acceptance (icp, rot, dip, drt)"
+      - "Not updated on interaction events (ixn does not change key state)"
+      - "The cache is a performance optimization — key state is always derivable from the KEL"
+      - "Cache invalidation is implicit: each establishment event overwrites the cached state"
+      - "In keripy: stored as KeyStateRecord (namedtuple) in .states CesrSuber"
+    examples:
+      - ".states[pre] = KeyStateRecord(keys=[...], ndigs=[...], wits=[...], sn=4, said='EABC...')"
+      - "After rotation at sn=6: .states[pre] is overwritten with the new key state"
+      - "Query shortcut: read .states[pre] instead of replaying all establishment events"
+    related_terms: ["KEL Storage Schema", "Database Key Patterns", "Idempotent Logging"]
+
+events:
+  - name: "EventLogged"
+    payload: "aid: AID, sn: int, said: SAID, fn: int, source: EventLocality"
+    triggers: "An event is accepted into the KEL — written to .evts, indexed in .kels and .fels, assigned an fn"
+
+  - name: "SignaturesAccumulated"
+    payload: "aid: AID, said: SAID, new_sigs: [Siger], total_count: int"
+    triggers: "New controller or witness signatures are appended to the existing signature set for an event"
+
+  - name: "ReceiptsAccumulated"
+    payload: "aid: AID, said: SAID, new_receipts: [Receipt], total_count: int"
+    triggers: "New witness receipts are appended to the existing receipt set for an event"
+
+  - name: "StateCacheUpdated"
+    payload: "aid: AID, sn: int, said: SAID"
+    triggers: "An establishment event is accepted and the cached key state for the AID is overwritten"
+
+rules:
+  - "All write operations are idempotent — reprocessing a duplicate event or late signature must not corrupt the log or create duplicates"
+  - "First-seen number (fn) is assigned exactly once per event at initial acceptance — it is never reassigned"
+  - "Local source records overwrite remote source records but never the reverse — trust escalation is one-directional"
+  - "Signature and receipt sets are append-only per event — entries are never removed (only accumulated)"
+  - "The state cache is an optimization — the KEL is the authoritative source of truth, and key state can always be recomputed by replaying establishment events"
+  - "dgKey and snKey are the two canonical access patterns — all subdatabases use one or the other"
+  - "Event bytes in .evts are immutable after first write — the content of an accepted event never changes"
+  - "Timestamps (.dtss) are immutable after first write — the first-seen time is permanent"

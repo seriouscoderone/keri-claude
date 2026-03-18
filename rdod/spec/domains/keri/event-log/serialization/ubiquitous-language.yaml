@@ -1,0 +1,171 @@
+# ubiquitous-language.yaml
+domain_ref: "keri/event-log/serialization"
+
+terms:
+  - term: "Event Serializer"
+    synonyms: ["SerderKERI [keripy]", "KeriEvent<KeyEvent> [keriox]", "Serder"]
+    definition: "Serializes and deserializes KERI key events to/from bytes. On serialization, enforces normative field ordering, computes the version string (v field) including size, and derives the SAID (d field) via the saidify algorithm. On deserialization, parses raw bytes by detecting the version string, extracts the KED (Key Event Dictionary), and validates the SAID. Provides typed accessors for event fields."
+    invariants:
+      - "Enforces normative field ordering for each event type (ilk) — the serialized byte order must match the declared order"
+      - "Computes and validates the SAID (d field) using the saidify algorithm: dummy d -> serialize -> digest -> inject"
+      - "Parses and validates the version string (v field) to determine protocol, version, serialization kind, and size"
+      - "Provides property accessors for event fields: .ilk (event type), .pre (AID prefix), .sn (sequence number), .said (SAID), .ked (full field map)"
+      - "Supports construction from raw bytes (deserialization) or from a field map (serialization)"
+    examples:
+      - "SerderKERI(raw=icp_bytes) in keripy — deserializes bytes, validates SAID, exposes .ked, .verfers, .digers"
+      - "KeriEvent<KeyEvent>::from_raw(bytes) in keriox — parses and validates a key event from wire bytes"
+      - "SerderKERI(ked=event_dict) in keripy — serializes field map, computes SAID and version string"
+    related_terms: ["Event Field Structure", "SAID", "Version String", "Event Serialization Kinds"]
+
+  - term: "Signed Event Message"
+    synonyms: ["SignedEventMessage [keriox]", "signed event bundle"]
+    definition: "An event serializer bundled with its controller signatures, optional witness receipts, and optional delegation source seal. The unit of transmission between KERI agents — everything needed to validate an event in a single message."
+    invariants:
+      - "Contains the serialized event (Event Serializer) and at least one controller signature"
+      - "Controller signatures are indexed (Siger) — the index corresponds to the signer's position in the current signing key list (k field)"
+      - "May include witness receipts: indexed signatures from witnesses (wigs) and/or non-indexed receipts"
+      - "May include a source seal (SealEvent) for delegated events — references the delegator's anchoring event"
+      - "The event serializer + signatures + receipts are concatenated in CESR stream order"
+    examples:
+      - "A SignedEventMessage with an icp event, 2-of-3 indexed Siger controller signatures, and 3 witness Cigar receipts"
+      - "A delegated inception bundle: dip event + controller sigs + delegator source seal"
+    related_terms: ["Event Serializer", "Seal Types", "Event Serialization Kinds"]
+
+  - term: "Event Field Structure"
+    synonyms: ["KED Fields [keripy]", "Key Event Dict", "EventData [keriox]"]
+    definition: "The normative field layout for each KERI key event type. Field ordering is significant — serialization must preserve the declared order for deterministic SAID computation. Each event type (ilk) has a fixed set of required fields and a specific field order."
+    invariants:
+      - "Common fields across all types: v (version string), t (type/ilk), d (SAID), i (identifier prefix), s (sequence number hex)"
+      - "Chain field: p (prior event SAID) — present in all events except inception"
+      - "Key fields: kt (signing threshold), k (signing keys list), nt (next threshold), n (next key digests list)"
+      - "Witness fields: bt (witness threshold/TOAD), b (witness list in inception), br (witnesses removed in rotation), ba (witnesses added in rotation)"
+      - "Config field: c (configuration traits list) — inception and rotation"
+      - "Anchor field: a (seals/anchors list) — all event types"
+      - "Delegation field: di (delegator prefix) — dip only"
+      - "Inception order: v, t, d, i, s, kt, k, nt, n, bt, b, c, a"
+      - "Rotation order: v, t, d, i, s, p, kt, k, nt, n, bt, br, ba, c, a"
+      - "Interaction order: v, t, d, i, s, p, a"
+      - "Delegated inception order: v, t, d, i, s, kt, k, nt, n, bt, b, c, a, di"
+      - "Delegated rotation order: v, t, d, i, s, p, kt, k, nt, n, bt, br, ba, c, a (same as rot — no di)"
+    examples:
+      - "Inception: {v:'KERI...', t:'icp', d:'ESAID...', i:'EAID...', s:'0', kt:'2', k:[...], nt:'2', n:[...], bt:'3', b:[...], c:[], a:[]}"
+      - "Interaction: {v:'KERI...', t:'ixn', d:'ESAID...', i:'EAID...', s:'3', p:'EPREV...', a:[{d:'ECRED...'}]}"
+    related_terms: ["Event Serializer", "Field Domain Validation", "SAID", "Seal Types"]
+
+  - term: "Event Creation Functions"
+    synonyms: ["incept() [keripy]", "rotate() [keripy]", "interact() [keripy]", "receipt() [keripy]", "InceptionEvent::new() [keriox]", "RotationEvent::new() [keriox]"]
+    definition: "Module-level functions (keripy) or constructors (keriox) that build event serializer objects from typed inputs. Each takes the required fields for its event type, applies normative field ordering, computes the SAID and version string, and returns a serialized event body ready for signing. These are pure construction functions — separate from the event processor state machine."
+    invariants:
+      - "incept(): constructs an inception event from keys, thresholds, witnesses, and config traits"
+      - "rotate(): constructs a rotation event from new keys, prior state, witness changes (br, ba), and anchors"
+      - "interact(): constructs an interaction event from AID, sequence number, prior digest, and seals"
+      - "receipt(): constructs a receipt (rct for non-transferable, vrc for transferable) for an existing event"
+      - "deltate(): constructs a delegated inception (dip) or delegated rotation (drt) event, adding the di field"
+      - "All functions compute the SAID and version string automatically — callers provide logical fields only"
+      - "Default thresholds are computed via quorum calculation (ample/simple) when not explicitly provided"
+    examples:
+      - "serder = incept(keys=['DABC...'], ndigs=['EDEF...'], wits=['BGHI...'], toad=1, code=MtrDex.Blake3_256)"
+      - "serder = rotate(pre='EABC...', keys=new_keys, dig=prior_said, sn=2, cuts=['Bxyz...'], adds=['Bdef...'])"
+      - "serder = interact(pre='EABC...', dig=prior_said, sn=3, data=[SealDigest(d='ECRED...')])"
+    related_terms: ["Event Serializer", "Quorum Calculation", "Event Field Structure", "Seal Types"]
+
+  - term: "Event Serialization Kinds"
+    synonyms: ["Serialization Kind", "Serials [keripy]", "SerializationKind [keriox]"]
+    definition: "The binary encoding format used to serialize a KERI event body. KERI supports four kinds: JSON (compact, no whitespace), CBOR, MessagePack (MGPK), and CESR native serialization. The kind is encoded in the version string and directly affects the SAID."
+    invariants:
+      - "JSON: compact no-whitespace serialization via separators=(',', ':') — deterministic"
+      - "CBOR: RFC 8949 deterministic encoding"
+      - "MGPK: MessagePack — compact binary encoding"
+      - "CESR: native CESR serialization using CESR primitive codes directly"
+      - "The serialization kind is encoded as 4 characters in the version string (KKKK field)"
+      - "Changing the serialization kind changes the SAID — same logical event has different SAIDs in different kinds"
+      - "All kinds must preserve normative field ordering"
+    examples:
+      - "JSON kind code: 'JSON' — e.g., version string 'KERICAACAAJSONAAKp.'"
+      - "CBOR kind code: 'CBOR' — e.g., version string 'KERICAACAACBORAABC.'"
+      - "CESR kind code: 'CESR' — e.g., version string 'KERICAACAACESRAAJM.'"
+    related_terms: ["Version String", "SAID", "Event Serializer"]
+
+  - term: "Field Ordering"
+    synonyms: ["Normative Field Order", "Canonical Field Order"]
+    definition: "The specification-mandated order of fields within each event type. Field ordering is normative because the SAID is computed over the serialized byte representation — reordering fields produces a different digest. Implementations must use insertion-ordered field maps (OrderedDict, LinkedHashMap, etc.) to preserve ordering during serialization."
+    invariants:
+      - "Field order per ilk is defined by the KERI specification and is not configurable"
+      - "Reordering fields invalidates the SAID — the digest changes because the byte serialization changes"
+      - "JSON serialization must emit fields in declaration order (no sorting)"
+      - "CBOR and MGPK must preserve map key insertion order"
+      - "Implementation requirement: use ordered maps — Python dict (3.7+), Rust BTreeMap/IndexMap, JS Map"
+    examples:
+      - "icp: v, t, d, i, s, kt, k, nt, n, bt, b, c, a — version string always first, anchors always last"
+      - "rot: v, t, d, i, s, p, kt, k, nt, n, bt, br, ba, c, a — p field appears after s (before key fields)"
+    related_terms: ["Event Field Structure", "SAID", "Event Serializer"]
+
+  - term: "Field Domain Validation"
+    synonyms: ["FieldDom [keripy]", "Ilks validation"]
+    definition: "Per-ilk specification of which fields are allowed, required, optional, and alternate in an event body. Used during both construction and deserialization to reject malformed events. Each ilk maps to a field domain that declares the normative field set."
+    invariants:
+      - "Each ilk (icp, rot, ixn, dip, drt) has a distinct field domain"
+      - "Fields not in the allowed set for the ilk are rejected"
+      - "Required fields must be present; optional fields may be omitted"
+      - "Alternate fields are mutually exclusive options for a given role (e.g., b vs br/ba for witnesses)"
+      - "In keripy: Saids/Ilks/Alls/Opts/Alts named tuples define the field domains per ilk"
+    examples:
+      - "icp allows: v, t, d, i, s, kt, k, nt, n, bt, b, c, a — all required"
+      - "dip allows all icp fields plus di — the delegator identifier"
+      - "rot uses br/ba instead of b for witness changes"
+    related_terms: ["Event Field Structure", "Event Serializer", "Event Creation Functions"]
+
+  - term: "Seal Types"
+    synonyms: ["Anchor Types", "SealDigest/SealEvent/SealLast [keripy]", "SealDigest/EventSeal/SourceSeal [keriox]"]
+    definition: "The specific kinds of seals that can appear in an event's a (anchor) field. Each seal type is a named structure with a fixed set of fields that binds external data or events to the KEL."
+    invariants:
+      - "Digest Seal (SealDigest): {d: SAID} — binds an arbitrary data digest to the KEL"
+      - "Event Seal (SealEvent): {i: prefix, s: sn, d: SAID} — binds a specific event of another AID by prefix, sequence number, and digest"
+      - "Latest Establishment Event Seal (SealLast): {i: prefix} — binds to the latest establishment event of another AID without specifying sn"
+      - "Root Seal (SealRoot): {rd: root_digest} — binds a Merkle tree root digest"
+      - "Multiple seals may appear in a single event's a field as a list"
+      - "Seal ordering within the list can be significant (e.g., for delegated superseding rules)"
+    examples:
+      - "Digest seal: a=[{d: 'ECRED_SAID...'}] — anchoring an ACDC credential issuance"
+      - "Event seal for delegation: a=[{i: 'EDELEG_AID...', s: '0', d: 'EDIP_SAID...'}] — delegator approving a delegated inception"
+      - "Latest establishment seal: a=[{i: 'EAID...'}] — reference to the most recent establishment event of EAID"
+    related_terms: ["Event Field Structure", "Event Creation Functions", "Signed Event Message"]
+
+  - term: "Quorum Calculation"
+    synonyms: ["ample() [keripy]", "simple() [keripy]", "majority computation"]
+    definition: "Functions that compute Byzantine fault-tolerant majority thresholds for witness quorums and multi-signature groups. Used during event construction to derive default thresholds when not explicitly specified by the caller."
+    invariants:
+      - "simple(n) = floor(n/2) + 1 — simple majority of n participants"
+      - "ample(n, f) computes m where ceil((n+f+1)/2) <= m <= n-f, subject to n >= 3f+1"
+      - "When f is not specified, ample defaults to the maximum fault tolerance: f = floor((n-1)/3)"
+      - "Ensures Byzantine fault tolerance — the quorum is large enough to tolerate f faulty participants out of n total"
+      - "Used to compute default witness threshold (toad/bt) when the caller omits it"
+      - "Also used for default signing thresholds in multi-sig configurations"
+    examples:
+      - "simple(5) = 3 — majority of 5"
+      - "ample(7) = 5 — with 7 witnesses, f = floor(6/3) = 2, need 5 to tolerate 2 faulty"
+      - "ample(4, f=1) = 3 — with 4 witnesses and 1 tolerated fault, need 3 receipts"
+    related_terms: ["Event Creation Functions", "Event Field Structure"]
+
+events:
+  - name: "EventSerialized"
+    payload: "ilk: EventType, said: SAID, kind: SerializationKind, size: int, raw: bytes"
+    triggers: "An event field map is serialized into bytes with computed SAID and version string"
+
+  - name: "EventDeserialized"
+    payload: "ilk: EventType, said: SAID, kind: SerializationKind, ked: FieldMap"
+    triggers: "Raw bytes are parsed into a validated event field map via version string detection"
+
+  - name: "EventConstructed"
+    payload: "ilk: EventType, aid: AID, sn: int, said: SAID, serder: EventSerializer"
+    triggers: "An event creation function produces a fully serialized event body ready for signing"
+
+rules:
+  - "Field ordering is normative — implementations must use insertion-ordered maps and serialize fields in the declared order per ilk"
+  - "The SAID is computed via the saidify algorithm: replace d field with dummy of correct length, serialize, digest, inject — changing any field changes the SAID"
+  - "The version string (v field) encodes protocol, version, serialization kind, and size — it must be first in every event"
+  - "Event creation functions are pure — they take field values and produce serialized bytes without side effects or state mutation"
+  - "Serialization kind directly affects the SAID — the same logical event has different SAIDs in JSON vs CBOR vs MGPK vs CESR"
+  - "Seal types are fixed structures — each seal type has a normative set of fields (d, or i+s+d, or i, or rd)"
+  - "Default thresholds are computed via ample() for BFT majority when not explicitly provided"
+  - "JSON serialization uses compact form with no whitespace: separators=(',', ':')"
