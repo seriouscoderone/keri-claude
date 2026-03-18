@@ -2,17 +2,32 @@
 domain_ref: "acdc/disclosure"
 
 ports:
-  # Inbound — what the parent domain calls
+  # Inbound — what the parent ACDC domain calls
   - id: "port://acdc/disclosure/inbound/disclosure-management"
     type: inbound
-    name: "Disclosure Management"
-    contract: "compact(block) -> SAID; expand(said, sad) -> Result<Block, VerificationError>; compute_agid(said_list) -> AGID; verify_inclusion(block, said_list, agid) -> Result<Valid, InclusionError>; compute_most_compact_form(acdc) -> ACDC"
+    name: "Graduated Disclosure Orchestration"
+    contract: "disclose(acdc, mode: DisclosureMode, options: DisclosureOptions) -> DisclosedVariant; classify(acdc) -> DisclosureMode; verify_disclosure(disclosed_variant, issuer_kel) -> Result<Valid, VerificationError>"
     protocol: "method-call"
     refs: ["domain://acdc"]
 
-  - id: "port://acdc/disclosure/inbound/graduated-disclosure"
-    type: inbound
-    name: "Graduated Disclosure Orchestration"
-    contract: "create_metadata_variant(acdc) -> MetadataACDC; create_compact_variant(acdc) -> CompactACDC; create_partial_variant(acdc, disclosed_sections) -> PartialACDC; create_selective_variant(acdc, disclosed_blocks) -> SelectiveACDC"
+  # Outbound — delegates to subdomains
+  - id: "port://acdc/disclosure/outbound/modes"
+    type: outbound
+    name: "Disclosure Mode Definitions"
+    contract: "Delegates to port://acdc/disclosure/modes/inbound/mode-definitions"
     protocol: "method-call"
-    refs: ["domain://acdc"]
+    refs: ["domain://acdc/disclosure/modes"]
+
+  - id: "port://acdc/disclosure/outbound/privacy"
+    type: outbound
+    name: "Privacy Mechanisms"
+    contract: "Delegates to port://acdc/disclosure/privacy/inbound/privacy-mechanisms"
+    protocol: "method-call"
+    refs: ["domain://acdc/disclosure/privacy"]
+
+  - id: "port://acdc/disclosure/outbound/aggregation"
+    type: outbound
+    name: "Aggregation Operations"
+    contract: "Delegates to port://acdc/disclosure/aggregation/inbound/aggregation-operations"
+    protocol: "method-call"
+    refs: ["domain://acdc/disclosure/aggregation"]

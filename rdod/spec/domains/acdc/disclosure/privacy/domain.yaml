@@ -1,0 +1,57 @@
+# domain.yaml
+template_version: "1.0"
+id: "acdc/disclosure/privacy"
+name: "Disclosure Privacy"
+description: >
+  Privacy-preserving mechanisms for ACDCs — the three ACDC privacy levels (public, private,
+  metadata), blinding via UUID entropy, and bulk issuance for preventing cross-presentation
+  correlation. Defines how the presence or absence of the top-level UUID u field determines
+  the privacy posture of a credential, and how bulk-issued instances with unique identifiers
+  prevent verifiers from correlating presentations across contexts.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "acdc-specification.md — ACDC Variants (Public, Private, Metadata), UUID Salty Nonce, Bulk Issuance sections"
+  - type: document
+    reference: "acdc-specification.md — Blinding, Anti-Correlation, Privacy-Preserving Credentials sections"
+  - type: implementation
+    reference: "keripy — src/keri/vc/proving.py (UUID handling, bulk issuance), src/keri/core/coring.py (Salter for UUID generation)"
+
+ubiquitous_language:
+  - term: "ACDC Privacy Level"
+    definition: "The privacy posture of an ACDC determined by its top-level UUID u field — public (absent), private (high-entropy), or metadata (empty)"
+    invariants:
+      - "Three mutually exclusive levels based on the u field"
+      - "Privacy level is set at issuance and cannot change"
+
+domain_clients:
+  - ref: "domain://acdc/disclosure"
+    relationship: "Parent disclosure domain delegates privacy level classification and bulk issuance logic to this subdomain"
+    via_port: "port://acdc/disclosure/privacy/inbound/privacy-mechanisms"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "SAID computation for blinded commitments, UUID entropy requirements (>= 128 bits cryptographic entropy)"
+    relationship: "Cryptographic algorithm types used for computing blinded SAIDs over UUID-protected blocks and generating high-entropy UUIDs"
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    Privacy levels are determined by a single field (the top-level UUID u) and are
+    straightforward to implement. Bulk issuance requires generating multiple instances
+    with unique SAIDs — each instance is a copy of the credential with a different
+    blinded identifier. The kernel dependency is for SAID computation over blinded blocks
+    and UUID generation with sufficient entropy. In keripy, the Salter class provides
+    UUID generation with configurable entropy.
+
+issues: []
+
+tags: ["privacy", "public-acdc", "private-acdc", "metadata-acdc", "uuid", "blinding", "bulk-issuance", "anti-correlation"]

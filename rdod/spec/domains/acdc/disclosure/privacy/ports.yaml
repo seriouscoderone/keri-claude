@@ -1,0 +1,19 @@
+# ports.yaml
+domain_ref: "acdc/disclosure/privacy"
+
+ports:
+  # Inbound -- what the parent disclosure domain calls
+  - id: "port://acdc/disclosure/privacy/inbound/privacy-mechanisms"
+    type: inbound
+    name: "Privacy Mechanisms"
+    contract: "classify_privacy_level(acdc) -> PublicOrPrivateOrMetadata; create_metadata_variant(acdc) -> MetadataACDC; create_blinded_block(fields, uuid) -> BlindedAttributeBlock; bulk_issue(acdc, count) -> [BulkInstance]"
+    protocol: "method-call"
+    refs: ["domain://acdc/disclosure"]
+
+  # Outbound -- kernel dependency for cryptographic operations
+  - id: "port://acdc/disclosure/privacy/outbound/digest"
+    type: outbound
+    name: "Cryptographic Digest for Blinded Commitments"
+    contract: "said_compute(block_with_uuid) -> SAID; generate_uuid(entropy_bits: int) -> UUID"
+    protocol: "method-call"
+    refs: ["kernel://cryptographic-algorithms"]

@@ -88,7 +88,10 @@ graph TD
 | `cesr/cesr-primitives` | CESR Primitives | subdomain | complete | 34 | Matter/Indexer traits, Verfer–Cipher, Sadder/Serder/Creder, Tholder |
 | `cesr/cesr-stream` | CESR Stream | subdomain | complete | 24 | Count codes, 12 concrete group types, parser dispatch, round-trip serialization |
 | `acdc` | ACDC Credentials | core | complete | 27 | SerderACDC/Creder, Schemer, Verifier, credential indexing/artifacts |
-| `acdc/disclosure` | Disclosure | subdomain | complete | 18 | Compactor, SAD path signatures, graduated partial disclosure |
+| `acdc/disclosure` | Disclosure | subdomain | complete | 1 | Graduated Disclosure orchestrator (delegates to 3 sub-subdomains) |
+| `acdc/disclosure/modes` | Disclosure Modes | sub-subdomain | complete | 6 | Compact, partial, nested, full, selective, chain-link |
+| `acdc/disclosure/privacy` | Disclosure Privacy | sub-subdomain | complete | 5 | Metadata/private/public ACDC, blinded blocks, bulk issuance |
+| `acdc/disclosure/aggregation` | Disclosure Aggregation | sub-subdomain | complete | 6 | AGID, inclusion proof, oneOf, most compact form, Compactor, SAD path sigs |
 | `acdc/tel` | Transaction Event Log | subdomain | complete | 11 | TEL, Registry, event types, Regery/Tevery (orchestrates 4 sub-subdomains) |
 | `acdc/tel/state` | TEL State Management | sub-subdomain | complete | 6 | Credential FSM, registry state, Tever, state reconstruction |
 | `acdc/tel/validation` | TEL Validation | sub-subdomain | complete | 6 | Validation pipeline, verifiable events, escrows, KEL anchor check |

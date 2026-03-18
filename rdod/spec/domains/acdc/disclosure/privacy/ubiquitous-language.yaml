@@ -1,0 +1,77 @@
+# ubiquitous-language.yaml
+domain_ref: "acdc/disclosure/privacy"
+
+terms:
+  - term: "Metadata ACDC"
+    synonyms: []
+    definition: "An ACDC variant with an empty top-level UUID u field, providing a mechanism to make cryptographic commitments to metadata (issuer, schema, edges, rules) without any correlation to the actual private ACDC."
+    invariants:
+      - "Top-level UUID u field is present but empty — distinguishes from private (non-empty) and public (absent)"
+      - "Top-level SAID differs from the actual ACDC's SAID because UUID value differs"
+      - "Attribute section a or aggregate A field may be empty or missing"
+      - "Only discloser commitments attached, not issuer commitments (prevents correlation)"
+    examples:
+      - "Metadata ACDC used to offer terms of use before disclosing actual credential"
+    related_terms: ["Chain-Link Confidentiality", "Private ACDC", "Public ACDC"]
+
+  - term: "Private ACDC"
+    synonyms: ["Confidential ACDC"]
+    definition: "An ACDC with a sufficiently high-entropy top-level UUID u field, making the top-level SAID a blinded commitment that cannot be correlated to ACDC content without disclosure."
+    invariants:
+      - "Top-level UUID u field present with >= 128 bits cryptographic entropy"
+      - "Top-level SAID provides a secure blinded commitment"
+      - "Content not discoverable from SAID + schema alone"
+    examples:
+      - "A credential where the SAID can be committed to (signed) without revealing any content"
+    related_terms: ["Public ACDC", "Metadata ACDC", "Partial Disclosure", "UUID"]
+
+  - term: "Public ACDC"
+    synonyms: ["Non-Confidential ACDC"]
+    definition: "An ACDC without a top-level UUID u field, where knowledge of schema and top-level SAID may enable content discovery via rainbow table attack."
+    invariants:
+      - "Top-level UUID u field absent"
+      - "Top-level SAID may serve as a correlation point despite non-disclosure of content"
+    examples:
+      - "A publicly verifiable attestation where content confidentiality is not required"
+    related_terms: ["Private ACDC", "Metadata ACDC"]
+
+  - term: "Blinded Attribute Block"
+    synonyms: []
+    definition: "An individual attribute block within the aggregate section that includes a SAID (d) and UUID (u) field, making its content discoverable only upon explicit disclosure of the block details including its UUID."
+    invariants:
+      - "Must have d (SAID) and u (UUID) fields"
+      - "All fields in a block must be disclosed together as a set"
+      - "Fields within a block are not independently selectively disclosable"
+      - "UUID provides sufficient entropy to prevent rainbow table discovery of content"
+    examples:
+      - "Score block: {\"d\": \"EC-vU...\", \"u\": \"0ABhY2...\", \"score\": 96}"
+      - "Compacted to its SAID: \"EC-vU19URXX8ztfWdp_j2HHr1lJsqtGa1YHtZrg6-GMR\""
+    related_terms: ["Selective Disclosure", "AGID", "UUID"]
+
+  - term: "Bulk-Issued Instance Disclosure"
+    synonyms: ["Bulk Issuance"]
+    definition: "Issuance of multiple instances of a given ACDC, each a copy with a unique instance identifier, so that disclosure of one instance is not correlatable to another."
+    invariants:
+      - "Each instance has a unique blinded SAID"
+      - "Issuer signs or seals the blinded SAID of each instance"
+      - "Instances are not correlatable to each other via their identifiers"
+    examples:
+      - "Bulk-issued private ACDCs for repeated presentations to different verifiers"
+    related_terms: ["Private ACDC", "Selective Disclosure", "AGID"]
+
+events:
+  - name: "PrivacyLevelClassified"
+    payload: "acdc_said: SAID, level: PublicOrPrivateOrMetadata, has_uuid: bool"
+    triggers: "ACDC is classified by its privacy level based on the presence and value of its top-level UUID field"
+
+  - name: "BulkInstancesIssued"
+    payload: "source_acdc_said: SAID, instance_count: int, instance_saids: [SAID], issuer: AID"
+    triggers: "Issuer creates multiple uncorrelatable instances of a credential for anti-correlation presentations"
+
+rules:
+  - "Top-level UUID u field determines privacy level: absent = public, non-empty high-entropy = private, present but empty = metadata"
+  - "Private ACDC UUIDs must have >= 128 bits of cryptographic entropy to resist rainbow table attacks"
+  - "A metadata ACDC must not provide any correlation point to the actual private ACDC"
+  - "Blinded attribute blocks must have sufficient UUID entropy (>= 128 bits) to resist rainbow table attacks"
+  - "Bulk-issued instances must have unique blinded SAIDs — no two instances may share an identifier"
+  - "Each bulk instance is independently disclosable without leaking information about other instances"
