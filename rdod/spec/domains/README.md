@@ -73,7 +73,7 @@ graph TD
 |----|------|------|--------|-------|-------------|
 | `keri` | KERI Protocol | core | complete | 18 | Hab/Habery, Kevery, Baser, Parser, escrow architecture |
 | `keri/key-state` | Key State | subdomain | complete | 20 | Kever/IdentifierState, KeyConfig, WitnessConfig, state reconstruction |
-| `keri/event-log` | Event Log | subdomain | complete | 25 | SerderKERI, SignedEventMessage, first-seen ordering, KEL storage schema |
+| `keri/event-log` | Event Log | subdomain | complete | 34 | Validation pipeline, dual threshold, pre-rotation binding, escrow cascade, field structure |
 | `keri/witness-agreement` | Witness Agreement | subdomain | complete | 19 | TOAD, receipt types/escrows, WitnessReceiptGenerator, BFT quorum |
 | `keri/duplicity-detection` | Duplicity Detection | subdomain | complete | 20 | Fork detection, LDE/DEL storage, notification bus |
 | `keri/delegation` | Delegation | subdomain | complete | 20 | Seal source, PDE/delegables escrow, approved seals, validation pipeline |

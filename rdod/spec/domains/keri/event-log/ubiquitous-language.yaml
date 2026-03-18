@@ -322,6 +322,127 @@ terms:
       - "ample(7, 2) = 5 — tolerating 2 faulty witnesses out of 7 (7 >= 3*2+1)"
     related_terms: ["Witness Threshold", "Signing Threshold", "Threshold"]
 
+  - term: "Event Validation Pipeline"
+    synonyms: ["processEvent() [keripy]", "process_notice() [keriox]"]
+    definition: "The complete step-by-step sequence that validates an incoming key event from receipt to acceptance or escrow. Implemented by the Event Processor (Kevery/EventProcessor)."
+    invariants:
+      - "Step 1: Check if prefix is known. If unknown and event is inception → create new Key Event Verifier. If unknown and not inception → escrow as out-of-order."
+      - "Step 2: Check sequence number. If sn > expected → escrow as out-of-order. If sn < expected → check for duplicate (same SAID = idempotent) or duplicity (different SAID = likely duplicitous escrow)."
+      - "Step 3: If sn == expected → call full validation (valSigsWigsDel / validate_event)."
+      - "Step 4: On validation success → log event to KEL, update key state, emit receipt cue."
+      - "Step 5: On validation failure → escrow to appropriate queue based on error type."
+      - "The pipeline is re-entrant: escrowed events are reprocessed through the same pipeline when their blocking condition resolves."
+    examples:
+      - "Rotation at sn=2 arrives: prefix known, sn matches expected → validate signatures + thresholds + witnesses + delegation → accept to KEL"
+      - "Event at sn=5 arrives but sn=4 is missing → escrow to out-of-order → when sn=4 arrives and is accepted, sn=5 is reprocessed from escrow"
+    related_terms: ["Event Processor", "Escrow Cascade", "Dual Threshold Verification"]
+
+  - term: "Dual Threshold Verification"
+    synonyms: ["valSigsWigsDel() [keripy]", "validate_event() [keriox]"]
+    definition: "The core validation logic that checks signatures, witness receipts, and delegation for an event. For rotation events, enforces DUAL threshold: signatures must satisfy BOTH the current signing threshold AND the prior next-key threshold (pre-rotation binding)."
+    invariants:
+      - "Step 1: Verify signature count — at least one valid signature required"
+      - "Step 2: Verify each signature cryptographically against the event serialization and the corresponding public key"
+      - "Step 3: Check signing threshold satisfaction — tholder.satisfy(indices) with verified signature indices"
+      - "Step 4 (rotation only): Check pre-rotation binding — ntholder.satisfy(ondices) using exposed next-key indices"
+      - "Step 5: Check witness threshold — toader.satisfy(windices) using verified witness receipt indices"
+      - "Step 6 (delegated only): Validate delegation seal — delegator's KEL must contain an anchor committing to this event"
+      - "Failure at any step → escrow to the appropriate queue (PSE for sigs, PWE for witnesses, PDE for delegation)"
+    examples:
+      - "Rotation with 2-of-3 threshold: signatures from keys at indices [0, 2] → tholder.satisfy([0, 2]) with thold=2 → True"
+      - "Same rotation also checks: ondices [0, 2] map to pre-committed next keys → ntholder.satisfy([0, 2]) → True"
+    related_terms: ["Pre-rotation Binding", "Signing Threshold", "Witness Threshold", "Escrow Cascade"]
+
+  - term: "Pre-rotation Binding"
+    synonyms: ["exposeds() [keripy]", "verify_next() [keriox]"]
+    definition: "The mechanism that enforces pre-rotation commitments during key rotation. Each indexed signature in a rotation event carries both an index (position in current key list) and an ondex (position in the prior next-key digest list). The binding is verified by computing the digest of the new signing key and comparing it to the pre-committed digest at the ondex position."
+    invariants:
+      - "Each Siger carries index (current key position) and ondex (next key position)"
+      - "For each siger: digest(new_key_at[index]) must equal prior_next_digest_at[ondex]"
+      - "Only ondices with valid key-digest matches count toward the next threshold"
+      - "The next threshold (ntholder) must be satisfied by the matched ondices"
+      - "BothSigCodex codes auto-match ondex=index; CurrentSigCodex codes have no ondex (current signing list only)"
+      - "This prevents an attacker from rotating to arbitrary keys — they must use the pre-committed keys"
+    examples:
+      - "Prior inception committed to next digests [D(N1), D(N2), D(N3)]. Rotation presents keys [N1, N2, N3]. Siger at index=0 has ondex=0 → digest(N1) must equal D(N1) → match."
+      - "Attacker tries rotation with unauthorized key K4 at index=0 → digest(K4) ≠ D(N1) → no ondex match → next threshold not satisfied → rejected"
+    related_terms: ["Dual Threshold Verification", "Pre-rotation", "Ondex", "Index"]
+
+  - term: "Escrow Cascade"
+    synonyms: ["Escrow State Machine"]
+    definition: "The flow of events between escrow queues based on what validation step fails. Events progress through escrows as their blocking conditions resolve, potentially visiting multiple escrow types before final acceptance."
+    invariants:
+      - "Out-of-Order → accepted (when prior event arrives)"
+      - "Partially-Signed → accepted OR → Partially-Witnessed (if sigs pass but witness threshold fails) OR → Delegation Escrow (if sigs pass but delegation missing)"
+      - "Partially-Witnessed → accepted (when witness receipts arrive)"
+      - "Delegation → accepted (when delegator's anchoring event arrives) OR → Partially-Witnessed (if delegation resolves but witnesses still insufficient)"
+      - "Likely Duplicitous → permanent storage (forensic evidence, never auto-resolved)"
+      - "Escrow processing order matters: OOE first, then receipt escrows, then PSE, then PWE, then PDE"
+    examples:
+      - "Multi-sig rotation: arrives with 1-of-3 signatures → PSE. Second sig arrives → reprocess → 2-of-3 passes → now check witnesses → insufficient → PWE. Witness receipts arrive → reprocess → accept."
+      - "Delegated inception: arrives before delegator's ixn → Delegation Escrow. Delegator's ixn arrives with seal → reprocess → signatures pass, witnesses pass → accept."
+    related_terms: ["Event Validation Pipeline", "Escrow Architecture"]
+
+  - term: "Event Field Structure"
+    synonyms: ["KED Fields", "Key Event Dict"]
+    definition: "The normative field layout for each KERI key event type. Field ordering is significant — serialization must preserve the declared order for deterministic SAID computation."
+    invariants:
+      - "Common fields: v (version string), t (type/ilk), d (SAID), i (identifier prefix), s (sequence number hex)"
+      - "Chain field: p (prior event SAID) — present in all events except inception"
+      - "Key fields: kt (signing threshold), k (signing keys list), nt (next threshold), n (next key digests list)"
+      - "Witness fields: bt (witness threshold/TOAD), b (witness list — inception), br (witnesses removed — rotation), ba (witnesses added — rotation)"
+      - "Config field: c (configuration traits list) — inception and rotation"
+      - "Anchor field: a (seals/anchors list) — all event types"
+      - "Delegation field: di (delegator prefix) — dip only"
+      - "Inception order: v, t, d, i, s, kt, k, nt, n, bt, b, c, a"
+      - "Rotation order: v, t, d, i, s, p, kt, k, nt, n, bt, br, ba, c, a"
+      - "Interaction order: v, t, d, i, s, p, a"
+      - "Delegated inception order: v, t, d, i, s, kt, k, nt, n, bt, b, c, a, di"
+    examples:
+      - "Inception: {v:'KERI...', t:'icp', d:'ESAID...', i:'EAID...', s:'0', kt:'2', k:['D...','D...','D...'], nt:'2', n:['E...','E...','E...'], bt:'3', b:['B...','B...','B...','B...','B...'], c:[], a:[]}"
+    related_terms: ["SAID", "Version String", "Event Serializer"]
+
+  - term: "Idempotent Logging"
+    synonyms: ["logEvent() [keripy]", "add_kel_finalized_event() [keriox]"]
+    definition: "The property that logging an already-accepted event is a safe no-op. Late-arriving signatures, witness receipts, or duplicate events are merged into the existing log entry without creating duplicates. Enables safe reprocessing of events from escrow."
+    invariants:
+      - "Event storage (.evts) uses put-if-not-exists semantics"
+      - "Signature storage (.sigs, .wigs) appends new signatures to existing sets"
+      - "KEL index (.kels) won't add duplicate entries at the same sn"
+      - "First-seen number is assigned only once (first=True on initial acceptance)"
+      - "Local source record overwrites remote source record (trust escalation)"
+    examples:
+      - "Event accepted with 2-of-3 sigs. Third sig arrives later → logEvent() adds third sig to .sigs but doesn't duplicate the event in .evts"
+      - "Same event received from two different sources → second call is idempotent"
+    related_terms: ["KEL Storage Schema", "First-Seen Ordering", "Event Source Record"]
+
+  - term: "Local Source Protection"
+    synonyms: ["Misfit Event Source", "escrowMFEvent() [keripy]"]
+    definition: "Security mechanism that prevents remote sources from injecting events for locally-owned, locally-witnessed, or locally-delegated identifiers. Events from remote sources targeting these protected identifiers are escrowed as 'misfits' rather than accepted, forcing re-sourcing through protected channels."
+    invariants:
+      - "Applies when: event source is remote AND (AID is locally owned OR locally witnessed OR locally delegated)"
+      - "Escrowed to misfit queue — not rejected, but held for local re-sourcing"
+      - "Local events (from the controller's own device) bypass this check"
+      - "Prevents an attacker from using a compromised network to inject events for identifiers the node controls"
+    examples:
+      - "A rotation event for our own AID arrives from an external network connection → escrowed as misfit → must be re-submitted through the local protected channel"
+    related_terms: ["Event Locality", "Event Source Record", "Event Validation Pipeline"]
+
+  - term: "Seal Types"
+    synonyms: ["Anchor Types"]
+    definition: "The specific types of seals that can appear in an event's 'a' (anchor) field, binding external data or events to the KEL."
+    invariants:
+      - "Digest Seal: {d: SAID} — binds an arbitrary data digest"
+      - "Event Seal: {i: prefix, s: sn, d: SAID} — binds a specific event of another AID"
+      - "Latest Establishment Event Seal: {i: prefix} — binds to the latest establishment event of another AID (no specific sn)"
+      - "Delegation seals in delegator events bind to delegated inception/rotation events"
+      - "Multiple seals may appear in a single event's 'a' field"
+      - "Seal ordering within the list is significant for delegated superseding rules (B2)"
+    examples:
+      - "Digest seal anchoring a credential: a=[{d: 'ECRED_SAID...'}]"
+      - "Event seal for delegation approval: a=[{i: 'EDELEG_AID...', s: '0', d: 'EDIP_SAID...'}]"
+    related_terms: ["Seal", "Interaction Event", "Delegation Seal Source"]
+
 events:
   - name: "InceptionCreated"
     payload: "aid: AID, key_state: KeyState, witnesses: [WitnessAID], config: [Trait], said: SAID"
