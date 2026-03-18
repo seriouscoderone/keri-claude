@@ -25,25 +25,45 @@ source_material:
     reference: "keriox — keriox_core/src/event/event_data/delegated.rs (SourceSeal), keriox_core/src/processor/escrow.rs (DelegationEscrow), keriox_core/src/processor/validator.rs (validate_event with delegator verification)"
 
 ubiquitous_language:
-  - term: "Cooperative Delegation"
-    definition: "A delegation that requires cooperation between delegator and delegatee — both must participate for a delegated establishment event to be valid"
+  - term: "Delegated Inception"
+    definition: "The inception event for a delegated AID — type 'dip' with di field referencing the delegator"
     invariants:
-      - "Delegatee's KEL references delegator's AID (di field)"
-      - "Delegator's KEL must contain a seal anchoring the delegated event"
-      - "Both bindings required for validity — neither party can unilaterally delegate"
+      - "Must include di field with the delegator's AID"
+      - "Requires a corresponding delegation seal in the delegator's KEL to be valid"
 
-  - term: "Delegation Seal"
-    definition: "An event seal in the delegator's KEL that cryptographically anchors a delegated event"
+  - term: "Delegated Rotation"
+    definition: "A rotation event for a delegated AID — type 'drt', inherits delegator from inception"
     invariants:
-      - "Contains i (delegatee AID), s (delegated event sn), d (delegated event SAID)"
-      - "Must appear in the delegator's KEL before the delegated event can be accepted"
+      - "Does NOT include di field — inherits delegator from the delegated inception"
+      - "Requires a corresponding delegation seal in the delegator's KEL to be valid"
+
+  - term: "Delegation Chain"
+    definition: "A chain of delegation where a delegated AID itself acts as a delegator, forming a hierarchical tree of authority"
+    invariants:
+      - "Verification requires walking up to the root non-delegated AID"
+      - "Superseding recovery rules apply recursively up the chain"
+
+  - term: "DID Configuration Trait"
+    definition: "A configuration trait (c field value 'DID') that instructs validators to treat delegates as equivalent to the delegator"
+    invariants:
+      - "Set in the c field of an establishment event"
+      - "Enables transparent delegation for authorization purposes"
 
 domain_clients:
   - ref: "domain://keri"
     relationship: "Parent domain drives the delegated identifier lifecycle — creation, rotation, and recovery of delegated AIDs"
     via_port: "port://keri/delegation/inbound/delegation-lifecycle"
 
-subdomains: []
+subdomains:
+  - ref: "keri/delegation/binding"
+    name: "Delegation Binding"
+    relationship: "Owns cooperative binding mechanics — seals, di field, source seal couples, two-way peg"
+  - ref: "keri/delegation/recovery"
+    name: "Delegation Recovery"
+    relationship: "Owns recovery logic — superseding rules B1-B3-C, joint compromise requirement, custodial delegation"
+  - ref: "keri/delegation/validation"
+    name: "Delegation Validation"
+    relationship: "Owns validation pipeline and escrow queues — .pdes, .delegables, .aess"
 
 kernels:
   - ref: "kernel://cryptographic-algorithms"

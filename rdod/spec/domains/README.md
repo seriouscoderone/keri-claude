@@ -83,7 +83,10 @@ graph TD
 | `keri/event-log/storage` | Event Storage | sub-subdomain | complete | 10 | KEL schema, first-seen ordering, idempotent logging, key patterns |
 | `keri/witness-agreement` | Witness Agreement | subdomain | complete | 19 | TOAD, receipt types/escrows, WitnessReceiptGenerator, BFT quorum |
 | `keri/duplicity-detection` | Duplicity Detection | subdomain | complete | 20 | Fork detection, LDE/DEL storage, notification bus |
-| `keri/delegation` | Delegation | subdomain | complete | 20 | Seal source, PDE/delegables escrow, approved seals, validation pipeline |
+| `keri/delegation` | Delegation | subdomain | complete | 4 | dip/drt event types, delegation chain, DID trait (delegates to 3 sub-subdomains) |
+| `keri/delegation/binding` | Delegation Binding | sub-subdomain | complete | 8 | Cooperative delegation, seals, di field, two-way binding, seal source |
+| `keri/delegation/recovery` | Delegation Recovery | sub-subdomain | complete | 4 | Joint compromise, superseding rules B1-B3-C, custodial delegation |
+| `keri/delegation/validation` | Delegation Validation | sub-subdomain | complete | 4 | Validation pipeline, PDE/delegable/approved escrows |
 | `cesr` | CESR Encoding | core | complete | 20 | Composable Event Streaming Representation — encoding layer |
 | `cesr/cesr-primitives` | CESR Primitives | subdomain | complete | 34 | Matter/Indexer traits, Verfer–Cipher, Sadder/Serder/Creder, Tholder |
 | `cesr/cesr-stream` | CESR Stream | subdomain | complete | 24 | Count codes, 12 concrete group types, parser dispatch, round-trip serialization |

@@ -1,0 +1,18 @@
+# ports.yaml
+domain_ref: "keri/delegation/recovery"
+
+ports:
+  # Inbound — what clients call
+  - id: "port://keri/delegation/recovery/inbound/recovery-rules"
+    type: inbound
+    name: "Recovery Rules"
+    contract: "evaluate_superseding(candidate: DelegatedRotation, incumbent: DelegatedRotation, delegator_kel: KEL) -> Result<SupersedingRule, NotSuperseding>; check_joint_compromise(delegatee_aid: AID, delegation_chain: [AID]) -> CompromiseRequirement; is_custodial(delegatee_aid: AID, delegator_aid: AID) -> bool"
+    protocol: "method-call"
+    refs: ["domain://keri/delegation"]
+
+  - id: "port://keri/delegation/recovery/inbound/superseding-comparison"
+    type: inbound
+    name: "Superseding Comparison"
+    contract: "compare_delegating_events(a: DelegatingEventRef, b: DelegatingEventRef) -> SupersedingOrder; apply_rule_b1(candidate_delegating_sn: int, incumbent_delegating_sn: int) -> Result<Supersedes, NotApplicable>; apply_rule_b2(candidate_seal_index: int, incumbent_seal_index: int, same_event: bool) -> Result<Supersedes, NotApplicable>; apply_rule_b3(candidate_event_type: EventType, incumbent_event_type: EventType, same_sn: bool) -> Result<Supersedes, NotApplicable>; apply_rule_c(delegation_chain: [AID], candidate: DelegatedRotation, incumbent: DelegatedRotation) -> Result<Supersedes, NotApplicable>"
+    protocol: "method-call"
+    refs: ["domain://keri/delegation"]

@@ -1,0 +1,68 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/delegation/validation"
+name: "Delegation Validation"
+description: >
+  The validation pipeline for delegated events and the escrow queues that hold events awaiting
+  delegator approval. Defines the multi-step validation process (verify delegatee signatures,
+  check di field, locate delegator seal, verify seal digest) and the three escrow states that
+  events pass through when the delegator's approval is not yet available: partially-delegated
+  (seal not found), delegable (delegator event not arrived), and approved (seal verified).
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Cooperative Delegation validation, Escrow processing for delegated events"
+  - type: implementation
+    reference: "keripy — src/keri/core/eventing.py (Kevery.processEscrowPartialDels, valSigsWigsDel — multi-step delegation validation pipeline)"
+  - type: implementation
+    reference: "keripy — src/keri/app/storing.py (.pdes — partially-delegated escrow, .delegables — delegable event escrow, .aess — approved delegation seals, .udes — unverified delegation seals)"
+  - type: implementation
+    reference: "keriox — keriox_core/src/processor/escrow.rs (DelegationEscrow — notified on KeyEventAdded), keriox_core/src/processor/validator.rs (validate_event with delegator verification)"
+
+ubiquitous_language:
+  - term: "Delegation Validation"
+    definition: "The multi-step validation process for delegated events that verifies both the delegatee's authority and the delegator's approval"
+    invariants:
+      - "Events failing any step are escrowed to the appropriate queue rather than rejected outright"
+      - "Validation completes only when both delegatee signatures and delegator seal are verified"
+
+  - term: "Partially-Delegated Escrow"
+    definition: "Holds delegated events that have been received and validated locally but are awaiting the delegator's anchoring seal"
+    invariants:
+      - "Events are promoted to the KEL when the matching seal is found"
+      - "Timeout: 3600 seconds — escrowed events are pruned after expiry"
+
+domain_clients:
+  - ref: "domain://keri/delegation"
+    relationship: "Parent delegation domain delegates validation pipeline and escrow management for delegated events"
+    via_port: "port://keri/delegation/validation/inbound/delegation-validation"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals:
+  - name: "Persistence"
+    abstraction: "Repository"
+    ref: "port://keri/delegation/validation/outbound/escrow-store"
+    implementation_notes: "Escrow storage for delegation-specific queues. Implementations: LMDB subdatabases .pdes (partially-delegated), .delegables (delegable events), .aess (approved seals), .udes (unverified seals) in keripy; DelegationEscrow in keriox. The validation subdomain defines the escrow lifecycle; the persistence engine provides the physical storage."
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In keripy, delegation validation is performed by valSigsWigsDel() which orchestrates the
+    full pipeline: signature verification, di field check, delegator seal lookup, and seal
+    digest verification. Events failing at the seal-lookup step go to .pdes (partially-delegated
+    escrow) or .delegables (if the delegator's event hasn't arrived at all). The
+    processEscrowPartialDels() method sweeps .pdes periodically, promoting events when the
+    delegator's anchoring event is found. In keriox, the DelegationEscrow subscribes to
+    KeyEventAdded notifications and retries escrowed delegated events when the delegator's
+    KEL advances.
+
+issues: []
+
+tags: ["validation", "escrow", "partially-delegated", "delegable", "approved-seals", "pipeline"]
