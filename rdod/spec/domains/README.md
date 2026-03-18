@@ -86,7 +86,11 @@ graph TD
 | `cesr/cesr-stream` | CESR Stream | subdomain | complete | 24 | Count codes, 12 concrete group types, parser dispatch, round-trip serialization |
 | `acdc` | ACDC Credentials | core | complete | 27 | SerderACDC/Creder, Schemer, Verifier, credential indexing/artifacts |
 | `acdc/disclosure` | Disclosure | subdomain | complete | 18 | Compactor, SAD path signatures, graduated partial disclosure |
-| `acdc/tel` | Transaction Event Log | subdomain | complete | 25 | Regery/Tever/Tevery/Reger, credential/registry state, TEL escrows |
+| `acdc/tel` | Transaction Event Log | subdomain | complete | 11 | TEL, Registry, event types, Regery/Tevery (orchestrates 4 sub-subdomains) |
+| `acdc/tel/state` | TEL State Management | sub-subdomain | complete | 6 | Credential FSM, registry state, Tever, state reconstruction |
+| `acdc/tel/validation` | TEL Validation | sub-subdomain | complete | 6 | Validation pipeline, verifiable events, escrows, KEL anchor check |
+| `acdc/tel/blinding` | TEL Blinding | sub-subdomain | complete | 8 | BLID, blinded blocks, shared secret, UUID derivation, decorrelation |
+| `acdc/tel/storage` | TEL Storage | sub-subdomain | complete | 6 | Reger schema, credential/escrow storage, key patterns, registry metadata |
 | `acdc/ipex` | IPEX Exchange | subdomain | complete | 18 | IpexHandler, Exchanger, message construction, grant artifacts |
 | `oobi` | Out-of-Band Introduction | adjacent | complete | 6 | Bootstrap discovery, BADA endpoint authorization |
 | `agent` | Agent Infrastructure | client | complete | 4 | Edge/cloud separation, Signify protocol contract |

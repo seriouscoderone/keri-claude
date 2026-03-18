@@ -43,19 +43,7 @@ terms:
       - "Registry inception with issuer AID and UUID for unique identification"
     related_terms: ["Registry", "REGID", "TEL"]
 
-  - term: "Blindable Update"
-    synonyms: ["bup event"]
-    definition: "A registry update event that uses a blinded attribute block to hide the actual ACDC state, enabling private (blinded) state registries."
-    invariants:
-      - "Message type t field must be 'bup'"
-      - "Field order: [v, t, d, rd, n, p, dt, b] — all required"
-      - "The b field value is the BLID (blinding SAID) of the blinded attribute block"
-      - "State can only be discovered by entities holding the shared secret salt"
-      - "New blinding factor per update — prevents correlation between updates and state changes"
-    examples:
-      - "Blinded issuance event where only the issuer and designated discloser can determine the ACDC state"
-      - "Periodic blind updates that decorrelate the time of actual state change"
-    related_terms: ["BLID", "Blinded Attribute Block", "Update Event", "Shared Secret Salt"]
+  # Blindable Update — delegated to domain://acdc/tel/blinding
 
   - term: "Update Event"
     synonyms: ["upd event"]
@@ -96,54 +84,7 @@ terms:
       - "Seal: {\"s\": \"3\", \"d\": \"ELvaU6Z-i0d8JJR2nmwyYAZAoTNZH3UfSVPzhzS6b5CM\"}"
     related_terms: ["KEL", "Anchor", "Key State"]
 
-  - term: "BLID"
-    synonyms: ["Blinding SAID"]
-    definition: "A cryptographic digest of the concatenated CESR serialization of a blinded attribute block's field values, serving as the value of the b field in a blindable update (bup) event."
-    invariants:
-      - "Computed on the text domain (qb64) CESR serialization of concatenated field values"
-      - "Uses dummy character (#) replacement for self-referential computation (like SAID protocol)"
-      - "Field concatenation order: [d, u, td, ts] for basic blocks; [d, u, td, ts, bn, bd] for bound blocks"
-      - "Typically uses Blake3-256 digest (E code, 44 characters)"
-    examples:
-      - "BLID: ECVr7QWEp_aqVQuz4yprRFXVxJ-9uWLx_d6oDinlHU6J"
-    related_terms: ["Blindable Update", "Blinded Attribute Block", "SAID"]
-
-  - term: "Blinded Attribute Block"
-    synonyms: []
-    definition: "A fixed-field concatenation of CESR-serialized values (BLID, UUID, ACDC SAID, transaction state) whose digest serves as the b field in a blindable update event, hiding the actual ACDC state."
-    invariants:
-      - "Virtual field labels (never serialized): [d, u, td, ts]"
-      - "UUID is the blinding factor — derived from shared secret salt and event sequence number"
-      - "Only entities with the shared secret salt can derive the UUID and discover the state"
-      - "Not part of the bup message itself — provided as a CESR attachment when disclosing"
-      - "CESR group code: BlindedStateQuadruples (-a##)"
-    examples:
-      - "Placeholder block with empty td and ts fields (CESR Empty: 1AAP)"
-      - "Issued block with real ACDC SAID in td and '0Missued' in ts"
-    related_terms: ["BLID", "Blindable Update", "Shared Secret Salt", "Bound Blinded Attribute Block"]
-
-  - term: "Bound Blinded Attribute Block"
-    synonyms: []
-    definition: "A variant of the blinded attribute block that adds bound issuee key event sequence number (bn) and SAID (bd) fields, binding the ACDC state to the issuee's key state at the time of publication."
-    invariants:
-      - "Virtual field labels: [d, u, td, ts, bn, bd]"
-      - "Binds ACDC state to issuee's key state — supports delegation chain verification"
-      - "CESR group code: BoundStateSextuples (-b##)"
-    examples:
-      - "Issued block with issuee key event at sequence number 1: bn=MAAB, bd=EJOnAKX..."
-    related_terms: ["Blinded Attribute Block", "Chain of Authority", "Delegation"]
-
-  - term: "Shared Secret Salt"
-    synonyms: ["Blind Salt"]
-    definition: "A secret shared between issuer and designated discloser, used with a hierarchically deterministic derivation algorithm and the TEL event sequence number to derive the UUID blinding factor for each blindable update."
-    invariants:
-      - "Must have >= 128 bits of cryptographic entropy"
-      - "Derivation path is the sequence number of the transaction event"
-      - "Derived UUID must be twice as long as the salt to preserve cryptographic entropy"
-      - "Only issuer and discloser possess the salt — enables independent state discovery"
-    examples:
-      - "Discloser derives UUID from salt + sequence number, tries finite state combinations to discover current state"
-    related_terms: ["Blinded Attribute Block", "BLID", "Blindable Update"]
+  # BLID, Blinded Attribute Block, Bound Blinded Attribute Block, Shared Secret Salt — delegated to domain://acdc/tel/blinding
 
   - term: "TEL Registrar"
     synonyms: ["Registrar"]
@@ -180,19 +121,6 @@ terms:
       - "Regery.processEscrows() retrying TEL events that were missing anchors or registry state"
     related_terms: ["Registry", "TEL Database", "TEL Event Processor", "TEL Event Verifier"]
 
-  - term: "TEL Event Verifier"
-    synonyms: ["Tever [keripy]", "TelState [keriox]", "ManagerTelState [keriox]"]
-    definition: "State machine tracking one registry's TEL state. In keripy: Tever holds regk (registry prefix), pre (issuer AID), sn, baks (backers), toad, and per-credential state via vcState(). In keriox: separate TelState enum (NotIssued, Issued, Revoked) and ManagerTelState struct for registry lifecycle."
-    invariants:
-      - "Maintains the current sequence number and latest event digest for its registry"
-      - "Tracks issuer AID, backer list, and backer threshold"
-      - "In keripy: exposes per-credential state via vcState() keyed by credential SAID"
-      - "In keriox: TelState enum enforces NotIssued -> Issued -> Revoked transition only"
-    examples:
-      - "Tever advancing sn from 0 to 1 after processing an iss event for a newly issued credential"
-      - "keriox TelState transitioning from Issued(digest) to Revoked upon rev event"
-    related_terms: ["TEL Event Processor", "Registry State", "Credential State"]
-
   - term: "TEL Event Processor"
     synonyms: ["Tevery [keripy]", "TelEventProcessor [keriox]"]
     definition: "Processes incoming TEL events against current registry state. Factory for TEL Event Verifier instances. Escrows out-of-order and missing-anchor events. In keriox: uses TelNotificationBus pub-sub for escrow reprocessing."
@@ -205,87 +133,6 @@ terms:
       - "Tevery receiving a bis event, finding no registry for it yet, and escrowing it for later"
       - "TelEventProcessor reprocessing escrowed events after a VCP event arrives via notification bus"
     related_terms: ["TEL Event Verifier", "TEL Escrows", "Registry Collection", "TEL Database"]
-
-  - term: "TEL Database"
-    synonyms: ["Reger [keripy]", "TelEventDatabase trait [keriox]"]
-    definition: "Persistent storage for TEL events and credential metadata. In keripy: subdatabases include .tvts (event serializations), .tels (TEL log index), .tibs (backer signatures), .baks (backer lists), .ancs (anchor seals), .oots (out-of-order escrow), .twes (partial witness escrow), .taes (anchorless escrow). In keriox: TelEventDatabase trait with add_new_event/get_events/get_management_events."
-    invariants:
-      - "Stores serialized TEL events, backer signatures, backer lists, and anchor seals"
-      - "Maintains separate escrow subdatabases for out-of-order, partial-witness, and anchorless events"
-      - "In keripy: key subdatabases are .tvts, .tels, .tibs, .baks, .ancs, .oots, .twes, .taes"
-      - "In keriox: trait-based abstraction with add_new_event(), get_events(), get_management_events()"
-    examples:
-      - "Reger.tvts storing the serialized bytes of each TEL event keyed by event SAID"
-      - "keriox TelEventDatabase::get_management_events() returning the VCP+VRT chain for a registry"
-    related_terms: ["TEL Event Processor", "Registry Collection", "TEL Escrows"]
-
-  - term: "Credential State Snapshot"
-    synonyms: ["VcStateRecord [keripy]", "TelState [keriox]"]
-    definition: "Snapshot of a credential's lifecycle state. In keripy: VcStateRecord with fields vn, i (credential SAID), s (sn), d (digest), ri (registry SAID), ra (registry anchor), a (KEL anchor), dt, et (event type: iss/bis/rev/brv). In keriox: TelState enum with NotIssued/Issued(digest)/Revoked variants."
-    invariants:
-      - "State transitions are one-directional only: NotIssued -> Issued -> Revoked, no backtracking"
-      - "In keripy: VcStateRecord includes credential SAID (i), registry SAID (ri), and the event type (et) that produced this state"
-      - "In keriox: TelState enum carries the event digest in the Issued variant for hash-chain verification"
-      - "State is determined by replaying TEL events from inception through the latest event"
-    examples:
-      - "VcStateRecord with et='iss', s='0', ri pointing to the registry — credential just issued"
-      - "TelState::Revoked after processing a rev event for a previously Issued credential"
-    related_terms: ["Credential State", "TEL Event Verifier", "Registry State Snapshot"]
-
-  - term: "Registry State Snapshot"
-    synonyms: ["RegStateRecord [keripy]", "ManagerTelState [keriox]"]
-    definition: "Snapshot of a registry's management state. Fields: registry SAID, sequence number, latest digest, issuer AID, backer threshold, backer list, config traits. Updated by VRT (registry rotation) events."
-    invariants:
-      - "Tracks the registry's management TEL state: SAID, sequence number, latest event digest"
-      - "Includes issuer AID, backer threshold (toad), and current backer list"
-      - "Config traits (e.g., NoBackers) are set at inception and constrain future events"
-      - "Updated only by VCP (inception) and VRT (rotation) management events"
-    examples:
-      - "RegStateRecord after VCP inception: sn=0, empty backer list with NoBackers trait"
-      - "ManagerTelState after VRT rotation: updated backer list and incremented sn"
-    related_terms: ["Registry State", "TEL Event Verifier", "Credential State Snapshot"]
-
-  - term: "Verifiable Event"
-    synonyms: ["VerifiableEvent [keriox]"]
-    definition: "A TEL event bundled with its KEL anchor seal (AttachedSourceSeal). The seal provides the cryptographic binding to the issuer's KEL: sequence number plus digest of the anchoring KEL event. Both the TEL event and its seal are required for validation."
-    invariants:
-      - "Bundles the TEL event with the AttachedSourceSeal referencing the issuer's KEL"
-      - "The seal contains the sequence number and digest of the anchoring KEL event"
-      - "Both components are required — a TEL event without its seal cannot be validated"
-      - "The seal is verified by checking the issuer's KEL contains the matching anchor at the stated position"
-    examples:
-      - "VerifiableEvent containing an iss event and a seal pointing to the issuer's KEL event at sn=3"
-      - "Validator extracting the seal from a VerifiableEvent and checking it against the issuer's KEL"
-    related_terms: ["Transaction Event Seal", "TEL Validation Pipeline", "TEL Event Processor"]
-
-  - term: "TEL Validation Pipeline"
-    synonyms: ["TelEventValidator [keriox]", "Verifier [keripy]"]
-    definition: "Multi-step validation for TEL events: (1) extract registry ID, (2) compute registry management state, (3) verify issuer's KEL contains anchor seal (check_kel_event), (4) compute current credential state, (5) apply state transition."
-    invariants:
-      - "Step 1: Extract registry ID from the TEL event"
-      - "Step 2: Compute current registry management state from management TEL"
-      - "Step 3: Verify the issuer's KEL contains the anchor seal at the stated position"
-      - "Step 4: Compute the current credential state from the credential's TEL"
-      - "Step 5: Apply the state transition — fails if transition is invalid"
-      - "Errors: MissingRegistry, MissingIssuer, DigestsNotMatch, MissingSeal"
-    examples:
-      - "Validator processing an iss event: finds registry via VCP, checks KEL anchor, confirms credential is NotIssued, transitions to Issued"
-      - "Validation failing with MissingSeal when the issuer's KEL event at the seal point is not yet available"
-    related_terms: ["Verifiable Event", "TEL Escrows", "TEL Event Processor", "Transaction Event Seal"]
-
-  - term: "TEL Escrows"
-    synonyms: [".oots/.twes/.taes [keripy]", "OutOfOrderEscrow [keriox]", "MissingRegistryEscrow [keriox]", "MissingIssuerEscrow [keriox]"]
-    definition: "Typed escrow queues for TEL events that cannot be immediately validated. Out-of-order: event sn does not match expected next. Missing registry: registry VCP not yet processed. Missing issuer: issuer's KEL event at seal point not yet available."
-    invariants:
-      - "Out-of-order escrow (.oots): event sn does not match expected next sequence number"
-      - "Missing registry escrow: registry VCP/management TEL not yet available"
-      - "Missing issuer escrow (.taes): issuer's KEL event at the anchor seal point not yet received"
-      - "Partial witness escrow (.twes): insufficient backer signatures collected so far"
-      - "In keriox: observer pattern on TelNotificationBus auto-retries when the blocking condition resolves"
-    examples:
-      - "An iss event escrowed in .oots because a prior rev event has not yet been processed"
-      - "keriox MissingRegistryEscrow holding a bis event until the VCP for that registry arrives"
-    related_terms: ["TEL Validation Pipeline", "TEL Event Processor", "TEL Database"]
 
   - term: "Backed vs Backerless"
     synonyms: []

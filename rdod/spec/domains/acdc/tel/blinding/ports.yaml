@@ -1,0 +1,33 @@
+# ports.yaml
+domain_ref: "acdc/tel/blinding"
+
+ports:
+  # Inbound -- what the parent TEL domain calls
+  - id: "port://acdc/tel/blinding/inbound/blinded-state"
+    type: inbound
+    name: "Blinded State Operations"
+    contract: "compute_blid(uuid: UUID, acdc_said: SAID?, state: CredentialState?) -> BLID; build_blinded_block(salt: Salt, sn: int, acdc_said: SAID?, state: CredentialState?) -> BlindedAttributeBlock; build_bound_block(salt: Salt, sn: int, acdc_said: SAID?, state: CredentialState?, bn: int, bd: SAID) -> BoundBlindedAttributeBlock; discover_state(salt: Salt, sn: int, blid: BLID, candidate_saids: [SAID], possible_states: [CredentialState]) -> CredentialState?"
+    protocol: "method-call"
+    refs: ["domain://acdc/tel"]
+
+  - id: "port://acdc/tel/blinding/inbound/uuid-derivation"
+    type: inbound
+    name: "UUID Derivation"
+    contract: "derive_uuid(salt: Salt, sn: int) -> UUID"
+    protocol: "method-call"
+    refs: ["domain://acdc/tel"]
+
+  # Outbound -- what blinding depends on
+  - id: "port://acdc/tel/blinding/outbound/digest"
+    type: outbound
+    name: "Cryptographic Digest"
+    contract: "blake3_256(data: bytes) -> Digest"
+    protocol: "method-call"
+    refs: ["kernel://cryptographic-algorithms"]
+
+  - id: "port://acdc/tel/blinding/outbound/kdf"
+    type: outbound
+    name: "Key Derivation Function"
+    contract: "derive(salt: bytes, path: int) -> bytes"
+    protocol: "method-call"
+    refs: ["kernel://cryptographic-algorithms"]

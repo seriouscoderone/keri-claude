@@ -1,0 +1,47 @@
+# ports.yaml
+domain_ref: "acdc/tel/storage"
+
+ports:
+  # Inbound -- what the parent TEL domain calls
+  - id: "port://acdc/tel/storage/inbound/event-logging"
+    type: inbound
+    name: "TEL Event Logging"
+    contract: "log_event(regid: REGID, event: bytes, sn: int, anchor: Seal) -> Result; add_backer_sigs(regid: REGID, said: SAID, sigs: [Siger]) -> Result; get_event_by_digest(regid: REGID, dig: SAID) -> bytes; get_event_by_sn(regid: REGID, sn: int) -> bytes; get_backer_sigs(regid: REGID, dig: SAID) -> [Siger]; get_anchor(regid: REGID, dig: SAID) -> Seal"
+    protocol: "method-call"
+    refs: ["domain://acdc/tel"]
+
+  - id: "port://acdc/tel/storage/inbound/credential-index"
+    type: inbound
+    name: "Credential Indexing"
+    contract: "store_credential(acdc_said: SAID, acdc_bytes: bytes, issuer: AID, subject: AID?, schema: SAID) -> Result; get_credential(acdc_said: SAID) -> bytes?; get_by_issuer(issuer: AID) -> [SAID]; get_by_subject(subject: AID) -> [SAID]; get_by_schema(schema: SAID) -> [SAID]; is_saved(acdc_said: SAID) -> bool"
+    protocol: "method-call"
+    refs: ["domain://acdc/tel"]
+
+  - id: "port://acdc/tel/storage/inbound/escrow-management"
+    type: inbound
+    name: "TEL Escrow Management"
+    contract: "escrow_oot(regid: REGID, sn: int, event: bytes) -> Result; escrow_twe(regid: REGID, sn: int, event: bytes) -> Result; escrow_tae(regid: REGID, sn: int, event: bytes) -> Result; escrow_cmse(regid: REGID, sn: int, event: bytes) -> Result; escrow_mre(regid: REGID, event: bytes) -> Result; escrow_mce(acdc_said: SAID, event: bytes) -> Result; escrow_mse(schema_said: SAID, event: bytes) -> Result; get_escrowed(escrow_type: str, key: bytes) -> Iterator<bytes>; remove_escrowed(escrow_type: str, key: bytes) -> Result"
+    protocol: "method-call"
+    refs: ["domain://acdc/tel"]
+
+  - id: "port://acdc/tel/storage/inbound/tel-replay"
+    type: inbound
+    name: "TEL Replay"
+    contract: "replay_by_sn(regid: REGID, start_sn?: int) -> Iterator<(sn, bytes)>; get_management_events(regid: REGID) -> Iterator<bytes>; get_max_sn(regid: REGID) -> int?"
+    protocol: "method-call"
+    refs: ["domain://acdc/tel"]
+
+  - id: "port://acdc/tel/storage/inbound/registry-metadata"
+    type: inbound
+    name: "Registry Metadata"
+    contract: "put_registry(name: str, record: RegistryRecord) -> Result; get_registry_by_name(name: str) -> RegistryRecord?; get_state(regid: REGID) -> RegStateRecord?; put_state(regid: REGID, state: RegStateRecord) -> Result"
+    protocol: "method-call"
+    refs: ["domain://acdc/tel"]
+
+  # Outbound -- what storage depends on
+  - id: "port://acdc/tel/storage/outbound/persistence"
+    type: outbound
+    name: "Persistence Engine"
+    contract: "put(db: str, key: bytes, val: bytes) -> bool; get(db: str, key: bytes) -> bytes?; append(db: str, key: bytes, val: bytes) -> bool; iterate(db: str, prefix: bytes) -> Iterator<(bytes, bytes)>; delete(db: str, key: bytes) -> bool"
+    protocol: "method-call"
+    refs: ["persistence"]

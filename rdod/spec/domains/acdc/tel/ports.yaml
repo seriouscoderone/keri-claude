@@ -16,14 +16,15 @@ ports:
     contract: "create_blinded_update(regid, acdc_said, state, shared_salt, sn) -> BlindableUpdateEvent; unblind_state(blid, shared_salt, sn, possible_states) -> CredentialState; update_blind(regid, sn) -> BlindableUpdateEvent"
     protocol: "method-call"
     refs: ["domain://acdc"]
+    delegates_to: "domain://acdc/tel/blinding via port://acdc/tel/blinding/inbound/blinded-state"
 
-  # Outbound — what TEL calls
+  # Outbound — what TEL calls (delegated to subdomains)
   - id: "port://acdc/tel/outbound/tel-store"
     type: outbound
-    name: "TEL Persistence"
-    contract: "append_event(regid, event) -> Result; get_tel(regid) -> TEL; get_latest_state(regid, acdc_said) -> CredentialState"
+    name: "TEL Storage"
+    contract: "Delegated to domain://acdc/tel/storage — see port://acdc/tel/storage/inbound/event-logging, port://acdc/tel/storage/inbound/credential-index, port://acdc/tel/storage/inbound/tel-replay"
     protocol: "method-call"
-    refs: ["persistence"]
+    refs: ["domain://acdc/tel/storage"]
 
   - id: "port://acdc/tel/outbound/kel-sealing"
     type: outbound

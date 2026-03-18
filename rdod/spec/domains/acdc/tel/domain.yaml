@@ -44,17 +44,21 @@ domain_clients:
     relationship: "ACDC core domain drives TEL for credential state management"
     via_port: "port://acdc/tel/inbound/state-management"
 
-subdomains: []
+subdomains:
+  - ref: "domain://acdc/tel/state"
+    relationship: "Credential and registry state machines — tracks lifecycle (NotIssued -> Issued -> Revoked) and registry management state"
+  - ref: "domain://acdc/tel/validation"
+    relationship: "Multi-step validation pipeline for TEL events — KEL anchor verification, escrow management, notification bus"
+  - ref: "domain://acdc/tel/blinding"
+    relationship: "Privacy-preserving blinded state management — BLID computation, UUID derivation from shared secret salt, state discovery"
+  - ref: "domain://acdc/tel/storage"
+    relationship: "Persistent storage for TEL events, backer signatures, anchor seals, credential/registry metadata, and escrow queues"
 
 kernels: []
 
 adjacents: []
 
-externals:
-  - name: "TEL Persistence"
-    abstraction: "Repository"
-    ref: "port://acdc/tel/outbound/tel-store"
-    implementation_notes: "Append-only store for TEL events. Implementations: LMDB (keripy), redb (keriox), DynamoDB (serious-keri)"
+externals: []
 
 implementation_guidance:
   suggested_type: "module"
