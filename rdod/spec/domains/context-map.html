@@ -1669,7 +1669,28 @@ const RDOD_DATA = [
         "via_port": "port://keri/event-log/inbound/event-management"
       }
     ],
-    "subdomains": [],
+    "subdomains": [
+      {
+        "ref": "domain://keri/event-log/validation",
+        "relationship": "Owns the multi-step validation pipeline: signature verification, threshold satisfaction, pre-rotation binding, witness checks, delegation approval",
+        "via_port": "port://keri/event-log/validation/inbound/validate-event"
+      },
+      {
+        "ref": "domain://keri/event-log/escrow",
+        "relationship": "Owns typed escrow queues and the escrow cascade: OOE, PSE, PWE, PDE, LDE, delegables, misfits",
+        "via_port": "port://keri/event-log/escrow/inbound/escrow-management"
+      },
+      {
+        "ref": "domain://keri/event-log/serialization",
+        "relationship": "Owns event construction, serialization/deserialization, field ordering, SAID computation, and seal types",
+        "via_port": "port://keri/event-log/serialization/inbound/event-construction"
+      },
+      {
+        "ref": "domain://keri/event-log/storage",
+        "relationship": "Owns persistent storage schema, idempotent logging, first-seen ordering, signature/receipt accumulation",
+        "via_port": "port://keri/event-log/storage/inbound/event-logging"
+      }
+    ],
     "kernels": [
       {
         "ref": "kernel://cryptographic-algorithms",
@@ -1700,6 +1721,341 @@ const RDOD_DATA = [
       "event-sourcing"
     ],
     "_source": "rdod/spec/domains/keri/event-log/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/event-log/escrow",
+    "name": "Event Escrow",
+    "description": "Typed escrow queues that hold events blocked at different validation stages. When an event cannot yet be fully validated -- missing prior event, insufficient signatures, missing witness receipts, or missing delegation seal -- it is placed in the appropriate escrow queue rather than rejected. As dependencies resolve, escrowed events are reprocessed through the validation pipeline. Events may flow between escrow types (the escrow cascade) before reaching final acceptance. Likely duplicitous events are escrowed permanently as forensic evidence.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md -- sections: Escrow, Out-of-Order Events, Partially Signed, Duplicity Detection"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md -- sections: Escrow Processing, Event Ordering, Duplicity"
+      },
+      {
+        "type": "document",
+        "reference": "keripy -- eventing.py: Kevery escrow methods (escrowOOEvent, escrowPSEvent, escrowPWEvent, escrowPDEvent, escrowLDEvent, escrowMFEvent), processEscrow* methods, TimeoutOOE/PSE/PWE/LDE constants"
+      },
+      {
+        "type": "document",
+        "reference": "keriox -- processor/escrow/: MaybeOutOfOrderEscrow, PartiallySignedEscrow, PartiallyWitnessedEscrow, DelegationEscrow, DuplicitousEvents, EscrowConfig, EscrowSet"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Escrow Cascade",
+        "definition": "The flow of events between escrow queues based on what validation step fails",
+        "invariants": [
+          "Events progress through escrows as their blocking conditions resolve",
+          "An event may visit multiple escrow types before final acceptance",
+          "Likely duplicitous events are permanent -- never auto-resolved"
+        ]
+      },
+      {
+        "term": "Out-of-Order Escrow",
+        "definition": "Holds events whose prior event in the KEL has not yet been received",
+        "invariants": [
+          "Events are reprocessed when the prior event arrives and is accepted",
+          "Default timeout: 1200 seconds (keripy)"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/event-log",
+        "relationship": "Parent domain routes validation failures to the appropriate escrow queue and triggers reprocessing",
+        "via_port": "port://keri/event-log/escrow/inbound/escrow-management"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Persistence",
+        "abstraction": "Repository",
+        "ref": "port://keri/event-log/escrow/outbound/escrow-store",
+        "implementation_notes": "Escrow storage subdatabases: .ooes (out-of-order), .pses (partially-signed), .pwes (partially-witnessed), .pdes (partially-delegated), .ldes (likely-duplicitous), .delegables (delegable), .misfits (misfit). Implementations: LMDB subdbs (keripy), EscrowCreator trait (keriox), DynamoDB tables (serious-keri)"
+      },
+      {
+        "name": "Timer",
+        "abstraction": "Clock",
+        "ref": "port://keri/event-log/escrow/outbound/timeout-clock",
+        "implementation_notes": "Provides current time for escrow timeout checks. Events are pruned if (now - escrowed_time) > timeout. Implementations: datetime.datetime.now() (keripy), Duration/Instant (keriox)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, escrow methods live on the Kevery class (escrowOOEvent, escrowPSEvent, etc.) and processing methods sweep each queue periodically (processEscrowOutOfOrders, processEscrowPartialSigs, etc.). In keriox, each escrow type is a separate struct (MaybeOutOfOrderEscrow, PartiallySignedEscrow, etc.) that implements the Notification observer pattern via NotificationBus, reprocessing events when relevant notifications fire.\n"
+    },
+    "issues": [],
+    "tags": [
+      "escrow",
+      "cascade",
+      "out-of-order",
+      "partial-signatures",
+      "partial-witnesses",
+      "delegation",
+      "duplicity",
+      "timeout"
+    ],
+    "_source": "rdod/spec/domains/keri/event-log/escrow/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/event-log/serialization",
+    "name": "Event Serialization",
+    "description": "Construction, serialization, and deserialization of KERI key events. Handles field ordering, version strings, SAID computation, and multi-format support (JSON, CBOR, MGPK, CESR native). This subdomain owns the shape of every key event message — the normative field layout per ilk, the allowed/optional/alternate fields, and the seal types that appear in anchor fields. It provides pure construction functions (incept, rotate, interact, receipt) that produce serialized event bodies ready for signing, as well as deserialization that validates version strings, field order, and SAIDs. Quorum computation (ample/simple) for BFT majority thresholds also lives here as it is used during event construction to derive default witness thresholds.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Key event messages, Inception Event Message Body, Rotation Event Message Body, Interaction Event Message Body, Delegated Inception/Rotation, Version String"
+      },
+      {
+        "type": "document",
+        "reference": "cesr-specification.md — sections: CESR native serialization, Composable Event Streaming"
+      },
+      {
+        "type": "document",
+        "reference": "keripy eventing.py — incept(), rotate(), interact(), receipt(), Serials, Ilks, FieldDom, TraitCodex, SealDigest/SealEvent/SealLast"
+      },
+      {
+        "type": "document",
+        "reference": "keriox keriox_core/src/event/ — KeyEvent, EventData, InceptionEvent, RotationEvent, InteractionEvent, event_msg/ serialization"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Event Serializer",
+        "definition": "Serializes and deserializes KERI events to/from bytes with version string, SAID computation, and field validation",
+        "invariants": [
+          "Enforces normative field ordering for each event type (ilk)",
+          "Computes and validates the SAID (d field) on serialization and deserialization",
+          "Parses and validates the version string (v field) including size and serialization kind"
+        ]
+      },
+      {
+        "term": "Event Field Structure",
+        "definition": "The normative field layout for each KERI key event type — field ordering is significant for deterministic SAID computation",
+        "invariants": [
+          "Field ordering must be preserved in serialization",
+          "Each event type has a fixed set of required and optional fields"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/event-log",
+        "relationship": "Event log delegates event construction and serialization/deserialization to this subdomain",
+        "via_port": "port://keri/event-log/serialization/inbound/event-construction"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Blake3-256/SHA-256 (SAID computation via saidify algorithm), digest seal computation",
+        "relationship": "SAID computation is a kernel operation — the hash algorithm is selected by the d field's CESR code prefix and applied to the serialized event body with dummy d field"
+      }
+    ],
+    "adjacents": [
+      {
+        "ref": "domain://cesr",
+        "relationship": "Events are CESR-encoded SADs — the encoding layer is adjacent. Serialization produces bytes; CESR wraps them into streams with attached signature groups."
+      }
+    ],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, event construction lives in the eventing module as module-level functions (incept, rotate, interact, receipt, deltate, state) and the SerderKERI class handles serialization. Field domain validation uses FieldDom (allowed/optional/alternate fields per ilk). In keriox, KeyEvent<KeyEventType> is a typed wrapper around event data, and InceptionEvent/RotationEvent/ InteractionEvent structs hold the typed fields. Seal types are SealDigest, SealEvent, SealLast in keripy; SealDigest, EventSeal, SourceSeal in keriox. All implementations must enforce normative field ordering — the field order directly affects the SAID.\n"
+    },
+    "issues": [],
+    "tags": [
+      "serialization",
+      "event-construction",
+      "said",
+      "version-string",
+      "field-ordering",
+      "cesr-native"
+    ],
+    "_source": "rdod/spec/domains/keri/event-log/serialization/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/event-log/storage",
+    "name": "Event Storage",
+    "description": "Persistent storage for KEL events, signatures, receipts, and metadata. Provides indexed access by prefix, sequence number, digest, and first-seen ordinal. All operations are idempotent — reprocessing a duplicate event or late-arriving signature merges safely without creating duplicates. The storage schema partitions data across separate subdatabases for events (.evts), KEL index (.kels), first-seen log (.fels/.fons), signatures (.sigs/.wigs), receipts (.rcts/.vrcs), timestamps (.dtss), source records (.esrs), and cached key state (.states). Two primary access patterns: dgKey (prefix+digest) for content-addressed lookup and snKey (prefix+sn) for sequence-ordered access.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keripy db/basing.py — Baser class, subdatabase definitions (.evts, .kels, .fels, .fons, .sigs, .wigs, .rcts, .vrcs, .esrs, .dtss, .states), dgKey/snKey patterns"
+      },
+      {
+        "type": "document",
+        "reference": "keripy db/dbing.py — LMDBer base class, Suber/IoSetSuber/CesrSuber/CesrIoSetSuber/SignerSuber database abstractions"
+      },
+      {
+        "type": "document",
+        "reference": "keriox keriox_core/src/database/ — EventDatabase trait, EventStorage, LMDB/redb implementations"
+      },
+      {
+        "type": "document",
+        "reference": "keripy eventing.py — logEvent(), Kevery.process() storage calls"
+      },
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: First-seen policy, Duplicity processing, Event logs"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "KEL Storage Schema",
+        "definition": "The partitioned database organization for storing KEL data across separate indexed subdatabases",
+        "invariants": [
+          "Events, signatures, receipts, and metadata each have dedicated subdatabases",
+          "Two primary key patterns: dgKey (prefix+digest) and snKey (prefix+sn)",
+          "All write operations are idempotent"
+        ]
+      },
+      {
+        "term": "Idempotent Logging",
+        "definition": "The property that logging an already-accepted event is a safe no-op — duplicates and late signatures merge without creating duplicate entries",
+        "invariants": [
+          "Event storage uses put-if-not-exists semantics",
+          "Signature stores append new signatures to existing sets",
+          "First-seen number is assigned only on initial acceptance"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/event-log",
+        "relationship": "Event log delegates all persistent storage operations to this subdomain — event logging, signature accumulation, receipt storage, state caching",
+        "via_port": "port://keri/event-log/storage/inbound/event-logging"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Persistence Engine",
+        "abstraction": "Repository",
+        "ref": "port://keri/event-log/storage/outbound/persistence",
+        "implementation_notes": "Key-value store with ordered iteration and duplicate-key support. Implementations: LMDB (keripy — memory-mapped B+ tree, named subdatabases, dupsort), redb (keriox — pure Rust embedded database), DynamoDB (serious-keri — serverless, GSI-based access patterns). The storage subdomain defines the logical schema; the persistence engine provides the physical storage."
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, the Baser class (db/basing.py) extends LMDBer and defines all subdatabases as typed attributes. Each subdatabase uses a specific Suber variant: Suber for simple key-value, IoSetSuber for insertion-ordered sets (signatures, receipts), CesrSuber for CESR-typed values, SignerSuber for signer records. Keys are constructed via dgKey(pre, dig) or snKey(pre, sn) utility functions. In keriox, the EventDatabase trait defines the storage interface and EventStorage provides the concrete implementation. In serious-keri, DynamoDB tables replace LMDB subdatabases with GSI access patterns mapping to snKey and dgKey lookups. All implementations must guarantee idempotent writes and ordered iteration for first-seen replay.\n"
+    },
+    "issues": [],
+    "tags": [
+      "storage",
+      "persistence",
+      "kel-database",
+      "first-seen",
+      "idempotent",
+      "lmdb",
+      "redb"
+    ],
+    "_source": "rdod/spec/domains/keri/event-log/storage/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "keri/event-log/validation",
+    "name": "Event Validation",
+    "description": "The multi-step validation pipeline for incoming key events. Verifies signatures against the current key list, checks signing threshold satisfaction, enforces pre-rotation binding for rotation events, validates witness receipt counts against the TOAD, and confirms delegation approval via the delegator's anchoring seal. Each validation step either passes (advancing to the next step) or fails with a typed error that routes the event to the appropriate escrow queue for later reprocessing.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md -- sections: Validation, Rotation Event Validation, Delegation Validation, Duplicity Detection"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_WP_2.x.web.md -- sections: Validation Logic, Pre-rotation, Dual Threshold"
+      },
+      {
+        "type": "document",
+        "reference": "KERI_SecurityDeepDive.web.md -- sections: Combined Arms, Establishment Dead-Attack"
+      },
+      {
+        "type": "document",
+        "reference": "keripy -- eventing.py: Kevery.processEvent(), Kever.valSigsWigsDel(), verifySigs(), exposeds(), validateDelegation(), Kever.validateSigs()"
+      },
+      {
+        "type": "document",
+        "reference": "keriox -- processor/validator.rs: EventValidator.validate_event(); event/sections/key_config.rs: KeyConfig.verify_next(), NextKeysData.check_threshold()"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Event Validation Pipeline",
+        "definition": "The complete step-by-step sequence that validates an incoming key event from receipt to acceptance or escrow",
+        "invariants": [
+          "Multi-step: sequence check, signature verification, threshold satisfaction, pre-rotation binding, witness threshold, delegation approval",
+          "Re-entrant: escrowed events are reprocessed through the same pipeline when their blocking condition resolves"
+        ]
+      },
+      {
+        "term": "Dual Threshold Verification",
+        "definition": "The core validation logic that checks signatures, witness receipts, and delegation for an event",
+        "invariants": [
+          "For rotation events, enforces BOTH the current signing threshold AND the prior next-key threshold",
+          "Failure at any step routes to the appropriate escrow queue"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://keri/event-log",
+        "relationship": "Parent domain delegates all incoming event validation to this subdomain",
+        "via_port": "port://keri/event-log/validation/inbound/validate-event"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "Ed25519/ECDSA signature verification (verifySigs), Blake3-256 digest comparison (pre-rotation binding)",
+        "relationship": "Signature verification and digest comparison are kernel operations invoked at multiple validation steps"
+      }
+    ],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Persistence (read)",
+        "abstraction": "Repository (read-only)",
+        "ref": "port://keri/event-log/validation/outbound/state-lookup",
+        "implementation_notes": "Reads current key state and KEL to provide validation context. Implementations: Kever cache (keripy), EventStorage.get_state() (keriox)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keripy, validation logic lives in Kever.valSigsWigsDel() and Kevery.processEvent(). In keriox, it is EventValidator.validate_event() in processor/validator.rs. The pipeline is stateless given a key state snapshot -- it takes an event, its signatures, and the current key state, and returns accept/reject/escrow-reason.\n"
+    },
+    "issues": [],
+    "tags": [
+      "validation",
+      "signatures",
+      "threshold",
+      "pre-rotation",
+      "delegation",
+      "pipeline"
+    ],
+    "_source": "rdod/spec/domains/keri/event-log/validation/domain.yaml"
   },
   {
     "template_version": "1.0",
