@@ -1,0 +1,71 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/key-state/commitment"
+name: "Key Commitment"
+description: >
+  Pre-rotation mechanics and key lifecycle. Manages the forward-blinded commitment to next
+  rotation keys, the key configuration (current signing keys + next key digests), and the
+  transferable/non-transferable distinction. This subdomain owns the cryptographic binding
+  between establishment events: each event publishes digests of the keys that will authorize the
+  next rotation, creating an unbroken chain of forward commitments. It also owns the paired
+  structure of current keys and next digests (key configuration) and the prefix-code-level
+  distinction between transferable AIDs (which can rotate) and non-transferable AIDs (which
+  cannot).
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Pre-rotation, Key State, Inception Event Message Body, Rotation Event Message Body, Prefix Codes"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: Pre-rotation, Key State, Transferability"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — sections: Combined Arms, Establishment Dead-Attack, Reserve Rotation"
+  - type: document
+    reference: "keripy eventing.py — Kever (verfers, digers, ndigers), key state update on rotation, partial rotation logic"
+  - type: document
+    reference: "keriox keriox_core/src/event/sections/key_config.rs — KeyConfig, NextKeysData, verify_next()"
+
+ubiquitous_language:
+  - term: "Pre-rotation Commitment"
+    definition: "Cryptographic commitment to the next set of rotation keys via publishing their digests in the current establishment event"
+    invariants:
+      - "Next key digests must appear in the establishment event preceding their use"
+      - "Pre-committed keys are never exposed until the rotation that activates them"
+
+  - term: "Key Configuration"
+    definition: "The current set of signing keys paired with the next key hash commitment"
+    invariants:
+      - "Current keys and next digests are both ordered — index position matters"
+      - "Represents the cryptographic material portion of key state"
+
+domain_clients:
+  - ref: "domain://keri/key-state"
+    relationship: "Parent domain delegates key commitment management, key configuration pairing, and transferability classification to this subdomain"
+    via_port: "port://keri/key-state/commitment/inbound/key-commitment"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519/ECDSA key types for signing keys (Verfer construction), Blake3-256/SHA-256 for computing next key digests (Diger construction), prefix code classification for transferability"
+    relationship: "Public key qualification and digest computation are kernel operations — this subdomain uses them to build key configurations and verify pre-rotation bindings"
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In keripy, key commitment state lives in the Kever class: verfers (current signing keys as
+    Verfer instances), digers/ndigers (next key digests as Diger instances). Rotation updates
+    both: the previous ndigers become the basis for verifying the new signing keys, and new
+    ndigers are committed. Partial rotation uses only a threshold-satisficing subset of the
+    pre-committed keys. In keriox, KeyConfig holds current_public_keys and next_keys_data
+    (NextKeysData). The verify_next() method enforces pre-rotation binding during rotation
+    validation.
+
+issues: []
+
+tags: ["pre-rotation", "key-configuration", "transferability", "commitment", "key-lifecycle"]

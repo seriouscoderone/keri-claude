@@ -72,7 +72,10 @@ graph TD
 | ID | Name | Role | Status | Terms | Description |
 |----|------|------|--------|-------|-------------|
 | `keri` | KERI Protocol | core | complete | 18 | Hab/Habery, Kevery, Baser, Parser, escrow architecture |
-| `keri/key-state` | Key State | subdomain | complete | 20 | Kever/IdentifierState, KeyConfig, WitnessConfig, state reconstruction |
+| `keri/key-state` | Key State | subdomain | complete | 1 | Key State orchestrating concept (delegates to 3 sub-subdomains) |
+| `keri/key-state/commitment` | Key Commitment | sub-subdomain | complete | 7 | Pre-rotation, signing/next keys, KeyConfig, transferable/non-transferable |
+| `keri/key-state/thresholds` | Threshold Logic | sub-subdomain | complete | 7 | Signing/rotation/dual/weighted thresholds, witness threshold/config |
+| `keri/key-state/tracking` | Key State Tracking | sub-subdomain | complete | 7 | Kever/IdentifierState, LastEstData, state reconstruction, config traits |
 | `keri/event-log` | Event Log | subdomain | complete | 16 | KEL, 5 event types, SAID, seals, field basics (orchestrates 4 sub-subdomains) |
 | `keri/event-log/validation` | Event Validation | sub-subdomain | complete | 8 | Pipeline, dual threshold, pre-rotation binding, delegation validation |
 | `keri/event-log/escrow` | Event Escrow | sub-subdomain | complete | 11 | Cascade, 7 escrow types, processing order, timeouts, sig accumulation |

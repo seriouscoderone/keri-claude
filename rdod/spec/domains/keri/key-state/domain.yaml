@@ -42,7 +42,16 @@ domain_clients:
     relationship: "Parent domain drives key state computation from the event log"
     via_port: "port://keri/key-state/inbound/state-computation"
 
-subdomains: []
+subdomains:
+  - ref: "domain://keri/key-state/commitment"
+    relationship: "Owns pre-rotation mechanics, key configuration (signing keys + next key digests), partial rotation, and transferable/non-transferable classification"
+    via_port: "port://keri/key-state/commitment/inbound/key-commitment"
+  - ref: "domain://keri/key-state/thresholds"
+    relationship: "Owns signing threshold (kt), rotation threshold (nt), dual threshold enforcement, fractionally weighted thresholds, witness threshold (bt/TOAD), and witness configuration"
+    via_port: "port://keri/key-state/thresholds/inbound/threshold-satisfaction"
+  - ref: "domain://keri/key-state/tracking"
+    relationship: "Owns the Kever state machine — per-AID state tracking, state reconstruction from the KEL, establishment subsequence management, last establishment data, configuration trait enforcement, and the authoritative answer to 'what is this AID's current key state?'"
+    via_port: "port://keri/key-state/tracking/inbound/state-tracking"
 
 kernels:
   - ref: "kernel://cryptographic-algorithms"
