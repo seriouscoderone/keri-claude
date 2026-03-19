@@ -1,0 +1,95 @@
+# ubiquitous-language.yaml
+domain_ref: "watcher-service"
+
+terms:
+  - term: "Watcher Node"
+    synonyms: ["Watcher Instance", "Watcher"]
+    definition: "A deployed watcher instance that polls witnesses and cross-checks KEL copies. Under the validator's control, not the controller's."
+    invariants:
+      - "Under the validator's control — not the controller's"
+      - "Polls multiple witnesses for the same AID's KERL"
+      - "Flags conflicting events as potential duplicity"
+      - "Operationally independent — no shared state with other watcher nodes"
+    examples:
+      - "A watcher node monitoring 50 AIDs by polling their designated witnesses every 30 seconds"
+      - "cd components/watcher && cargo run — starts a keriox watcher node"
+    related_terms: ["Watcher AID", "KEL Cross-Check", "Duplicity Alert", "Watcher Pool Deployment"]
+
+  - term: "Watcher AID"
+    synonyms: ["Watcher Identifier", "Watcher Prefix"]
+    definition: "The identifier of the watcher node, used to authenticate watcher responses to validators."
+    invariants:
+      - "Authenticates query responses to validators"
+      - "Validators designate watchers by AID in their configuration"
+    examples:
+      - "Validator configures watcher AID BKx7... as its designated duplicity monitor"
+      - "Watcher signs query responses with its AID key for validator verification"
+    related_terms: ["Watcher Node"]
+
+  - term: "KEL Cross-Check"
+    synonyms: ["KERL Cross-Check", "Witness Comparison"]
+    definition: "The core watcher operation: comparing KERL copies from multiple witnesses for the same AID, flagging differences as potential duplicity."
+    invariants:
+      - "Compares events at the same (prefix, sn) across witness sources"
+      - "Identical events across sources confirm consistency"
+      - "Conflicting events at the same position indicate potential duplicity"
+      - "Missing events from a witness may indicate partitioning or witness failure"
+    examples:
+      - "Watcher compares KERL for EDP1... from 3 witnesses — all match at sn=0..5 -> consistent"
+      - "Watcher compares KERL for EDP1... — witness BDg3... has different rotation at sn=3 -> duplicity flagged"
+    related_terms: ["Watcher Node", "Duplicity Alert"]
+
+  - term: "Duplicity Alert"
+    synonyms: ["Duplicity Notification", "Duplicity Evidence"]
+    definition: "Notification emitted when a watcher detects conflicting events at the same (prefix, sn) from different witness sources."
+    invariants:
+      - "Contains the conflicting events and their sources"
+      - "Stored in the DEL (Duplicitous Event Log)"
+      - "Served to validators on query"
+      - "Once duplicity is detected for an AID, the alert persists permanently"
+    examples:
+      - "Alert: AID EDP1... has conflicting rotation events at sn=3 from witnesses BDg3... and BAbc..."
+      - "Validator queries watcher and receives duplicity alert — stops trusting the affected AID"
+    related_terms: ["KEL Cross-Check", "Watcher Node"]
+
+  - term: "Watcher Pool Deployment"
+    synonyms: ["Watcher Pool", "Watcher Infrastructure"]
+    definition: "Operational concern of deploying watchers with sufficient diversity to achieve ambient duplicity detection."
+    invariants:
+      - "Each watcher in the pool is operationally independent — no shared state"
+      - "Diversity across geographic regions and administrative domains"
+      - "Sufficient diversity means a duplicitous controller cannot partition all watchers"
+      - "Validators may use one or more watchers from the pool"
+    examples:
+      - "3-watcher pool across AWS, GCP, and Azure — different regions and providers"
+      - "Validator designates 2 watchers from different providers for redundancy"
+    related_terms: ["Watcher Node", "Watcher AID"]
+
+events:
+  - name: "KELPolled"
+    payload: "aid: AID, witness_aid: AID, latest_sn: int"
+    triggers: "Watcher polls a witness for the latest KERL of a monitored AID"
+
+  - name: "CrossCheckPassed"
+    payload: "aid: AID, sn_range: string, witnesses_checked: int"
+    triggers: "Watcher compares KERL copies across witnesses — all consistent"
+
+  - name: "DuplicityDetected"
+    payload: "aid: AID, sn: int, conflicting_events: [Event], sources: [AID]"
+    triggers: "Watcher detects conflicting events at the same (prefix, sn) from different witnesses"
+
+  - name: "DuplicityAlertServed"
+    payload: "aid: AID, requester: AID, alert_count: int"
+    triggers: "Validator queries watcher and receives duplicity alert(s)"
+
+  - name: "MonitoringStarted"
+    payload: "aid: AID, witnesses: [AID], poll_interval: int"
+    triggers: "Watcher begins monitoring a new AID by polling its designated witnesses"
+
+rules:
+  - "Watchers are under the VALIDATOR's control — the controller does not choose or influence watchers"
+  - "KEL cross-check compares events at the same (prefix, sn) — not just latest state"
+  - "Conflicting events are evidence of duplicity — stored permanently in the DEL"
+  - "Watcher nodes are stateless with respect to each other — no inter-watcher communication"
+  - "Ambient duplicity detection requires sufficient diversity — a single watcher is insufficient"
+  - "Watcher responses are authenticated by the watcher's own AID — validators verify signatures"

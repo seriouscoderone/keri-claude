@@ -1,0 +1,192 @@
+# ubiquitous-language.yaml
+domain_ref: "local-agent"
+
+terms:
+  - term: "Habitat"
+    synonyms: ["Hab", "Habery"]
+    definition: "Controller's view of a managed AID. A Habitat (Hab) represents one AID; a Habitat collection (Habery) is the set of Habitats sharing a database environment. A Habitat wraps a Key Event Verifier (Kever) with signing capability — the controller can both verify key state and produce signatures. The Habery owns the shared database (Baser), key manager (Manager), event processor (Kevery), and message parser."
+    invariants:
+      - "Each Habitat maps to exactly one AID"
+      - "A Habery provides a shared database (Baser), key manager (Manager), and event processor (Kevery) to all its Habitats"
+      - "A Habitat combines key state verification (Kever) with the ability to sign events using the controller's private keys"
+      - "Hab.pre is the AID prefix; Hab.kever is the key state; Hab.mgr is the key manager"
+      - "Habery.habs is the collection keyed by name/prefix; Habery.db is the shared Baser"
+      - "Creating a Hab via Habery automatically wires the shared database, key manager, and event processor"
+    examples:
+      - "habery = Habery(name='controller', salt=salt) → creates collection with shared Baser and Manager"
+      - "hab = habery.makeHab('myaid', icount=1, ncount=1, wits=[wit1, wit2]) → inception with 2 witnesses"
+      - "hab.rotate(toad=2, cuts=[old_wit], adds=[new_wit]) → key rotation with witness change"
+      - "hab.interact(data=[seal]) → interaction event anchoring a seal"
+      - "In keriox: Controller::new(config) creates the equivalent of a Habery; Controller.incept() creates a new identifier"
+    related_terms: ["Local Key Manager", "Local Event Processor", "Local Database", "CLI Interface"]
+
+  - term: "Local Key Manager"
+    synonyms: ["Manager", "Keeper"]
+    definition: "Manages private keys entirely on the controller's device. Generates Signers (private key wrappers that produce signatures) from a Salter with configurable security tiers. No passcode-over-network — the salt lives on the local filesystem, encrypted at rest. In keripy this is the Manager class; in keriox it is integrated into the Controller."
+    invariants:
+      - "Keys stored locally in encrypted form — no network dependency for key operations"
+      - "Manager holds current signing keys (Signers) and pre-rotated next key digests (Digers)"
+      - "Deterministic key derivation from local salt using configurable argon2 tiers"
+      - "Manager.incept(icount, ncount, algo, salt, ...) → creates inception key pairs"
+      - "Manager.rotate(pre, count, ...) → creates next rotation key pairs, returns old and new Signers"
+      - "Manager.sign(ser, pre, ...) → produces indexed signatures (Sigers) using the current signing keys"
+      - "Unlike Signify Keeper, the Local Key Manager never communicates with a remote agent — all operations are in-process"
+    examples:
+      - "mgr = Manager(ks=Keeper(db), salt=salter.qb64) → local key manager with on-disk key store"
+      - "verfers, digers, _, _ = mgr.incept(icount=1, ncount=1) → Ed25519 keypair + next key digest"
+      - "mgr.sign(ser=event.raw, pre=hab.pre) → [Siger] — indexed signature from local private key"
+      - "In keriox: controller.incept(key_config) handles key generation internally"
+    related_terms: ["Habitat", "Local Database", "Direct Witness Communication"]
+
+  - term: "Local Event Processor"
+    synonyms: ["Kevery", "Local Kevery"]
+    definition: "The full event validation pipeline (Kevery) running in the controller's own process. Validates incoming events against current key state, manages all escrow types locally, and emits cues for receipting and notification. Unlike in the thin wallet model where KERIA runs Kevery on the server, here the entire pipeline is local."
+    invariants:
+      - "Validates events against current key state — same rules as any Kevery instance"
+      - "Manages all escrow types locally: partial signatures, out-of-order events, unverified receipts, partially-witnessed events"
+      - "Emits cues for witness receipting, delegation processing, and application notification"
+      - "Operates in lax (accept all prefixes) or strict (only accept own prefix) mode"
+      - "Processes events from local creation (hab.rotate, hab.interact) and from remote delivery (witness receipts, other agents' events)"
+      - "processEscrows() runs periodically to resolve pending items"
+    examples:
+      - "kevery = Kevery(db=baser, lax=True) → promiscuous event processor for a local agent"
+      - "kevery.process(serder=event, sigers=sigs, wigers=wigs) → validates and stores event"
+      - "kevery.processEscrows() → attempts to resolve all pending escrow items"
+      - "In keriox: the event processor is embedded in the Controller's process() pipeline"
+    related_terms: ["Habitat", "Local Database", "Direct Witness Communication"]
+
+  - term: "Local Database"
+    synonyms: ["Baser", "Local Baser"]
+    definition: "The LMDB (keripy) or redb (keriox) database running on the controller's local storage. Contains all subdatabases for events, signatures, receipts, escrows, and application state. In the fat wallet model, this is the single source of truth — no cloud-hosted copy."
+    invariants:
+      - "Subdatabases include: .evts (events by prefix+digest), .kels (KEL index by prefix+sn), .sigs (controller signatures), .wigs (witness signatures), .rcts (non-transferable receipts), .ures (unverified receipt escrow), .ooes (out-of-order escrow), .dels (delegator approval), .ldes (likely duplicitous escrow)"
+      - "Append-only semantics for KEL events — events are never modified after acceptance"
+      - "Supports indexed access by prefix, sequence number, digest, and first-seen number"
+      - "Memory-mapped I/O (LMDB) requires local filesystem — incompatible with ephemeral/serverless environments"
+      - "Single writer, multiple readers — LMDB locking model"
+      - "The Baser is owned by the Habery and shared across all Habs"
+    examples:
+      - "db = Baser(name='controller', temp=False) → persistent LMDB database"
+      - "db.getEvt(key=snKey(pre, sn)) → retrieve event by prefix and sequence number"
+      - "db.putSigs(key=dgKey(pre, dig), val=[sig.qb64b]) → store indexed signatures"
+      - "In keriox: Database::new(path) with redb backend"
+    related_terms: ["Habitat", "Local Event Processor", "Local Credential Management"]
+
+  - term: "Direct Witness Communication"
+    synonyms: []
+    definition: "The controller connects to witness HTTP endpoints directly — no KERIA proxy. The operational manifestation of indirect mode in a fat wallet. The controller sends events to each designated witness, collects receipts, and verifies the TOAD (threshold of accountable duplicity) locally."
+    invariants:
+      - "Controller sends events directly to each witness in the AID's witness list"
+      - "Controller collects receipts (witness signatures) directly from each witness"
+      - "TOAD satisfaction checked locally — the controller knows when enough receipts have arrived"
+      - "Witness endpoints discovered via OOBI resolution or configuration"
+      - "HTTP transport: POST event to witness URL, witness responds with receipt"
+      - "No Witnesser doer or async operation queue — the controller drives the process synchronously or via local async loop"
+    examples:
+      - "hab.makeHab('myaid', wits=['BBil...', 'BLsk...'], toad=2) → inception with 2 witnesses, TOAD=2"
+      - "kli witness submit --name controller --alias myaid → sends pending events to witnesses and collects receipts"
+      - "In keriox: controller.notify_witnesses(&identifier) → HTTP POST to each witness endpoint"
+      - "Witnesser in keripy local mode: sends to each witness URL, waits for receipt, checks toad"
+    related_terms: ["Habitat", "Local Event Processor", "Direct Watcher Communication"]
+
+  - term: "Direct Watcher Communication"
+    synonyms: []
+    definition: "The controller connects to watcher endpoints directly for duplicity monitoring and key state queries. No cloud agent intermediary — the controller manages watcher registration, log submission, and duplicity report retrieval."
+    invariants:
+      - "Controller registers watchers for its own AIDs and AIDs it wants to monitor"
+      - "Controller submits KELs to watchers for independent verification"
+      - "Watcher duplicity reports received and processed locally"
+      - "Watchers provide an independent view of key state — a second opinion beyond witnesses"
+      - "Watcher endpoints discovered via OOBI resolution or configuration"
+    examples:
+      - "kli watcher add --name controller --watcher-aid BWat... → registers a watcher"
+      - "kli query --name controller --alias target-aid → queries watcher for key state"
+      - "In keriox: controller.query(&watcher_oobi, &target_prefix) → queries watcher for latest key state"
+    related_terms: ["Habitat", "Direct Witness Communication", "Local Event Processor"]
+
+  - term: "Local Credential Management"
+    synonyms: ["Regery", "Local Verifier", "Local Credentialer"]
+    definition: "Full TEL (Transaction Event Log) processing and credential storage running locally on the controller's device. The Regery manages registry TELs, the Verifier validates received credentials, and the Credentialer issues credentials — all in-process, no cloud agent needed."
+    invariants:
+      - "Registry TEL events (vcp, iss, rev, bis, brv) created and stored in the local Baser"
+      - "Credential issuance anchors ACDC SAID to the controller's KEL via interaction event"
+      - "Credential revocation via TEL revocation event, anchored to KEL"
+      - "Received credentials validated by local Verifier against issuer's KEL and registry TEL"
+      - "Credential storage in local database — no cloud wallet"
+      - "IPEX exchange protocol (grant/admit/offer/agree) handled locally"
+    examples:
+      - "regery = Regery(hby=habery, name='myregistry', temp=False) → local registry"
+      - "regery.issue(hab=hab, said=acdc_said) → issue credential, anchor to KEL"
+      - "kli vc issue --name controller --alias myaid --registry myreg --schema schema_said --data @cred.json"
+      - "kli vc list --name controller --alias myaid → list credentials in local wallet"
+    related_terms: ["Habitat", "Local Database", "Local Event Processor"]
+
+  - term: "CLI Interface"
+    synonyms: ["kli", "KERI Command Line"]
+    definition: "Command-line tool (kli in keripy) providing a user interface to local agent operations. Covers the full lifecycle: identifier inception, rotation, interaction, credential issuance/revocation, OOBI resolution, witness management, and multi-sig coordination. The primary human interface to the fat wallet."
+    invariants:
+      - "kli commands map directly to Habery/Hab/Manager operations"
+      - "Configuration via --config-dir and --config-file pointing to JSON config"
+      - "Each kli invocation opens the local database, performs the operation, and closes"
+      - "Multi-sig workflows use kli multisig subcommands for coordinated operations"
+      - "kli init creates a new Habery with salt and configuration"
+      - "kli incept creates a new Hab (AID) under the Habery"
+    examples:
+      - "kli init --name controller --salt 0ACDEyMzQ1Njc4OWxtbm9wcQ --nopasscode → initialize local agent"
+      - "kli incept --name controller --alias myaid --file inception-config.json → create AID"
+      - "kli rotate --name controller --alias myaid → rotate keys"
+      - "kli oobi resolve --name controller --oobi-alias peer --oobi http://witness:5642/oobi/BWit..."
+      - "kli vc issue --name controller --alias myaid --registry myreg --schema SAID --data @payload.json"
+      - "kli status --name controller --alias myaid → display current key state"
+    related_terms: ["Habitat", "Local Key Manager", "Local Credential Management"]
+
+events:
+  - name: "HabitatCreated"
+    payload: "aid: AID, alias: string, hab_name: string, witness_count: int, toad: int"
+    triggers: "Controller creates a new Hab via Habery.makeHab() or kli incept"
+
+  - name: "KeysRotated"
+    payload: "aid: AID, sn: int, new_verfers: [Verfer], new_digers: [Diger]"
+    triggers: "Controller rotates keys via hab.rotate() or kli rotate"
+
+  - name: "InteractionSealed"
+    payload: "aid: AID, sn: int, seals: [Seal]"
+    triggers: "Controller creates an interaction event via hab.interact() or kli interact"
+
+  - name: "WitnessReceiptCollected"
+    payload: "aid: AID, sn: int, witness_aid: AID, receipt_dig: Diger"
+    triggers: "Controller receives a witness receipt after sending an event directly"
+
+  - name: "ToadSatisfied"
+    payload: "aid: AID, sn: int, toad: int, receipts_collected: int"
+    triggers: "Enough witness receipts collected to satisfy the TOAD threshold"
+
+  - name: "EventProcessedLocally"
+    payload: "aid: AID, sn: int, event_type: string, source: local | remote"
+    triggers: "Local Kevery validates and accepts an event into the database"
+
+  - name: "EscrowProcessedLocally"
+    payload: "escrow_type: string, items_resolved: int"
+    triggers: "Local event processor resolves pending escrow items"
+
+  - name: "CredentialIssuedLocally"
+    payload: "said: SAID, schema: SAID, recipient: AID, registry: string"
+    triggers: "Local Credentialer issues a credential and anchors it to the KEL"
+
+  - name: "CredentialRevokedLocally"
+    payload: "said: SAID, registry: string, revocation_sn: int"
+    triggers: "Local Regery processes a credential revocation event"
+
+  - name: "OOBIResolvedLocally"
+    payload: "aid: AID, endpoint: URL, role: string"
+    triggers: "Controller resolves an OOBI directly over HTTP"
+
+rules:
+  - "Private keys live on the controller's device for the entire lifecycle — no cloud agent involved"
+  - "The full KERI event processing pipeline runs locally — the controller is both producer and validator"
+  - "The local database (Baser) is the single source of truth — there is no cloud-hosted copy"
+  - "Witness and watcher communication is direct HTTP — no proxy, no intermediary agent"
+  - "TOAD satisfaction is checked locally by the controller after collecting witness receipts"
+  - "Credential issuance, revocation, and verification are all local operations"
+  - "The Habery owns the shared database, key manager, and event processor — individual Habs share these resources"
+  - "Memory-mapped databases (LMDB) require a stable local filesystem — this deployment model is incompatible with ephemeral/serverless environments"

@@ -1,0 +1,110 @@
+# ubiquitous-language.yaml
+domain_ref: "witness-service"
+
+terms:
+  - term: "Witness Node"
+    synonyms: ["Witness Instance", "Witness"]
+    definition: "A deployed witness instance with its own non-transferable AID, HTTP endpoint, and KERL storage. Receipts key events under the first-seen rule."
+    invariants:
+      - "Signs receipts with its own non-transferable key — never signs on behalf of a controller"
+      - "Accepts events under the first-seen rule — rejects conflicting events at the same (prefix, sn)"
+      - "Serves KERLs to validators on request"
+      - "Operationally independent — no shared state with other witness nodes"
+    examples:
+      - "A witness node deployed on AWS with AID BDg3H7... serving 200 controllers' KERLs"
+      - "cd components/witness && cargo run — starts a keriox witness node"
+    related_terms: ["Witness AID", "Receipt Generation", "KERL Storage", "Witness Endpoint"]
+
+  - term: "Witness AID"
+    synonyms: ["Witness Identifier", "Witness Prefix"]
+    definition: "The non-transferable identifier (B prefix) of the witness. Used to verify receipt signatures and designate the witness in a controller's witness list."
+    invariants:
+      - "Non-transferable — no key rotation, no pre-rotation commitment"
+      - "B prefix indicates Ed25519 non-transferable"
+      - "Must be included in the controller's witness list (backer) to be authoritative"
+    examples:
+      - "BDg3H7x... — a witness AID with B prefix (Ed25519 non-transferable)"
+      - "Controller inception event lists witness AIDs in the 'b' field (backers)"
+    related_terms: ["Witness Node", "Receipt Generation"]
+
+  - term: "Receipt Generation"
+    synonyms: ["Witness Receipting", "Event Receipting"]
+    definition: "Automatic generation of a non-transferable receipt upon first-seen event acceptance. The core operation of a witness node."
+    invariants:
+      - "Receipt generated only on first-seen acceptance — duplicate events receive the existing receipt"
+      - "Receipt signature is from the witness's own non-transferable AID"
+      - "Conflicting events at the same (prefix, sn) are rejected after first-seen"
+      - "Implementations: WitnessReceiptGenerator (keriox), Receiptor (keripy)"
+    examples:
+      - "Witness receives inception event for EDP1... — accepts (first-seen), generates receipt signed by BDg3..."
+      - "Witness receives conflicting rotation at sn=3 — rejects (already has a first-seen event at sn=3)"
+    related_terms: ["Witness Node", "Witness AID", "KERL Storage"]
+
+  - term: "KERL Storage"
+    synonyms: ["Witness KERL", "Key Event Receipt Log Storage"]
+    definition: "Per-AID receipted key event logs maintained by the witness. Contains the events and corresponding witness receipts. Served to validators on request."
+    invariants:
+      - "One KERL per monitored AID — append-only"
+      - "Includes both events and the witness's receipts"
+      - "Served via query endpoint to validators and watchers"
+      - "Persists across witness restarts"
+    examples:
+      - "Witness stores KERL for EDP1...: inception (sn=0) + receipt, rotation (sn=1) + receipt, interaction (sn=2) + receipt"
+      - "Validator requests KERL for EDP1... — witness returns all events with receipts"
+    related_terms: ["Witness Node", "Receipt Generation", "Witness Endpoint"]
+
+  - term: "Witness Endpoint"
+    synonyms: ["Witness HTTP Endpoint"]
+    definition: "HTTP endpoint accepting events from controllers/agents and serving KERLs to validators. Supports OOBI resolution at /.well-known/keri/oobi/{aid}/{role}/{eid}."
+    invariants:
+      - "Accepts key events for receipting (POST)"
+      - "Serves KERLs for monitored AIDs (GET/query)"
+      - "Provides OOBI resolution at well-known path"
+      - "Single endpoint serves all monitored AIDs"
+    examples:
+      - "POST event to witness endpoint — receives receipt in response"
+      - "GET /.well-known/keri/oobi/EDP1.../witness/BDg3... — resolves witness OOBI"
+      - "Query endpoint returns KERL for requested AID"
+    related_terms: ["Witness Node", "KERL Storage"]
+
+  - term: "Witness Pool Deployment"
+    synonyms: ["Witness Pool", "Witness Infrastructure"]
+    definition: "Operational concern of deploying N witnesses across independent infrastructure for availability and fault tolerance. Geographic and administrative diversity recommended."
+    invariants:
+      - "Each witness in the pool is operationally independent — no shared state"
+      - "Diversity across geographic regions and administrative domains"
+      - "Pool size determined by controller's witness threshold and availability requirements"
+      - "Individual witness failure does not prevent event receipting if threshold is still achievable"
+    examples:
+      - "5-witness pool: 2 in US-East, 1 in EU-West, 1 in AP-Southeast, 1 in US-West — different cloud providers"
+      - "Controller sets witness threshold to 3-of-5 — events valid when any 3 witnesses receipt"
+    related_terms: ["Witness Node", "Witness AID"]
+
+events:
+  - name: "EventReceived"
+    payload: "aid: AID, sn: int, event_type: string, source: AID"
+    triggers: "Controller or agent submits a key event to the witness for receipting"
+
+  - name: "ReceiptGenerated"
+    payload: "aid: AID, sn: int, witness_aid: AID, receipt_signature: Signature"
+    triggers: "Witness accepts event under first-seen rule and generates receipt"
+
+  - name: "EventRejected"
+    payload: "aid: AID, sn: int, reason: string"
+    triggers: "Witness rejects event — conflicting event already seen at (prefix, sn)"
+
+  - name: "KERLServed"
+    payload: "aid: AID, sn_range: string, requester: AID"
+    triggers: "Validator or watcher queries the witness for a KERL"
+
+  - name: "OOBIResolved"
+    payload: "aid: AID, role: string, eid: AID, endpoint: URL"
+    triggers: "External party resolves witness OOBI at well-known path"
+
+rules:
+  - "Witness NEVER signs on behalf of a controller — only signs receipts with its own non-transferable key"
+  - "First-seen rule is absolute — once a witness accepts an event at (prefix, sn), conflicting events at the same position are permanently rejected"
+  - "Witness nodes are stateless with respect to each other — no inter-witness communication"
+  - "A witness's receipt is authoritative only if the witness AID is in the controller's designated witness list"
+  - "KERL served to any requester — no authentication required for read access"
+  - "Witness storage is append-only — events and receipts are never modified or deleted"

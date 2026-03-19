@@ -1,14 +1,14 @@
 # domain.yaml
 template_version: "1.0"
 id: "agent"
-name: "Agent Infrastructure"
+name: "Agent Infrastructure [DEPRECATED]"
 description: >
-  Application-level infrastructure for operating KERI identifiers. Separates cloud
-  hosting (KERIA) from edge signing (Signify). The agent manages AIDs, processes
-  events, coordinates multi-sig, delivers credentials, and exposes APIs — but never
-  holds private signing keys. All sensitive operations are signed at the edge by
-  the controller via the Signify protocol.
-version: "0.1.0"
+  DEPRECATED — replaced by three-tier architecture:
+  - APPLICATIONS: domain://signify-client (thin wallet), domain://local-agent (fat wallet)
+  - SERVICES: domain://cloud-agent-service, domain://witness-service, domain://watcher-service
+  The "agent" concept conflated deployment topology with protocol semantics.
+  Retained for reference only — all terms moved to replacement domains.
+version: "0.0.0-deprecated"
 
 source_material:
   - type: document

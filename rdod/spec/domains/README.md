@@ -8,16 +8,39 @@ KERI (Key Event Receipt Infrastructure) is a decentralized key management protoc
 
 ```mermaid
 graph TD
-    agent["agent<br/><i>Client: Agent Architecture</i>"]
-    keri["keri<br/><i>Core: Key Management Protocol</i>"]
-    cesr["cesr<br/><i>Core: Composable Encoding</i>"]
-    acdc["acdc<br/><i>Core: Credential Framework</i>"]
-    oobi["oobi<br/><i>Adjacent: Discovery</i>"]
+    subgraph "APPLICATIONS (where the controller lives)"
+        sc["signify-client<br/><i>Thin Wallet</i>"]
+        la["local-agent<br/><i>Fat Wallet</i>"]
+    end
+
+    subgraph "SERVICES (infrastructure you deploy)"
+        cas["cloud-agent-service<br/><i>KERIA</i>"]
+        ws["witness-service"]
+        wts["watcher-service"]
+    end
+
+    subgraph "PROTOCOL (the rules)"
+        keri["keri<br/><i>Key Management</i>"]
+        cesr["cesr<br/><i>Encoding</i>"]
+        acdc["acdc<br/><i>Credentials</i>"]
+        oobi["oobi<br/><i>Discovery</i>"]
+    end
+
     crypto["cryptographic-algorithms<br/><i>Kernel</i>"]:::kernel
 
-    agent --> keri
-    agent --> acdc
-    agent --> oobi
+    sc -. "Signify protocol" .-> cas
+    la --> ws
+    la --> wts
+    cas --> ws
+    cas --> wts
+    sc --> keri
+    la --> keri
+    cas --> keri
+    ws --> keri
+    wts --> keri
+    sc --> acdc
+    la --> acdc
+    cas --> acdc
     keri -. "OHS+PL" .-> cesr
     acdc -. "OHS+PL" .-> cesr
     keri -. "Partnership" .-> acdc
@@ -52,17 +75,11 @@ graph TD
     acdc --> tel
     acdc --> ipex
 
-    subgraph "agent subdomains"
-        es["edge-signing<br/><i>(Signify)</i>"]
-        ch["cloud-hosting<br/><i>(KERIA)</i>"]
-    end
-    agent --> es
-    agent --> ch
-    es -. "Customer-Supplier" .-> ch
-
     keri -.-> crypto
     cesr -.-> crypto
-    es -.-> crypto
+    sc -.-> crypto
+    la -.-> crypto
+    ws -.-> crypto
 
     classDef kernel fill:#f0e6ff,stroke:#7c3aed
 ```
@@ -111,9 +128,18 @@ graph TD
 | `acdc/ipex/verification` | IPEX Verification | sub-subdomain | complete | 4 | PoI, PoD, credential artifacts, KRAM authentication |
 | `acdc/ipex/messaging` | IPEX Messaging | sub-subdomain | complete | 4 | Exchanger, IPEX Handler, message construction, EXN format |
 | `oobi` | Out-of-Band Introduction | adjacent | complete | 6 | Bootstrap discovery, BADA endpoint authorization |
-| `agent` | Agent Infrastructure | client | complete | 4 | Edge/cloud separation, Signify protocol contract |
-| `agent/edge-signing` | Edge Signing (Signify) | subdomain | complete | 22 | Controller-side: keepers, tiers, derivation paths, resource API, operations |
-| `agent/cloud-hosting` | Cloud Hosting (KERIA) | subdomain | complete | 20 | Server-side: HIO doers, escrows, long-running ops, seeker, registrar |
+| | | | | | |
+| **SERVICES** | | | | | |
+| `cloud-agent-service` | Cloud Agent Service (KERIA) | service | complete | 21 | Multi-tenant AID hosting, admin API, message router, long-running ops |
+| `witness-service` | Witness Service | service | complete | 6 | Witness nodes, receipt generation, KERL storage, pool deployment |
+| `watcher-service` | Watcher Service | service | complete | 5 | Watcher nodes, KEL cross-check, duplicity alerts, pool deployment |
+| | | | | | |
+| **APPLICATIONS** | | | | | |
+| `signify-client` | Signify Client (Thin Wallet) | application | complete | 22 | Keepers, tiers, derivation paths, resource API, Signify protocol |
+| `local-agent` | Local Agent (Fat Wallet) | application | complete | 8 | Hab/Habery, local Kevery, local Baser, direct witness/watcher comms |
+| | | | | | |
+| **DEPRECATED** | | | | | |
+| `agent` | ~~Agent Infrastructure~~ | deprecated | — | — | Replaced by signify-client + local-agent + cloud-agent-service |
 
 ## Source Material
 

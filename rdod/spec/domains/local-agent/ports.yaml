@@ -1,0 +1,77 @@
+# ports.yaml
+domain_ref: "local-agent"
+
+ports:
+  # Inbound — controller operations driven by application code or CLI
+  - id: "port://local-agent/inbound/controller-operations"
+    type: inbound
+    name: "Controller Operations"
+    contract: >
+      init(name, salt, config) -> Habery;
+      incept(alias, icount, ncount, wits, toad) -> Hab + AID;
+      rotate(aid, cuts, adds, toad) -> RotationEvent;
+      interact(aid, seals) -> InteractionEvent;
+      get_key_state(aid) -> KeyState;
+      sign(aid, content) -> [Siger];
+      resolve_oobi(url) -> Result;
+      issue_credential(aid, registry, schema, recipient, data) -> SAID;
+      revoke_credential(said, registry) -> Result;
+      query_watcher(watcher, target_aid) -> KeyState
+    protocol: "method-call"
+    refs: []
+
+  - id: "port://local-agent/inbound/cli-commands"
+    type: inbound
+    name: "CLI Commands"
+    contract: >
+      kli_init(name, salt, config) -> Result;
+      kli_incept(name, alias, config_file) -> AID;
+      kli_rotate(name, alias) -> Result;
+      kli_interact(name, alias, data) -> Result;
+      kli_oobi_resolve(name, oobi, alias) -> Result;
+      kli_vc_issue(name, alias, registry, schema, data) -> SAID;
+      kli_vc_list(name, alias) -> [Credential];
+      kli_status(name, alias) -> KeyState
+    protocol: "CLI"
+    refs: []
+
+  # Outbound — local database persistence
+  - id: "port://local-agent/outbound/local-storage"
+    type: outbound
+    name: "Local Storage"
+    contract: >
+      open_db(name, path) -> Baser;
+      append_event(aid, event, sigs) -> Result;
+      get_kel(aid) -> KEL;
+      get_key_state(aid) -> KeyState;
+      put_sigs(aid, dig, sigs) -> Result;
+      put_wigs(aid, dig, wigs) -> Result;
+      get_escrowed(aid, type) -> [EscrowedItem];
+      store_credential(said, credential) -> Result;
+      get_credential(said) -> Credential;
+      store_tel_event(registry, event) -> Result
+    protocol: "method-call"
+    refs: ["local-storage"]
+
+  # Outbound — direct witness HTTP communication
+  - id: "port://local-agent/outbound/witness-comms"
+    type: outbound
+    name: "Witness Communication"
+    contract: >
+      send_event(witness_url, event, sigs) -> Receipt;
+      get_receipts(witness_url, aid, sn) -> [Receipt];
+      query_key_state(witness_url, aid) -> KeyState
+    protocol: "REST"
+    refs: ["domain://witness-service"]
+
+  # Outbound — direct watcher HTTP communication
+  - id: "port://local-agent/outbound/watcher-comms"
+    type: outbound
+    name: "Watcher Communication"
+    contract: >
+      register(watcher_url, aid) -> Result;
+      submit_kel(watcher_url, aid, kel) -> Result;
+      query_key_state(watcher_url, aid) -> KeyState;
+      get_duplicity_report(watcher_url, aid) -> DuplicityReport
+    protocol: "REST"
+    refs: ["domain://watcher-service"]

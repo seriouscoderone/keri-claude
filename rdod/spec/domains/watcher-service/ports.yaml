@@ -1,0 +1,40 @@
+# ports.yaml
+domain_ref: "watcher-service"
+
+ports:
+  # Inbound — validator queries and OOBI resolution
+  - id: "port://watcher-service/inbound/query"
+    type: inbound
+    name: "Watcher Query"
+    contract: "query_kel(aid) -> KELState; query_duplicity(aid) -> DuplicityStatus — validators query for KEL state and duplicity alerts"
+    protocol: "HTTP"
+    refs: ["domain://cloud-agent-service", "domain://local-agent"]
+
+  - id: "port://watcher-service/inbound/oobi"
+    type: inbound
+    name: "OOBI Resolution"
+    contract: "resolve_oobi(aid, role, eid) -> OOBIResponse — serves watcher OOBI for discovery"
+    protocol: "HTTP"
+    refs: []
+
+  # Outbound — witness polling, storage, HTTP server
+  - id: "port://watcher-service/outbound/witness-poll"
+    type: outbound
+    name: "Witness KERL Polling"
+    contract: "poll_kerl(witness_aid, target_aid, since_sn?) -> KERL — fetches KERL from witness for cross-checking"
+    protocol: "HTTP"
+    refs: ["domain://witness-service"]
+
+  - id: "port://watcher-service/outbound/watcher-store"
+    type: outbound
+    name: "Watcher Storage"
+    contract: "cache_kel(aid, source_witness, events) -> Result; get_cached_kel(aid, source_witness?) -> [Event]; store_duplicity(aid, sn, evidence) -> Result; get_duplicity(aid) -> [DuplicityAlert]"
+    protocol: "method-call"
+    refs: ["persistence"]
+
+  - id: "port://watcher-service/outbound/http-server"
+    type: outbound
+    name: "HTTP Server"
+    contract: "listen(port) -> Server — serves query endpoint and OOBI resolution"
+    protocol: "method-call"
+    refs: ["transport"]

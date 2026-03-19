@@ -1,0 +1,135 @@
+# domain.yaml
+template_version: "1.0"
+id: "local-agent"
+name: "Local Agent (Full-Stack KERI Application)"
+description: >
+  Application-tier domain for fat wallet KERI applications. The complete KERI stack runs
+  on the controller's device: private keys, event processing, database, and direct witness
+  communication all in one process. No cloud agent dependency. The Hab/Habery pattern is
+  the primary API. Implementations: keripy (direct usage), keriox (standalone mode).
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keripy — Python reference implementation (Hab, Habery, Manager, Baser, Kevery, kli)"
+  - type: document
+    reference: "keriox — Rust production implementation (Controller, Identifier SDK, standalone mode)"
+  - type: document
+    reference: "keri-specification.md — KERI protocol specification"
+  - type: user-input
+    reference: "CLAUDE.md — keripy CLI, development commands, architecture"
+
+ubiquitous_language:
+  - term: "Habitat"
+    definition: "Controller's view of a managed AID. Hab = one AID, Habery = collection sharing database. Wraps Kever with signing capability"
+    invariants:
+      - "Each Habitat maps to exactly one AID"
+      - "Habery provides shared database, key manager, and event processor to all its Habitats"
+      - "Habitat combines key state verification (Kever) with local signing capability"
+
+  - term: "Local Key Manager"
+    definition: "Manages private keys on device without network dependency. Generates Signers from Salter with configurable tiers"
+    invariants:
+      - "Keys stored locally — no passcode-over-network, no cloud agent"
+      - "Manager maintains signing keys and pre-rotated next key digests"
+      - "Deterministic key derivation from local salt"
+
+  - term: "Local Event Processor"
+    definition: "Full Kevery event validation pipeline running in-process, not proxied via cloud agent. Includes all escrow processing"
+    invariants:
+      - "Validates events against current key state"
+      - "Manages all escrow types locally (partial signatures, out-of-order events, unverified receipts)"
+      - "Emits cues for receipting and notification"
+
+  - term: "Local Database"
+    definition: "LMDB/redb with all subdatabases running on local storage — the Baser on device"
+    invariants:
+      - "Subdatabases: .evts, .kels, .sigs, .wigs, .rcts, .ures, .ooes, .dels, .ldes"
+      - "Append-only semantics for KEL events"
+      - "Supports indexed access by prefix, sequence number, digest, and first-seen number"
+
+  - term: "Direct Witness Communication"
+    definition: "Controller connects to witness HTTP endpoints directly, no KERIA proxy — the operational manifestation of indirect mode in a fat wallet"
+    invariants:
+      - "Controller sends events directly to each designated witness"
+      - "Controller collects receipts directly from witnesses"
+      - "Witness TOAD (threshold of accountable duplicity) checked locally"
+
+  - term: "Direct Watcher Communication"
+    definition: "Controller connects to watcher endpoints directly for duplicity monitoring — no cloud agent intermediary"
+    invariants:
+      - "Controller registers watchers and queries for key state directly"
+      - "Watcher duplicity reports received and processed locally"
+
+  - term: "Local Credential Management"
+    definition: "Full TEL processing and credential storage locally — Regery, Verifier, and Credentialer running on device"
+    invariants:
+      - "Registry TEL events created and stored locally"
+      - "Credential issuance, revocation, and verification all in-process"
+      - "No cloud agent needed for credential lifecycle"
+
+  - term: "CLI Interface"
+    definition: "Command-line tool (kli in keripy) for local agent operations: inception, rotation, credential issuance, OOBI resolution, and more"
+    invariants:
+      - "kli commands map to Habery/Hab operations"
+      - "Interactive workflows for multi-sig coordination"
+      - "Configuration via config files and command-line arguments"
+
+domain_clients: []
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519 (signing), X25519 (key agreement), Blake3-256/Blake2b-256/SHA-256 (digests), argon2 (key stretching), libsodium"
+    relationship: "Cryptographic algorithm types used directly for local key generation, signing, hashing, and key stretching"
+
+adjacents:
+  - ref: "domain://keri"
+    relationship: "Conformist — runs the full KERI protocol stack locally, using all event types, key state computation, and escrow processing directly"
+    via_port: "port://keri/inbound/identifier-lifecycle"
+    is_cross_cutting: false
+  - ref: "domain://cesr"
+    relationship: "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly for all encoding"
+    via_port: "port://cesr/inbound/encoding"
+    is_cross_cutting: false
+  - ref: "domain://acdc"
+    relationship: "Conformist — uses ACDC credential types, TEL events, and IPEX exchange protocol directly"
+    via_port: "port://acdc/inbound/credential-lifecycle"
+    is_cross_cutting: false
+  - ref: "domain://oobi"
+    relationship: "Customer-Supplier — resolves OOBIs directly over HTTP for endpoint and key state discovery"
+    via_port: "port://oobi/inbound/discovery"
+    is_cross_cutting: false
+  - ref: "domain://witness-service"
+    relationship: "Customer-Supplier — connects to witnesses directly via HTTP for event receipting and key state verification"
+    via_port: "port://local-agent/outbound/witness-comms"
+    is_cross_cutting: false
+  - ref: "domain://watcher-service"
+    relationship: "Customer-Supplier — connects to watchers directly via HTTP for duplicity monitoring and key state queries"
+    via_port: "port://local-agent/outbound/watcher-comms"
+    is_cross_cutting: false
+
+externals:
+  - name: "Local Storage"
+    abstraction: "Repository"
+    ref: "port://local-agent/outbound/local-storage"
+    implementation_notes: "LMDB (keripy) or redb (keriox) on device — Baser subdatabases for events, signatures, receipts, escrows, and credential TELs"
+  - name: "Network Transport"
+    abstraction: "Adapter"
+    ref: "port://local-agent/outbound/network-transport"
+    implementation_notes: "HTTP/TCP for direct witness and watcher communication. No cloud agent proxy — the controller's process connects directly"
+
+implementation_guidance:
+  suggested_type: "application"
+  language_affinity: "any"
+  notes: >
+    keripy provides the reference fat wallet via Habery/Hab pattern and kli CLI.
+    keriox provides standalone mode via Controller/Identifier SDK. This domain
+    represents the fat wallet deployment model where the entire KERI stack runs
+    on the controller's device — the alternative to the thin wallet (signify-client)
+    model that delegates hosting to a cloud agent.
+
+issues: []
+
+tags: ["fat-wallet", "local-agent", "hab", "habery", "kli", "standalone", "application"]

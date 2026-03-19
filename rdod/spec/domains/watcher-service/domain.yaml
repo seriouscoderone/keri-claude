@@ -1,0 +1,89 @@
+# domain.yaml
+template_version: "1.0"
+id: "watcher-service"
+name: "Watcher Service"
+description: >
+  Service-tier domain for watcher node infrastructure. Deploys watcher nodes that monitor
+  for duplicity by collecting and comparing KEL copies from witnesses. Under the validator's
+  control (not the controller's). Provides ambient duplicity detection when deployed at
+  sufficient diversity. Implementation: keriox components/watcher.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — KERI watcher protocol (duplicity detection, ambient verifiability)"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — watcher architecture and duplicity detection"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — security analysis of watcher-based detection"
+  - type: user-input
+    reference: "CLAUDE.md — keriox components/watcher"
+
+ubiquitous_language:
+  - term: "Watcher Node"
+    definition: "A deployed watcher instance that polls witnesses and cross-checks KEL copies, under the validator's control"
+    invariants:
+      - "Under the validator's control — not the controller's"
+      - "Polls multiple witnesses for the same AID's KERL"
+      - "Flags conflicting events as potential duplicity"
+
+  - term: "Watcher AID"
+    definition: "The identifier of the watcher node, used to authenticate watcher responses"
+    invariants:
+      - "Authenticates query responses to validators"
+      - "Validators designate watchers by AID"
+
+  - term: "KEL Cross-Check"
+    definition: "The core operation: comparing KERL copies from multiple witnesses for the same AID, flagging differences as potential duplicity"
+    invariants:
+      - "Compares events at the same (prefix, sn) across witness sources"
+      - "Identical events across sources confirm consistency"
+      - "Conflicting events at the same position indicate potential duplicity"
+
+domain_clients:
+  - ref: "domain://signify-client"
+    relationship: "Indirect — Signify clients access watchers via cloud-agent-service proxy"
+    via_port: "port://watcher-service/inbound/query"
+  - ref: "domain://local-agent"
+    relationship: "Direct connection for local agent watcher queries"
+    via_port: "port://watcher-service/inbound/query"
+  - ref: "domain://cloud-agent-service"
+    relationship: "Queries watchers for duplicity status on behalf of controllers"
+    via_port: "port://watcher-service/inbound/query"
+
+subdomains: []
+
+kernels: []
+
+adjacents:
+  - ref: "domain://keri"
+    relationship: "Conformist — implements duplicity-detection monitoring protocol"
+    via_port: "port://keri/inbound/identifier-lifecycle"
+    is_cross_cutting: false
+  - ref: "domain://witness-service"
+    relationship: "Customer-Supplier — polls witnesses for KERL copies to cross-check"
+    via_port: "port://witness-service/inbound/kerl-query"
+    is_cross_cutting: false
+
+externals:
+  - name: "Watcher Storage"
+    abstraction: "Repository"
+    ref: "port://watcher-service/outbound/watcher-store"
+    implementation_notes: "Cached KEL copies from multiple witness sources, DEL (Duplicitous Event Log) for duplicity evidence. Implementation: redb (keriox)"
+  - name: "HTTP Server"
+    abstraction: "Adapter"
+    ref: "port://watcher-service/outbound/http-server"
+    implementation_notes: "Query endpoint for validators, OOBI resolution. Implementation: axum (keriox)"
+
+implementation_guidance:
+  suggested_type: "service"
+  language_affinity: "any"
+  notes: >
+    Primary implementation is keriox components/watcher (Rust, axum). Watchers are under
+    the validator's control — the controller does not choose watchers. Sufficient diversity
+    of watcher deployments provides ambient duplicity detection. Each watcher operates
+    independently, polling witnesses and maintaining its own cached KEL copies.
+
+issues: []
+
+tags: ["watcher", "service", "duplicity-detection", "monitoring", "infrastructure"]

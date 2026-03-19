@@ -1,0 +1,63 @@
+# ports.yaml
+domain_ref: "cloud-agent-service"
+
+ports:
+  # Inbound — three KERIA service endpoints
+  - id: "port://cloud-agent-service/inbound/boot"
+    type: inbound
+    name: "Agency Boot"
+    contract: "provision_agent(inception_event) -> AgentConfig; destroy_agent(agent_id) -> Result"
+    protocol: "REST"
+    refs: ["domain://signify-client"]
+
+  - id: "port://cloud-agent-service/inbound/admin-api"
+    type: inbound
+    name: "Admin API"
+    contract: >
+      create_identifier(config) -> AID;
+      rotate(aid) -> RotationEvent;
+      interact(aid, seals) -> InteractionEvent;
+      list_credentials() -> [Credential];
+      get_credential(said) -> Credential;
+      resolve_oobi(url) -> Result;
+      list_contacts() -> [Contact];
+      list_notifications() -> [Notification];
+      mark_notification(id, read) -> Result
+    protocol: "REST"
+    refs: ["domain://signify-client"]
+
+  - id: "port://cloud-agent-service/inbound/message-router"
+    type: inbound
+    name: "Message Router"
+    contract: "receive_message(keri_message) -> Result — routes protocol messages to agent instances by target AID"
+    protocol: "REST"
+    refs: []
+
+  # Outbound — persistence, HTTP server, witness/watcher interaction
+  - id: "port://cloud-agent-service/outbound/agent-store"
+    type: outbound
+    name: "Agent Persistence"
+    contract: "store_agent(agent) -> Result; get_agent(id) -> Agent; store_credential(cred) -> Result; list_credentials(aid) -> [Credential]; store_contact(contact) -> Result; enqueue_notification(notification) -> Result; get_escrowed(aid, type) -> [EscrowedItem]"
+    protocol: "method-call"
+    refs: ["persistence"]
+
+  - id: "port://cloud-agent-service/outbound/http-server"
+    type: outbound
+    name: "HTTP Server"
+    contract: "listen(boot_port, admin_port, router_port) -> Server"
+    protocol: "method-call"
+    refs: ["transport"]
+
+  - id: "port://cloud-agent-service/outbound/witness-forward"
+    type: outbound
+    name: "Witness Event Forwarding"
+    contract: "forward_event(event, witness_aids) -> [Receipt]; collect_receipts(event, witness_threshold) -> ReceiptSet"
+    protocol: "HTTP"
+    refs: ["domain://witness-service"]
+
+  - id: "port://cloud-agent-service/outbound/watcher-query"
+    type: outbound
+    name: "Watcher Query"
+    contract: "query_kel(aid) -> KELState; query_duplicity(aid) -> DuplicityStatus"
+    protocol: "HTTP"
+    refs: ["domain://watcher-service"]

@@ -164,17 +164,7 @@ terms:
       - "KERI10JSON00011c_ — KERI v1.0, JSON serialization, 284 bytes"
     related_terms: ["CESR"]
 
-  - term: "Habitat"
-    synonyms: ["Hab", "Habery"]
-    definition: "Controller's view of a managed AID. A Habitat represents one AID; a Habitat collection (Habery) is the set of Habitats sharing a database environment. A Habitat wraps a Key Event Verifier with signing capability, and the collection owns the database, key manager, event processor, and message parser."
-    invariants:
-      - "Each Habitat maps to exactly one AID"
-      - "A Habitat collection (Habery) provides a shared database, key manager, and event processor to all its Habitats"
-      - "A Habitat combines key state verification (Kever) with the ability to sign events using the controller's private keys"
-    examples:
-      - "A single Hab managing one Ed25519 AID with its Kever, database, and signing keys"
-      - "A Habery holding multiple Habs for a multi-AID controller, sharing a single Baser and Kevery"
-    related_terms: ["Controller", "AID", "Key Event Verifier", "Event Database", "Event Processor"]
+  # Habitat (Hab/Habery) — moved to domain://local-agent (application-tier concept, not protocol)
 
   - term: "Event Database"
     synonyms: ["Baser"]

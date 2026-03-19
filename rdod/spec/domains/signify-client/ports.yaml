@@ -1,0 +1,44 @@
+# ports.yaml
+domain_ref: "signify-client"
+
+ports:
+  # Inbound — end users and applications drive the thin wallet
+  - id: "port://signify-client/inbound/user-operations"
+    type: inbound
+    name: "User Operations"
+    contract: >
+      connect(url, passcode) -> Session;
+      create_identifier(alias, config) -> AID + Operation;
+      rotate(aid) -> RotationEvent + Operation;
+      issue_credential(registry, schema, recipient, data) -> SAID + Operation;
+      present_credential(said, recipient) -> Result;
+      resolve_oobi(url) -> Operation;
+      sign(content) -> Signature;
+      lock() -> void
+    protocol: "method-call"
+    refs: []
+
+  # Outbound — communication with cloud agent via Signify protocol
+  - id: "port://signify-client/outbound/cloud-agent-comms"
+    type: outbound
+    name: "Cloud Agent Communication"
+    contract: >
+      boot(inception_event) -> AgentConfig;
+      request(method, path, body, kram_headers) -> Response;
+      poll_operation(name) -> OperationStatus;
+      send_exchange(exn, sigs, atc) -> Result
+    protocol: "REST"
+    refs: ["domain://cloud-agent-service"]
+
+  # Outbound — encrypted key material persistence
+  - id: "port://signify-client/outbound/key-storage"
+    type: outbound
+    name: "Key Storage"
+    contract: >
+      store_encrypted(salt_ciphertext) -> Result;
+      load_encrypted(passcode) -> Salt;
+      store_signing_association(origin, aid, credential) -> Result;
+      load_signing_associations() -> [SigningAssociation];
+      destroy() -> Result
+    protocol: "method-call"
+    refs: ["key-storage"]

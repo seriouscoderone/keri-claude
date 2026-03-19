@@ -71,9 +71,18 @@ ubiquitous_language:
       - "Provides post-quantum resistance — attacker must compromise both current and pre-committed keys"
 
 domain_clients:
-  - ref: "domain://agent"
-    relationship: "Agent infrastructure consumes KERI to manage AIDs, process events, and coordinate signing"
+  - ref: "domain://local-agent"
+    relationship: "Fat wallet applications run the full KERI protocol stack locally"
     via_port: "port://keri/inbound/identifier-lifecycle"
+  - ref: "domain://cloud-agent-service"
+    relationship: "Cloud agent service runs KERI protocol on behalf of thin wallet controllers"
+    via_port: "port://keri/inbound/identifier-lifecycle"
+  - ref: "domain://witness-service"
+    relationship: "Witness nodes implement the witness-agreement protocol"
+    via_port: "port://keri/inbound/event-verification"
+  - ref: "domain://watcher-service"
+    relationship: "Watcher nodes implement duplicity-detection monitoring"
+    via_port: "port://keri/inbound/event-verification"
 
 subdomains:
   - ref: "domain://keri/key-state"

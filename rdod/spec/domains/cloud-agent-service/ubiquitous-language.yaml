@@ -1,0 +1,326 @@
+# ubiquitous-language.yaml
+domain_ref: "cloud-agent-service"
+
+terms:
+  - term: "KERIA"
+    synonyms: ["Cloud Agent", "KERI Agent"]
+    definition: "Server-side cloud agent hosting KERI identifiers on behalf of controllers. Manages AIDs, processes events, coordinates multi-sig, stores credentials — never holds private keys."
+    invariants:
+      - "Zero access to private signing or decryption keys"
+      - "Can store, forward, and assemble — but never sign"
+      - "One agent instance per controller AID"
+    examples:
+      - "A KERIA deployment on AWS hosting 500 agent instances"
+      - "keria start --config-dir scripts --config-file demo-witness-oobis"
+    related_terms: ["Agent Instance", "Agency", "Admin API", "Message Router", "Multi-tenancy"]
+
+  - term: "Agency"
+    synonyms: ["Boot Service", "Boot Endpoint"]
+    definition: "The provisioning service (port 3903) that creates and destroys agent instances. Entry point for new Signify clients."
+    invariants:
+      - "POST /boot with inception event -> provisions new agent instance"
+      - "One-time per controller AID — idempotent on retry"
+      - "Returns agent configuration (endpoints, controller AID confirmation)"
+    examples:
+      - "Signify client calls POST /boot with controller inception event"
+    related_terms: ["Agent Instance", "KERIA", "Multi-tenancy"]
+
+  - term: "Admin API"
+    synonyms: ["API Handler"]
+    definition: "The management endpoint (port 3901) for all agent operations. KRAM-authenticated. Scoped to the requesting controller's agent instance."
+    invariants:
+      - "All requests require valid KRAM signatures — unsigned requests rejected"
+      - "Operations scoped to authenticated controller's agent instance"
+      - "Read and write operations: identifiers, credentials, OOBIs, contacts, notifications"
+    examples:
+      - "POST /identifiers — create a new managed AID"
+      - "GET /credentials — list credentials in wallet"
+      - "POST /oobi — resolve an out-of-band introduction"
+      - "GET /notifications — poll for pending actions"
+    related_terms: ["KRAM", "Agent Instance", "Notification"]
+
+  - term: "Message Router"
+    synonyms: ["Protocol Endpoint", "HTTP Endpoint"]
+    definition: "The protocol endpoint (port 3902) receiving external KERI messages from other agents, witnesses, and watchers. Routes to correct agent instance."
+    invariants:
+      - "No KRAM required — messages are KERI-protocol authenticated (event signatures)"
+      - "Routes by target AID to the correct agent instance"
+      - "Handles: multi-sig partial signatures, IPEX exchange, witness receipts, queries"
+    examples:
+      - "Another agent sends a multi-sig partial signature for a group AID"
+      - "Witness sends event receipts after witnessing"
+      - "IPEX grant message delivering a credential"
+    related_terms: ["Multi-sig Assembly", "KERIA"]
+
+  - term: "Agent Instance"
+    synonyms: ["Agent"]
+    definition: "A provisioned agent representing a single controller. Contains managed AIDs, credential wallet, contact book, and pending operation queues."
+    invariants:
+      - "Bound to exactly one controller AID"
+      - "Isolated from other agent instances"
+      - "Persists across KERIA restarts"
+    examples:
+      - "Agent instance for controller EDP1... manages 3 AIDs and 12 credentials"
+    related_terms: ["KERIA", "Agency", "Credential Wallet", "Contact Book", "Multi-tenancy"]
+
+  - term: "Credential Wallet"
+    synonyms: ["Wallet"]
+    definition: "Server-hosted storage of ACDC credentials held by the controller's AIDs. Includes received credentials, their schemas, and presentation history."
+    invariants:
+      - "Credential content readable by the agent (not encrypted at rest)"
+      - "Presentation to third parties requires edge-signed authorization"
+      - "Wallet scoped to agent instance"
+    examples:
+      - "Wallet contains 3 vLEI credentials: QVI, LE, OOR"
+    related_terms: ["Agent Instance", "ACDC"]
+
+  - term: "Contact Book"
+    synonyms: ["Contacts"]
+    definition: "Directory of resolved OOBIs — known AIDs with verified key state and endpoint URLs, used for addressing and signature verification."
+    invariants:
+      - "Populated by OOBI resolution via admin API"
+      - "Entries: AID, key state snapshot, endpoint URLs, alias"
+      - "Key state refreshed on subsequent OOBI resolution"
+    examples:
+      - "Resolve OOBI for a QVI -> added to contacts with witness endpoints"
+    related_terms: ["OOBI", "Agent Instance"]
+
+  - term: "Multi-sig Assembly"
+    synonyms: ["Signature Assembly", "Group Signing"]
+    definition: "Process of collecting partial signatures from multiple edge clients for group AID events. Assembles when the signing threshold is satisfied."
+    invariants:
+      - "Each partial signature arrives independently via message router"
+      - "Assembly is threshold-aware (kt satisfaction check)"
+      - "Incomplete signature sets escrowed with timeout"
+      - "Assembled event forwarded to witnesses once complete"
+    examples:
+      - "3-of-5 group inception: 5 controllers sign independently, KERIA assembles when 3 arrive"
+      - "Group credential issuance: partial signatures collected, ACDC issued when threshold met"
+    related_terms: ["Message Router", "Threshold", "Counselor"]
+
+  - term: "Long-running Operation"
+    synonyms: ["Operation", "Monitor"]
+    definition: "An async task tracked by KERIA's Monitor — witness receipting, delegation approval, group formation, credential issuance, registry anchoring, OOBI resolution, end-role setup. Edge clients poll via GET /operations/{name}."
+    invariants:
+      - "Operations named {type}.{oid} — type identifies the workflow, oid the resource"
+      - "Types: witness, delegation, group, query, registry, credential, endrole, oobi"
+      - "Monitor checks completion by querying the relevant component (Counselor for group, Boatswain for delegation, etc.)"
+      - "Operations have a done flag, optional error, and response payload"
+      - "Returned as HTTP 202 Accepted with operation handle"
+    examples:
+      - "POST /identifiers returns op name 'witness.EDP1...' — poll until done"
+      - "POST /credentials returns op name 'credential.EDP1...' — poll until TEL anchored"
+    related_terms: ["Admin API", "Escrow", "Doer"]
+
+  - term: "Doer"
+    synonyms: ["HIO Doer", "DoDoer"]
+    definition: "HIO (Hierarchical Input/Output) event-driven processing unit. Each Doer has a recur() method called repeatedly by the HIO scheduler. The Agent is a DoDoer composing many sub-doers."
+    invariants:
+      - "Non-blocking — each recur() call processes available work and returns"
+      - "Doers drain work from Decks (FIFO queues)"
+      - "Key doers: Witnesser (witness receipting), Delegator (delegation events), Escrower (escrow processing), ParserDoer (message parsing)"
+      - "No threads — concurrency via cooperative scheduling"
+    examples:
+      - "Witnesser.recur(): pops from witners deck, sends receipt requests"
+      - "Escrower.recur(): calls processEscrows() on Kevery, Tevery, Exchanger, Verifier"
+    related_terms: ["Escrow", "Deck", "Agent Instance"]
+
+  - term: "Deck"
+    synonyms: ["Work Queue"]
+    definition: "Thread-safe FIFO deque used to queue work items between doers. The standard pattern is: producer appends to deck, consumer doer drains in recur() loop."
+    invariants:
+      - "Pattern: while deck: item = deck.popleft(); process(item)"
+      - "Key decks on Agent: cues, groups, anchors, witners, queries"
+    examples:
+      - "Admin API appends to witners deck -> Witnesser doer drains and processes"
+    related_terms: ["Doer", "Agent Instance"]
+
+  - term: "Notification"
+    synonyms: ["Pending Action"]
+    definition: "A queued message for the edge client indicating an action requiring attention — multi-sig request, credential offer, exchange message."
+    invariants:
+      - "Edge client polls for notifications via GET /notifications"
+      - "Agent cannot push — edge always pulls"
+      - "Notifications have a type, a related resource (AID, SAID), and a read/unread state"
+    examples:
+      - "Notification: multi-sig rotation pending for group AID, 2 of 3 signatures collected"
+      - "Notification: IPEX grant received — credential offered for admission"
+    related_terms: ["Admin API", "Multi-sig Assembly"]
+
+  - term: "Escrow"
+    synonyms: ["Pending Escrow"]
+    definition: "Temporary storage for incomplete or out-of-order operations — partial multi-sig events, unverified receipts, pending IPEX exchanges."
+    invariants:
+      - "Escrowed items have a timeout after which they are discarded"
+      - "Items automatically complete when missing data arrives"
+      - "Multiple escrow types: partial signature, out-of-order event, unverified receipt"
+      - "Each component (Kevery, Tevery, Exchanger, Verifier, Registrar, Credentialer) maintains its own escrows"
+      - "Escrows processed periodically by the Escrower doer in the HIO loop"
+    examples:
+      - "A multi-sig event with 1 of 3 required signatures is escrowed until others arrive"
+      - "An out-of-order event escrowed until its predecessor is received"
+    related_terms: ["Multi-sig Assembly", "Agent Instance", "Doer"]
+
+  - term: "End-Role Authorization"
+    synonyms: ["End-Role", "Endpoint Role"]
+    definition: "A signed declaration authorizing an endpoint to serve a specific role (witness, agent, watcher) for an AID. Published via reply message, tracked as a long-running operation."
+    invariants:
+      - "Signed by the AID's controller"
+      - "Stored in db.ends keyed by (cid, role, eid)"
+      - "Must be adopted by the endpoint before it takes effect"
+      - "Tracked as OpTypes.endrole long-running operation"
+    examples:
+      - "POST /identifiers/myaid/endroles — authorize KERIA agent as endpoint"
+      - "GET /endroles/{aid}/{role} — list endpoints for role"
+    related_terms: ["Admin API", "Long-running Operation", "OOBI"]
+
+  - term: "Postman"
+    synonyms: ["Message Sender"]
+    definition: "Routes peer-to-peer messages (exchange messages, multi-sig requests, credentials) to remote agents. Wraps content in KERI protocol format and delivers via HTTP."
+    invariants:
+      - "send(hab, dest, topic, serder, attachment) — delivers to destination AID's agent"
+      - "Uses resolved OOBI endpoints for routing"
+      - "Messages arrive at the recipient's message router (port 3902)"
+    examples:
+      - "Postman delivers multi-sig partial signature to co-signer's agent"
+      - "Postman delivers IPEX grant to credential recipient's agent"
+    related_terms: ["Message Router", "OOBI"]
+
+  - term: "Seeker"
+    synonyms: ["Credential Search"]
+    definition: "Full-text search index for credentials. Creates static indexes (issuer/schema, issuee/schema) and dynamic indexes (all scalar fields in credential payload) for efficient querying."
+    invariants:
+      - "Indexes built from credential schema — each schema field becomes a searchable index"
+      - "Queries via find(filter, sort, skip, limit) returning matching SAIDs"
+      - "Triggered by Verifier cues when credentials are saved"
+    examples:
+      - "seeker.find({'schema': schemaSaid, '-a-i': issuerAid}) -> [SAID, ...]"
+      - "Dynamic index: credential attribute 'LEI' becomes searchable via '-a-LEI'"
+    related_terms: ["Credential Wallet", "Agent Instance"]
+
+  - term: "Counselor"
+    synonyms: []
+    definition: "Tracks multi-sig group event approval progress. Monitors whether all required group members have provided their partial signatures for a pending group event."
+    invariants:
+      - "Agent owns one Counselor instance"
+      - "Monitor queries Counselor to detect group operation completion"
+      - "Works with Multiplexor to collect exchange messages by SAID"
+    examples:
+      - "3-of-5 group rotation: Counselor tracks 3 partial sigs arrived -> marks complete"
+    related_terms: ["Multi-sig Assembly", "Long-running Operation"]
+
+  - term: "Boatswain"
+    synonyms: []
+    definition: "Tracks delegation approval progress. Monitors whether a delegator has anchored the required seal approving a delegated event."
+    invariants:
+      - "Agent owns one Boatswain instance"
+      - "Monitor queries Boatswain to detect delegation operation completion"
+    examples:
+      - "Delegated inception: Boatswain waits for delegator's anchoring seal -> marks complete"
+    related_terms: ["Delegation", "Long-running Operation"]
+
+  - term: "Registrar"
+    synonyms: []
+    definition: "Manages TEL (Transaction Event Log) events for credential registries — registry inception, credential issuance events, revocation events. Works with Credentialer for the full credential lifecycle."
+    invariants:
+      - "Creates and manages registry TEL events"
+      - "Has processEscrows() called by Escrower for pending TEL events"
+      - "Integrates with Monitor for tracking registry/credential operations"
+    examples:
+      - "Registrar processes vcp (registry inception) -> creates management TEL"
+      - "Registrar processes iss (credential issuance) -> creates credential TEL entry"
+    related_terms: ["Credential Wallet", "TEL", "Escrow"]
+
+  - term: "Credentialer"
+    synonyms: []
+    definition: "Issues and manages ACDC credentials — validates schemas, creates credential events, tracks issuance completion. Companion to Registrar."
+    invariants:
+      - "complete() returns true when credential issuance is fully anchored"
+      - "Has processEscrows() for pending credential operations"
+      - "Monitor queries Credentialer to detect credential operation completion"
+    examples:
+      - "POST /credentials triggers Credentialer -> issues ACDC -> anchors to KEL via Registrar"
+    related_terms: ["Registrar", "Credential Wallet", "Long-running Operation"]
+
+  - term: "Multi-tenancy"
+    synonyms: ["Agency Multi-tenancy"]
+    definition: "One KERIA process hosts many agent instances. Agency (boot endpoint) provisions new instances. Each instance is isolated — one controller's data inaccessible to others."
+    invariants:
+      - "Bidirectional mappings: controller AID <-> agent AID"
+      - "Infrastructure concern, not visible to the Signify protocol"
+      - "Agency manages the lifecycle of all tenant agent instances"
+    examples:
+      - "A single KERIA deployment hosting 500 isolated agent instances for 500 controllers"
+      - "Agency boot creates a new agent instance, mapping controller AID to agent AID"
+    related_terms: ["Agency", "Agent Instance", "KERIA"]
+
+events:
+  - name: "AgentProvisioned"
+    payload: "agent_id: string, controller_aid: AID, boot_config: AgentConfig"
+    triggers: "Signify client sends POST /boot with controller inception event"
+
+  - name: "AgentDestroyed"
+    payload: "agent_id: string, controller_aid: AID"
+    triggers: "Controller or operator destroys the agent instance"
+
+  - name: "IdentifierCreated"
+    payload: "aid: AID, alias: string, agent_id: string"
+    triggers: "Controller creates a new managed AID via admin API"
+
+  - name: "CredentialReceived"
+    payload: "said: SAID, issuer: AID, schema: SAID, holder_aid: AID"
+    triggers: "IPEX grant received and admitted — credential added to wallet"
+
+  - name: "MultisigAssembled"
+    payload: "aid: AID, event_type: string, sequence: int, signers: [AID]"
+    triggers: "All required partial signatures collected — threshold satisfied"
+
+  - name: "NotificationQueued"
+    payload: "type: string, resource_aid: AID, resource_said: SAID"
+    triggers: "An external message arrives requiring controller attention"
+
+  - name: "ContactAdded"
+    payload: "aid: AID, alias: string, endpoints: [URL]"
+    triggers: "OOBI successfully resolved and KEL verified"
+
+  - name: "OperationCreated"
+    payload: "name: string, type: OpType, oid: string"
+    triggers: "An async operation is submitted to the Monitor"
+
+  - name: "OperationCompleted"
+    payload: "name: string, type: OpType, done: true, response: object"
+    triggers: "Monitor detects completion via component query (Counselor, Boatswain, etc.)"
+
+  - name: "EscrowProcessed"
+    payload: "component: string, items_processed: int"
+    triggers: "Escrower doer runs processEscrows() on a component"
+
+  - name: "EndRoleAuthorized"
+    payload: "aid: AID, role: string, eid: AID"
+    triggers: "Controller publishes signed end-role authorization"
+
+  - name: "CredentialIndexed"
+    payload: "said: SAID, schema: SAID, fields_indexed: int"
+    triggers: "Seeker indexes a newly saved credential from Verifier cue"
+
+  - name: "MessageRouted"
+    payload: "source: AID, target: AID, type: string"
+    triggers: "Message router receives and routes an external KERI protocol message"
+
+  - name: "OOBIResolved"
+    payload: "aid: AID, endpoint: URL, role: string, kel_verified: bool"
+    triggers: "Agent resolves an OOBI URL, retrieves and verifies the discovered AID's KEL"
+
+rules:
+  - "KERIA can NEVER produce a valid signature — all signing delegated to edge"
+  - "All admin API requests must be KRAM-authenticated — no anonymous access"
+  - "Message router accepts protocol-authenticated messages (KERI signatures), not KRAM"
+  - "Agent instances are isolated — one controller's data is inaccessible to another"
+  - "Edge client polls for notifications and operations — agent cannot push to edge"
+  - "Incomplete events are escrowed with timeout, not rejected — escrows processed periodically by Doers"
+  - "Three endpoints share agent state and persistence — they are ports, not separate services"
+  - "All async work flows through Decks — producers append, consumer Doers drain in their recur() loop"
+  - "Long-running operations are the ONLY mechanism for tracking async completion — no callbacks to edge"
+  - "Credential search indexes are rebuilt from schema structure — each scalar attribute becomes a searchable field"
+  - "Credential wallet operations (present, revoke) require edge-signed authorization — the agent cannot present credentials unilaterally"
+  - "Multi-tenancy is an infrastructure concern — the Signify protocol is unaware of other tenants"
