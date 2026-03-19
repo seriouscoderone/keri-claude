@@ -330,6 +330,22 @@ terms:
       - "A credential exchange that fails because the registry TEL was not transmitted"
     related_terms: ["Registry SAID", "Issuer", "Credential Verifier"]
 
+  - term: "ACDC Message Types"
+    synonyms: ["ACDC Ilks", "ACDC Native Types"]
+    definition: "The message type variants for ACDC credentials, identified by the 't' (type/ilk) field. Determines the serialization format and field structure."
+    invariants:
+      - "acm: ACDC field Map — the default labeled message type. Top-level field map with explicit field labels (v, t, d, u, i, s, a/A, e, r). Used for JSON, CBOR, MGPK serializations."
+      - "act: ACDC fixed field with aTtribute section — CESR native format with fixed (unlabeled) field ordering. Includes the attribute section (a field)."
+      - "acg: ACDC fixed field with aGgregate section — CESR native format with fixed field ordering. Includes the aggregate section (A field) instead of the attribute section. Used for selectively disclosable credentials."
+      - "ace: ACDC with Extra fields — experimental variant allowing additional non-normative fields. May not be normative."
+      - "sch: Schema — a JSON Schema document identified by its SAID, used for credential structure validation."
+      - "If no 't' field is present, 'acm' is inferred as the default type."
+    examples:
+      - "t='acm': standard ACDC credential as a labeled JSON field map"
+      - "t='act': CESR native ACDC with fixed-field attribute section (compact binary)"
+      - "t='acg': CESR native ACDC with fixed-field aggregate section (selectively disclosable)"
+    related_terms: ["ACDC", "Credential Serializer", "Schema", "CESR"]
+
 events:
   - name: "CredentialIssued"
     payload: "acdc: ACDC, issuer_aid: AID, schema_said: SAID, registry_said: SAID?"
