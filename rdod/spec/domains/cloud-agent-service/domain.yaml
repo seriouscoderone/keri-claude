@@ -21,50 +21,29 @@ source_material:
 
 ubiquitous_language:
   - term: "KERIA"
-    definition: "Cloud agent hosting service — the server-side component that manages AIDs, processes events, and coordinates operations without ever holding private keys"
+    definition: "Cloud agent hosting service — the orchestrating service that delegates provisioning (Agency), API exposure (Admin/Message Router), and async processing (Doers/Monitor) to its three subdomains. Never holds private keys."
     invariants:
       - "Zero access to private signing or decryption keys"
       - "Can store, forward, and assemble — but never sign"
-      - "One agent instance per controller AID"
-
-  - term: "Agency"
-    definition: "The boot service (port 3903) that provisions and destroys agent instances for Signify clients"
-    invariants:
-      - "Handles POST /boot to create agent instances"
-      - "Each provisioning requires a valid inception event from the edge client"
-      - "One-time operation per controller — idempotent on retry"
-
-  - term: "Admin API"
-    definition: "The management endpoint (port 3901) for all agent operations — identifier lifecycle, credential management, OOBI resolution, state queries"
-    invariants:
-      - "All requests authenticated via KRAM — unsigned requests rejected"
-      - "Scoped to the authenticated controller's agent instance"
-
-  - term: "Message Router"
-    definition: "The protocol endpoint (port 3902) receiving external KERI messages from other agents, witnesses, and watchers"
-    invariants:
-      - "Handles inbound multi-sig coordination, credential exchange, event receipts"
-      - "Routes messages to the correct agent instance based on the target AID"
-      - "No KRAM required — messages are protocol-authenticated (KERI signatures)"
-
-  - term: "Agent Instance"
-    definition: "A provisioned agent representing a single controller — contains the controller's managed AIDs, credential wallet, contact book, and pending operations"
-    invariants:
-      - "Bound to exactly one controller AID (the authentication anchor)"
-      - "Isolated from other agent instances"
-
-  - term: "Multi-tenancy"
-    definition: "One KERIA process hosts many agent instances. Agency (boot endpoint) provisions new instances. Each instance is isolated — one controller's data inaccessible to others."
-    invariants:
-      - "Bidirectional mappings: controller AID <-> agent AID"
-      - "Infrastructure concern, not visible to the Signify protocol"
+      - "Delegates provisioning to cloud-agent-service/provisioning"
+      - "Delegates API exposure to cloud-agent-service/api"
+      - "Delegates async processing to cloud-agent-service/processing"
 
 domain_clients:
   - ref: "domain://signify-client"
     relationship: "Customer-Supplier — thin wallets drive the cloud agent via Signify protocol"
     via_port: "port://cloud-agent-service/inbound/admin-api"
 
-subdomains: []
+subdomains:
+  - ref: "domain://cloud-agent-service/provisioning"
+    relationship: "Owns multi-tenant agent lifecycle — provisioning, isolation, and destruction of per-controller agent instances via the Agency boot endpoint"
+    via_port: "port://cloud-agent-service/provisioning/inbound/agent-lifecycle"
+  - ref: "domain://cloud-agent-service/api"
+    relationship: "Owns the three service endpoints — Admin API (KRAM-authenticated management), Message Router (protocol message routing), notification/end-role systems"
+    via_port: "port://cloud-agent-service/api/inbound/admin-api"
+  - ref: "domain://cloud-agent-service/processing"
+    relationship: "Owns the HIO-based async event processing pipeline — Doers, Decks, escrow management, long-running operation tracking, and specialized processing components"
+    via_port: "port://cloud-agent-service/processing/inbound/process-work"
 
 kernels: []
 

@@ -1,0 +1,19 @@
+# ports.yaml
+domain_ref: "cloud-agent-service/provisioning"
+
+ports:
+  # Inbound — what clients call
+  - id: "port://cloud-agent-service/provisioning/inbound/agent-lifecycle"
+    type: inbound
+    name: "Agent Lifecycle"
+    contract: "provision_agent(inception_event) -> AgentConfig; destroy_agent(agent_id) -> Result; lookup_agent(controller_aid) -> Agent; get_agent(agent_aid) -> Agent"
+    protocol: "method-call"
+    refs: ["domain://cloud-agent-service"]
+
+  # Outbound — what provisioning calls
+  - id: "port://cloud-agent-service/provisioning/outbound/agent-registry"
+    type: outbound
+    name: "Agent Registry"
+    contract: "store_agent(agent_aid, controller_aid) -> Result; remove_agent(agent_aid) -> Result; get_by_controller(controller_aid) -> Agent; get_by_agent(agent_aid) -> Agent; register_managed_aid(agent_aid, managed_aid) -> Result; list_managed_aids(agent_aid) -> [AID]"
+    protocol: "method-call"
+    refs: ["persistence"]

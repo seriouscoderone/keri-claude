@@ -1,0 +1,99 @@
+# ubiquitous-language.yaml
+domain_ref: "cloud-agent-service/provisioning"
+
+terms:
+  - term: "Agency"
+    synonyms: ["Boot Service", "Boot Endpoint", "port 3903"]
+    definition: "The provisioning service (port 3903) that creates and destroys agent instances. Entry point for new Signify clients. Receives POST /boot with a controller inception event, validates it, creates an isolated agent instance, and returns configuration."
+    invariants:
+      - "POST /boot with inception event -> provisions new agent instance"
+      - "One-time per controller AID — idempotent on retry"
+      - "Returns agent configuration (endpoints, controller AID confirmation)"
+      - "Manages the bidirectional caid<->agent registry"
+    examples:
+      - "Signify client calls POST /boot with controller inception event -> Agency creates agent, stores mappings, returns config"
+      - "Repeated POST /boot for same controller AID -> returns existing agent config (idempotent)"
+    related_terms: ["Agent Instance", "Multi-tenancy", "Agent Registry"]
+
+  - term: "Agent Instance"
+    synonyms: ["Agent"]
+    definition: "A provisioned agent representing a single controller. Contains managed AIDs, credential wallet, contact book, and pending operation queues. Each instance is isolated — one controller's data is inaccessible to others."
+    invariants:
+      - "Bound to exactly one controller AID (the authentication anchor)"
+      - "Isolated from other agent instances — no cross-tenant data access"
+      - "Persists across KERIA restarts"
+      - "Owns its own Habery (AID store), Reger (credential registry), Verifier, and processing doers"
+    examples:
+      - "Agent instance for controller EDP1... manages 3 AIDs and 12 credentials"
+      - "Agent destruction removes all owned AIDs, credentials, contacts, and mappings"
+    related_terms: ["Agency", "Multi-tenancy", "Credential Wallet", "Contact Book"]
+
+  - term: "Multi-tenancy"
+    synonyms: ["Agency Multi-tenancy"]
+    definition: "One KERIA process hosts many agent instances. Agency (boot endpoint) provisions new instances. Each instance is isolated — one controller's data inaccessible to others."
+    invariants:
+      - "Bidirectional mappings: controller AID <-> agent AID (AgencyBaser .agnt and .ctrl sub-databases)"
+      - "Managed AIDs per agent tracked in .aids mapping"
+      - "Infrastructure concern, not visible to the Signify protocol"
+      - "Agency manages the lifecycle of all tenant agent instances"
+    examples:
+      - "A single KERIA deployment hosting 500 isolated agent instances for 500 controllers"
+      - "Agency boot creates a new agent instance, mapping controller AID to agent AID"
+    related_terms: ["Agency", "Agent Instance", "Agent Registry"]
+
+  - term: "Credential Wallet"
+    synonyms: ["Wallet"]
+    definition: "Server-hosted storage of ACDC credentials held by the controller's AIDs. Includes received credentials, their schemas, and presentation history. Scoped to the agent instance."
+    invariants:
+      - "Credential content readable by the agent (not encrypted at rest)"
+      - "Presentation to third parties requires edge-signed authorization"
+      - "Wallet scoped to agent instance — isolated per tenant"
+    examples:
+      - "Wallet contains 3 vLEI credentials: QVI, LE, OOR"
+    related_terms: ["Agent Instance"]
+
+  - term: "Contact Book"
+    synonyms: ["Contacts"]
+    definition: "Directory of resolved OOBIs — known AIDs with verified key state and endpoint URLs, used for addressing and signature verification. Scoped to the agent instance."
+    invariants:
+      - "Populated by OOBI resolution via admin API"
+      - "Entries: AID, key state snapshot, endpoint URLs, alias"
+      - "Key state refreshed on subsequent OOBI resolution"
+      - "Scoped to agent instance — isolated per tenant"
+    examples:
+      - "Resolve OOBI for a QVI -> added to contacts with witness endpoints"
+    related_terms: ["Agent Instance"]
+
+  - term: "Agent Registry"
+    synonyms: ["AgencyBaser"]
+    definition: "The persistent store of all agent-to-controller mappings. Tracks which controller AID owns which agent instance, and which managed AIDs belong to each agent."
+    invariants:
+      - ".agnt sub-database: agent AID -> controller AID"
+      - ".ctrl sub-database: controller AID -> agent AID"
+      - ".aids sub-database: agent AID -> [managed AIDs]"
+      - "All three mappings updated atomically during provisioning"
+    examples:
+      - "Agency.lookup(caid) -> agent instance (via .ctrl mapping)"
+      - "Agency.get(agent_aid) -> agent instance (via .agnt mapping)"
+    related_terms: ["Agency", "Multi-tenancy"]
+
+events:
+  - name: "AgentProvisioned"
+    payload: "agent_id: string, controller_aid: AID, boot_config: AgentConfig"
+    triggers: "Signify client sends POST /boot with controller inception event"
+
+  - name: "AgentDestroyed"
+    payload: "agent_id: string, controller_aid: AID"
+    triggers: "Controller or operator destroys the agent instance"
+
+  - name: "ManagedAIDRegistered"
+    payload: "agent_id: string, aid: AID"
+    triggers: "A new AID is created under the agent instance and registered in the .aids mapping"
+
+rules:
+  - "POST /boot requires a valid controller inception event — no anonymous provisioning"
+  - "One agent instance per controller AID — idempotent on retry, never duplicated"
+  - "Agent instances are isolated — one controller's data is inaccessible to another"
+  - "All agent-owned resources (AIDs, credentials, contacts) are scoped to the instance and destroyed with it"
+  - "Bidirectional caid<->agent mappings are updated atomically during provisioning and destruction"
+  - "Multi-tenancy is an infrastructure concern — the Signify protocol is unaware of other tenants"

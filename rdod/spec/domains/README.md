@@ -130,7 +130,10 @@ graph TD
 | `oobi` | Out-of-Band Introduction | adjacent | complete | 6 | Bootstrap discovery, BADA endpoint authorization |
 | | | | | | |
 | **SERVICES** | | | | | |
-| `cloud-agent-service` | Cloud Agent Service (KERIA) | service | complete | 21 | Multi-tenant AID hosting, admin API, message router, long-running ops |
+| `cloud-agent-service` | Cloud Agent Service (KERIA) | service | complete | 1 | KERIA orchestrator (delegates to 3 subdomains) |
+| `cloud-agent-service/provisioning` | Agent Provisioning | subdomain | complete | 6 | Agency, agent instance, multi-tenancy, wallet, contacts |
+| `cloud-agent-service/api` | Agent API | subdomain | complete | 6 | Admin API, message router, KRAM, notifications, end-role |
+| `cloud-agent-service/processing` | Agent Processing | subdomain | complete | 11 | Doers, decks, escrows, monitor, counselor, boatswain, registrar, seeker |
 | `witness-service` | Witness Service | service | complete | 6 | Witness nodes, receipt generation, KERL storage, pool deployment |
 | `watcher-service` | Watcher Service | service | complete | 5 | Watcher nodes, KEL cross-check, duplicity alerts, pool deployment |
 | | | | | | |

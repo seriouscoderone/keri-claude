@@ -1,0 +1,72 @@
+# domain.yaml
+template_version: "1.0"
+id: "cloud-agent-service/processing"
+name: "Agent Processing"
+description: >
+  The HIO-based async event processing pipeline — Doers, Decks, escrow management,
+  long-running operation tracking (Monitor), and the specialized processing components
+  (Counselor, Boatswain, Registrar, Credentialer, Seeker, Postman). Owns the cooperative
+  scheduling model where producers append to Decks and consumer Doers drain work in
+  their recur() loops. Tracks all async operations via the Monitor for edge-client polling.
+  Implementation: keria (Python), serious-keri (TypeScript/Lambda).
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keridoc-llms-full.md — Doer architecture, escrow processing, operation tracking"
+  - type: document
+    reference: "KERIArchGroupIssuance.md — group issuance, multi-sig coordination, Counselor, Boatswain"
+  - type: document
+    reference: "keria — agenting.py: Agent (DoDoer), Witnesser, Delegator, Escrower; monitoring.py: Monitor; ending.py: Counselor, Boatswain, Registrar, Credentialer"
+  - type: user-input
+    reference: "CLAUDE.md — HIO orchestration, Doer/Deck pattern"
+
+ubiquitous_language:
+  - term: "Doer"
+    definition: "HIO event-driven processing unit with recur() method — the cooperative scheduling primitive for all async work"
+    invariants:
+      - "Non-blocking — each recur() call processes available work and returns"
+      - "Doers drain work from Decks (FIFO queues)"
+      - "No threads — concurrency via cooperative scheduling"
+
+  - term: "Long-running Operation"
+    definition: "An async task tracked by the Monitor — edge clients poll via GET /operations/{name} until done"
+    invariants:
+      - "Operations named {type}.{oid}"
+      - "Monitor checks completion by querying the relevant component"
+      - "Operations have a done flag, optional error, and response payload"
+
+domain_clients:
+  - ref: "domain://cloud-agent-service"
+    relationship: "Parent domain delegates async event processing to this subdomain"
+    via_port: "port://cloud-agent-service/processing/inbound/process-work"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals:
+  - name: "Persistence"
+    abstraction: "Repository"
+    ref: "port://cloud-agent-service/processing/outbound/processing-store"
+    implementation_notes: "Stores escrow queues, operation tracking records, credential indexes. Implementations: LMDB sub-databases (keria), DynamoDB (serious-keri)"
+  - name: "Timer"
+    abstraction: "Service"
+    ref: "port://cloud-agent-service/processing/outbound/timer"
+    implementation_notes: "Provides escrow timeouts and operation timeouts. Implementations: HIO scheduler (keria), Lambda timeout + DynamoDB TTL (serious-keri)"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In keria, the Agent class is a DoDoer composing many sub-doers (Witnesser, Delegator,
+    Escrower, ParserDoer). Each doer's recur() method drains its assigned Deck. The Monitor
+    class (monitoring.py) tracks operations and queries specialized components (Counselor,
+    Boatswain, Registrar, Credentialer) for completion status. In serious-keri, the cooperative
+    scheduling model maps to Lambda invocations with DynamoDB-backed work queues.
+
+issues: []
+
+tags: ["processing", "doer", "deck", "escrow", "monitor", "hio", "async"]

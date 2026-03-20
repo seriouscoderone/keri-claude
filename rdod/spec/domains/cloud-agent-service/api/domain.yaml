@@ -1,0 +1,69 @@
+# domain.yaml
+template_version: "1.0"
+id: "cloud-agent-service/api"
+name: "Agent API"
+description: >
+  The three service endpoints that expose cloud agent operations — Admin API (KRAM-authenticated
+  management on port 3901), Message Router (protocol message routing on port 3902), and the
+  notification/end-role systems. Owns request authentication, routing to correct agent instance,
+  notification queueing for edge-client polling, and end-role authorization tracking.
+  Implementation: keria (Python), serious-keri (TypeScript/Lambda).
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keridoc-llms-full.md — KERIA architecture documentation, API endpoints"
+  - type: document
+    reference: "keria — app.py: createHttpEndpoints(), agenting.py: AdminHandler, ProtocolMessageRouter"
+  - type: user-input
+    reference: "CLAUDE.md — KERIA service architecture (ports 3901/3902/3903)"
+
+ubiquitous_language:
+  - term: "Admin API"
+    definition: "The management endpoint (port 3901) for all agent operations — KRAM-authenticated, scoped to the requesting controller's agent instance"
+    invariants:
+      - "All requests authenticated via KRAM — unsigned requests rejected"
+      - "Scoped to the authenticated controller's agent instance"
+
+  - term: "Message Router"
+    definition: "The protocol endpoint (port 3902) receiving external KERI messages from other agents, witnesses, and watchers — routes to correct agent instance by target AID"
+    invariants:
+      - "No KRAM required — messages are protocol-authenticated (KERI signatures)"
+      - "Routes by target AID to the correct agent instance"
+
+  - term: "Notification"
+    definition: "A queued message for the edge client indicating an action requiring attention"
+    invariants:
+      - "Edge client polls for notifications — agent cannot push"
+      - "Notifications have a type, related resource, and read/unread state"
+
+domain_clients:
+  - ref: "domain://cloud-agent-service"
+    relationship: "Parent domain delegates request handling and routing to this subdomain"
+    via_port: "port://cloud-agent-service/api/inbound/admin-api"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals:
+  - name: "HTTP Server"
+    abstraction: "Adapter"
+    ref: "port://cloud-agent-service/api/outbound/http-server"
+    implementation_notes: "Exposes admin (3901) and message router (3902) endpoints. Implementations: Falcon/hio (keria), API Gateway+Lambda (serious-keri)"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In keria, the Admin API is served by Falcon endpoints with KRAM authentication middleware
+    (agenting.py: AdminHandler). The Message Router is a separate Falcon app on port 3902
+    (ProtocolMessageRouter). Notifications are stored per-agent and polled via GET /notifications.
+    End-role authorizations are tracked as long-running operations. In serious-keri, these map
+    to separate Lambda handler routes behind API Gateway.
+
+issues: []
+
+tags: ["api", "admin", "message-router", "notification", "end-role", "kram"]

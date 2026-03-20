@@ -1,0 +1,113 @@
+# ubiquitous-language.yaml
+domain_ref: "cloud-agent-service/api"
+
+terms:
+  - term: "Admin API"
+    synonyms: ["API Handler", "port 3901"]
+    definition: "The management endpoint (port 3901) for all agent operations. KRAM-authenticated. Scoped to the requesting controller's agent instance. Handles identifier lifecycle, credential management, OOBI resolution, contact management, notification polling, and operation status queries."
+    invariants:
+      - "All requests require valid KRAM signatures — unsigned requests rejected"
+      - "Operations scoped to authenticated controller's agent instance"
+      - "Read and write operations: identifiers, credentials, OOBIs, contacts, notifications, operations"
+      - "Async operations return HTTP 202 with operation handle for polling"
+    examples:
+      - "POST /identifiers — create a new managed AID"
+      - "GET /credentials — list credentials in wallet"
+      - "POST /oobi — resolve an out-of-band introduction"
+      - "GET /notifications — poll for pending actions"
+      - "GET /operations/{name} — check async operation status"
+    related_terms: ["KRAM Authentication", "Notification", "End-Role Authorization", "KERIA"]
+
+  - term: "Message Router"
+    synonyms: ["Protocol Endpoint", "HTTP Endpoint", "port 3902"]
+    definition: "The protocol endpoint (port 3902) receiving external KERI messages from other agents, witnesses, and watchers. Routes to correct agent instance based on the target AID. No KRAM required — messages are KERI-protocol authenticated (event signatures)."
+    invariants:
+      - "No KRAM required — messages are protocol-authenticated (KERI signatures)"
+      - "Routes by target AID to the correct agent instance"
+      - "Handles: multi-sig partial signatures, IPEX exchange, witness receipts, queries"
+      - "Deposited messages trigger notification queueing for the target agent"
+    examples:
+      - "Another agent sends a multi-sig partial signature for a group AID"
+      - "Witness sends event receipts after witnessing"
+      - "IPEX grant message delivering a credential"
+    related_terms: ["Admin API", "Notification", "KERIA"]
+
+  - term: "KERIA"
+    synonyms: ["Cloud Agent", "KERI Agent"]
+    definition: "The overall cloud agent service — a brief reference to the three-port architecture (boot 3903, admin 3901, message router 3902) that this subdomain exposes as API endpoints."
+    invariants:
+      - "Three endpoints share agent state and persistence — they are ports, not separate services"
+      - "Zero access to private signing or decryption keys"
+    examples:
+      - "keria start --config-dir scripts --config-file demo-witness-oobis"
+    related_terms: ["Admin API", "Message Router"]
+
+  - term: "Notification"
+    synonyms: ["Pending Action"]
+    definition: "A queued message for the edge client indicating an action requiring attention — multi-sig request, credential offer, exchange message. Polled via GET /notifications on the admin API."
+    invariants:
+      - "Edge client polls for notifications via GET /notifications"
+      - "Agent cannot push — edge always pulls"
+      - "Notifications have a type, a related resource (AID, SAID), and a read/unread state"
+      - "Marked as read via PUT /notifications/{id}"
+    examples:
+      - "Notification: multi-sig rotation pending for group AID, 2 of 3 signatures collected"
+      - "Notification: IPEX grant received — credential offered for admission"
+    related_terms: ["Admin API", "Message Router"]
+
+  - term: "End-Role Authorization"
+    synonyms: ["End-Role", "Endpoint Role"]
+    definition: "A signed declaration authorizing an endpoint to serve a specific role (witness, agent, watcher) for an AID. Published via reply message, tracked as a long-running operation, polled by edge client."
+    invariants:
+      - "Signed by the AID's controller"
+      - "Stored in db.ends keyed by (cid, role, eid)"
+      - "Must be adopted by the endpoint before it takes effect"
+      - "Tracked as OpTypes.endrole long-running operation"
+    examples:
+      - "POST /identifiers/myaid/endroles — authorize KERIA agent as endpoint"
+      - "GET /endroles/{aid}/{role} — list endpoints for role"
+    related_terms: ["Admin API", "Notification"]
+
+  - term: "KRAM Authentication"
+    synonyms: ["KRAM"]
+    definition: "The authentication mechanism for admin API requests. Controllers sign each request with their edge keys, proving identity without transmitting secrets. The cloud agent verifies the KRAM signature against the controller's known key state."
+    invariants:
+      - "Every admin API request must carry a valid KRAM signature"
+      - "Signature binds request method, path, and body to the controller's AID"
+      - "Verification uses the controller AID's current key state"
+    examples:
+      - "Signify client signs GET /identifiers with KRAM headers -> KERIA verifies against controller key state -> scopes to controller's agent"
+    related_terms: ["Admin API"]
+
+events:
+  - name: "NotificationQueued"
+    payload: "type: string, resource_aid: AID, resource_said: SAID"
+    triggers: "An external message arrives requiring controller attention"
+
+  - name: "MessageRouted"
+    payload: "source: AID, target: AID, type: string"
+    triggers: "Message router receives and routes an external KERI protocol message to the target agent instance"
+
+  - name: "EndRoleAuthorized"
+    payload: "aid: AID, role: string, eid: AID"
+    triggers: "Controller publishes signed end-role authorization via admin API"
+
+  - name: "IdentifierCreated"
+    payload: "aid: AID, alias: string, agent_id: string"
+    triggers: "Controller creates a new managed AID via admin API"
+
+  - name: "ContactAdded"
+    payload: "aid: AID, alias: string, endpoints: [URL]"
+    triggers: "OOBI successfully resolved and KEL verified via admin API"
+
+  - name: "OOBIResolved"
+    payload: "aid: AID, endpoint: URL, role: string, kel_verified: bool"
+    triggers: "Agent resolves an OOBI URL, retrieves and verifies the discovered AID's KEL"
+
+rules:
+  - "All admin API requests must be KRAM-authenticated — no anonymous access"
+  - "Message router accepts protocol-authenticated messages (KERI signatures), not KRAM"
+  - "Edge client polls for notifications and operations — agent cannot push to edge"
+  - "Three endpoints share agent state and persistence — they are ports, not separate services"
+  - "Async operations return HTTP 202 with operation handle — the ONLY mechanism for tracking completion"
+  - "End-role authorizations are tracked as long-running operations until the endpoint adopts the role"

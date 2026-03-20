@@ -1,0 +1,173 @@
+# ubiquitous-language.yaml
+domain_ref: "cloud-agent-service/processing"
+
+terms:
+  - term: "Doer"
+    synonyms: ["HIO Doer", "DoDoer"]
+    definition: "HIO (Hierarchical Input/Output) event-driven processing unit. Each Doer has a recur() method called repeatedly by the HIO scheduler. The Agent is a DoDoer composing many sub-doers. No threads — concurrency via cooperative scheduling."
+    invariants:
+      - "Non-blocking — each recur() call processes available work and returns"
+      - "Doers drain work from Decks (FIFO queues)"
+      - "Key doers: Witnesser (witness receipting), Delegator (delegation events), Escrower (escrow processing), ParserDoer (message parsing)"
+      - "No threads — concurrency via cooperative scheduling"
+    examples:
+      - "Witnesser.recur(): pops from witners deck, sends receipt requests"
+      - "Escrower.recur(): calls processEscrows() on Kevery, Tevery, Exchanger, Verifier"
+    related_terms: ["Deck", "Escrow", "Long-running Operation"]
+
+  - term: "Deck"
+    synonyms: ["Work Queue"]
+    definition: "Thread-safe FIFO deque used to queue work items between doers. The standard pattern is: producer appends to deck, consumer doer drains in recur() loop."
+    invariants:
+      - "Pattern: while deck: item = deck.popleft(); process(item)"
+      - "Key decks on Agent: cues, groups, anchors, witners, queries"
+      - "Producers: API handlers, message router, escrow reprocessing"
+      - "Consumers: Doer subclasses (Witnesser, Delegator, Escrower, etc.)"
+    examples:
+      - "Admin API appends to witners deck -> Witnesser doer drains and processes"
+      - "Message Router appends to groups deck -> Counselor-related doer processes"
+    related_terms: ["Doer", "Escrow"]
+
+  - term: "Escrow"
+    synonyms: ["Pending Escrow"]
+    definition: "Temporary storage for incomplete or out-of-order operations — partial multi-sig events, unverified receipts, pending IPEX exchanges. Each component maintains its own escrows, processed periodically by the Escrower doer."
+    invariants:
+      - "Escrowed items have a timeout after which they are discarded"
+      - "Items automatically complete when missing data arrives"
+      - "Multiple escrow types: partial signature, out-of-order event, unverified receipt"
+      - "Each component (Kevery, Tevery, Exchanger, Verifier, Registrar, Credentialer) maintains its own escrows"
+      - "Escrows processed periodically by the Escrower doer in the HIO loop"
+    examples:
+      - "A multi-sig event with 1 of 3 required signatures is escrowed until others arrive"
+      - "An out-of-order event escrowed until its predecessor is received"
+    related_terms: ["Doer", "Multi-sig Assembly", "Counselor"]
+
+  - term: "Long-running Operation"
+    synonyms: ["Operation", "Monitor"]
+    definition: "An async task tracked by KERIA's Monitor — witness receipting, delegation approval, group formation, credential issuance, registry anchoring, OOBI resolution, end-role setup. Edge clients poll via GET /operations/{name}."
+    invariants:
+      - "Operations named {type}.{oid} — type identifies the workflow, oid the resource"
+      - "Types: witness, delegation, group, query, registry, credential, endrole, oobi"
+      - "Monitor checks completion by querying the relevant component (Counselor for group, Boatswain for delegation, etc.)"
+      - "Operations have a done flag, optional error, and response payload"
+      - "Returned as HTTP 202 Accepted with operation handle"
+    examples:
+      - "POST /identifiers returns op name 'witness.EDP1...' — poll until done"
+      - "POST /credentials returns op name 'credential.EDP1...' — poll until TEL anchored"
+    related_terms: ["Doer", "Counselor", "Boatswain", "Registrar", "Credentialer"]
+
+  - term: "Counselor"
+    synonyms: []
+    definition: "Tracks multi-sig group event approval progress. Monitors whether all required group members have provided their partial signatures for a pending group event."
+    invariants:
+      - "Agent owns one Counselor instance"
+      - "Monitor queries Counselor to detect group operation completion"
+      - "Works with Multiplexor to collect exchange messages by SAID"
+    examples:
+      - "3-of-5 group rotation: Counselor tracks 3 partial sigs arrived -> marks complete"
+    related_terms: ["Multi-sig Assembly", "Long-running Operation", "Escrow"]
+
+  - term: "Boatswain"
+    synonyms: []
+    definition: "Tracks delegation approval progress. Monitors whether a delegator has anchored the required seal approving a delegated event."
+    invariants:
+      - "Agent owns one Boatswain instance"
+      - "Monitor queries Boatswain to detect delegation operation completion"
+    examples:
+      - "Delegated inception: Boatswain waits for delegator's anchoring seal -> marks complete"
+    related_terms: ["Long-running Operation", "Escrow"]
+
+  - term: "Registrar"
+    synonyms: []
+    definition: "Manages TEL (Transaction Event Log) events for credential registries — registry inception, credential issuance events, revocation events. Works with Credentialer for the full credential lifecycle."
+    invariants:
+      - "Creates and manages registry TEL events"
+      - "Has processEscrows() called by Escrower for pending TEL events"
+      - "Integrates with Monitor for tracking registry/credential operations"
+    examples:
+      - "Registrar processes vcp (registry inception) -> creates management TEL"
+      - "Registrar processes iss (credential issuance) -> creates credential TEL entry"
+    related_terms: ["Credentialer", "Escrow", "Long-running Operation"]
+
+  - term: "Credentialer"
+    synonyms: []
+    definition: "Issues and manages ACDC credentials — validates schemas, creates credential events, tracks issuance completion. Companion to Registrar."
+    invariants:
+      - "complete() returns true when credential issuance is fully anchored"
+      - "Has processEscrows() for pending credential operations"
+      - "Monitor queries Credentialer to detect credential operation completion"
+    examples:
+      - "POST /credentials triggers Credentialer -> issues ACDC -> anchors to KEL via Registrar"
+    related_terms: ["Registrar", "Long-running Operation", "Escrow"]
+
+  - term: "Seeker"
+    synonyms: ["Credential Search"]
+    definition: "Full-text search index for credentials. Creates static indexes (issuer/schema, issuee/schema) and dynamic indexes (all scalar fields in credential payload) for efficient querying."
+    invariants:
+      - "Indexes built from credential schema — each schema field becomes a searchable index"
+      - "Queries via find(filter, sort, skip, limit) returning matching SAIDs"
+      - "Triggered by Verifier cues when credentials are saved"
+    examples:
+      - "seeker.find({'schema': schemaSaid, '-a-i': issuerAid}) -> [SAID, ...]"
+      - "Dynamic index: credential attribute 'LEI' becomes searchable via '-a-LEI'"
+    related_terms: ["Credentialer", "Doer"]
+
+  - term: "Postman"
+    synonyms: ["Message Sender"]
+    definition: "Routes peer-to-peer messages (exchange messages, multi-sig requests, credentials) to remote agents. Wraps content in KERI protocol format and delivers via HTTP."
+    invariants:
+      - "send(hab, dest, topic, serder, attachment) — delivers to destination AID's agent"
+      - "Uses resolved OOBI endpoints for routing"
+      - "Messages arrive at the recipient's message router (port 3902)"
+    examples:
+      - "Postman delivers multi-sig partial signature to co-signer's agent"
+      - "Postman delivers IPEX grant to credential recipient's agent"
+    related_terms: ["Doer", "Deck"]
+
+  - term: "Multi-sig Assembly"
+    synonyms: ["Signature Assembly", "Group Signing"]
+    definition: "Process of collecting partial signatures from multiple edge clients for group AID events. Assembles when the signing threshold is satisfied."
+    invariants:
+      - "Each partial signature arrives independently via message router"
+      - "Assembly is threshold-aware (kt satisfaction check)"
+      - "Incomplete signature sets escrowed with timeout"
+      - "Assembled event forwarded to witnesses once complete"
+    examples:
+      - "3-of-5 group inception: 5 controllers sign independently, KERIA assembles when 3 arrive"
+      - "Group credential issuance: partial signatures collected, ACDC issued when threshold met"
+    related_terms: ["Counselor", "Escrow", "Deck"]
+
+events:
+  - name: "OperationCreated"
+    payload: "name: string, type: OpType, oid: string"
+    triggers: "An async operation is submitted to the Monitor"
+
+  - name: "OperationCompleted"
+    payload: "name: string, type: OpType, done: true, response: object"
+    triggers: "Monitor detects completion via component query (Counselor, Boatswain, etc.)"
+
+  - name: "MultisigAssembled"
+    payload: "aid: AID, event_type: string, sequence: int, signers: [AID]"
+    triggers: "All required partial signatures collected — threshold satisfied"
+
+  - name: "EscrowProcessed"
+    payload: "component: string, items_processed: int"
+    triggers: "Escrower doer runs processEscrows() on a component"
+
+  - name: "CredentialReceived"
+    payload: "said: SAID, issuer: AID, schema: SAID, holder_aid: AID"
+    triggers: "IPEX grant received and admitted — credential added to wallet"
+
+  - name: "CredentialIndexed"
+    payload: "said: SAID, schema: SAID, fields_indexed: int"
+    triggers: "Seeker indexes a newly saved credential from Verifier cue"
+
+rules:
+  - "All async work flows through Decks — producers append, consumer Doers drain in their recur() loop"
+  - "Long-running operations are the ONLY mechanism for tracking async completion — no callbacks to edge"
+  - "Incomplete events are escrowed with timeout, not rejected — escrows processed periodically by Doers"
+  - "Each component (Kevery, Tevery, Exchanger, Verifier, Registrar, Credentialer) maintains its own escrows"
+  - "Monitor checks completion by querying the relevant specialized component"
+  - "Credential search indexes are rebuilt from schema structure — each scalar attribute becomes a searchable field"
+  - "Credential wallet operations (present, revoke) require edge-signed authorization — the agent cannot present credentials unilaterally"
+  - "Multi-sig assembly is threshold-aware — incomplete signature sets are escrowed, not rejected"

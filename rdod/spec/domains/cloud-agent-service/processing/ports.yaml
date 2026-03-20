@@ -1,0 +1,40 @@
+# ports.yaml
+domain_ref: "cloud-agent-service/processing"
+
+ports:
+  # Inbound — what clients call
+  - id: "port://cloud-agent-service/processing/inbound/process-work"
+    type: inbound
+    name: "Work Processing"
+    contract: "enqueue_work(deck: DeckName, item: WorkItem) -> Result; get_operation(name: string) -> Operation; list_operations(type: OpType) -> [Operation]"
+    protocol: "method-call"
+    refs: ["domain://cloud-agent-service"]
+
+  - id: "port://cloud-agent-service/processing/inbound/multisig"
+    type: inbound
+    name: "Multi-sig Assembly"
+    contract: "submit_partial_signature(group_aid: AID, siger: Siger, event: SignedEventMessage) -> Result; check_group_status(group_aid: AID) -> GroupStatus"
+    protocol: "method-call"
+    refs: ["domain://cloud-agent-service"]
+
+  - id: "port://cloud-agent-service/processing/inbound/credential-ops"
+    type: inbound
+    name: "Credential Operations"
+    contract: "issue_credential(schema: SAID, issuer: AID, issuee: AID, data: object) -> Operation; search_credentials(filter: object, sort: object, skip: int, limit: int) -> [SAID]"
+    protocol: "method-call"
+    refs: ["domain://cloud-agent-service"]
+
+  # Outbound — what processing calls
+  - id: "port://cloud-agent-service/processing/outbound/processing-store"
+    type: outbound
+    name: "Processing Persistence"
+    contract: "store_escrow(type: EscrowType, key: string, item: object, timeout: Duration) -> Result; get_escrowed(type: EscrowType) -> [EscrowedItem]; remove_escrow(type: EscrowType, key: string) -> Result; store_operation(op: Operation) -> Result; get_operation(name: string) -> Operation; store_credential_index(said: SAID, field: string, value: string) -> Result; search_index(filter: object) -> [SAID]"
+    protocol: "method-call"
+    refs: ["persistence"]
+
+  - id: "port://cloud-agent-service/processing/outbound/timer"
+    type: outbound
+    name: "Timer"
+    contract: "set_timeout(key: string, duration: Duration) -> Result; is_expired(key: string) -> bool"
+    protocol: "method-call"
+    refs: ["timer"]

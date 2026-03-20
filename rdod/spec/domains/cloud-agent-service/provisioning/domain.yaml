@@ -1,0 +1,71 @@
+# domain.yaml
+template_version: "1.0"
+id: "cloud-agent-service/provisioning"
+name: "Agent Provisioning"
+description: >
+  Multi-tenant agent lifecycle — provisioning, isolation, and destruction of per-controller
+  agent instances via the Agency boot endpoint. Manages the bidirectional controller-AID to
+  agent-AID mappings, enforces one-agent-per-controller invariant, and scopes all agent-owned
+  resources (managed AIDs, credential wallet, contact book) to the provisioned instance.
+  Implementation: keria (Python), serious-keri (TypeScript/Lambda).
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keridoc-llms-full.md — Agency architecture, agent provisioning, multi-tenancy"
+  - type: document
+    reference: "keria — agenting.py: Agency class, Agent class, AgencyBaser (.agnt, .ctrl, .aids)"
+  - type: user-input
+    reference: "CLAUDE.md — KERIA service architecture (port 3903 boot endpoint)"
+
+ubiquitous_language:
+  - term: "Agency"
+    definition: "The provisioning service that creates and destroys agent instances — the boot entry point for new Signify clients"
+    invariants:
+      - "POST /boot with inception event -> provisions new agent instance"
+      - "One-time per controller AID — idempotent on retry"
+      - "Returns agent configuration (endpoints, controller AID confirmation)"
+
+  - term: "Agent Instance"
+    definition: "A provisioned agent representing a single controller — contains the controller's managed AIDs, credential wallet, contact book, and pending operations"
+    invariants:
+      - "Bound to exactly one controller AID (the authentication anchor)"
+      - "Isolated from other agent instances"
+      - "Persists across KERIA restarts"
+
+  - term: "Multi-tenancy"
+    definition: "One KERIA process hosts many agent instances, each isolated — one controller's data inaccessible to others"
+    invariants:
+      - "Bidirectional mappings: controller AID <-> agent AID"
+      - "Infrastructure concern, not visible to the Signify protocol"
+      - "Agency manages the lifecycle of all tenant agent instances"
+
+domain_clients:
+  - ref: "domain://cloud-agent-service"
+    relationship: "Parent domain delegates agent lifecycle management to this subdomain"
+    via_port: "port://cloud-agent-service/provisioning/inbound/agent-lifecycle"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals:
+  - name: "Agent Registry"
+    abstraction: "Repository"
+    ref: "port://cloud-agent-service/provisioning/outbound/agent-registry"
+    implementation_notes: "Stores agent instances and bidirectional caid<->agent mappings. Implementations: AgencyBaser with .agnt, .ctrl, .aids sudb mappings (keria/LMDB), DynamoDB (serious-keri)"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In keria, the Agency class (agenting.py) handles provisioning via POST /boot. Agent
+    instances are created with their own Habery, Reger, Verifier, and processing doers.
+    AgencyBaser stores the registry of agent-to-controller mappings in LMDB sub-databases.
+    In serious-keri, provisioning maps to a Lambda handler backed by DynamoDB.
+
+issues: []
+
+tags: ["provisioning", "multi-tenant", "agency", "agent-lifecycle", "boot"]
