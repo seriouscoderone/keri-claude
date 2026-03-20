@@ -1,0 +1,118 @@
+# domain.yaml
+template_version: "1.0"
+id: "signify-client/key-management"
+name: "Signify Key Management"
+description: >
+  Security-critical subdomain for key generation, storage, and protection on the controller's
+  edge device. Handles passcode-to-salt derivation, deterministic/random key generation via
+  Keepers, security tiers, key derivation paths, and encrypted key-at-rest storage. Keys never
+  leave this subdomain — it produces signatures on request but never exports private material.
+  Implementations: signify-ts (KeyManager, Keeper), signifypy (Manager, Keeper).
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "signify-ts — core/authing.ts, core/keeping.ts: SaltyKeeper, RandyKeeper, GroupKeeper, Manager"
+  - type: document
+    reference: "signifypy — core/keeping.py: SaltyKeeper, RandyKeeper, GroupKeeper, Manager"
+  - type: document
+    reference: "keridoc-llms-full.md — Signify key management, passcode handling, key derivation"
+
+ubiquitous_language:
+  - term: "Passcode"
+    definition: "User-supplied secret (21-character base64 string) used to derive the salt for key generation and to encrypt key material at rest"
+    invariants:
+      - "Minimum 21 characters (>=128 bits entropy after stretching)"
+      - "Never sent to the cloud agent"
+      - "Stretched via argon2 to derive the master salt"
+      - "Zeroed from memory on session timeout"
+
+  - term: "Salt"
+    definition: "The cryptographic seed derived from the passcode via argon2 key stretching — all private keys for the controller are deterministically derived from this salt"
+    invariants:
+      - "Derived from passcode + argon2 — not stored directly"
+      - "All key derivation is deterministic from the salt"
+      - "Salt reconstruction requires the original passcode"
+
+  - term: "Session"
+    definition: "An active period between the Signify client and KERIA, initiated when the controller unlocks key material with their passcode"
+    invariants:
+      - "Begins when passcode unlocks key material in memory"
+      - "Ends on explicit lock, timeout, or app closure"
+      - "Key material zeroed from memory on session end"
+      - "No operations possible outside an active session"
+
+  - term: "Keeper"
+    definition: "Abstraction for key management — holds signing keys and produces signatures. Three implementations: SaltyKeeper (deterministic from salt), RandyKeeper (random keys), GroupKeeper (multi-sig proxy)"
+    invariants:
+      - "All keepers expose the same interface: incept(), rotate(), sign()"
+      - "Keeper type chosen at AID creation via Algos enum (salty | randy | group)"
+      - "SaltyKeeper: deterministic derivation from salt + path — recoverable from passcode"
+      - "RandyKeeper: random keys, encrypted proxies stored — NOT recoverable from passcode alone"
+      - "GroupKeeper: wraps a member AID's keeper, maps group indices to member indices"
+
+  - term: "Algos"
+    definition: "Enum selecting the key management strategy for an AID: salty (deterministic from salt), randy (random), or group (multi-sig proxy)"
+    invariants:
+      - "salty: all keys derivable from passcode — full recovery possible"
+      - "randy: random keys stored encrypted — recovery requires encrypted backups"
+      - "group: delegates to a member AID's keeper with index remapping"
+
+  - term: "Tier"
+    definition: "Security level controlling argon2 CPU/memory cost for passcode stretching. Higher tiers are slower but more resistant to brute-force"
+    invariants:
+      - "Three levels: low, med, high"
+      - "Tier is set at client construction and affects all key derivation"
+      - "Higher tier = more argon2 iterations = slower unlock but stronger protection"
+
+  - term: "Key Derivation Path"
+    definition: "Deterministic path for deriving a specific key from the master salt. Composed of stem (prefix string), pidx (AID index), ridx (rotation index), and kidx (key index)"
+    invariants:
+      - "Path = stem + hex(ridx) + hex(kidx + offset)"
+      - "stem: string prefix identifying the derivation context (e.g. 'signify:aid', 'signify:controller')"
+      - "pidx: which AID under this passcode (0, 1, 2...)"
+      - "ridx: which rotation (increments on each key rotation)"
+      - "kidx: which key within a rotation (for multi-key thresholds)"
+      - "Same path + same salt always produces the same key"
+
+  - term: "Encrypter"
+    definition: "Encrypts key material at rest using X25519 ECDH-derived symmetric keys. The salt and private key proxies are encrypted before storage"
+    invariants:
+      - "Uses X25519 key agreement + secretbox symmetric encryption"
+      - "Encrypted salt (sxlt) stored on the cloud agent — agent cannot decrypt without passcode"
+      - "Decryption requires the controller's ECDH private key derived from the salt"
+
+domain_clients:
+  - ref: "domain://signify-client"
+    relationship: "Parent domain delegates all key generation, protection, and signing to this subdomain"
+    via_port: "port://signify-client/key-management/inbound/key-ops"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "argon2 for passcode stretching, Ed25519/ECDSA for key generation, X25519 for key-at-rest encryption (ECDH + secretbox)"
+    relationship: "All cryptographic primitives — key derivation, signing, encryption — are kernel operations. This subdomain composes them into the Keeper abstraction and Encrypter"
+
+adjacents: []
+
+externals:
+  - name: "Key Storage"
+    abstraction: "Repository"
+    ref: "port://signify-client/key-management/outbound/key-storage"
+    implementation_notes: "Encrypted key material at rest. Implementations: browser localStorage (signify-browser-extension), filesystem (signify-ts/signifypy), secure enclave (mobile). Stores encrypted salt (sxlt) and encrypted private key proxies (prxs)"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In signify-ts, the Manager class owns Keeper lifecycle: new() creates the appropriate Keeper
+    type based on Algos, get() retrieves it. SaltyKeeper derives keys from salt + path via
+    libsodium. RandyKeeper generates random keys and stores encrypted proxies. GroupKeeper wraps
+    a member AID's keeper with index remapping. The Encrypter uses X25519 ECDH to encrypt the
+    salt (sxlt) for cloud-side storage. In signifypy, the same structure exists in
+    core/keeping.py with Manager, SaltyKeeper, RandyKeeper, GroupKeeper.
+
+issues: []
+
+tags: ["key-management", "passcode", "keeper", "salt", "encryption", "edge-signing", "security"]

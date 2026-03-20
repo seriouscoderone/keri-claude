@@ -1,0 +1,113 @@
+# domain.yaml
+template_version: "1.0"
+id: "signify-client/resources"
+name: "Signify Resources"
+description: >
+  The client-side API surface for driving the cloud agent — resource classes for identifier
+  lifecycle, credential management, exchange messages, group operations, and registry management.
+  All operations are KRAM-authenticated and return long-running Operation handles for async
+  tracking. This subdomain translates high-level user intent into signed, serialized requests
+  that flow through the cloud-agent-comms boundary.
+  Implementations: signify-ts (Identifiers, Credentials, Exchanges, Groups, Registries, Operations),
+  signifypy (Identifiers, Credentials, Exchanges, Groups, Registries).
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "signify-ts — clienting.ts: SignifyClient resource accessors, aid.ts: Identifiers, credentials.ts: Credentials"
+  - type: document
+    reference: "signifypy — clienting.py: SignifyClient resource accessors, coring.py: Identifiers, credentials.py: Credentials"
+  - type: document
+    reference: "keridoc-llms-full.md — Signify client resource API, operation tracking"
+
+ubiquitous_language:
+  - term: "Controller AID"
+    definition: "The AID created during initial agent provisioning that identifies the controller to KERIA. Used for KRAM authentication of all subsequent requests"
+    invariants:
+      - "Created during boot (agent provisioning)"
+      - "The controller AID's KEL is the trust anchor for the entire agent relationship"
+      - "Rotation of this AID rotates the authentication relationship"
+
+  - term: "Operation"
+    definition: "A handle for tracking an asynchronous KERIA task — witness receipting, delegation approval, credential issuance, OOBI resolution. Edge client polls for completion"
+    invariants:
+      - "Returned by create/rotate/issue calls as a promise"
+      - "Polled via client.operations().get(name) until done=true"
+      - "Has name, done flag, optional error, and response payload"
+      - "Types: witness, delegation, group, query, registry, credential, endrole, oobi"
+
+  - term: "Identifier Resource"
+    definition: "Client-side resource class for AID lifecycle operations — create, rotate, interact, list, get, add end-roles, list members"
+    invariants:
+      - "Accessed via client.identifiers()"
+      - "create() returns inception event + signatures + operation handle"
+      - "rotate() returns rotation event + operation handle"
+      - "addEndRole() authorizes an endpoint provider for a role"
+
+  - term: "Credential Resource"
+    definition: "Client-side resource class for credential operations — issue, list, get, revoke"
+    invariants:
+      - "Accessed via client.credentials()"
+      - "issue() requires registry, schema SAID, recipient, and credential data"
+      - "Issuance returns a long-running operation (credential + TEL anchoring)"
+
+  - term: "Exchange Resource"
+    definition: "Client-side resource class for IPEX and multi-sig exchange messages — build, send, and track exn messages"
+    invariants:
+      - "Accessed via client.exchanges()"
+      - "createExchangeMessage() builds a signed exn"
+      - "send() delivers to recipients via message router"
+      - "Used for IPEX grant/admit, multi-sig coordination, challenge-response"
+
+  - term: "Group Resource"
+    definition: "Client-side resource class for multi-sig group operations — send requests to group members, get pending requests"
+    invariants:
+      - "Accessed via client.groups()"
+      - "getRequest() fetches a pending multi-sig request by SAID"
+      - "sendRequest() distributes an exn to all group members"
+
+  - term: "Registry Resource"
+    definition: "Client-side resource class for credential registry management — create registries for TEL-based credential state tracking"
+    invariants:
+      - "Accessed via client.registries()"
+      - "create() provisions a new registry anchored to an AID's KEL"
+      - "Each registry gets its own TEL for tracking credential state"
+
+  - term: "End-Role"
+    definition: "An authorization declaring which endpoints serve specific roles (witness, agent, watcher) for an AID. Published via signed reply messages anchored to the KEL"
+    invariants:
+      - "Roles: witness, controller, agent, watcher, mediator"
+      - "Must be signed by the AID's controller"
+      - "Added via identifiers().addEndRole(name, role, eid)"
+
+domain_clients:
+  - ref: "domain://signify-client"
+    relationship: "Parent domain delegates all resource API operations and async tracking to this subdomain"
+    via_port: "port://signify-client/resources/inbound/resource-ops"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals:
+  - name: "Cloud Agent Communication"
+    abstraction: "Adapter"
+    ref: "port://signify-client/resources/outbound/cloud-agent-comms"
+    implementation_notes: "REST via KRAM-authenticated HTTP to cloud-agent-service admin API (port 3901). All requests carry signed headers. Async operations return operation handles for polling. Implementations: fetch (signify-ts), requests (signifypy)"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In signify-ts, each resource is a class accessed from SignifyClient: Identifiers (aid.ts),
+    Credentials (credentials.ts), Exchanges (exchanges.ts), Groups (groups.ts), Registries
+    (registries.ts), Operations (operations.ts). Each method serializes the request, obtains
+    signatures from key-management, attaches KRAM headers, and sends via fetch. Async operations
+    return an Operation object for polling. In signifypy, the same pattern exists in clienting.py
+    with Identifiers, Credentials, Exchanges, Groups, Registries as resource classes.
+
+issues: []
+
+tags: ["resources", "api-surface", "identifier", "credential", "exchange", "group", "registry", "operation"]

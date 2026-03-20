@@ -1,0 +1,142 @@
+# ubiquitous-language.yaml
+domain_ref: "signify-client/key-management"
+
+terms:
+  - term: "Passcode"
+    synonyms: ["Bran", "Salt Passphrase"]
+    definition: "User-supplied secret (21-character base64 string) used to derive the salt for key generation and to encrypt key material at rest."
+    invariants:
+      - "Minimum 21 characters (>=128 bits entropy after stretching)"
+      - "Never sent to the cloud agent"
+      - "Stretched via argon2 to derive the master salt"
+      - "Zeroed from memory on session timeout"
+    examples:
+      - "bran = '0123456789abcdefghijk' — 21-char passphrase"
+      - "Browser extension prompts for passcode on startup, zeroes after 5-minute timeout"
+    related_terms: ["Session", "Salt", "Tier"]
+
+  - term: "Salt"
+    synonyms: ["Master Salt", "Salter"]
+    definition: "The cryptographic seed derived from the passcode via argon2 key stretching. All private keys for the controller are deterministically derived from this salt."
+    invariants:
+      - "Derived from passcode + argon2 — not stored directly"
+      - "All key derivation is deterministic from the salt"
+      - "Salt reconstruction requires the original passcode"
+      - "Encrypted as sxlt before storage on the cloud agent"
+    examples:
+      - "Salter(raw=stretched_bytes) → deterministic key derivation for all AIDs"
+      - "sxlt field on agent record — encrypted salt that only the passcode can unlock"
+    related_terms: ["Passcode", "Key Derivation Path", "Encrypter"]
+
+  - term: "Session"
+    synonyms: ["Authenticated Session"]
+    definition: "An active period between the Signify client and KERIA, initiated when the controller unlocks key material with their passcode."
+    invariants:
+      - "Begins when passcode unlocks key material in memory"
+      - "Ends on explicit lock, timeout, or app closure"
+      - "Key material zeroed from memory on session end"
+      - "No operations possible outside an active session"
+    examples:
+      - "Browser extension: user enters passcode → session active → 5-min timeout → zeroed"
+      - "signify-ts: client.connect() with bran unlocks key material for the session"
+    related_terms: ["Passcode", "Keeper"]
+
+  - term: "Keeper"
+    synonyms: ["Key Keeper", "SaltyKeeper", "RandyKeeper", "GroupKeeper"]
+    definition: "Abstraction for key management — holds signing keys and produces signatures. Three implementations: SaltyKeeper (deterministic from salt), RandyKeeper (random keys), GroupKeeper (multi-sig proxy)."
+    invariants:
+      - "All keepers expose the same interface: incept(), rotate(), sign()"
+      - "Keeper type chosen at AID creation via Algos enum (salty | randy | group)"
+      - "SaltyKeeper: deterministic derivation from salt + path — recoverable from passcode"
+      - "RandyKeeper: random keys, encrypted proxies stored — NOT recoverable from passcode alone"
+      - "GroupKeeper: wraps a member AID's keeper, maps group indices to member indices"
+    examples:
+      - "manager.new(Algos.salty, pidx, {stem, tier, ...}) → SaltyKeeper"
+      - "keeper.sign(serialized_event, indexed=true) → [Siger]"
+      - "GroupKeeper: sign(ser) delegates to member keeper, remaps indices for group threshold"
+    related_terms: ["Algos", "Key Derivation Path", "Salt"]
+
+  - term: "Algos"
+    synonyms: ["Key Algorithm", "Algorithm Enum"]
+    definition: "Enum selecting the key management strategy for an AID: salty (deterministic from salt), randy (random), or group (multi-sig proxy)."
+    invariants:
+      - "salty: all keys derivable from passcode — full recovery possible"
+      - "randy: random keys stored encrypted — recovery requires encrypted backups"
+      - "group: delegates to a member AID's keeper with index remapping"
+    examples:
+      - "Algos.salty for personal AIDs; Algos.group for multi-sig AIDs"
+      - "manager.new(Algos.randy, pidx) → RandyKeeper with random key material"
+    related_terms: ["Keeper", "Salt"]
+
+  - term: "Tier"
+    synonyms: ["Security Tier"]
+    definition: "Security level controlling argon2 CPU/memory cost for passcode stretching. Higher tiers are slower but more resistant to brute-force."
+    invariants:
+      - "Three levels: low, med, high"
+      - "Tier is set at client construction and affects all key derivation"
+      - "Higher tier = more argon2 iterations = slower unlock but stronger protection"
+    examples:
+      - "Tier.low for development/testing; Tier.high for production hardware wallets"
+      - "new SignifyClient(url, bran, Tier.low)"
+    related_terms: ["Passcode", "Salt"]
+
+  - term: "Key Derivation Path"
+    synonyms: ["Derivation Path"]
+    definition: "Deterministic path for deriving a specific key from the master salt. Composed of stem (prefix string), pidx (AID index), ridx (rotation index), and kidx (key index)."
+    invariants:
+      - "Path = stem + hex(ridx) + hex(kidx + offset)"
+      - "stem: string prefix identifying the derivation context (e.g. 'signify:aid', 'signify:controller')"
+      - "pidx: which AID under this passcode (0, 1, 2...)"
+      - "ridx: which rotation (increments on each key rotation)"
+      - "kidx: which key within a rotation (for multi-key thresholds)"
+      - "Same path + same salt always produces the same key"
+    examples:
+      - "stem='signify:aid', ridx=0, kidx=0 → path 'signify:aid00' → first signing key"
+      - "After rotation: ridx=1, kidx=0 → path 'signify:aid10' → new signing key"
+    related_terms: ["Keeper", "Salt", "Tier"]
+
+  - term: "Encrypter"
+    synonyms: ["Key Encrypter"]
+    definition: "Encrypts key material at rest using X25519 ECDH-derived symmetric keys. The salt and private key proxies are encrypted before storage."
+    invariants:
+      - "Uses X25519 key agreement + secretbox symmetric encryption"
+      - "Encrypted salt (sxlt) stored on the cloud agent — agent cannot decrypt without passcode"
+      - "Decryption requires the controller's ECDH private key derived from the salt"
+    examples:
+      - "encrypter.encrypt(matter=salter) → Cipher (stored as sxlt on KERIA)"
+      - "RandyKeeper stores encrypted private key proxies (prxs) via Encrypter"
+    related_terms: ["Passcode", "Salt", "Key Storage"]
+
+events:
+  - name: "SessionStarted"
+    payload: "controller_aid: AID, tier: Tier"
+    triggers: "Controller provides passcode, key material unlocked in memory"
+
+  - name: "SessionEnded"
+    payload: "controller_aid: AID, reason: timeout | explicit | error"
+    triggers: "Timeout expires, user locks, or application closes"
+
+  - name: "KeyMaterialZeroed"
+    payload: "controller_aid: AID"
+    triggers: "Session ends — all in-memory key material overwritten with zeros"
+
+  - name: "KeeperCreated"
+    payload: "algo: Algos, pidx: int, stem: string"
+    triggers: "Manager creates a new Keeper for an AID inception"
+
+  - name: "KeysRotated"
+    payload: "pidx: int, old_ridx: int, new_ridx: int"
+    triggers: "Keeper generates new signing keys at incremented rotation index"
+
+  - name: "KeyMaterialEncrypted"
+    payload: "type: sxlt | prxs | nxts, storage_target: string"
+    triggers: "Encrypter encrypts key material for at-rest storage"
+
+rules:
+  - "Private keys NEVER leave the controller's device under any circumstances"
+  - "All key material in memory must be zeroed when the session ends"
+  - "Passcode must meet minimum entropy (21 chars / 128 bits after stretching)"
+  - "Salty keepers are fully recoverable from the passcode — randy keepers require encrypted backup"
+  - "Group keepers delegate signing to a member AID's keeper — they never hold group-level keys directly"
+  - "The encrypted salt (sxlt) stored on the cloud agent is opaque to the agent — decryption requires the passcode"
+  - "Key derivation paths must be deterministic — same salt + same path = same key, always"

@@ -17,28 +17,3 @@ ports:
       lock() -> void
     protocol: "method-call"
     refs: []
-
-  # Outbound — communication with cloud agent via Signify protocol
-  - id: "port://signify-client/outbound/cloud-agent-comms"
-    type: outbound
-    name: "Cloud Agent Communication"
-    contract: >
-      boot(inception_event) -> AgentConfig;
-      request(method, path, body, kram_headers) -> Response;
-      poll_operation(name) -> OperationStatus;
-      send_exchange(exn, sigs, atc) -> Result
-    protocol: "REST"
-    refs: ["domain://cloud-agent-service"]
-
-  # Outbound — encrypted key material persistence
-  - id: "port://signify-client/outbound/key-storage"
-    type: outbound
-    name: "Key Storage"
-    contract: >
-      store_encrypted(salt_ciphertext) -> Result;
-      load_encrypted(passcode) -> Salt;
-      store_signing_association(origin, aid, credential) -> Result;
-      load_signing_associations() -> [SigningAssociation];
-      destroy() -> Result
-    protocol: "method-call"
-    refs: ["key-storage"]

@@ -1,0 +1,135 @@
+# ubiquitous-language.yaml
+domain_ref: "signify-client/resources"
+
+terms:
+  - term: "Controller AID"
+    synonyms: ["Agent AID"]
+    definition: "The AID created during initial agent provisioning that identifies the controller to KERIA. Used for KRAM authentication of all subsequent requests."
+    invariants:
+      - "Created during boot (agent provisioning)"
+      - "The controller AID's KEL is the trust anchor for the entire agent relationship"
+      - "Rotation of this AID rotates the authentication relationship"
+    examples:
+      - "client.boot() → creates controller AID and provisions agent instance"
+      - "All subsequent KRAM headers reference this AID's key state"
+    related_terms: ["Operation", "Identifier Resource"]
+
+  - term: "Operation"
+    synonyms: ["Long-running Operation", "Op"]
+    definition: "A handle for tracking an asynchronous KERIA task — witness receipting, delegation approval, credential issuance, OOBI resolution. Edge client polls for completion."
+    invariants:
+      - "Returned by create/rotate/issue calls as a promise"
+      - "Polled via client.operations().get(name) until done=true"
+      - "Has name, done flag, optional error, and response payload"
+      - "Types: witness, delegation, group, query, registry, credential, endrole, oobi"
+    examples:
+      - "const op = await client.identifiers().create(name, config); await op.op() // poll"
+      - "while (!op.done) { op = await client.operations().get(op.name); }"
+    related_terms: ["Identifier Resource", "Credential Resource", "Registry Resource"]
+
+  - term: "Identifier Resource"
+    synonyms: ["Identifiers"]
+    definition: "Client-side resource class for AID lifecycle operations — create, rotate, interact, list, get, add end-roles, list members."
+    invariants:
+      - "Accessed via client.identifiers()"
+      - "create() returns inception event + signatures + operation handle"
+      - "rotate() returns rotation event + operation handle"
+      - "addEndRole() authorizes an endpoint provider for a role"
+    examples:
+      - "await client.identifiers().create('myaid', {wits, toad, ...})"
+      - "await client.identifiers().addEndRole('myaid', 'agent', agentAid)"
+      - "await client.identifiers().rotate('myaid') → operation handle"
+    related_terms: ["Operation", "End-Role", "Controller AID"]
+
+  - term: "Credential Resource"
+    synonyms: ["Credentials"]
+    definition: "Client-side resource class for credential operations — issue, list, get, revoke."
+    invariants:
+      - "Accessed via client.credentials()"
+      - "issue() requires registry, schema SAID, recipient, and credential data"
+      - "Issuance returns a long-running operation (credential + TEL anchoring)"
+    examples:
+      - "await client.credentials().issue(name, registryName, schemaSaid, recipientAid, data)"
+      - "await client.credentials().list() → [{sad: ACDC, status: TELState}]"
+    related_terms: ["Operation", "Registry Resource", "Exchange Resource"]
+
+  - term: "Exchange Resource"
+    synonyms: ["Exchanges"]
+    definition: "Client-side resource class for IPEX and multi-sig exchange messages — build, send, and track exn messages."
+    invariants:
+      - "Accessed via client.exchanges()"
+      - "createExchangeMessage() builds a signed exn"
+      - "send() delivers to recipients via message router"
+      - "Used for IPEX grant/admit, multi-sig coordination, challenge-response"
+    examples:
+      - "await client.exchanges().send(name, 'credential', sender, '/ipex/grant', payload, embeds, [recipient])"
+      - "IPEX admit: acknowledge credential receipt via exchange message"
+    related_terms: ["Credential Resource", "Group Resource"]
+
+  - term: "Group Resource"
+    synonyms: ["Groups"]
+    definition: "Client-side resource class for multi-sig group operations — send requests to group members, get pending requests."
+    invariants:
+      - "Accessed via client.groups()"
+      - "getRequest() fetches a pending multi-sig request by SAID"
+      - "sendRequest() distributes an exn to all group members"
+    examples:
+      - "await client.groups().sendRequest(name, exn, sigs, atc)"
+      - "await client.groups().getRequest(said) → pending multi-sig request details"
+    related_terms: ["Exchange Resource", "Identifier Resource"]
+
+  - term: "Registry Resource"
+    synonyms: ["Registries"]
+    definition: "Client-side resource class for credential registry management — create registries for TEL-based credential state tracking."
+    invariants:
+      - "Accessed via client.registries()"
+      - "create() provisions a new registry anchored to an AID's KEL"
+      - "Each registry gets its own TEL for tracking credential state"
+    examples:
+      - "await client.registries().create({name: 'myaid', registryName: 'myreg'})"
+    related_terms: ["Credential Resource", "Operation"]
+
+  - term: "End-Role"
+    synonyms: ["Endpoint Role"]
+    definition: "An authorization declaring which endpoints serve specific roles (witness, agent, watcher) for an AID. Published via signed reply messages anchored to the KEL."
+    invariants:
+      - "Roles: witness, controller, agent, watcher, mediator"
+      - "Must be signed by the AID's controller"
+      - "Added via identifiers().addEndRole(name, role, eid)"
+    examples:
+      - "Authorize KERIA as the 'agent' endpoint for myaid"
+      - "await client.identifiers().addEndRole('myaid', 'agent', agentAid)"
+    related_terms: ["Identifier Resource", "Operation"]
+
+events:
+  - name: "IdentifierCreated"
+    payload: "aid: AID, alias: string, algo: Algos, keeper_type: string"
+    triggers: "Controller creates a new AID via the Signify client"
+
+  - name: "IdentifierRotated"
+    payload: "aid: AID, ridx: int, new_keys: [Verfer]"
+    triggers: "Controller rotates an AID's keys — ridx increments, new derivation path"
+
+  - name: "CredentialIssued"
+    payload: "said: SAID, schema: SAID, recipient: AID, registry: string"
+    triggers: "Controller signs and issues a credential via the Signify client"
+
+  - name: "OperationPolled"
+    payload: "name: string, type: string, done: bool"
+    triggers: "Edge client polls a long-running operation for status"
+
+  - name: "EndRoleAuthorized"
+    payload: "aid: AID, role: string, eid: AID"
+    triggers: "Controller publishes end-role authorization for an endpoint"
+
+  - name: "ExchangeSent"
+    payload: "sender: AID, route: string, recipients: [AID]"
+    triggers: "Controller sends an exchange message (IPEX grant/admit, multi-sig coordination)"
+
+rules:
+  - "All resource operations require KRAM-authenticated requests — unsigned requests are rejected"
+  - "Long-running operations must be polled — the agent cannot push completion to the edge"
+  - "End-role authorizations must be signed and anchored before other agents/witnesses will accept them"
+  - "Credential issuance requires a registry — the registry must be created before any credential can be issued"
+  - "Exchange messages are the sole mechanism for IPEX negotiation and multi-sig coordination"
+  - "The cloud agent is untrusted with respect to key material — it can request but never produce signatures"

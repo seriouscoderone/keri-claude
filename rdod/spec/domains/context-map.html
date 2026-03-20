@@ -1998,6 +1998,86 @@ const RDOD_DATA = [
   },
   {
     "template_version": "1.0",
+    "id": "cloud-agent-service/api",
+    "name": "Agent API",
+    "description": "The three service endpoints that expose cloud agent operations — Admin API (KRAM-authenticated management on port 3901), Message Router (protocol message routing on port 3902), and the notification/end-role systems. Owns request authentication, routing to correct agent instance, notification queueing for edge-client polling, and end-role authorization tracking. Implementation: keria (Python), serious-keri (TypeScript/Lambda).\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keridoc-llms-full.md — KERIA architecture documentation, API endpoints"
+      },
+      {
+        "type": "document",
+        "reference": "keria — app.py: createHttpEndpoints(), agenting.py: AdminHandler, ProtocolMessageRouter"
+      },
+      {
+        "type": "user-input",
+        "reference": "CLAUDE.md — KERIA service architecture (ports 3901/3902/3903)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Admin API",
+        "definition": "The management endpoint (port 3901) for all agent operations — KRAM-authenticated, scoped to the requesting controller's agent instance",
+        "invariants": [
+          "All requests authenticated via KRAM — unsigned requests rejected",
+          "Scoped to the authenticated controller's agent instance"
+        ]
+      },
+      {
+        "term": "Message Router",
+        "definition": "The protocol endpoint (port 3902) receiving external KERI messages from other agents, witnesses, and watchers — routes to correct agent instance by target AID",
+        "invariants": [
+          "No KRAM required — messages are protocol-authenticated (KERI signatures)",
+          "Routes by target AID to the correct agent instance"
+        ]
+      },
+      {
+        "term": "Notification",
+        "definition": "A queued message for the edge client indicating an action requiring attention",
+        "invariants": [
+          "Edge client polls for notifications — agent cannot push",
+          "Notifications have a type, related resource, and read/unread state"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://cloud-agent-service",
+        "relationship": "Parent domain delegates request handling and routing to this subdomain",
+        "via_port": "port://cloud-agent-service/api/inbound/admin-api"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "HTTP Server",
+        "abstraction": "Adapter",
+        "ref": "port://cloud-agent-service/api/outbound/http-server",
+        "implementation_notes": "Exposes admin (3901) and message router (3902) endpoints. Implementations: Falcon/hio (keria), API Gateway+Lambda (serious-keri)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keria, the Admin API is served by Falcon endpoints with KRAM authentication middleware (agenting.py: AdminHandler). The Message Router is a separate Falcon app on port 3902 (ProtocolMessageRouter). Notifications are stored per-agent and polled via GET /notifications. End-role authorizations are tracked as long-running operations. In serious-keri, these map to separate Lambda handler routes behind API Gateway.\n"
+    },
+    "issues": [],
+    "tags": [
+      "api",
+      "admin",
+      "message-router",
+      "notification",
+      "end-role",
+      "kram"
+    ],
+    "_source": "rdod/spec/domains/cloud-agent-service/api/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
     "id": "cloud-agent-service",
     "name": "Cloud Agent Service (KERIA)",
     "description": "Service-tier domain for cloud-hosted AID management. Multi-tenant infrastructure where each controller gets an isolated agent instance. Hosts AIDs, processes events, coordinates multi-sig, stores credentials, routes protocol messages — but NEVER holds private keys. Three service endpoints: boot (agency), admin API, message router. The Signify protocol boundary lives here (KRAM authentication on admin API). Implementation: keria (Python), serious-keri (TypeScript/Lambda).\n",
@@ -2019,53 +2099,13 @@ const RDOD_DATA = [
     "ubiquitous_language": [
       {
         "term": "KERIA",
-        "definition": "Cloud agent hosting service — the server-side component that manages AIDs, processes events, and coordinates operations without ever holding private keys",
+        "definition": "Cloud agent hosting service — the orchestrating service that delegates provisioning (Agency), API exposure (Admin/Message Router), and async processing (Doers/Monitor) to its three subdomains. Never holds private keys.",
         "invariants": [
           "Zero access to private signing or decryption keys",
           "Can store, forward, and assemble — but never sign",
-          "One agent instance per controller AID"
-        ]
-      },
-      {
-        "term": "Agency",
-        "definition": "The boot service (port 3903) that provisions and destroys agent instances for Signify clients",
-        "invariants": [
-          "Handles POST /boot to create agent instances",
-          "Each provisioning requires a valid inception event from the edge client",
-          "One-time operation per controller — idempotent on retry"
-        ]
-      },
-      {
-        "term": "Admin API",
-        "definition": "The management endpoint (port 3901) for all agent operations — identifier lifecycle, credential management, OOBI resolution, state queries",
-        "invariants": [
-          "All requests authenticated via KRAM — unsigned requests rejected",
-          "Scoped to the authenticated controller's agent instance"
-        ]
-      },
-      {
-        "term": "Message Router",
-        "definition": "The protocol endpoint (port 3902) receiving external KERI messages from other agents, witnesses, and watchers",
-        "invariants": [
-          "Handles inbound multi-sig coordination, credential exchange, event receipts",
-          "Routes messages to the correct agent instance based on the target AID",
-          "No KRAM required — messages are protocol-authenticated (KERI signatures)"
-        ]
-      },
-      {
-        "term": "Agent Instance",
-        "definition": "A provisioned agent representing a single controller — contains the controller's managed AIDs, credential wallet, contact book, and pending operations",
-        "invariants": [
-          "Bound to exactly one controller AID (the authentication anchor)",
-          "Isolated from other agent instances"
-        ]
-      },
-      {
-        "term": "Multi-tenancy",
-        "definition": "One KERIA process hosts many agent instances. Agency (boot endpoint) provisions new instances. Each instance is isolated — one controller's data inaccessible to others.",
-        "invariants": [
-          "Bidirectional mappings: controller AID <-> agent AID",
-          "Infrastructure concern, not visible to the Signify protocol"
+          "Delegates provisioning to cloud-agent-service/provisioning",
+          "Delegates API exposure to cloud-agent-service/api",
+          "Delegates async processing to cloud-agent-service/processing"
         ]
       }
     ],
@@ -2076,7 +2116,23 @@ const RDOD_DATA = [
         "via_port": "port://cloud-agent-service/inbound/admin-api"
       }
     ],
-    "subdomains": [],
+    "subdomains": [
+      {
+        "ref": "domain://cloud-agent-service/provisioning",
+        "relationship": "Owns multi-tenant agent lifecycle — provisioning, isolation, and destruction of per-controller agent instances via the Agency boot endpoint",
+        "via_port": "port://cloud-agent-service/provisioning/inbound/agent-lifecycle"
+      },
+      {
+        "ref": "domain://cloud-agent-service/api",
+        "relationship": "Owns the three service endpoints — Admin API (KRAM-authenticated management), Message Router (protocol message routing), notification/end-role systems",
+        "via_port": "port://cloud-agent-service/api/inbound/admin-api"
+      },
+      {
+        "ref": "domain://cloud-agent-service/processing",
+        "relationship": "Owns the HIO-based async event processing pipeline — Doers, Decks, escrow management, long-running operation tracking, and specialized processing components",
+        "via_port": "port://cloud-agent-service/processing/inbound/process-work"
+      }
+    ],
     "kernels": [],
     "adjacents": [
       {
@@ -2144,6 +2200,173 @@ const RDOD_DATA = [
       "signify"
     ],
     "_source": "rdod/spec/domains/cloud-agent-service/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "cloud-agent-service/processing",
+    "name": "Agent Processing",
+    "description": "The HIO-based async event processing pipeline — Doers, Decks, escrow management, long-running operation tracking (Monitor), and the specialized processing components (Counselor, Boatswain, Registrar, Credentialer, Seeker, Postman). Owns the cooperative scheduling model where producers append to Decks and consumer Doers drain work in their recur() loops. Tracks all async operations via the Monitor for edge-client polling. Implementation: keria (Python), serious-keri (TypeScript/Lambda).\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keridoc-llms-full.md — Doer architecture, escrow processing, operation tracking"
+      },
+      {
+        "type": "document",
+        "reference": "KERIArchGroupIssuance.md — group issuance, multi-sig coordination, Counselor, Boatswain"
+      },
+      {
+        "type": "document",
+        "reference": "keria — agenting.py: Agent (DoDoer), Witnesser, Delegator, Escrower; monitoring.py: Monitor; ending.py: Counselor, Boatswain, Registrar, Credentialer"
+      },
+      {
+        "type": "user-input",
+        "reference": "CLAUDE.md — HIO orchestration, Doer/Deck pattern"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Doer",
+        "definition": "HIO event-driven processing unit with recur() method — the cooperative scheduling primitive for all async work",
+        "invariants": [
+          "Non-blocking — each recur() call processes available work and returns",
+          "Doers drain work from Decks (FIFO queues)",
+          "No threads — concurrency via cooperative scheduling"
+        ]
+      },
+      {
+        "term": "Long-running Operation",
+        "definition": "An async task tracked by the Monitor — edge clients poll via GET /operations/{name} until done",
+        "invariants": [
+          "Operations named {type}.{oid}",
+          "Monitor checks completion by querying the relevant component",
+          "Operations have a done flag, optional error, and response payload"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://cloud-agent-service",
+        "relationship": "Parent domain delegates async event processing to this subdomain",
+        "via_port": "port://cloud-agent-service/processing/inbound/process-work"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Persistence",
+        "abstraction": "Repository",
+        "ref": "port://cloud-agent-service/processing/outbound/processing-store",
+        "implementation_notes": "Stores escrow queues, operation tracking records, credential indexes. Implementations: LMDB sub-databases (keria), DynamoDB (serious-keri)"
+      },
+      {
+        "name": "Timer",
+        "abstraction": "Service",
+        "ref": "port://cloud-agent-service/processing/outbound/timer",
+        "implementation_notes": "Provides escrow timeouts and operation timeouts. Implementations: HIO scheduler (keria), Lambda timeout + DynamoDB TTL (serious-keri)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keria, the Agent class is a DoDoer composing many sub-doers (Witnesser, Delegator, Escrower, ParserDoer). Each doer's recur() method drains its assigned Deck. The Monitor class (monitoring.py) tracks operations and queries specialized components (Counselor, Boatswain, Registrar, Credentialer) for completion status. In serious-keri, the cooperative scheduling model maps to Lambda invocations with DynamoDB-backed work queues.\n"
+    },
+    "issues": [],
+    "tags": [
+      "processing",
+      "doer",
+      "deck",
+      "escrow",
+      "monitor",
+      "hio",
+      "async"
+    ],
+    "_source": "rdod/spec/domains/cloud-agent-service/processing/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "cloud-agent-service/provisioning",
+    "name": "Agent Provisioning",
+    "description": "Multi-tenant agent lifecycle — provisioning, isolation, and destruction of per-controller agent instances via the Agency boot endpoint. Manages the bidirectional controller-AID to agent-AID mappings, enforces one-agent-per-controller invariant, and scopes all agent-owned resources (managed AIDs, credential wallet, contact book) to the provisioned instance. Implementation: keria (Python), serious-keri (TypeScript/Lambda).\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keridoc-llms-full.md — Agency architecture, agent provisioning, multi-tenancy"
+      },
+      {
+        "type": "document",
+        "reference": "keria — agenting.py: Agency class, Agent class, AgencyBaser (.agnt, .ctrl, .aids)"
+      },
+      {
+        "type": "user-input",
+        "reference": "CLAUDE.md — KERIA service architecture (port 3903 boot endpoint)"
+      }
+    ],
+    "ubiquitous_language": [
+      {
+        "term": "Agency",
+        "definition": "The provisioning service that creates and destroys agent instances — the boot entry point for new Signify clients",
+        "invariants": [
+          "POST /boot with inception event -> provisions new agent instance",
+          "One-time per controller AID — idempotent on retry",
+          "Returns agent configuration (endpoints, controller AID confirmation)"
+        ]
+      },
+      {
+        "term": "Agent Instance",
+        "definition": "A provisioned agent representing a single controller — contains the controller's managed AIDs, credential wallet, contact book, and pending operations",
+        "invariants": [
+          "Bound to exactly one controller AID (the authentication anchor)",
+          "Isolated from other agent instances",
+          "Persists across KERIA restarts"
+        ]
+      },
+      {
+        "term": "Multi-tenancy",
+        "definition": "One KERIA process hosts many agent instances, each isolated — one controller's data inaccessible to others",
+        "invariants": [
+          "Bidirectional mappings: controller AID <-> agent AID",
+          "Infrastructure concern, not visible to the Signify protocol",
+          "Agency manages the lifecycle of all tenant agent instances"
+        ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://cloud-agent-service",
+        "relationship": "Parent domain delegates agent lifecycle management to this subdomain",
+        "via_port": "port://cloud-agent-service/provisioning/inbound/agent-lifecycle"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Agent Registry",
+        "abstraction": "Repository",
+        "ref": "port://cloud-agent-service/provisioning/outbound/agent-registry",
+        "implementation_notes": "Stores agent instances and bidirectional caid<->agent mappings. Implementations: AgencyBaser with .agnt, .ctrl, .aids sudb mappings (keria/LMDB), DynamoDB (serious-keri)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In keria, the Agency class (agenting.py) handles provisioning via POST /boot. Agent instances are created with their own Habery, Reger, Verifier, and processing doers. AgencyBaser stores the registry of agent-to-controller mappings in LMDB sub-databases. In serious-keri, provisioning maps to a Lambda handler backed by DynamoDB.\n"
+    },
+    "issues": [],
+    "tags": [
+      "provisioning",
+      "multi-tenant",
+      "agency",
+      "agent-lifecycle",
+      "boot"
+    ],
+    "_source": "rdod/spec/domains/cloud-agent-service/provisioning/domain.yaml"
   },
   {
     "template_version": "1.0",
@@ -4400,11 +4623,12 @@ const RDOD_DATA = [
     "ubiquitous_language": [
       {
         "term": "Signify Client",
-        "definition": "Controller-side library that holds private keys, signs all operations, and communicates with a KERIA cloud agent via KRAM-authenticated HTTP",
+        "definition": "Controller-side library that holds private keys, signs all operations, and communicates with a KERIA cloud agent via KRAM-authenticated HTTP. Orchestrates key-management and resources subdomains",
         "invariants": [
           "Private keys generated and stored locally — never transmitted",
           "All requests to cloud agent signed via KRAM",
-          "Exposes resource objects: identifiers, credentials, exchanges, groups, registries, operations"
+          "Delegates key lifecycle to signify-client/key-management",
+          "Delegates resource API to signify-client/resources"
         ]
       },
       {
@@ -4417,6 +4641,127 @@ const RDOD_DATA = [
           "This boundary exists only in the thin wallet deployment model — fat wallets have no equivalent"
         ]
       },
+      {
+        "term": "KRAM",
+        "definition": "KERI Request Authentication Method — HTTP signature-based authentication using KERI identifiers. Each request includes signed headers that the cloud agent verifies against the controller's KEL",
+        "invariants": [
+          "Signature covers HTTP method, path, and body digest",
+          "Cloud agent verifies against controller AID's current key state",
+          "Replay protection via nonce and timestamp"
+        ]
+      },
+      {
+        "term": "Browser Extension",
+        "definition": "Chrome/Firefox extension wrapping signify-ts, providing passwordless web authentication via signed HTTP headers",
+        "invariants": [
+          "Private keys accessible only to background script and popup — never to websites",
+          "Websites communicate via polaris-web library (content script bridge)",
+          "Requires active tab context for all operations"
+        ]
+      },
+      {
+        "term": "Signing Association",
+        "definition": "A stored mapping between a website origin and a credential/AID, authorizing the browser extension to sign requests for that website",
+        "invariants": [
+          "Established by explicit user approval in the extension",
+          "Scoped to a specific origin (website domain)",
+          "Stored in Chrome storage, not transmitted"
+        ]
+      },
+      {
+        "term": "Signing Request",
+        "definition": "A request originating from the cloud agent for the controller to cryptographically sign an event, credential, or exchange message",
+        "invariants": [
+          "Cloud agent can never produce a valid signature — only request one",
+          "Controller reviews the content before signing",
+          "Signing is asynchronous — the agent waits for the edge response"
+        ]
+      }
+    ],
+    "domain_clients": [],
+    "subdomains": [
+      {
+        "ref": "domain://signify-client/key-management",
+        "relationship": "Owns all key generation, passcode-to-salt derivation, Keeper lifecycle, security tiers, key derivation paths, and encrypted key-at-rest storage",
+        "via_port": "port://signify-client/key-management/inbound/key-ops"
+      },
+      {
+        "ref": "domain://signify-client/resources",
+        "relationship": "Owns the client-side API surface — resource classes for identifiers, credentials, exchanges, groups, registries, and async operation tracking",
+        "via_port": "port://signify-client/resources/inbound/resource-ops"
+      }
+    ],
+    "kernels": [],
+    "adjacents": [
+      {
+        "ref": "domain://cloud-agent-service",
+        "relationship": "Customer-Supplier — signify-client drives cloud-agent-service via Signify protocol (delegated to resources subdomain's cloud-agent-comms port)",
+        "via_port": "port://signify-client/resources/outbound/cloud-agent-comms",
+        "is_cross_cutting": false
+      },
+      {
+        "ref": "domain://keri",
+        "relationship": "Conformist — uses KERI protocol types and event structures directly without translation",
+        "via_port": "port://keri/inbound/identifier-lifecycle",
+        "is_cross_cutting": false
+      },
+      {
+        "ref": "domain://cesr",
+        "relationship": "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly",
+        "via_port": "port://cesr/inbound/encoding",
+        "is_cross_cutting": false
+      },
+      {
+        "ref": "domain://acdc",
+        "relationship": "Conformist — uses ACDC credential types, schemas, and IPEX exchange protocol directly",
+        "via_port": "port://acdc/inbound/credential-lifecycle",
+        "is_cross_cutting": false
+      },
+      {
+        "ref": "domain://oobi",
+        "relationship": "Customer-Supplier — resolves OOBIs via cloud agent for endpoint and key state discovery",
+        "via_port": "port://oobi/inbound/discovery",
+        "is_cross_cutting": false
+      }
+    ],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "package",
+      "language_affinity": "any",
+      "notes": "signify-ts (TypeScript) for browsers and Node.js. signifypy (Python) for scripting and testing. signify-browser-extension (React) wraps signify-ts in a Chrome/Firefox extension with polaris-web for website integration. This domain replaces agent/edge-signing as a top-level application-tier domain.\n"
+    },
+    "issues": [],
+    "tags": [
+      "thin-wallet",
+      "edge-signing",
+      "signify",
+      "private-keys",
+      "controller",
+      "application"
+    ],
+    "_source": "rdod/spec/domains/signify-client/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "signify-client/key-management",
+    "name": "Signify Key Management",
+    "description": "Security-critical subdomain for key generation, storage, and protection on the controller's edge device. Handles passcode-to-salt derivation, deterministic/random key generation via Keepers, security tiers, key derivation paths, and encrypted key-at-rest storage. Keys never leave this subdomain — it produces signatures on request but never exports private material. Implementations: signify-ts (KeyManager, Keeper), signifypy (Manager, Keeper).\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "signify-ts — core/authing.ts, core/keeping.ts: SaltyKeeper, RandyKeeper, GroupKeeper, Manager"
+      },
+      {
+        "type": "document",
+        "reference": "signifypy — core/keeping.py: SaltyKeeper, RandyKeeper, GroupKeeper, Manager"
+      },
+      {
+        "type": "document",
+        "reference": "keridoc-llms-full.md — Signify key management, passcode handling, key derivation"
+      }
+    ],
+    "ubiquitous_language": [
       {
         "term": "Passcode",
         "definition": "User-supplied secret (21-character base64 string) used to derive the salt for key generation and to encrypt key material at rest",
@@ -4434,6 +4779,16 @@ const RDOD_DATA = [
           "Derived from passcode + argon2 — not stored directly",
           "All key derivation is deterministic from the salt",
           "Salt reconstruction requires the original passcode"
+        ]
+      },
+      {
+        "term": "Session",
+        "definition": "An active period between the Signify client and KERIA, initiated when the controller unlocks key material with their passcode",
+        "invariants": [
+          "Begins when passcode unlocks key material in memory",
+          "Ends on explicit lock, timeout, or app closure",
+          "Key material zeroed from memory on session end",
+          "No operations possible outside an active session"
         ]
       },
       {
@@ -4478,15 +4833,77 @@ const RDOD_DATA = [
         ]
       },
       {
-        "term": "Session",
-        "definition": "An active period between the Signify client and KERIA, initiated when the controller unlocks key material with their passcode",
+        "term": "Encrypter",
+        "definition": "Encrypts key material at rest using X25519 ECDH-derived symmetric keys. The salt and private key proxies are encrypted before storage",
         "invariants": [
-          "Begins when passcode unlocks key material in memory",
-          "Ends on explicit lock, timeout, or app closure",
-          "Key material zeroed from memory on session end",
-          "No operations possible outside an active session"
+          "Uses X25519 key agreement + secretbox symmetric encryption",
+          "Encrypted salt (sxlt) stored on the cloud agent — agent cannot decrypt without passcode",
+          "Decryption requires the controller's ECDH private key derived from the salt"
         ]
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://signify-client",
+        "relationship": "Parent domain delegates all key generation, protection, and signing to this subdomain",
+        "via_port": "port://signify-client/key-management/inbound/key-ops"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cryptographic-algorithms",
+        "source": "argon2 for passcode stretching, Ed25519/ECDSA for key generation, X25519 for key-at-rest encryption (ECDH + secretbox)",
+        "relationship": "All cryptographic primitives — key derivation, signing, encryption — are kernel operations. This subdomain composes them into the Keeper abstraction and Encrypter"
+      }
+    ],
+    "adjacents": [],
+    "externals": [
+      {
+        "name": "Key Storage",
+        "abstraction": "Repository",
+        "ref": "port://signify-client/key-management/outbound/key-storage",
+        "implementation_notes": "Encrypted key material at rest. Implementations: browser localStorage (signify-browser-extension), filesystem (signify-ts/signifypy), secure enclave (mobile). Stores encrypted salt (sxlt) and encrypted private key proxies (prxs)"
+      }
+    ],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "In signify-ts, the Manager class owns Keeper lifecycle: new() creates the appropriate Keeper type based on Algos, get() retrieves it. SaltyKeeper derives keys from salt + path via libsodium. RandyKeeper generates random keys and stores encrypted proxies. GroupKeeper wraps a member AID's keeper with index remapping. The Encrypter uses X25519 ECDH to encrypt the salt (sxlt) for cloud-side storage. In signifypy, the same structure exists in core/keeping.py with Manager, SaltyKeeper, RandyKeeper, GroupKeeper.\n"
+    },
+    "issues": [],
+    "tags": [
+      "key-management",
+      "passcode",
+      "keeper",
+      "salt",
+      "encryption",
+      "edge-signing",
+      "security"
+    ],
+    "_source": "rdod/spec/domains/signify-client/key-management/domain.yaml"
+  },
+  {
+    "template_version": "1.0",
+    "id": "signify-client/resources",
+    "name": "Signify Resources",
+    "description": "The client-side API surface for driving the cloud agent — resource classes for identifier lifecycle, credential management, exchange messages, group operations, and registry management. All operations are KRAM-authenticated and return long-running Operation handles for async tracking. This subdomain translates high-level user intent into signed, serialized requests that flow through the cloud-agent-comms boundary. Implementations: signify-ts (Identifiers, Credentials, Exchanges, Groups, Registries, Operations), signifypy (Identifiers, Credentials, Exchanges, Groups, Registries).\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "signify-ts — clienting.ts: SignifyClient resource accessors, aid.ts: Identifiers, credentials.ts: Credentials"
       },
+      {
+        "type": "document",
+        "reference": "signifypy — clienting.py: SignifyClient resource accessors, coring.py: Identifiers, credentials.py: Credentials"
+      },
+      {
+        "type": "document",
+        "reference": "keridoc-llms-full.md — Signify client resource API, operation tracking"
+      }
+    ],
+    "ubiquitous_language": [
       {
         "term": "Controller AID",
         "definition": "The AID created during initial agent provisioning that identifies the controller to KERIA. Used for KRAM authentication of all subsequent requests",
@@ -4497,24 +4914,6 @@ const RDOD_DATA = [
         ]
       },
       {
-        "term": "KRAM",
-        "definition": "KERI Request Authentication Method — HTTP signature-based authentication using KERI identifiers. Each request includes signed headers that the cloud agent verifies against the controller's KEL",
-        "invariants": [
-          "Signature covers HTTP method, path, and body digest",
-          "Cloud agent verifies against controller AID's current key state",
-          "Replay protection via nonce and timestamp"
-        ]
-      },
-      {
-        "term": "Encrypter",
-        "definition": "Encrypts key material at rest using X25519 ECDH-derived symmetric keys. The salt and private key proxies are encrypted before storage",
-        "invariants": [
-          "Uses X25519 key agreement + secretbox symmetric encryption",
-          "Encrypted salt (sxlt) stored on the cloud agent — agent cannot decrypt without passcode",
-          "Decryption requires the controller's ECDH private key derived from the salt"
-        ]
-      },
-      {
         "term": "Operation",
         "definition": "A handle for tracking an asynchronous KERIA task — witness receipting, delegation approval, credential issuance, OOBI resolution. Edge client polls for completion",
         "invariants": [
@@ -4522,33 +4921,6 @@ const RDOD_DATA = [
           "Polled via client.operations().get(name) until done=true",
           "Has name, done flag, optional error, and response payload",
           "Types: witness, delegation, group, query, registry, credential, endrole, oobi"
-        ]
-      },
-      {
-        "term": "Signing Request",
-        "definition": "A request originating from the cloud agent for the controller to cryptographically sign an event, credential, or exchange message",
-        "invariants": [
-          "Cloud agent can never produce a valid signature — only request one",
-          "Controller reviews the content before signing",
-          "Signing is asynchronous — the agent waits for the edge response"
-        ]
-      },
-      {
-        "term": "Signing Association",
-        "definition": "A stored mapping between a website origin and a credential/AID, authorizing the browser extension to sign requests for that website",
-        "invariants": [
-          "Established by explicit user approval in the extension",
-          "Scoped to a specific origin (website domain)",
-          "Stored in Chrome storage, not transmitted"
-        ]
-      },
-      {
-        "term": "Browser Extension",
-        "definition": "Chrome/Firefox extension wrapping signify-ts, providing passwordless web authentication via signed HTTP headers",
-        "invariants": [
-          "Private keys accessible only to background script and popup — never to websites",
-          "Websites communicate via polaris-web library (content script bridge)",
-          "Requires active tab context for all operations"
         ]
       },
       {
@@ -4608,70 +4980,41 @@ const RDOD_DATA = [
         ]
       }
     ],
-    "domain_clients": [],
+    "domain_clients": [
+      {
+        "ref": "domain://signify-client",
+        "relationship": "Parent domain delegates all resource API operations and async tracking to this subdomain",
+        "via_port": "port://signify-client/resources/inbound/resource-ops"
+      }
+    ],
     "subdomains": [],
-    "kernels": [
-      {
-        "ref": "kernel://cryptographic-algorithms",
-        "source": "Ed25519 (signing), X25519 (key agreement/encryption), argon2 (passcode key stretching), libsodium (secretbox)",
-        "relationship": "Cryptographic algorithm types used directly for key generation, signing, ECDH encryption, and passcode stretching"
-      }
-    ],
-    "adjacents": [
-      {
-        "ref": "domain://cloud-agent-service",
-        "relationship": "Customer-Supplier — signify-client drives cloud-agent-service via Signify protocol and KRAM-authenticated HTTP requests",
-        "via_port": "port://signify-client/outbound/cloud-agent-comms",
-        "is_cross_cutting": false
-      },
-      {
-        "ref": "domain://keri",
-        "relationship": "Conformist — uses KERI protocol types and event structures directly without translation",
-        "via_port": "port://keri/inbound/identifier-lifecycle",
-        "is_cross_cutting": false
-      },
-      {
-        "ref": "domain://cesr",
-        "relationship": "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly",
-        "via_port": "port://cesr/inbound/encoding",
-        "is_cross_cutting": false
-      },
-      {
-        "ref": "domain://acdc",
-        "relationship": "Conformist — uses ACDC credential types, schemas, and IPEX exchange protocol directly",
-        "via_port": "port://acdc/inbound/credential-lifecycle",
-        "is_cross_cutting": false
-      },
-      {
-        "ref": "domain://oobi",
-        "relationship": "Customer-Supplier — resolves OOBIs via cloud agent for endpoint and key state discovery",
-        "via_port": "port://oobi/inbound/discovery",
-        "is_cross_cutting": false
-      }
-    ],
+    "kernels": [],
+    "adjacents": [],
     "externals": [
       {
-        "name": "Key Storage",
-        "abstraction": "Repository",
-        "ref": "port://signify-client/outbound/key-storage",
-        "implementation_notes": "Encrypted key material at rest. Implementations: browser localStorage (signify-browser-extension), filesystem (signify-ts/signifypy), secure enclave (mobile)"
+        "name": "Cloud Agent Communication",
+        "abstraction": "Adapter",
+        "ref": "port://signify-client/resources/outbound/cloud-agent-comms",
+        "implementation_notes": "REST via KRAM-authenticated HTTP to cloud-agent-service admin API (port 3901). All requests carry signed headers. Async operations return operation handles for polling. Implementations: fetch (signify-ts), requests (signifypy)"
       }
     ],
     "implementation_guidance": {
-      "suggested_type": "package",
+      "suggested_type": "module",
       "language_affinity": "any",
-      "notes": "signify-ts (TypeScript) for browsers and Node.js. signifypy (Python) for scripting and testing. signify-browser-extension (React) wraps signify-ts in a Chrome/Firefox extension with polaris-web for website integration. This domain replaces agent/edge-signing as a top-level application-tier domain.\n"
+      "notes": "In signify-ts, each resource is a class accessed from SignifyClient: Identifiers (aid.ts), Credentials (credentials.ts), Exchanges (exchanges.ts), Groups (groups.ts), Registries (registries.ts), Operations (operations.ts). Each method serializes the request, obtains signatures from key-management, attaches KRAM headers, and sends via fetch. Async operations return an Operation object for polling. In signifypy, the same pattern exists in clienting.py with Identifiers, Credentials, Exchanges, Groups, Registries as resource classes.\n"
     },
     "issues": [],
     "tags": [
-      "thin-wallet",
-      "edge-signing",
-      "signify",
-      "private-keys",
-      "controller",
-      "application"
+      "resources",
+      "api-surface",
+      "identifier",
+      "credential",
+      "exchange",
+      "group",
+      "registry",
+      "operation"
     ],
-    "_source": "rdod/spec/domains/signify-client/domain.yaml"
+    "_source": "rdod/spec/domains/signify-client/resources/domain.yaml"
   },
   {
     "template_version": "1.0",

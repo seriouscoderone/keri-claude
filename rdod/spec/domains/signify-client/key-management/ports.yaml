@@ -1,0 +1,30 @@
+# ports.yaml
+domain_ref: "signify-client/key-management"
+
+ports:
+  # Inbound — what the parent signify-client domain calls
+  - id: "port://signify-client/key-management/inbound/key-ops"
+    type: inbound
+    name: "Key Operations"
+    contract: >
+      unlock(passcode, tier) -> Session;
+      lock() -> void;
+      create_keeper(algo, pidx, config) -> Keeper;
+      get_keeper(aid) -> Keeper;
+      sign(aid, content, indexed) -> [Siger];
+      rotate_keys(aid) -> {verfers: [Verfer], digers: [Diger]}
+    protocol: "method-call"
+    refs: ["domain://signify-client"]
+
+  # Outbound — encrypted key material persistence
+  - id: "port://signify-client/key-management/outbound/key-storage"
+    type: outbound
+    name: "Key Storage"
+    contract: >
+      store_encrypted_salt(sxlt: Cipher) -> Result;
+      load_encrypted_salt() -> Cipher;
+      store_encrypted_proxies(prxs: [Cipher], nxts: [Cipher]) -> Result;
+      load_encrypted_proxies(aid) -> {prxs: [Cipher], nxts: [Cipher]};
+      destroy() -> Result
+    protocol: "method-call"
+    refs: ["key-storage"]

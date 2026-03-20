@@ -138,7 +138,9 @@ graph TD
 | `watcher-service` | Watcher Service | service | complete | 5 | Watcher nodes, KEL cross-check, duplicity alerts, pool deployment |
 | | | | | | |
 | **APPLICATIONS** | | | | | |
-| `signify-client` | Signify Client (Thin Wallet) | application | complete | 22 | Keepers, tiers, derivation paths, resource API, Signify protocol |
+| `signify-client` | Signify Client (Thin Wallet) | application | complete | 6 | Signify Client/Protocol, KRAM, browser extension (delegates to 2 subdomains) |
+| `signify-client/key-management` | Signify Key Management | subdomain | complete | 8 | Passcode, salt, session, keeper, algos, tier, derivation path, encrypter |
+| `signify-client/resources` | Signify Resources | subdomain | complete | 8 | Controller AID, operation, identifier/credential/exchange/group/registry resources |
 | `local-agent` | Local Agent (Fat Wallet) | application | complete | 8 | Hab/Habery, local Kevery, local Baser, direct witness/watcher comms |
 | | | | | | |
 | **DEPRECATED** | | | | | |
