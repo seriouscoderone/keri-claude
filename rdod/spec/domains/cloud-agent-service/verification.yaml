@@ -1,0 +1,111 @@
+# verification.yaml
+domain_ref: "cloud-agent-service"
+
+# Formalized invariants from ubiquitous_language terms
+properties:
+  - invariant: "Zero access to private signing or decryption keys"
+    term: "KERIA"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(st.binary(min_size=1, max_size=512))
+        def test_keria_never_holds_private_keys(payload):
+            agent = create_keria_agent()
+            # Agent has no signing capability — all sign methods raise or are absent
+            assert not hasattr(agent, 'private_key')
+            assert not hasattr(agent, 'signing_key')
+            with pytest.raises(AttributeError):
+                agent.sign(payload)
+    strategy: "st.binary() for arbitrary payloads"
+    notes: "Structural property — KERIA agent class must not expose signing interfaces"
+
+  - invariant: "Can store, forward, and assemble — but never sign"
+    term: "KERIA"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(st.binary(min_size=1, max_size=512))
+        def test_keria_operations_produce_no_signatures(payload):
+            agent = create_keria_agent()
+            result = agent.forward(payload)
+            assert 'signature' not in result or result['signature'] is None
+            # All signature fields in assembled events come from edge, not agent
+    strategy: "st.binary() for arbitrary message payloads"
+    notes: "Any signature present in agent output must originate from edge client, never from agent itself"
+
+  - invariant: "Agent instances are isolated — one controller's data inaccessible to another"
+    term: "KERIA"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            controller_a=keri_aid_strategy(),
+            controller_b=keri_aid_strategy(),
+            data=st.binary(min_size=1)
+        )
+        def test_agent_isolation(controller_a, controller_b):
+            assume(controller_a != controller_b)
+            agent_a = provision_agent(controller_a)
+            agent_b = provision_agent(controller_b)
+            agent_a.store('key', data)
+            with pytest.raises(AccessDenied):
+                agent_b.get('key')
+    strategy: "keri_aid_strategy() generating distinct controller AIDs"
+    notes: "Cross-tenant access must raise — no data leakage between agents"
+
+# Formalized port contracts
+contracts:
+  - port_ref: "port://cloud-agent-service/inbound/boot"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda inception_event: is_valid_inception(inception_event) and has_valid_signatures(inception_event)"
+        description: "Inception event must be valid and properly signed"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: isinstance(result, AgentConfig) and result.agent_id is not None and result.controller_aid is not None"
+        description: "Returns a valid AgentConfig with agent_id and controller_aid"
+
+  - port_ref: "port://cloud-agent-service/inbound/admin-api"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda request: has_valid_kram_signature(request) and agent_exists(request.controller_aid)"
+        description: "Request must carry valid KRAM signature and map to an existing agent"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda request, result: result.scope == request.controller_aid"
+        description: "All returned data is scoped to the authenticated controller's agent instance"
+
+  - port_ref: "port://cloud-agent-service/inbound/message-router"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda msg: is_valid_keri_message(msg) and has_valid_keri_signatures(msg)"
+        description: "Message must be a valid KERI protocol message with valid event signatures (no KRAM required)"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda msg, result: result.routed_to == resolve_agent_by_aid(msg.target_aid)"
+        description: "Message routed to the correct agent instance based on target AID"
+
+  - port_ref: "port://cloud-agent-service/outbound/witness-forward"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda event, witness_aids: is_valid_event(event) and len(witness_aids) > 0"
+        description: "Event must be valid and at least one witness AID specified"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda receipts, threshold: len([r for r in receipts if r.valid]) >= threshold"
+        description: "Collected receipts meet or exceed the witness threshold"
+
+# No state machine for this orchestrator domain — lifecycle state machines
+# live in the provisioning and processing subdomains
+state_machines: []

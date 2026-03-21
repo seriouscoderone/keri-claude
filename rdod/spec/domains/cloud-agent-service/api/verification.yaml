@@ -1,0 +1,177 @@
+# verification.yaml
+domain_ref: "cloud-agent-service/api"
+
+# Formalized invariants from ubiquitous_language terms
+properties:
+  - invariant: "All requests require valid KRAM signatures — unsigned requests rejected"
+    term: "Admin API"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            method=st.sampled_from(['GET', 'POST', 'PUT', 'DELETE']),
+            path=st.text(min_size=1, max_size=100),
+            body=st.binary(max_size=1024)
+        )
+        def test_unsigned_requests_rejected(method, path, body):
+            request = build_request(method, path, body, kram_headers=None)
+            response = admin_api.handle(request)
+            assert response.status_code == 401
+    strategy: "st.sampled_from for HTTP methods, st.text for paths, st.binary for bodies"
+    notes: "Every admin API request without KRAM headers must be rejected with 401"
+
+  - invariant: "KRAM-signed request verifies against controller AID's key state"
+    term: "KRAM Authentication"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            method=st.sampled_from(['GET', 'POST', 'PUT']),
+            path=st.text(min_size=1, max_size=100),
+            body=st.binary(max_size=1024)
+        )
+        def test_kram_verification(method, path, body):
+            controller = create_controller()
+            kram_headers = controller.sign_request(method, path, body)
+            verified = verify_kram(kram_headers, controller.aid, controller.key_state)
+            assert verified is True
+            # Tampered body fails verification
+            tampered_body = body + b'\x00'
+            verified_tampered = verify_kram(kram_headers, controller.aid, controller.key_state)
+            assert not verify_kram_body(kram_headers, tampered_body)
+    strategy: "Standard HTTP method/path/body strategies"
+    notes: "KRAM signature binds method, path, and body — any modification breaks verification"
+
+  - invariant: "Signature binds request method, path, and body digest"
+    term: "KRAM Authentication"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        Method, Path, Body, Sig = Strings('method path body sig')
+        sign = Function('kram_sign', StringSort(), StringSort(), StringSort(), StringSort())
+        verify = Function('kram_verify', StringSort(), StringSort(), StringSort(), StringSort(), BoolSort())
+        s = Solver()
+        # Verification succeeds for matching inputs
+        s.add(verify(sign(Method, Path, Body), Method, Path, Body) == True)
+        # Try to verify with different body
+        Body2 = String('body2')
+        s.add(Body != Body2)
+        s.add(verify(sign(Method, Path, Body), Method, Path, Body2) == True)
+        assert s.check() == unsat  # Cannot verify with different body
+    strategy: ""
+    notes: "SMT proof that KRAM signatures are binding — changing any input invalidates the signature"
+
+  - invariant: "Operations scoped to authenticated controller's agent instance"
+    term: "Admin API"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            controller_a=keri_aid_strategy(),
+            controller_b=keri_aid_strategy()
+        )
+        def test_api_scoping(controller_a, controller_b):
+            assume(controller_a != controller_b)
+            # Controller A creates an identifier
+            req_a = signed_request(controller_a, 'POST', '/identifiers', body={'alias': 'test'})
+            admin_api.handle(req_a)
+            # Controller B lists identifiers — must not see A's identifier
+            req_b = signed_request(controller_b, 'GET', '/identifiers')
+            result = admin_api.handle(req_b)
+            assert all(aid.controller != controller_a for aid in result.json())
+    strategy: "keri_aid_strategy() for distinct controller AIDs"
+    notes: "Admin API operations are tenant-scoped — no cross-controller data leakage"
+
+  - invariant: "No KRAM required — messages are protocol-authenticated (KERI signatures)"
+    term: "Message Router"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(keri_message=valid_keri_message_strategy())
+        def test_message_router_accepts_keri_auth(keri_message):
+            # Message router accepts KERI-authenticated messages without KRAM
+            response = message_router.receive_message(keri_message)
+            assert response.status_code != 401  # Not rejected for auth
+    strategy: "valid_keri_message_strategy() generating properly signed KERI protocol messages"
+    notes: "Message router uses KERI protocol authentication, not KRAM"
+
+  - invariant: "Async operations return HTTP 202 with operation handle for polling"
+    term: "Admin API"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(config=identifier_config_strategy())
+        def test_async_returns_202_with_operation(config):
+            request = signed_request(controller, 'POST', '/identifiers', body=config)
+            response = admin_api.handle(request)
+            assert response.status_code == 202
+            op = response.json()
+            assert 'name' in op
+            assert 'done' in op
+            assert isinstance(op['name'], str)
+    strategy: "identifier_config_strategy() for valid AID creation configs"
+    notes: "All mutating operations that require async processing return 202 with an operation handle"
+
+  - invariant: "Edge client polls for notifications via GET /notifications"
+    term: "Notification"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(notification_count=st.integers(min_value=0, max_value=50))
+        def test_notifications_are_pull_only(notification_count):
+            # Queue N notifications
+            for _ in range(notification_count):
+                queue_notification(controller_aid)
+            # Edge must poll to discover them
+            request = signed_request(controller, 'GET', '/notifications')
+            result = admin_api.handle(request)
+            assert len(result.json()) == notification_count
+    strategy: "st.integers for notification count"
+    notes: "Agent cannot push — edge always pulls notifications via polling"
+
+# Formalized port contracts
+contracts:
+  - port_ref: "port://cloud-agent-service/api/inbound/admin-api"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda request: has_valid_kram_signature(request)"
+        description: "All admin API requests must carry valid KRAM authentication"
+      - formal:
+          language: python
+          expression: "lambda request: agent_exists(extract_controller_aid(request))"
+        description: "The authenticated controller must have a provisioned agent instance"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda request, response:
+                (response.status_code == 202 and 'name' in response.json())
+                or (response.status_code == 200)
+                or (response.status_code >= 400)
+        description: "Mutating async operations return 202 with operation handle; reads return 200; errors return 4xx/5xx"
+
+  - port_ref: "port://cloud-agent-service/api/inbound/message-router"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda msg: is_valid_keri_message(msg) and msg.target_aid is not None"
+        description: "Message must be a valid KERI protocol message with an identifiable target AID"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda msg, result:
+                result.routed and notification_queued_for(msg.target_aid)
+        description: "Message routed to correct agent and notification queued for edge polling"
+
+# No state machine for the API subdomain — it is stateless request/response
+# The lifecycle state machines live in provisioning (agent lifecycle) and processing (operation lifecycle)
+state_machines: []

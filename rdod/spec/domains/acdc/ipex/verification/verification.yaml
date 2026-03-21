@@ -1,0 +1,186 @@
+# verification.yaml
+domain_ref: "acdc/ipex/verification"
+
+properties:
+  - invariant: "Issuer must provide signature or seal on the SAID of the most compact form"
+    term: "Proof of Issuance"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda acdc, issuer_commitment, issuer_key_state: (
+          compact_said := compute_most_compact_form(acdc).d,
+          verify_signature(issuer_commitment, compact_said, issuer_key_state)
+          or verify_seal(issuer_commitment, compact_said, issuer_key_state)
+        )
+    strategy: "Generate ACDCs with valid and invalid issuer commitments; verify PoI check"
+    notes: "Either signature or seal is acceptable"
+
+  - invariant: "A commitment to the top-level SAID is equivalent to a commitment to the hash tree root"
+    term: "Proof of Issuance"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        ForAll([acdc, commitment],
+          Implies(
+            And(
+              is_valid_commitment(commitment, acdc.d),
+              acdc.d == said_compute(most_compact_form(acdc))
+            ),
+            is_valid_commitment(commitment, hash_tree_root(acdc))
+          )
+        )
+    notes: "SAID commitment equivalence — top-level SAID covers entire tree"
+
+  - invariant: "This single commitment provides PoI for all schema-authorized variants"
+    term: "Proof of Issuance"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda acdc, commitment, variants: all(
+          verify_poi(variant, commitment) for variant in schema_authorized_variants(acdc)
+        )
+    strategy: "Generate all schema-authorized variants of an ACDC; verify PoI holds for each"
+    notes: "One commitment covers compact, partial, selective, and full variants"
+
+  - invariant: "Discloser provides the SAD of the variant, verifiable against its SAID"
+    term: "Proof of Disclosure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda compact_sad, expanded_sad: (
+          said_compute(expanded_sad) == compact_sad.d
+        )
+    strategy: "Generate SAD pairs (compact + expanded); verify SAID matches"
+    notes: "PoD is SAID verification of the expanded block"
+
+  - invariant: "Grant contains the full ACDC (or selective disclosure variant)"
+    term: "Credential Artifacts in Grant"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda grant: (
+          grant.acdc is not None
+          and (is_full_acdc(grant.acdc) or is_selective_variant(grant.acdc))
+        )
+    strategy: "Generate grant messages; verify ACDC presence and variant validity"
+    notes: ""
+
+  - invariant: "Grant contains the issuance TEL event (iss for backerless, bis for backed registries)"
+    term: "Credential Artifacts in Grant"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda grant: (
+          grant.tel_event is not None
+          and grant.tel_event.t in ('iss', 'bis')
+        )
+    strategy: "Generate grants with and without TEL events; verify presence required"
+    notes: ""
+
+  - invariant: "Grant contains the KEL anchor seal binding the TEL event to the issuer's KEL"
+    term: "Credential Artifacts in Grant"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda grant: (
+          grant.kel_seal is not None
+          and is_valid_said(grant.kel_seal.d)
+          and isinstance(grant.kel_seal.s, int)
+        )
+    strategy: "Generate grants with and without seals; verify seal presence required"
+    notes: ""
+
+  - invariant: "Credential artifact verification requires ACDC SAID to match iss event, and iss event digest to match KEL seal"
+    term: "Credential Artifacts in Grant"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        ForAll([acdc, tel_event, kel_seal],
+          Implies(
+            artifacts_verified(acdc, tel_event, kel_seal),
+            And(
+              tel_event.ta == acdc.d,  # ACDC SAID in TEL event
+              kel_seal.d == said_compute(tel_event)  # TEL event SAID in seal
+            )
+          )
+        )
+    notes: "Three-link verification chain: ACDC -> TEL -> KEL"
+
+  - invariant: "KRAM authentication is checked before processing any IPEX exchange message content"
+    term: "KRAM"
+    technique: symbolic
+    formal:
+      language: python
+      expression: |
+        lambda processing_trace: (
+          auth_step_index := next(i for i, s in enumerate(processing_trace) if s == 'kram_auth'),
+          content_step_index := next(i for i, s in enumerate(processing_trace) if s == 'process_content'),
+          auth_step_index < content_step_index
+        )
+    notes: "Temporal ordering — authentication must precede content processing"
+
+  - invariant: "Verification is stateless given a key state snapshot — it takes artifacts and returns valid/invalid"
+    term: "KRAM"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda artifacts, key_state: (
+          result1 := verify(artifacts, key_state),
+          result2 := verify(artifacts, key_state),
+          result1 == result2  # deterministic, no side effects
+        )
+    strategy: "Verify same artifacts twice with same key state; verify identical result"
+    notes: "Pure function — no state mutation during verification"
+
+contracts:
+  - port_ref: "port://acdc/ipex/verification/inbound/verify-disclosure"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            is_valid_said(acdc_said) and is_valid_signature(issuer_commitment) and is_valid_key_state(issuer_key_state)
+        description: "SAID, commitment, and key state must all be valid"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            (result == True and verify_signature(issuer_commitment, acdc_said, issuer_key_state))
+            or (result == False)
+        description: "verify_proof_of_issuance returns True iff the commitment is cryptographically valid"
+
+  - port_ref: "port://acdc/ipex/verification/inbound/verify-disclosure"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            is_valid_acdc(acdc) and is_valid_tel_event(tel_event) and is_valid_seal(kel_seal)
+        description: "All three artifact components must be structurally valid"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            (result == True) == (tel_event.ta == acdc.d and said_in_seal(tel_event, kel_seal))
+        description: "verify_credential_artifacts returns True iff the three-link chain is consistent"
+
+  - port_ref: "port://acdc/ipex/verification/inbound/authenticate-message"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            exn_message.type == 'exn' and is_valid_key_state(sender_key_state)
+        description: "Message must be exn type and key state must be valid"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            (result == True) == verify_signature(exn_message.signature, exn_message.d, sender_key_state)
+        description: "Authentication passes iff the message signature verifies against sender's key state"

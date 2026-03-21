@@ -1,0 +1,103 @@
+# verification.yaml
+domain_ref: "keri/duplicity-detection"
+
+properties:
+  - invariant: "Both versions are independently cryptographically verifiable"
+    term: "Duplicity"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda evidence: all(e.signatures_verified() and e.hash_chain_valid() for e in evidence.events)"
+    strategy: "st.from_type(DuplicityEvidence)"
+    notes: "Duplicity evidence must consist of independently verifiable events — if either event is unverifiable, it is internal inconsistency, not duplicity"
+
+  - invariant: "The versions are mutually inconsistent — different event content at the same location"
+    term: "Duplicity"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda evidence: evidence.events[0].aid == evidence.events[1].aid and evidence.events[0].sn == evidence.events[1].sn and evidence.events[0].said != evidence.events[1].said"
+    strategy: "st.from_type(DuplicityEvidence)"
+    notes: "Same AID, same sn, different SAID — the defining characteristic of duplicity"
+
+  - invariant: "Always detectable given access to both versions"
+    term: "Duplicity"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda event_a, event_b: (event_a.aid == event_b.aid and event_a.sn == event_b.sn and event_a.said != event_b.said) implies is_duplicity(event_a, event_b)"
+    strategy: "st.tuples(st.from_type(KeyEvent), st.from_type(KeyEvent))"
+    notes: "Duplicity detection is a deterministic comparison — given both events, detection is guaranteed"
+
+  - invariant: "An internally inconsistent log is not verifiable and is simply rejected"
+    term: "Internal Inconsistency"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda log: not log.crypto_valid() implies log.rejected()"
+    strategy: "st.from_type(EventLog)"
+    notes: "Internal inconsistency is a simpler problem — no evidence collection needed, just rejection"
+
+  - invariant: "Contains verified but conflicting events at the same sequence number"
+    term: "DEL"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda del_entry: len(del_entry.events) >= 2 and all(e.sn == del_entry.sn for e in del_entry.events) and len(set(e.said for e in del_entry.events)) == len(del_entry.events)"
+    strategy: "st.from_type(DELEntry)"
+    notes: "Every DEL entry must contain at least two events with the same sn but different SAIDs"
+
+  - invariant: "Involves compromise of current (live) keys, not stale keys"
+    term: "Live Duplicity"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda attack, current_key_state: attack.compromised_keys.intersects(current_key_state.signing_keys) or attack.compromised_keys.intersects(current_key_state.pre_rotated_keys)"
+    strategy: "st.tuples(st.from_type(DuplicityAttack), st.from_type(KeyState))"
+    notes: "Live attacks target the current key state — if compromised keys are stale, it is a dead attack"
+
+  - invariant: "Involves compromise of stale (already rotated) keys"
+    term: "Dead Duplicity"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda attack, current_key_state, past_key_states: attack.compromised_keys.intersects(set().union(*(ks.signing_keys for ks in past_key_states))) and not attack.compromised_keys.intersects(current_key_state.signing_keys)"
+    strategy: "st.tuples(st.from_type(DuplicityAttack), st.from_type(KeyState), st.lists(st.from_type(KeyState), min_size=1))"
+    notes: "Dead attacks use keys from a prior key state — the further in the past, the more ambient copies protect"
+
+contracts:
+  - port_ref: "port://keri/duplicity-detection/inbound/monitoring"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sources: aid is not None and len(sources) >= 1"
+        description: "AID must be valid and at least one source endpoint must be provided for monitoring"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: result.is_no_duplicity() or (result.is_evidence() and len(result.evidence.events) >= 2)"
+        description: "check_duplicity returns either clean status or evidence with at least two conflicting events"
+
+  - port_ref: "port://keri/duplicity-detection/inbound/recovery"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, event: event.type == 'rot' and event.aid == aid and event.signatures_verified()"
+        description: "Superseding event must be a verified rotation event for the specified AID"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: result.is_recovery_applied() implies result.trunk is not None and result.disputed_branch is not None"
+        description: "Successful recovery produces both a trunk and a disputed branch"
+
+  - port_ref: "port://keri/duplicity-detection/inbound/evidence-query"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None"
+        description: "AID must be a valid identifier"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda evidence: all(e.events[0].aid == e.events[1].aid and e.events[0].sn == e.events[1].sn for e in evidence)"
+        description: "All returned evidence entries consist of events with matching AID and sn"

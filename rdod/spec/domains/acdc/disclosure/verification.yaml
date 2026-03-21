@@ -1,0 +1,45 @@
+# verification.yaml
+domain_ref: "acdc/disclosure"
+
+properties:
+  - invariant: "Each step discloses only what is needed to facilitate further disclosure"
+    term: "Graduated Disclosure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda steps: all(
+          disclosed_fields(steps[i]) <= required_fields_for(steps[i+1])
+          for i in range(len(steps) - 1)
+        )
+    strategy: "Generate sequences of disclosure steps; verify monotonic information increase"
+    notes: "Least disclosure principle — each step is minimal for the next"
+
+  - invariant: "All graduated disclosure mechanisms may be used in combination"
+    term: "Graduated Disclosure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda acdc, modes: all(
+          is_valid_disclosure(apply_mode(acdc, mode)) for mode in modes
+        )
+    strategy: "Generate ACDCs and apply combinations of compact, partial, selective modes"
+    notes: "Modes compose without conflict"
+
+contracts:
+  - port_ref: "port://acdc/disclosure/inbound/disclosure-management"
+    preconditions:
+      - formal:
+          language: python
+          expression: "is_valid_acdc(acdc) and mode in ['compact', 'partial', 'full', 'selective']"
+        description: "ACDC must be valid and mode must be a recognized disclosure mode"
+    postconditions:
+      - formal:
+          language: python
+          expression: "said_compute(result) == acdc.d or is_valid_variant(result, acdc)"
+        description: "Disclosed variant is verifiable against the original ACDC's SAID or is a valid schema-authorized variant"
+      - formal:
+          language: python
+          expression: "disclosed_information(result) <= disclosed_information(acdc)"
+        description: "Disclosed variant does not reveal more information than the source ACDC"

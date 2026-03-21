@@ -1,0 +1,394 @@
+# verification.yaml
+domain_ref: "oobi"
+
+# Formalized invariants from ubiquitous_language terms
+properties:
+  # --- OOBI ---
+  - invariant: "Format: URL containing AID prefix and optional role/endpoint-type"
+    term: "OOBI"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        import re
+        OOBI_PATTERN = re.compile(
+            r'^https?://.+/oobi/[A-Za-z0-9\-_]{44,}(/[a-z]+)?$'
+        )
+        @given(oobi_url())
+        def test_oobi_format(url):
+            assert OOBI_PATTERN.match(url)
+            # Extract AID
+            parts = url.split('/oobi/')
+            aid_part = parts[1].split('/')[0]
+            assert len(aid_part) >= 44  # minimum qb64 AID length
+    strategy: "oobi_url() — generates valid OOBI URLs with various structures"
+    notes: "OOBI URLs contain an AID prefix in the path, optionally followed by role."
+
+  - invariant: "An OOBI is a hint, not a proof -- always verify the KEL after resolution"
+    term: "OOBI"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(oobi_resolution_result())
+        def test_oobi_not_proof(result):
+            # Resolution result must include verification status
+            assert hasattr(result, 'kel_verified')
+            # A resolved OOBI without KEL verification is not trusted
+            if not result.kel_verified:
+                assert result.trust_level == 'untrusted'
+    strategy: "oobi_resolution_result() — generates resolution outcomes with varying verification states"
+    notes: "Trust comes from KEL verification, not from the OOBI URL itself."
+
+  - invariant: "Multiple OOBIs may exist for the same AID (different endpoints, roles)"
+    term: "OOBI"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(aid_prefix(),
+               st.lists(st.tuples(endpoint_url(), role()), min_size=2, max_size=5))
+        def test_multiple_oobis_per_aid(aid, endpoint_roles):
+            oobis = [make_oobi(aid, ep, role) for ep, role in endpoint_roles]
+            # All OOBIs reference the same AID
+            for oobi in oobis:
+                assert extract_aid(oobi) == aid
+            # But they are distinct URLs
+            assert len(set(oobis)) == len(oobis)
+    strategy: "aid_prefix() x list of (endpoint, role) pairs"
+    notes: "An AID can have multiple OOBIs for different endpoints and roles."
+
+  # --- BADA ---
+  - invariant: "Signed authorizations supersede unsigned"
+    term: "BADA"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(endpoint_authorization(signed=True),
+               endpoint_authorization(signed=False))
+        def test_bada_signed_supersedes_unsigned(signed_auth, unsigned_auth):
+            result = bada_accept(signed_auth, unsigned_auth)
+            assert result == signed_auth
+    strategy: "endpoint_authorization(signed=True/False)"
+    notes: "BADA always prefers signed over unsigned authorizations."
+
+  - invariant: "More recent timestamps supersede older"
+    term: "BADA"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(endpoint_authorization_pair_same_signedness())
+        def test_bada_recent_supersedes_older(auth_pair):
+            older, newer = auth_pair
+            assume(newer.timestamp > older.timestamp)
+            assume(newer.signed == older.signed)
+            result = bada_accept(older, newer)
+            assert result == newer
+    strategy: "endpoint_authorization_pair_same_signedness() — two auths with same signed status"
+    notes: "Among same-signedness authorizations, the most recent wins."
+
+  - invariant: "Authorizations anchored in KEL supersede unanchored"
+    term: "BADA"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(endpoint_authorization(anchored=True),
+               endpoint_authorization(anchored=False))
+        def test_bada_anchored_supersedes_unanchored(anchored, unanchored):
+            assume(anchored.signed == unanchored.signed)
+            result = bada_accept(anchored, unanchored)
+            assert result == anchored
+    strategy: "endpoint_authorization(anchored=True/False)"
+    notes: "KEL-anchored authorizations are more authoritative than unanchored."
+
+  - invariant: "BADA ordering is total: signed+anchored > signed > unsigned"
+    term: "BADA"
+    technique: "smt"
+    formal:
+      language: "z3"
+      expression: |
+        # Model authorization priority as a total order
+        signed, anchored = Bools('signed anchored')
+        priority = Function('priority', BoolSort(), BoolSort(), IntSort())
+        s = Solver()
+        # Priority levels: unsigned=0, signed-unanchored=1, signed-anchored=2
+        s.add(priority(False, False) == 0)  # unsigned, unanchored
+        s.add(priority(True, False) == 1)   # signed, unanchored
+        s.add(priority(True, True) == 2)    # signed, anchored
+        # Anchored implies signed (you can't anchor without signing)
+        s.add(Implies(anchored == True, signed == True))
+        # Verify total order
+        s1, a1, s2, a2 = Bools('s1 a1 s2 a2')
+        s.add(Implies(And(s1 == True, a1 == True),
+                       priority(s1, a1) >= priority(s2, a2)))
+        assert s.check() == sat
+    notes: "BADA defines a strict priority order on authorization attributes."
+
+  # --- Endpoint Authorization ---
+  - invariant: "Signed by the AID's current signing keys"
+    term: "Endpoint Authorization"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(endpoint_authorization(signed=True))
+        def test_endpoint_auth_signed_by_controller(auth):
+            key_state = get_current_key_state(auth.aid)
+            # Verify signature against current keys
+            verified = verify_with_key_state(auth.signature, auth.body, key_state)
+            assert verified == True
+    strategy: "endpoint_authorization(signed=True)"
+    notes: "Endpoint authorizations must be signed by the controlling AID's current keys."
+
+  - invariant: "Anchored to the KEL via interaction event seal"
+    term: "Endpoint Authorization"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(endpoint_authorization(anchored=True))
+        def test_endpoint_auth_anchored(auth):
+            kel = get_kel(auth.aid)
+            # Find interaction event that anchors this authorization
+            anchor_event = find_anchor(kel, auth.seal_digest)
+            assert anchor_event is not None
+            assert anchor_event.type == 'ixn'
+    strategy: "endpoint_authorization(anchored=True)"
+    notes: "Anchored authorizations have a corresponding interaction event in the KEL."
+
+  - invariant: "Specifies role, endpoint URL, and optionally the endpoint AID"
+    term: "Endpoint Authorization"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(endpoint_authorization())
+        def test_endpoint_auth_structure(auth):
+            assert auth.role in ('witness', 'controller', 'agent', 'watcher', 'mediator')
+            assert auth.endpoint.startswith('http://') or auth.endpoint.startswith('https://')
+            # endpoint_aid is optional
+            if auth.endpoint_aid is not None:
+                assert len(auth.endpoint_aid) >= 44
+    strategy: "endpoint_authorization()"
+    notes: "Every endpoint authorization specifies at minimum a role and URL."
+
+  # --- Well-Known OOBI ---
+  - invariant: "Path: /.well-known/keri/oobi/{aid}"
+    term: "Well-Known OOBI"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(aid_prefix(), endpoint_url())
+        def test_wellknown_oobi_path(aid, base_url):
+            wk_oobi = make_wellknown_oobi(base_url, aid)
+            parsed = urlparse(wk_oobi)
+            assert parsed.path.startswith('/.well-known/keri/oobi/')
+            path_aid = parsed.path.split('/.well-known/keri/oobi/')[1].split('/')[0]
+            assert path_aid == aid
+    strategy: "aid_prefix() x endpoint_url()"
+    notes: "Well-known OOBIs follow RFC 8615 path convention."
+
+  - invariant: "Enables discovery without prior out-of-band communication"
+    term: "Well-Known OOBI"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(aid_prefix(), domain_name())
+        def test_wellknown_discoverable(aid, domain):
+            # Given only a domain name and an AID, the OOBI URL is constructible
+            url = f"https://{domain}/.well-known/keri/oobi/{aid}"
+            assert is_valid_url(url)
+            assert extract_aid(url) == aid
+    strategy: "aid_prefix() x domain_name()"
+    notes: "Well-known path makes OOBIs discoverable from just domain + AID."
+
+  # --- OOBI Resolution ---
+  - invariant: "Resolution is not complete until the KEL is verified"
+    term: "OOBI Resolution"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(oobi_url())
+        def test_resolution_requires_kel_verification(oobi):
+            result = resolve_oobi(oobi)
+            if result.status == 'complete':
+                assert result.kel_verified == True
+            elif result.status == 'pending':
+                assert result.kel_verified == False
+    strategy: "oobi_url()"
+    notes: "Resolution is a multi-step process: fetch, retrieve KEL, verify."
+
+  - invariant: "Failed verification means the OOBI is untrusted, not that it's invalid"
+    term: "OOBI Resolution"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(oobi_url_with_bad_kel())
+        def test_failed_verification_untrusted(oobi):
+            result = resolve_oobi(oobi)
+            assert result.kel_verified == False
+            # OOBI itself is still syntactically valid
+            assert result.oobi_valid == True
+            # But the endpoint is untrusted
+            assert result.trust_level == 'untrusted'
+    strategy: "oobi_url_with_bad_kel() — OOBI pointing to endpoint with invalid KEL"
+    notes: "An OOBI can be well-formed but point to an unverifiable endpoint."
+
+  # --- Role ---
+  - invariant: "Roles constrain what operations the endpoint can perform"
+    term: "Role"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.sampled_from(['witness', 'controller', 'agent', 'watcher', 'mediator']))
+        def test_role_operations(role):
+            allowed_ops = get_allowed_operations(role)
+            assert len(allowed_ops) > 0
+            if role == 'witness':
+                assert 'receipt' in allowed_ops
+            elif role == 'agent':
+                assert 'manage' in allowed_ops
+            elif role == 'watcher':
+                assert 'observe' in allowed_ops
+    strategy: "sampled_from valid roles"
+    notes: "Each role has a distinct set of permitted operations."
+
+  - invariant: "Role must match the endpoint authorization"
+    term: "Role"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(endpoint_authorization())
+        def test_role_matches_authorization(auth):
+            oobi = make_oobi(auth.aid, auth.endpoint, auth.role)
+            resolved = resolve_oobi(oobi)
+            if resolved.kel_verified:
+                # The authorization's role must match the OOBI's claimed role
+                assert resolved.authorized_role == auth.role
+    strategy: "endpoint_authorization()"
+    notes: "Role in OOBI URL must match the role in the endpoint authorization."
+
+# Formalized port contracts
+contracts:
+  - port_ref: "port://oobi/inbound/discovery"
+    preconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda url: (
+                isinstance(url, str) and
+                (url.startswith('http://') or url.startswith('https://')) and
+                '/oobi/' in url or '/.well-known/keri/oobi/' in url
+            )
+        description: "URL must be a valid HTTP(S) URL containing an OOBI path"
+      - formal:
+          language: "python"
+          expression: |
+            lambda aid, role=None: (
+                isinstance(aid, str) and
+                len(aid) >= 44 and
+                (role is None or role in ('witness', 'controller', 'agent', 'watcher', 'mediator'))
+            )
+        description: "AID is a valid CESR-qualified identifier, role is optional but must be valid"
+    postconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda result: (
+                hasattr(result, 'aid') and
+                hasattr(result, 'endpoint') and
+                hasattr(result, 'kel_verified') and
+                isinstance(result.kel_verified, bool)
+            )
+        description: "Resolution returns an object with AID, endpoint, and verification status"
+      - formal:
+          language: "python"
+          expression: |
+            lambda result: (
+                not result.kel_verified or
+                (result.key_state is not None and result.key_state.valid)
+            )
+        description: "If KEL is verified, key state must be present and valid"
+
+  - port_ref: "port://oobi/outbound/url-resolution"
+    preconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda url: isinstance(url, str) and url.startswith('http')
+        description: "URL is a valid HTTP(S) URL"
+    postconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda response: (
+                hasattr(response, 'status_code') and
+                isinstance(response.status_code, int)
+            )
+        description: "HTTP response includes a status code"
+
+# State machines
+state_machines:
+  - name: "OOBI Resolution Lifecycle"
+    term: "OOBI Resolution"
+    states:
+      - "Unresolved"
+      - "Fetching"
+      - "RetrievingKEL"
+      - "VerifyingKEL"
+      - "Resolved"
+      - "Untrusted"
+      - "Failed"
+    transitions:
+      - from: "Unresolved"
+        to: "Fetching"
+        trigger: "resolve_oobi(url) called"
+        guard: "URL is syntactically valid"
+      - from: "Fetching"
+        to: "RetrievingKEL"
+        trigger: "endpoint responds with discovery data"
+        guard: "HTTP response is successful (2xx)"
+      - from: "Fetching"
+        to: "Failed"
+        trigger: "endpoint unreachable or HTTP error"
+        guard: "connection timeout or non-2xx response"
+      - from: "RetrievingKEL"
+        to: "VerifyingKEL"
+        trigger: "KEL data received from endpoint"
+        guard: "response contains KEL events"
+      - from: "RetrievingKEL"
+        to: "Failed"
+        trigger: "no KEL data available"
+        guard: "endpoint returns empty or error"
+      - from: "VerifyingKEL"
+        to: "Resolved"
+        trigger: "KEL verification succeeds"
+        guard: "all events in KEL are cryptographically valid and consistent"
+      - from: "VerifyingKEL"
+        to: "Untrusted"
+        trigger: "KEL verification fails"
+        guard: "signature verification failure or inconsistent key state"
+      - from: "Untrusted"
+        to: "Fetching"
+        trigger: "retry resolution (e.g., with updated witness list)"
+        guard: "retry policy allows"
+      - from: "Failed"
+        to: "Fetching"
+        trigger: "retry resolution"
+        guard: "retry policy allows"
+    invariants:
+      - "Resolved state is only reachable through VerifyingKEL — no shortcut past verification"
+      - "Untrusted is distinct from Failed — the endpoint responded but verification failed"
+      - "Every path from Unresolved to Resolved passes through VerifyingKEL"
+      - "BADA policy applies when updating an already-resolved endpoint"
+    initial_state: "Unresolved"
+    terminal_states: ["Resolved", "Untrusted", "Failed"]

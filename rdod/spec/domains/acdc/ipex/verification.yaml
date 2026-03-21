@@ -1,0 +1,76 @@
+# verification.yaml
+domain_ref: "acdc/ipex"
+
+properties:
+  - invariant: "The difference between exchange types is the information disclosed, not the mechanism"
+    term: "IPEX"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda issuance_flow, presentation_flow: (
+          same_message_types(issuance_flow, presentation_flow)
+          and same_protocol_structure(issuance_flow, presentation_flow)
+          and differs_only_in_payload(issuance_flow, presentation_flow)
+        )
+    strategy: "Generate issuance and presentation flows; verify structural identity"
+    notes: "Protocol unification — one mechanism for both issuance and presentation"
+
+  - invariant: "Uses KERI exchange (exn) message format with specific route (r) field values"
+    term: "IPEX"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda msg: (
+          msg.type == 'exn'
+          and msg.r.startswith('/ipex/')
+          and msg.r.split('/')[-1] in ('apply', 'offer', 'agree', 'grant', 'admit', 'spurn')
+        )
+    strategy: "Generate IPEX messages; verify all use exn type with /ipex/* routes"
+    notes: "Route field constrains the message type"
+
+  - invariant: "A single protocol handles both issuance and presentation"
+    term: "IPEX"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda exchange: (
+          exchange.pattern in ('issuance', 'presentation')
+          and exchange.protocol == 'ipex'
+        )
+    strategy: "Generate both issuance and presentation exchanges; verify same protocol used"
+    notes: ""
+
+contracts:
+  - port_ref: "port://acdc/ipex/inbound/exchange-protocol"
+    preconditions:
+      - formal:
+          language: python
+          expression: "is_valid_aid(issuer_aid) and is_valid_aid(issuee_aid) and is_valid_acdc(acdc)"
+        description: "Both AIDs must be valid and ACDC must be structurally valid"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            result.r == '/ipex/grant'
+            and result.type == 'exn'
+            and result.acdc.d == acdc.d
+        description: "initiate_issuance returns a grant message containing the ACDC"
+
+  - port_ref: "port://acdc/ipex/inbound/direct-issuance"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            is_valid_aid(issuer_aid) and is_valid_aid(issuee_aid)
+            and is_valid_acdc(acdc) and is_valid_signature(signature)
+        description: "Valid AIDs, valid ACDC, and valid signature required"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            result.r == '/ipex/grant'
+            and verify_signature(result, signature, issuer_aid)
+        description: "Grant message is properly signed by the issuer"

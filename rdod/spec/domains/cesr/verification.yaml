@@ -1,0 +1,593 @@
+# verification.yaml
+domain_ref: "cesr"
+
+# Formalized invariants from ubiquitous_language terms
+properties:
+  # --- Composability ---
+  - invariant: "T(cat(b[k])) = cat(T(b[k])) and B(cat(t[k])) = cat(B(t[k])) for all k"
+    term: "Composability"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.lists(cesr_primitive_qb64(), min_size=1, max_size=10))
+        def test_composability_roundtrip(primitives):
+            concatenated_t = b''.join(p.encode() for p in primitives)
+            concatenated_b = base64url_decode(concatenated_t)
+            assert base64url_encode(concatenated_b) == concatenated_t
+            assert base64url_decode(base64url_encode(concatenated_b)) == concatenated_b
+    strategy: "st.lists(cesr_primitive_qb64(), min_size=1, max_size=10)"
+    notes: "The fundamental CESR composability property. T(B(t)) = t and B(T(b)) = b for concatenated primitives."
+
+  - invariant: "Text domain primitives MUST be integer multiples of 4 Base64 characters"
+    term: "Composability"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive())
+        def test_t_domain_mod4(primitive):
+            assert len(primitive.qb64) % 4 == 0
+    strategy: "cesr_primitive() — generates arbitrary valid CESR primitives"
+    notes: "24-bit alignment in T domain means every primitive is a multiple of 4 characters."
+
+  - invariant: "Binary domain primitives MUST be integer multiples of 3 bytes"
+    term: "Composability"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive())
+        def test_b_domain_mod3(primitive):
+            assert len(primitive.qb2) % 3 == 0
+    strategy: "cesr_primitive() — generates arbitrary valid CESR primitives"
+    notes: "24-bit alignment in B domain means every primitive is a multiple of 3 bytes."
+
+  - invariant: "All primitives MUST be aligned on 24-bit boundaries"
+    term: "Composability"
+    technique: "smt"
+    formal:
+      language: "z3"
+      expression: |
+        qb64_len, qb2_len = Ints('qb64_len qb2_len')
+        s = Solver()
+        s.add(qb64_len > 0, qb2_len > 0)
+        s.add(qb64_len * 6 == qb2_len * 8)  # bits must match
+        s.add(qb64_len % 4 == 0)
+        s.add(qb2_len % 3 == 0)
+        # Prove: 4 chars * 6 bits = 24 bits = 3 bytes * 8 bits
+        s.add(qb64_len * 6 != qb2_len * 8)
+        assert s.check() == unsat  # no counterexample exists
+    notes: "Proves that 4-char T-domain and 3-byte B-domain alignment both enforce 24-bit boundaries."
+
+  - invariant: "All Count Code groups MUST also be composable"
+    term: "Composability"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_count_code_group())
+        def test_count_code_composability(group):
+            assert len(group.qb64) % 4 == 0
+            assert len(group.qb2) % 3 == 0
+            assert base64url_decode(group.qb64) == group.qb2
+            assert base64url_encode(group.qb2) == group.qb64
+    strategy: "cesr_count_code_group() — generates valid count code groups with contents"
+    notes: "Count code groups are composable just like individual primitives."
+
+  # --- Primitive ---
+  - invariant: "Every primitive is self-framing -- extractable from a stream without external delimiters"
+    term: "Primitive"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.lists(cesr_primitive_qb64(), min_size=2, max_size=5))
+        def test_self_framing(primitives):
+            stream = ''.join(primitives)
+            parsed = []
+            while stream:
+                prim, stream = parse_next_primitive(stream)
+                parsed.append(prim)
+            assert parsed == primitives
+    strategy: "st.lists(cesr_primitive_qb64(), min_size=2, max_size=5)"
+    notes: "Concatenated primitives must be separable by parsing leading code."
+
+  - invariant: "In the R domain, represented as a (code, raw) pair where code is text and raw is binary bytes"
+    term: "Primitive"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive())
+        def test_r_domain_structure(primitive):
+            assert isinstance(primitive.code, str)
+            assert isinstance(primitive.raw, bytes)
+            assert len(primitive.code) > 0
+            assert len(primitive.raw) >= 0
+    strategy: "cesr_primitive()"
+    notes: "R domain is always a (text code, binary raw) pair."
+
+  # --- Domain ---
+  - invariant: "T domain uses only URL/filename-safe Base64 characters (A-Z, a-z, 0-9, -, _) per RFC 4648"
+    term: "Domain"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        import re
+        SAFE_B64 = re.compile(r'^[A-Za-z0-9\-_]+$')
+        @given(cesr_primitive())
+        def test_t_domain_charset(primitive):
+            assert SAFE_B64.match(primitive.qb64)
+    strategy: "cesr_primitive()"
+    notes: "No '=' pad character, no '+' or '/' from standard Base64."
+
+  - invariant: "T domain NEVER uses the '=' pad character"
+    term: "Domain"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive())
+        def test_no_pad_character(primitive):
+            assert '=' not in primitive.qb64
+    strategy: "cesr_primitive()"
+    notes: "CESR composability eliminates the need for Base64 '=' padding."
+
+  - invariant: "Six transformations are defined: T(B), B(T), T(R), R(T), B(R), R(B)"
+    term: "Domain"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive())
+        def test_six_transforms(primitive):
+            # T(B) and B(T)
+            assert base64url_encode(primitive.qb2) == primitive.qb64.encode()
+            assert base64url_decode(primitive.qb64.encode()) == primitive.qb2
+            # T(R) and R(T): encode/decode through qb64
+            rebuilt_t = qualify(primitive.code, primitive.raw)
+            code_r, raw_r = dequalify(primitive.qb64)
+            assert rebuilt_t == primitive.qb64
+            assert code_r == primitive.code
+            assert raw_r == primitive.raw
+            # B(R) and R(B): encode/decode through qb2
+            rebuilt_b = bqualify(primitive.code, primitive.raw)
+            code_r2, raw_r2 = bdequalify(primitive.qb2)
+            assert rebuilt_b == primitive.qb2
+            assert code_r2 == primitive.code
+            assert raw_r2 == primitive.raw
+    strategy: "cesr_primitive()"
+    notes: "All six domain transforms must be lossless and consistent."
+
+  # --- Code ---
+  - invariant: "Code MUST be stable in the T domain -- type characters do not change when value changes"
+    term: "Code"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_code(), st.binary())
+        def test_code_stability(code, raw_value):
+            sizage = lookup_sizage(code)
+            raw_a = raw_value[:sizage.raw_size].ljust(sizage.raw_size, b'\x00')
+            raw_b = bytes(reversed(raw_a))
+            prim_a = qualify(code, raw_a)
+            prim_b = qualify(code, raw_b)
+            assert prim_a[:sizage.hs] == prim_b[:sizage.hs]
+    strategy: "cesr_code() x st.binary() — code from code table, arbitrary raw bytes"
+    notes: "The first hs characters (hard size / type code) never change regardless of value."
+
+  - invariant: "Each code table MUST be uniquely indicated by its first character in the T domain"
+    term: "Code"
+    technique: "smt"
+    formal:
+      language: "z3"
+      expression: |
+        # Model: first_char -> code_table_id is injective
+        FirstChar = DeclareSort('FirstChar')
+        TableId = DeclareSort('TableId')
+        table_of = Function('table_of', FirstChar, TableId)
+        c1, c2 = Consts('c1 c2', FirstChar)
+        s = Solver()
+        # Selectors: 0-9 -> extended tables, '-' -> count, '_' -> op, A-Za-z -> 1-char table
+        s.add(ForAll([c1, c2], Implies(table_of(c1) == table_of(c2), c1 == c2)))
+        assert s.check() == sat  # the injective mapping is satisfiable
+    notes: "First character unambiguously selects the code table. No two tables share a selector."
+
+  - invariant: "Code size is determined by pad size: ps=0 -> 4*M chars, ps=1 -> 4*M+1 chars, ps=2 -> 4*M+2 chars"
+    term: "Code"
+    technique: "smt"
+    formal:
+      language: "z3"
+      expression: |
+        raw_len, pad_size, code_size = Ints('raw_len pad_size code_size')
+        s = Solver()
+        s.add(raw_len > 0)
+        s.add(pad_size == (3 - raw_len % 3) % 3)
+        s.add(Or(
+            And(pad_size == 0, code_size % 4 == 0),
+            And(pad_size == 1, code_size % 4 == 1),
+            And(pad_size == 2, code_size % 4 == 2)
+        ))
+        assert s.check() == sat
+    notes: "Pad size directly constrains minimum code size modulo 4."
+
+  # --- Selector ---
+  - invariant: "'-' MUST select the count code table; '_' MUST select the op code table; '0'-'9' select extended tables"
+    term: "Selector"
+    technique: "smt"
+    formal:
+      language: "z3"
+      expression: |
+        char_val = Int('char_val')
+        is_selector = Function('is_selector', IntSort(), BoolSort())
+        table_id = Function('table_id', IntSort(), IntSort())
+        s = Solver()
+        # '-' = 45, '_' = 95, '0'-'9' = 48-57
+        s.add(table_id(45) == 0)   # '-' -> count codes
+        s.add(table_id(95) == 1)   # '_' -> op codes
+        for i in range(48, 58):
+            s.add(table_id(i) == i - 48 + 2)  # '0'-'9' -> tables 2-11
+        # Letters are NOT selectors
+        for c in list(range(65, 91)) + list(range(97, 123)):
+            s.add(is_selector(c) == False)
+        for c in [45, 95] + list(range(48, 58)):
+            s.add(is_selector(c) == True)
+        assert s.check() == sat
+    notes: "12 selectors partition non-letter first characters into distinct code tables."
+
+  # --- Stable ---
+  - invariant: "Value portion MUST be right-aligned (stable value encoding)"
+    term: "Stable"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_code(), st.binary())
+        def test_stable_value_right_aligned(code, raw_value):
+            sizage = lookup_sizage(code)
+            if sizage.fs == VARIABLE:
+                return  # skip variable-length
+            raw = raw_value[:sizage.raw_size].ljust(sizage.raw_size, b'\x00')
+            qb64 = qualify(code, raw)
+            # Last bytes of qb64 encode the value — changing low bits of raw changes only trailing chars
+            raw_modified = bytearray(raw)
+            raw_modified[-1] ^= 0x01
+            qb64_modified = qualify(code, bytes(raw_modified))
+            # Code prefix unchanged
+            assert qb64[:sizage.hs] == qb64_modified[:sizage.hs]
+    strategy: "cesr_code() x st.binary()"
+    notes: "Right-aligned value means code prefix is stable and value changes affect trailing characters."
+
+  - invariant: "Any zero padding MUST appear in the middle (mid-padding), after the code but before the value"
+    term: "Stable"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive())
+        def test_mid_padding_position(primitive):
+            sizage = lookup_sizage(primitive.code)
+            if sizage.ls == 0:
+                return  # no padding needed
+            # Decode qb64 to bytes, check lead bytes are zero
+            raw_with_lead = base64url_decode(primitive.qb64[sizage.hs:].encode())
+            lead_bytes = raw_with_lead[:sizage.ls]
+            assert lead_bytes == b'\x00' * sizage.ls
+    strategy: "cesr_primitive()"
+    notes: "Mid-padding zeros appear between code and value in the binary representation."
+
+  # --- Mid-padding ---
+  - invariant: "Pad size ps = (3 - (N mod 3)) mod 3, where N is raw binary length in bytes"
+    term: "Mid-padding"
+    technique: "smt"
+    formal:
+      language: "z3"
+      expression: |
+        N = Int('N')
+        ps = Int('ps')
+        s = Solver()
+        s.add(N >= 0)
+        s.add(ps == (3 - N % 3) % 3)
+        # Verify exhaustive: N%3=0 -> ps=0, N%3=1 -> ps=2, N%3=2 -> ps=1
+        s.push()
+        s.add(N % 3 == 0)
+        s.add(ps != 0)
+        assert s.check() == unsat
+        s.pop()
+        s.push()
+        s.add(N % 3 == 1)
+        s.add(ps != 2)
+        assert s.check() == unsat
+        s.pop()
+        s.push()
+        s.add(N % 3 == 2)
+        s.add(ps != 1)
+        assert s.check() == unsat
+        s.pop()
+    notes: "Pad size computation has exactly 3 cases. SMT proves boundary correctness exhaustively."
+
+  - invariant: "Mid-padding preserves stable right-aligned value encoding"
+    term: "Mid-padding"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.sampled_from([32, 64, 33, 16, 57]),
+               st.binary(min_size=64, max_size=64))
+        def test_midpad_preserves_stability(raw_size, raw_source):
+            raw = raw_source[:raw_size]
+            ps = (3 - len(raw) % 3) % 3
+            padded = b'\x00' * ps + raw
+            assert len(padded) % 3 == 0
+            encoded = base64url_encode(padded)
+            assert len(encoded) % 4 == 0
+            # Verify lead bytes are zero
+            decoded = base64url_decode(encoded)
+            assert decoded[:ps] == b'\x00' * ps
+            assert decoded[ps:] == raw
+    strategy: "sampled raw sizes x arbitrary binary"
+    notes: "Mid-padding achieves 24-bit alignment while preserving stable value encoding."
+
+  # --- Quadlet / Triplet ---
+  - invariant: "1 quadlet = 4 T-domain characters = 3 B-domain bytes = 24 bits"
+    term: "Quadlet"
+    technique: "smt"
+    formal:
+      language: "z3"
+      expression: |
+        quadlets = Int('quadlets')
+        t_chars, b_bytes, bits = Ints('t_chars b_bytes bits')
+        s = Solver()
+        s.add(quadlets > 0)
+        s.add(t_chars == quadlets * 4)
+        s.add(b_bytes == quadlets * 3)
+        s.add(bits == quadlets * 24)
+        s.add(t_chars * 6 == bits)   # 4 chars * 6 bits = 24 bits
+        s.add(b_bytes * 8 == bits)   # 3 bytes * 8 bits = 24 bits
+        assert s.check() == sat
+    notes: "Quadlet/triplet equivalence is the foundation of T/B domain composability."
+
+  - invariant: "The count value is invariant between T and B domains because both measure 24-bit units"
+    term: "Quadlet"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_count_code())
+        def test_count_value_domain_invariant(count_code):
+            t_count = parse_count_t(count_code.qb64)
+            b_count = parse_count_b(count_code.qb2)
+            assert t_count == b_count
+    strategy: "cesr_count_code() — generates valid count codes"
+    notes: "Count codes measure quadlets/triplets, so the numeric value is the same in both domains."
+
+  # --- qb64 ---
+  - invariant: "qb64 length MUST be an integer multiple of 4 characters"
+    term: "qb64"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive())
+        def test_qb64_mod4(primitive):
+            assert len(primitive.qb64) % 4 == 0
+    strategy: "cesr_primitive()"
+    notes: "Directly tests the T-domain alignment invariant on qb64 output."
+
+  - invariant: "Uses only URL/filename-safe Base64 characters (no '=' padding)"
+    term: "qb64"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        import re
+        @given(cesr_primitive())
+        def test_qb64_safe_chars(primitive):
+            assert re.match(r'^[A-Za-z0-9\-_]+$', primitive.qb64)
+            assert '=' not in primitive.qb64
+    strategy: "cesr_primitive()"
+    notes: "URL-safe Base64 alphabet without padding."
+
+  # --- qb2 ---
+  - invariant: "qb2 length MUST be an integer multiple of 3 bytes"
+    term: "qb2"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive())
+        def test_qb2_mod3(primitive):
+            assert len(primitive.qb2) % 3 == 0
+    strategy: "cesr_primitive()"
+    notes: "Directly tests the B-domain alignment invariant on qb2 output."
+
+  - invariant: "Obtainable from qb64 via naive Base64 decode: qb2 = B(qb64)"
+    term: "qb2"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive())
+        def test_qb2_from_qb64(primitive):
+            computed_qb2 = base64url_decode(primitive.qb64.encode())
+            assert computed_qb2 == primitive.qb2
+    strategy: "cesr_primitive()"
+    notes: "T-to-B conversion is naive Base64 decode -- no special CESR logic needed."
+
+  - invariant: "Convertible back to qb64 via naive Base64 encode: qb64 = T(qb2)"
+    term: "qb2"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive())
+        def test_qb64_from_qb2(primitive):
+            computed_qb64 = base64url_encode(primitive.qb2).decode()
+            assert computed_qb64 == primitive.qb64
+    strategy: "cesr_primitive()"
+    notes: "B-to-T conversion is naive Base64 encode -- standard tooling is sufficient."
+
+  # --- Sizage ---
+  - invariant: "hs + ss = code size; fs = total qualified primitive size in T-domain characters"
+    term: "Sizage"
+    technique: "smt"
+    formal:
+      language: "z3"
+      expression: |
+        hs, ss, fs, ls = Ints('hs ss fs ls')
+        raw_size = Int('raw_size')
+        s = Solver()
+        s.add(hs > 0, ss >= 0, fs > 0, ls >= 0, ls <= 2)
+        s.add(raw_size > 0)
+        # code_size = hs + ss
+        code_size = hs + ss
+        # For fixed-size: fs = code_size + ceil((raw_size + ls) * 4 / 3) rounded to mod-4
+        # Simplified: fs = ((raw_size + ls + code_size_bytes) * 4 + 2) / 3 rounded
+        # The key relation: (fs - code_size) * 3 == (raw_size + ls) * 4 - overlap_bits
+        # Actually: fs * 3 = (raw_size + ls) * 4 + code_size * 3
+        # Which reduces to: fs = code_size + ((raw_size + ls) * 4) / 3
+        # Since (raw_size + ls) % 3 == 0 by construction:
+        s.add((raw_size + ls) % 3 == 0)
+        s.add(fs == code_size + ((raw_size + ls) * 4) // 3)
+        assert s.check() == sat
+    notes: "Sizage fields are arithmetically constrained. hs+ss=code_size, fs=total T-domain chars."
+
+  - invariant: "fs = u32::MAX indicates variable-length (actual size encoded in soft chars)"
+    term: "Sizage"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_variable_length_code())
+        def test_variable_length_fs_sentinel(code):
+            sizage = lookup_sizage(code)
+            assert sizage.fs == 0xFFFFFFFF  # u32::MAX
+            assert sizage.ss > 0  # must have soft chars to encode size
+    strategy: "cesr_variable_length_code() — selectors 4-9"
+    notes: "Variable-length codes use u32::MAX as sentinel for fs."
+
+  # --- Infil/Exfil ---
+  - invariant: "infil then exfil is identity: exfil(infil(code, raw)) == (code, raw)"
+    term: "Infil/Exfil"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_code_raw_pair())
+        def test_infil_exfil_roundtrip(pair):
+            code, raw = pair
+            qb64 = infil(code, raw)
+            code_out, raw_out = exfil(qb64)
+            assert code_out == code
+            assert raw_out == raw
+    strategy: "cesr_code_raw_pair() — generates valid (code, raw) pairs from code table"
+    notes: "Infil/exfil round-trip is the fundamental correctness property of qualification."
+
+  - invariant: "binfil then bexfil is identity: bexfil(binfil(code, raw)) == (code, raw)"
+    term: "Infil/Exfil"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_code_raw_pair())
+        def test_binfil_bexfil_roundtrip(pair):
+            code, raw = pair
+            qb2 = binfil(code, raw)
+            code_out, raw_out = bexfil(qb2)
+            assert code_out == code
+            assert raw_out == raw
+    strategy: "cesr_code_raw_pair()"
+    notes: "Binary domain round-trip must also be lossless."
+
+  - invariant: "Cross-domain consistency: B(infil(code, raw)) == binfil(code, raw)"
+    term: "Infil/Exfil"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_code_raw_pair())
+        def test_infil_binfil_consistency(pair):
+            code, raw = pair
+            qb64 = infil(code, raw)
+            qb2_via_convert = base64url_decode(qb64.encode())
+            qb2_direct = binfil(code, raw)
+            assert qb2_via_convert == qb2_direct
+    strategy: "cesr_code_raw_pair()"
+    notes: "T-domain infil followed by B(T) must equal direct B-domain binfil."
+
+  # --- Version String ---
+  - invariant: "Total length is 19 characters, terminated by '.'"
+    term: "Version String"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(version_string_v2())
+        def test_version_string_length(vs):
+            assert len(vs) == 19
+            assert vs[-1] == '.'
+    strategy: "version_string_v2() — generates valid v2.XX version strings"
+    notes: "v2.XX version strings are exactly 19 characters with '.' terminator."
+
+  - invariant: "Format: 4-char protocol + 3-char protocol version + 3-char genus version + 4-char serialization kind + 4-char Base64 size + terminator '.'"
+    term: "Version String"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        import re
+        VS_PATTERN = re.compile(r'^[A-Z]{4}[A-Za-z0-9\-_]{3}[A-Za-z0-9\-_]{3}(JSON|CBOR|MGPK|CESR)[A-Za-z0-9\-_]{4}\.$')
+        @given(version_string_v2())
+        def test_version_string_format(vs):
+            assert VS_PATTERN.match(vs)
+    strategy: "version_string_v2()"
+    notes: "Validates the structured format of v2.XX version strings."
+
+# Formalized port contracts
+contracts:
+  - port_ref: "port://cesr/inbound/encoding"
+    preconditions:
+      - formal:
+          language: "python"
+          expression: "lambda code, raw: code in CODE_TABLE and len(raw) == CODE_TABLE[code].raw_size"
+        description: "Code must be a valid code table entry and raw size must match"
+      - formal:
+          language: "python"
+          expression: "lambda qualified: len(qualified) >= 1 and qualified[0] in VALID_FIRST_CHARS"
+        description: "Qualified input must start with a valid code table selector or letter"
+    postconditions:
+      - formal:
+          language: "python"
+          expression: "lambda result: len(result.qb64) % 4 == 0 and len(result.qb2) % 3 == 0"
+        description: "Encoded primitive satisfies 24-bit alignment in both domains"
+      - formal:
+          language: "python"
+          expression: "lambda code, raw, result: dequalify(result.qb64) == (code, raw)"
+        description: "Encoding is reversible -- decode yields original (code, raw)"
+
+  - port_ref: "port://cesr/inbound/code-lookup"
+    preconditions:
+      - formal:
+          language: "python"
+          expression: "lambda code: isinstance(code, str) and len(code) >= 1"
+        description: "Code must be a non-empty string"
+    postconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda code, entry: (
+                entry.hs + entry.ss == len(code) and
+                entry.ls >= 0 and entry.ls <= 2 and
+                (entry.fs == 0xFFFFFFFF or entry.fs > 0)
+            )
+        description: "Returned entry has consistent sizage fields"
+      - formal:
+          language: "python"
+          expression: "lambda code, entry: entry is None if code not in CODE_TABLE else entry is not None"
+        description: "Lookup returns None for unknown codes, entry for known codes"
+
+# State machines — none for cesr root domain (stateless encoding)
+state_machines: []

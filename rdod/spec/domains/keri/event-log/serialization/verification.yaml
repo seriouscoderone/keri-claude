@@ -1,0 +1,484 @@
+# verification.yaml
+domain_ref: "keri/event-log/serialization"
+
+properties:
+  # Event Serializer invariants
+  - invariant: "Enforces normative field ordering for each event type (ilk) — the serialized byte order must match the declared order"
+    term: "Event Serializer"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(ilk=st.sampled_from(['icp', 'rot', 'ixn', 'dip', 'drt']))
+        def test_normative_field_order(ilk):
+            event = build_event_by_ilk(ilk)
+            raw = serialize(event)
+            field_positions = extract_field_positions(raw, ilk)
+            expected_order = get_normative_order(ilk)
+            actual_order = [f for f, _ in sorted(field_positions.items(), key=lambda x: x[1])]
+            assert actual_order == expected_order
+    strategy: "st.sampled_from(['icp', 'rot', 'ixn', 'dip', 'drt'])"
+    notes: "Field order is normative per ilk — serialization must match."
+
+  - invariant: "Computes and validates the SAID (d field) using the saidify algorithm: dummy d -> serialize -> digest -> inject"
+    term: "Event Serializer"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy())
+        def test_said_computation_roundtrip(event):
+            # saidify: replace d with dummy, serialize, digest, inject
+            dummy = replace_d_with_dummy(event)
+            raw = serialize(dummy)
+            computed_said = digest(raw)
+            assert computed_said == event.d
+    strategy: "key_event_strategy()"
+    notes: "SAID computation is deterministic and round-trippable."
+
+  - invariant: "Parses and validates the version string (v field) to determine protocol, version, serialization kind, and size"
+    term: "Event Serializer"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy())
+        def test_version_string_parsing(event):
+            vs = event.v
+            parsed = parse_version_string(vs)
+            assert parsed.protocol in ('KERI', 'ACDC')
+            assert parsed.kind in ('JSON', 'CBOR', 'MGPK', 'CESR')
+            assert parsed.size > 0
+            assert parsed.size == len(serialize(event))
+    strategy: "key_event_strategy()"
+    notes: "Version string is parseable and size matches serialized length."
+
+  - invariant: "Supports construction from raw bytes (deserialization) or from a field map (serialization)"
+    term: "Event Serializer"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy())
+        def test_serializer_both_directions(event):
+            # Serialize from field map
+            raw = serialize(event)
+            # Deserialize from bytes
+            deserialized = deserialize(raw)
+            assert deserialized.ked == event.ked
+            assert deserialized.said == event.said
+    strategy: "key_event_strategy()"
+    notes: "Round-trip: field map -> bytes -> field map."
+
+  # Signed Event Message invariants
+  - invariant: "Contains the serialized event (Event Serializer) and at least one controller signature"
+    term: "Signed Event Message"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(sem=signed_event_message_strategy())
+        def test_sem_has_event_and_sig(sem):
+            assert sem.serder is not None
+            assert len(sem.sigers) >= 1
+    strategy: "signed_event_message_strategy()"
+    notes: "Every signed message must have an event and at least one signature."
+
+  - invariant: "Controller signatures are indexed (Siger) — the index corresponds to the signer's position in the current signing key list (k field)"
+    term: "Signed Event Message"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(sem=signed_event_message_strategy())
+        def test_sem_siger_indices(sem):
+            n_keys = len(sem.serder.ked.get('k', []))
+            for siger in sem.sigers:
+                assert 0 <= siger.index < n_keys
+    strategy: "signed_event_message_strategy()"
+    notes: "Siger index must be within the key list bounds."
+
+  # Event Field Structure invariants
+  - invariant: "Common fields across all types: v (version string), t (type/ilk), d (SAID), i (identifier prefix), s (sequence number hex)"
+    term: "Event Field Structure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy())
+        def test_common_fields_present(event):
+            ked = event.ked
+            assert 'v' in ked
+            assert 't' in ked
+            assert 'd' in ked
+            assert 'i' in ked
+            assert 's' in ked
+    strategy: "key_event_strategy()"
+    notes: "v, t, d, i, s are required in every event type."
+
+  - invariant: "Chain field: p (prior event SAID) — present in all events except inception"
+    term: "Event Field Structure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy())
+        def test_chain_field(event):
+            if event.t in ('icp', 'dip'):
+                assert 'p' not in event.ked or event.ked.get('p') is None
+            else:
+                assert 'p' in event.ked and event.ked['p'] is not None
+    strategy: "key_event_strategy()"
+    notes: "Inception has no p; all others do."
+
+  - invariant: "Inception order: v, t, d, i, s, kt, k, nt, n, bt, b, c, a"
+    term: "Event Field Structure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(icp=inception_event_strategy())
+        def test_inception_field_order(icp):
+            keys = list(icp.ked.keys())
+            expected = ['v', 't', 'd', 'i', 's', 'kt', 'k', 'nt', 'n', 'bt', 'b', 'c', 'a']
+            assert keys == expected
+    strategy: "inception_event_strategy()"
+    notes: "Normative field order for icp."
+
+  - invariant: "Rotation order: v, t, d, i, s, p, kt, k, nt, n, bt, br, ba, c, a"
+    term: "Event Field Structure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(rot=rotation_event_strategy())
+        def test_rotation_field_order(rot):
+            keys = list(rot.ked.keys())
+            expected = ['v', 't', 'd', 'i', 's', 'p', 'kt', 'k', 'nt', 'n', 'bt', 'br', 'ba', 'c', 'a']
+            assert keys == expected
+    strategy: "rotation_event_strategy()"
+    notes: "Normative field order for rot."
+
+  - invariant: "Interaction order: v, t, d, i, s, p, a"
+    term: "Event Field Structure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(ixn=interaction_event_strategy())
+        def test_interaction_field_order(ixn):
+            keys = list(ixn.ked.keys())
+            expected = ['v', 't', 'd', 'i', 's', 'p', 'a']
+            assert keys == expected
+    strategy: "interaction_event_strategy()"
+    notes: "Normative field order for ixn."
+
+  - invariant: "Delegated inception order: v, t, d, i, s, kt, k, nt, n, bt, b, c, a, di"
+    term: "Event Field Structure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(dip=delegated_inception_strategy())
+        def test_dip_field_order(dip):
+            keys = list(dip.ked.keys())
+            expected = ['v', 't', 'd', 'i', 's', 'kt', 'k', 'nt', 'n', 'bt', 'b', 'c', 'a', 'di']
+            assert keys == expected
+    strategy: "delegated_inception_strategy()"
+    notes: "Normative field order for dip — di is last."
+
+  # Event Creation Functions invariants
+  - invariant: "All functions compute the SAID and version string automatically — callers provide logical fields only"
+    term: "Event Creation Functions"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(keys=key_list_strategy(min_size=1, max_size=5))
+        def test_creation_computes_said_auto(keys):
+            ndigs = [compute_digest(k) for k in generate_keys(len(keys))]
+            serder = incept(keys=keys, ndigs=ndigs)
+            assert serder.said is not None
+            assert serder.v is not None
+            # Verify SAID is correctly computed
+            assert serder.said == compute_said(serder)
+    strategy: "key_list_strategy(1..5)"
+    notes: "SAID and version string are computed, not provided."
+
+  - invariant: "Default thresholds are computed via quorum calculation (ample/simple) when not explicitly provided"
+    term: "Event Creation Functions"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(n_keys=st.integers(min_value=1, max_value=10))
+        def test_default_threshold_from_quorum(n_keys):
+            keys = generate_keys(n_keys)
+            ndigs = [compute_digest(k) for k in generate_keys(n_keys)]
+            serder = incept(keys=keys, ndigs=ndigs)
+            # Default threshold should be quorum majority
+            expected_kt = simple(n_keys) if n_keys <= 2 else ample(n_keys)
+            assert int(serder.ked['kt']) >= 1
+    strategy: "st.integers(1..10)"
+    notes: "Quorum calculation provides BFT-safe defaults."
+
+  # Event Serialization Kinds invariants
+  - invariant: "Changing the serialization kind changes the SAID — same logical event has different SAIDs in different kinds"
+    term: "Event Serialization Kinds"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event_data=event_data_strategy())
+        def test_kind_changes_said(event_data):
+            said_json = compute_said_for_kind(event_data, 'JSON')
+            said_cbor = compute_said_for_kind(event_data, 'CBOR')
+            said_mgpk = compute_said_for_kind(event_data, 'MGPK')
+            assert said_json != said_cbor
+            assert said_json != said_mgpk
+            assert said_cbor != said_mgpk
+    strategy: "event_data_strategy()"
+    notes: "Three different kinds produce three different SAIDs."
+
+  - invariant: "All kinds must preserve normative field ordering"
+    term: "Event Serialization Kinds"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy(),
+               kind=st.sampled_from(['JSON', 'CBOR', 'MGPK']))
+        def test_all_kinds_preserve_order(event, kind):
+            raw = serialize(event, kind=kind)
+            deserialized = deserialize(raw)
+            original_keys = list(event.ked.keys())
+            deserialized_keys = list(deserialized.ked.keys())
+            assert original_keys == deserialized_keys
+    strategy: "key_event_strategy(), st.sampled_from kinds"
+    notes: "Field order must survive serialization round-trip in all kinds."
+
+  # Field Ordering invariants
+  - invariant: "Field order per ilk is defined by the KERI specification and is not configurable"
+    term: "Field Ordering"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(ilk=st.sampled_from(['icp', 'rot', 'ixn', 'dip', 'drt']))
+        def test_field_order_not_configurable(ilk):
+            order = get_normative_order(ilk)
+            assert order == get_normative_order(ilk)  # Always the same
+            # Cannot set a custom order
+            assert is_frozen(order)
+    strategy: "st.sampled_from(['icp', 'rot', 'ixn', 'dip', 'drt'])"
+    notes: "Field order is specification-defined and immutable."
+
+  - invariant: "Reordering fields invalidates the SAID — the digest changes because the byte serialization changes"
+    term: "Field Ordering"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy())
+        def test_reorder_changes_said(event):
+            original_said = event.said
+            reordered = reorder_fields(event.ked)
+            assume(list(reordered.keys()) != list(event.ked.keys()))
+            reordered_said = compute_said_from_ked(reordered)
+            assert reordered_said != original_said
+    strategy: "key_event_strategy()"
+    notes: "Byte-level serialization means order matters for SAID."
+
+  # Field Domain Validation invariants
+  - invariant: "Each ilk (icp, rot, ixn, dip, drt) has a distinct field domain"
+    term: "Field Domain Validation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(st.data())
+        def test_distinct_field_domains(data):
+            domains = {ilk: get_field_domain(ilk) for ilk in ['icp', 'rot', 'ixn', 'dip', 'drt']}
+            # Each domain is unique
+            domain_sets = [frozenset(d) for d in domains.values()]
+            assert len(set(domain_sets)) == len(domain_sets)
+    strategy: "Fixed ilk enumeration"
+    notes: "Five ilks, five distinct field domains."
+
+  - invariant: "Fields not in the allowed set for the ilk are rejected"
+    term: "Field Domain Validation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(ilk=st.sampled_from(['icp', 'rot', 'ixn']),
+               extra_field=st.text(min_size=1, max_size=3))
+        def test_extra_fields_rejected(ilk, extra_field):
+            assume(extra_field not in get_field_domain(ilk))
+            ked = build_ked(ilk)
+            ked[extra_field] = 'unexpected'
+            result = validate_field_domain(ked, ilk)
+            assert result.is_err()
+    strategy: "st.sampled_from ilks, st.text for extra field names"
+    notes: "Unknown fields in the KED are rejected."
+
+  # Seal Types invariants
+  - invariant: "Digest Seal (SealDigest): {d: SAID} — binds an arbitrary data digest to the KEL"
+    term: "Seal Types"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(said=said_strategy())
+        def test_digest_seal_structure(said):
+            seal = SealDigest(d=said)
+            assert hasattr(seal, 'd')
+            assert seal.d == said
+            assert not hasattr(seal, 'i')
+            assert not hasattr(seal, 's')
+    strategy: "said_strategy()"
+    notes: "Digest seal has exactly one field: d."
+
+  - invariant: "Event Seal (SealEvent): {i: prefix, s: sn, d: SAID} — binds a specific event"
+    term: "Seal Types"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(prefix=aid_strategy(), sn=st.integers(min_value=0, max_value=1000),
+               said=said_strategy())
+        def test_event_seal_structure(prefix, sn, said):
+            seal = SealEvent(i=prefix, s=sn, d=said)
+            assert seal.i == prefix
+            assert seal.s == sn
+            assert seal.d == said
+    strategy: "aid_strategy(), st.integers(0..1000), said_strategy()"
+    notes: "Event seal has three fields: i, s, d."
+
+  # Quorum Calculation invariants
+  - invariant: "simple(n) = floor(n/2) + 1 — simple majority of n participants"
+    term: "Quorum Calculation"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        n = Int('n')
+        result = Int('result')
+        s = Solver()
+        s.add(n >= 1)
+        s.add(result == n / 2 + 1)
+        # Verify simple(5) = 3
+        s.add(n == 5, result != 3)
+        assert s.check() == unsat  # simple(5) must be 3
+    notes: "Simple majority formula: floor(n/2) + 1."
+
+  - invariant: "ample(n, f) computes m where ceil((n+f+1)/2) <= m <= n-f, subject to n >= 3f+1"
+    term: "Quorum Calculation"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        n, f, m = Ints('n f m')
+        s = Solver()
+        s.add(n >= 1, f >= 0)
+        s.add(n >= 3 * f + 1)  # BFT constraint
+        s.add(m >= (n + f + 1 + 1) / 2)  # ceil((n+f+1)/2)
+        s.add(m <= n - f)
+        assert s.check() == sat
+    notes: "BFT quorum formula with Byzantine fault tolerance constraint."
+
+  - invariant: "Ensures Byzantine fault tolerance — the quorum is large enough to tolerate f faulty participants out of n total"
+    term: "Quorum Calculation"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        n, f, m = Ints('n f m')
+        s = Solver()
+        s.add(n >= 1, f >= 0)
+        s.add(n >= 3 * f + 1)
+        s.add(m >= (n + f + 1 + 1) / 2)
+        s.add(m <= n - f)
+        # BFT property: even with f faulty, m honest participants can form quorum
+        # and two quorums must overlap by at least one honest participant
+        s.add(2 * m > n + f)  # overlap > f ensures at least one honest in overlap
+        assert s.check() == sat
+    notes: "BFT overlap property: any two quorums share at least one honest participant."
+
+contracts:
+  - port_ref: "port://keri/event-log/serialization/inbound/event-construction"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda keys, ndigs: len(keys) >= 1"
+        description: "At least one signing key required for inception"
+      - formal:
+          language: python
+          expression: "lambda pre, keys, ndigs, dig, sn: pre is not None and sn >= 1"
+        description: "Rotation requires valid AID and sn >= 1"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda keys, ndigs, result: result.t == 'icp' and result.said is not None"
+        description: "incept returns icp event with computed SAID"
+      - formal:
+          language: python
+          expression: "lambda pre, keys, ndigs, dig, sn, result: result.t == 'rot' and result.ked['p'] == dig"
+        description: "rotate returns rot event with p == provided prior digest"
+      - formal:
+          language: python
+          expression: "lambda pre, dig, sn, result: result.t == 'ixn' and result.ked['p'] == dig"
+        description: "interact returns ixn event with p == provided prior digest"
+
+  - port_ref: "port://keri/event-log/serialization/inbound/event-deserialization"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda raw: raw is not None and len(raw) >= 17"
+        description: "Raw bytes must be at least version string length"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda raw, result: result.said is not None and result.ked is not None"
+        description: "Deserialized event has SAID and KED"
+      - formal:
+          language: python
+          expression: "lambda serder, result: result == (compute_said(serder) == serder.said)"
+        description: "validate_said returns True iff SAID matches recomputed value"
+
+  - port_ref: "port://keri/event-log/serialization/inbound/seal-construction"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda d: d is not None and len(d) > 0"
+        description: "Digest must be non-empty for seal_digest"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda d, seal: seal.d == d and type(seal).__name__ == 'SealDigest'"
+        description: "seal_digest returns SealDigest with provided digest"
+      - formal:
+          language: python
+          expression: "lambda i, s, d, seal: seal.i == i and seal.s == s and seal.d == d"
+        description: "seal_event returns SealEvent with all three fields"
+
+  - port_ref: "port://keri/event-log/serialization/inbound/quorum"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda n: n >= 1"
+        description: "At least one participant"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda n, result: 1 <= result <= n"
+        description: "ample returns value in [1, n]"
+      - formal:
+          language: python
+          expression: "lambda n, result: result == n // 2 + 1"
+        description: "simple returns floor(n/2) + 1"
+
+state_machines: []

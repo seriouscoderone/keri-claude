@@ -1,0 +1,656 @@
+# verification.yaml
+domain_ref: "keri/event-log/escrow"
+
+properties:
+  # Escrow Type Pattern invariants
+  - invariant: "Trigger condition: the specific validation failure that diverts an event into this escrow"
+    term: "Escrow Type Pattern"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(escrow_type=st.sampled_from(['OOE', 'PSE', 'PWE', 'PDE', 'LDE']))
+        def test_escrow_has_trigger(escrow_type):
+            escrow = get_escrow_definition(escrow_type)
+            assert escrow.trigger_condition is not None
+            assert len(escrow.trigger_condition) > 0
+    strategy: "st.sampled_from(['OOE', 'PSE', 'PWE', 'PDE', 'LDE'])"
+    notes: "Every escrow type must define its trigger."
+
+  - invariant: "On reprocessing: the event is fully re-validated — not assumed valid. It may be accepted, remain escrowed, or cascade to a different escrow type."
+    term: "Escrow Type Pattern"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(escrowed_event=escrowed_event_strategy())
+        def test_reprocessing_full_validation(escrowed_event):
+            result = reprocess(escrowed_event)
+            assert result in ('accepted', 'escrowed', 'cascaded', 'timed_out')
+    strategy: "escrowed_event_strategy()"
+    notes: "Reprocessing re-validates from scratch."
+
+  - invariant: "Exception: Likely Duplicitous Escrow has no reprocessing trigger — events are permanent forensic evidence"
+    term: "Escrow Type Pattern"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(lde_event=lde_event_strategy())
+        def test_lde_no_reprocessing(lde_event):
+            escrow = get_escrow_definition('LDE')
+            assert escrow.reprocessing_trigger is None
+    strategy: "lde_event_strategy()"
+    notes: "LDE events are never automatically resolved."
+
+  - invariant: "Exception: Misfit Event Escrow has no automatic reprocessing — events must be re-submitted from a local source"
+    term: "Escrow Type Pattern"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(misfit_event=misfit_event_strategy())
+        def test_misfit_no_auto_reprocess(misfit_event):
+            escrow = get_escrow_definition('MISFIT')
+            assert escrow.auto_reprocess is False
+    strategy: "misfit_event_strategy()"
+    notes: "Misfit events require manual local re-submission."
+
+  # Escrow Cascade invariants
+  - invariant: "Out-of-Order -> accepted (when prior event arrives)"
+    term: "Escrow Cascade"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy(), gap_sn=st.integers(min_value=1, max_value=10))
+        def test_ooe_resolves_on_prior(kel, gap_sn):
+            processor = EventProcessor(kel)
+            expected_sn = len(kel.events)
+            # Submit event at expected + gap (out of order)
+            future_event = build_valid_event(kel.aid, sn=expected_sn + gap_sn)
+            processor.process(future_event)
+            assert processor.is_escrowed(future_event.said, 'OOE')
+            # Submit missing events to fill the gap
+            for sn in range(expected_sn, expected_sn + gap_sn):
+                fill_event = build_valid_event(kel.aid, sn=sn)
+                processor.process(fill_event)
+            processor.process_escrows()
+            assert processor.is_accepted(future_event.said)
+    strategy: "kel_strategy(), st.integers(1..10)"
+    notes: "OOE events resolve when the gap is filled."
+
+  - invariant: "Partially-Signed -> accepted OR -> Partially-Witnessed (if sigs pass but witness threshold fails) OR -> Partially-Delegated (if sigs pass but delegation missing)"
+    term: "Escrow Cascade"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=partially_signed_event_strategy(),
+               outcome=st.sampled_from(['accepted', 'pwe', 'pde']))
+        def test_pse_cascade(event, outcome):
+            if outcome == 'accepted':
+                result = resolve_pse_fully(event)
+                assert result == 'accepted'
+            elif outcome == 'pwe':
+                result = resolve_pse_sigs_only(event)
+                assert result == 'PWE'
+            elif outcome == 'pde':
+                result = resolve_pse_sigs_only_delegated(event)
+                assert result == 'PDE'
+    strategy: "partially_signed_event_strategy(), st.sampled_from outcomes"
+    notes: "PSE can cascade to PWE or PDE depending on what remains unsatisfied."
+
+  - invariant: "Likely Duplicitous -> permanent storage (forensic evidence, never auto-resolved)"
+    term: "Escrow Cascade"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(lde_event=lde_event_strategy())
+        def test_lde_permanent(lde_event):
+            processor = EventProcessor()
+            processor.escrow_lde(lde_event)
+            # After any number of escrow processing sweeps, LDE remains
+            for _ in range(10):
+                processor.process_escrows()
+            assert processor.is_escrowed(lde_event.said, 'LDE')
+    strategy: "lde_event_strategy()"
+    notes: "LDE events are never removed by processing — only by explicit timeout pruning."
+
+  - invariant: "Escrow processing order matters: OOE first, then receipt escrows, then PSE, then PWE, then PDE"
+    term: "Escrow Cascade"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(st.data())
+        def test_escrow_processing_order(data):
+            processor = EventProcessor()
+            order = processor.get_escrow_processing_order()
+            assert order.index('OOE') < order.index('PSE')
+            assert order.index('PSE') < order.index('PWE')
+            assert order.index('PWE') < order.index('PDE')
+    strategy: "Fixed order verification"
+    notes: "OOE < receipt < PSE < PWE < PDE."
+
+  # Out-of-Order Escrow invariants
+  - invariant: "Triggered when sn > expected_sn for a known prefix, or when the prefix is unknown and the event is not an inception"
+    term: "Out-of-Order Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(expected_sn=st.integers(min_value=0, max_value=10),
+               event_sn=st.integers(min_value=1, max_value=100))
+        def test_ooe_trigger(expected_sn, event_sn):
+            assume(event_sn > expected_sn)
+            result = check_sn(event_sn, expected_sn)
+            assert result == 'OOE'
+    strategy: "st.integers for expected and event sn"
+    notes: "sn > expected = OOE."
+
+  - invariant: "Default timeout: 1200 seconds (keripy TimeoutOOE)"
+    term: "Out-of-Order Escrow"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        timeout = Int('timeout')
+        s = Solver()
+        s.add(timeout == 1200)
+        s.add(timeout > 0)
+        assert s.check() == sat
+    notes: "Default OOE timeout is 1200s (20 minutes)."
+
+  - invariant: "Events are fully re-validated through the pipeline on reprocessing -- not assumed valid"
+    term: "Out-of-Order Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=ooe_event_strategy())
+        def test_ooe_revalidation(event):
+            result = reprocess_ooe(event)
+            assert result.validation_steps_executed == full_validation_steps()
+    strategy: "ooe_event_strategy()"
+    notes: "OOE reprocessing does full validation."
+
+  # Partially-Signed Escrow invariants
+  - invariant: "Triggered when signature verification passes for at least one sig but tholder.satisfy(indices) returns False"
+    term: "Partially-Signed Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(threshold=st.integers(min_value=2, max_value=5),
+               n_valid=st.integers(min_value=1, max_value=5))
+        def test_pse_trigger(threshold, n_valid):
+            assume(n_valid < threshold)
+            assume(n_valid >= 1)
+            indices = list(range(n_valid))
+            tholder = parse_threshold(threshold)
+            assert not tholder.satisfy(indices)
+            # This is the PSE trigger condition
+    strategy: "st.integers for threshold and valid sig count"
+    notes: "At least one valid sig but below threshold = PSE."
+
+  - invariant: "Signatures are accumulated: new arrivals of the same event (same SAID) merge their signatures into the existing escrow entry"
+    term: "Partially-Signed Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(n_keys=st.integers(min_value=3, max_size=7))
+        def test_pse_signature_accumulation(n_keys):
+            event_said = generate_said()
+            escrow = PSEscrow()
+            sig1 = generate_sig(index=0)
+            sig2 = generate_sig(index=1)
+            escrow.add(event_said, sig1)
+            assert escrow.sig_count(event_said) == 1
+            escrow.add(event_said, sig2)
+            assert escrow.sig_count(event_said) == 2
+    strategy: "st.integers(3..7) for key count"
+    notes: "Signatures accumulate per SAID."
+
+  - invariant: "Default timeout: 3600 seconds (keripy TimeoutPSE)"
+    term: "Partially-Signed Escrow"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        timeout = Int('timeout')
+        s = Solver()
+        s.add(timeout == 3600)
+        s.add(timeout > 0)
+        assert s.check() == sat
+    notes: "Default PSE timeout is 3600s (1 hour)."
+
+  # Partially-Witnessed Escrow invariants
+  - invariant: "Triggered when toader.satisfy(windices) returns False -- insufficient witness receipts"
+    term: "Partially-Witnessed Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(toad=st.integers(min_value=1, max_value=5),
+               n_receipts=st.integers(min_value=0, max_value=5))
+        def test_pwe_trigger(toad, n_receipts):
+            assume(n_receipts < toad)
+            windices = list(range(n_receipts))
+            assert not satisfy_witness(toad, windices)
+    strategy: "st.integers for toad and receipt count"
+    notes: "Below TOAD = PWE."
+
+  - invariant: "Default timeout: 3600 seconds (keripy TimeoutPWE)"
+    term: "Partially-Witnessed Escrow"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        timeout = Int('timeout')
+        s = Solver()
+        s.add(timeout == 3600)
+        s.add(timeout > 0)
+        assert s.check() == sat
+    notes: "Default PWE timeout is 3600s (1 hour)."
+
+  # Partially-Delegated Escrow invariants
+  - invariant: "Triggered when the delegator's KEL does not contain a seal committing to this delegated event"
+    term: "Partially-Delegated Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(dip=delegated_inception_strategy())
+        def test_pde_trigger(dip):
+            empty_delegator_kel = KEL()
+            seal = find_delegation_seal(empty_delegator_kel, dip.i, dip.sn, dip.said)
+            assert seal is None  # No seal found -> PDE trigger
+    strategy: "delegated_inception_strategy()"
+    notes: "Missing seal in delegator's KEL triggers PDE."
+
+  - invariant: "On reprocessing, if the delegator's seal is found, event advances to witness check (may cascade to PWE)"
+    term: "Partially-Delegated Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(dip=delegated_inception_strategy())
+        def test_pde_cascade_to_pwe(dip):
+            result = reprocess_pde_with_seal_but_no_witnesses(dip)
+            assert result in ('accepted', 'PWE')
+    strategy: "delegated_inception_strategy()"
+    notes: "PDE resolution may cascade to PWE if witnesses insufficient."
+
+  # Delegable Event Escrow invariants
+  - invariant: "Only applies to events the local node has originated as a delegatee"
+    term: "Delegable Event Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy(), is_local=st.booleans())
+        def test_delegable_only_local(event, is_local):
+            if is_local and event.t in ('dip', 'drt'):
+                can_escrow = True
+            else:
+                can_escrow = False
+            assert can_escrow == should_escrow_delegable(event, is_local)
+    strategy: "key_event_strategy(), st.booleans()"
+    notes: "Only local delegated events go to delegable escrow."
+
+  - invariant: "Distinct from PDE: delegables are local events awaiting external approval, PDE are remote events awaiting external evidence"
+    term: "Delegable Event Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=delegated_event_strategy(),
+               source=st.sampled_from(['local', 'remote']))
+        def test_delegable_vs_pde(event, source):
+            if source == 'local':
+                assert escrow_type_for(event, source) == 'DELEGABLE'
+            else:
+                assert escrow_type_for(event, source) == 'PDE'
+    strategy: "delegated_event_strategy(), st.sampled_from sources"
+    notes: "Source determines delegable (local) vs PDE (remote)."
+
+  # Misfit Event Escrow invariants
+  - invariant: "Triggered by Local Source Protection: remote source + local/witnessed/delegated AID"
+    term: "Misfit Event Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(is_local_aid=st.booleans(), is_local_witness=st.booleans())
+        def test_misfit_trigger(is_local_aid, is_local_witness):
+            is_remote = True
+            is_misfit = is_remote and (is_local_aid or is_local_witness)
+            result = check_misfit(is_remote, is_local_aid, is_local_witness)
+            assert result.is_misfit == is_misfit
+    strategy: "st.booleans() for local_aid and local_witness"
+    notes: "Remote + local AID/witness = misfit."
+
+  - invariant: "Events are not automatically reprocessed -- they must be re-submitted from a local source"
+    term: "Misfit Event Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(misfit=misfit_event_strategy())
+        def test_misfit_no_auto_reprocess(misfit):
+            processor = EventProcessor()
+            processor.escrow_misfit(misfit)
+            resolved = processor.process_escrows()
+            # Misfit events are never in the resolved list
+            assert misfit.said not in [r.said for r in resolved]
+    strategy: "misfit_event_strategy()"
+    notes: "Misfits require manual re-submission."
+
+  # Likely Duplicitous Escrow invariants
+  - invariant: "Triggered when sn < expected_sn AND the event's SAID differs from the already-accepted event at that sn"
+    term: "Likely Duplicitous Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy(min_events=3))
+        def test_lde_trigger(kel):
+            target_sn = 1  # sn < expected
+            existing_said = kel.events[target_sn].said
+            different_event = build_event(kel.aid, sn=target_sn)
+            assume(different_event.said != existing_said)
+            result = check_duplicate(different_event, kel)
+            assert result == 'LDE'
+    strategy: "kel_strategy(min_events=3)"
+    notes: "Same sn, different SAID = likely duplicitous."
+
+  - invariant: "Events are NEVER automatically reprocessed or resolved"
+    term: "Likely Duplicitous Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(lde_event=lde_event_strategy())
+        def test_lde_never_resolved(lde_event):
+            processor = EventProcessor()
+            processor.escrow_lde(lde_event)
+            for _ in range(100):
+                resolved = processor.process_escrows()
+                assert lde_event.said not in [r.said for r in resolved]
+    strategy: "lde_event_strategy()"
+    notes: "LDE is permanent forensic evidence."
+
+  # Escrow Processing Order invariants
+  - invariant: "Order: OOE first, then receipt/witness escrows, then PSE, then PWE, then PDE"
+    term: "Escrow Processing Order"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(st.data())
+        def test_processing_order(data):
+            order = get_escrow_processing_order()
+            assert order == ['OOE', 'RECEIPTS', 'PSE', 'PWE', 'PDE']
+    strategy: "Fixed order verification"
+    notes: "Canonical processing order."
+
+  - invariant: "OOE is processed first because it may release events that then need signature/witness/delegation checks"
+    term: "Escrow Processing Order"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(st.data())
+        def test_ooe_first(data):
+            order = get_escrow_processing_order()
+            assert order[0] == 'OOE'
+    strategy: "Fixed order"
+    notes: "OOE must be first — it unblocks other escrows."
+
+  # Escrow Timeout invariants
+  - invariant: "OOE default: 1200 seconds (20 minutes) in keripy; configurable in keriox"
+    term: "Escrow Timeout"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        ooe_timeout = Int('ooe_timeout')
+        s = Solver()
+        s.add(ooe_timeout == 1200)
+        s.add(ooe_timeout > 0, ooe_timeout <= 86400)
+        assert s.check() == sat
+    notes: "OOE timeout: 1200s default, bounded to 24 hours max."
+
+  - invariant: "Timeout is checked during each processing sweep: if (now - escrowed_datetime) > timeout, the entry is pruned"
+    term: "Escrow Timeout"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(timeout=st.integers(min_value=1, max_value=86400),
+               elapsed=st.integers(min_value=0, max_value=172800))
+        def test_timeout_pruning(timeout, elapsed):
+            is_expired = elapsed > timeout
+            result = check_timeout(elapsed, timeout)
+            assert result.is_pruned == is_expired
+    strategy: "st.integers for timeout and elapsed"
+    notes: "Simple duration comparison: elapsed > timeout = prune."
+
+  # Signature Accumulation invariants
+  - invariant: "Signatures are matched by event SAID -- only signatures for the exact same event are merged"
+    term: "Signature Accumulation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(said1=said_strategy(), said2=said_strategy())
+        def test_sig_matched_by_said(said1, said2):
+            assume(said1 != said2)
+            store = SigStore()
+            store.add(said1, generate_sig(index=0))
+            store.add(said2, generate_sig(index=0))
+            assert store.get_sigs(said1) != store.get_sigs(said2)
+    strategy: "said_strategy() x2"
+    notes: "Signatures are partitioned by SAID."
+
+  - invariant: "Idempotent: re-submitting the same signature from the same index is a no-op"
+    term: "Signature Accumulation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(said=said_strategy(), index=st.integers(min_value=0, max_value=9))
+        def test_sig_accumulation_idempotent(said, index):
+            store = SigStore()
+            sig = generate_sig(index=index)
+            store.add(said, sig)
+            count_after_first = store.sig_count(said)
+            store.add(said, sig)  # duplicate
+            count_after_second = store.sig_count(said)
+            assert count_after_first == count_after_second
+    strategy: "said_strategy(), st.integers(0..9)"
+    notes: "Duplicate signature at same index is silently ignored."
+
+contracts:
+  - port_ref: "port://keri/event-log/escrow/inbound/escrow-management"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda event: event is not None and event.said is not None"
+        description: "Event must be non-null with a valid SAID"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda event, result: result.is_ok()
+        description: "Escrow operations succeed for valid events"
+
+  - port_ref: "port://keri/event-log/escrow/inbound/escrow-processing"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda: True"
+        description: "No preconditions — processing sweeps are always safe to invoke"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda resolved: all(
+                r.escrow_type in ('OOE', 'PSE', 'PWE', 'PDE') for r in resolved
+            )
+        description: "Resolved events come from processable escrow types (not LDE or MISFIT)"
+
+  - port_ref: "port://keri/event-log/escrow/inbound/signature-accumulation"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sn, said, sigers: said is not None and len(sigers) >= 1"
+        description: "SAID and at least one signature required"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, sn, said, sigers, store: (
+                store.sig_count(said) >= len(sigers)
+            )
+        description: "After accumulation, sig count >= submitted count"
+
+  - port_ref: "port://keri/event-log/escrow/outbound/escrow-store"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sn, said, event, dt: aid is not None and said is not None"
+        description: "Valid AID and SAID required for storage"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, sn, said, event, dt, store: (
+                event in list(store.get_ooe_iter(aid))
+            )
+        description: "Stored event is retrievable from iterator"
+
+  - port_ref: "port://keri/event-log/escrow/outbound/timeout-clock"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda: True"
+        description: "Clock is always available"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: result >= 0"
+        description: "now() returns non-negative timestamp"
+      - formal:
+          language: python
+          expression: "lambda dt, result: result.total_seconds() >= 0"
+        description: "elapsed_since returns non-negative duration"
+
+state_machines:
+  - name: "Escrow Cascade"
+    term: "Escrow Cascade"
+    states:
+      - "received"
+      - "ooe"
+      - "pse"
+      - "pwe"
+      - "pde"
+      - "lde"
+      - "misfit"
+      - "delegable"
+      - "accepted"
+      - "timed_out"
+    transitions:
+      - from: "received"
+        to: "ooe"
+        trigger: "sn > expected or unknown prefix (non-inception)"
+        guard: "event.sn > expected_sn or (prefix_unknown and event.t not in ('icp', 'dip'))"
+      - from: "received"
+        to: "pse"
+        trigger: "sn matches but insufficient controller signatures"
+        guard: "event.sn == expected_sn and valid_sig_count >= 1 and not tholder.satisfy(indices)"
+      - from: "received"
+        to: "misfit"
+        trigger: "remote source for local/witnessed AID"
+        guard: "source == 'remote' and (is_local_aid or is_local_witness)"
+      - from: "received"
+        to: "lde"
+        trigger: "sn already accepted with different SAID"
+        guard: "event.sn < expected_sn and event.said != accepted_said_at(event.sn)"
+      - from: "received"
+        to: "delegable"
+        trigger: "locally-originated delegated event awaiting delegator"
+        guard: "source == 'local' and event.t in ('dip', 'drt') and not delegation_seal_found"
+      - from: "received"
+        to: "accepted"
+        trigger: "all validation passes"
+        guard: "all_thresholds_met and (not delegated or delegation_valid)"
+      - from: "ooe"
+        to: "received"
+        trigger: "prior event accepted — reprocess"
+        guard: "prior_sn_now_accepted"
+      - from: "ooe"
+        to: "timed_out"
+        trigger: "OOE timeout exceeded"
+        guard: "elapsed > 1200"
+      - from: "pse"
+        to: "pwe"
+        trigger: "signatures now satisfy threshold but witnesses insufficient"
+        guard: "tholder.satisfy(indices) and not toader.satisfy(windices)"
+      - from: "pse"
+        to: "pde"
+        trigger: "signatures satisfy threshold but delegation missing (delegated events)"
+        guard: "tholder.satisfy(indices) and event.t in ('dip', 'drt') and not delegation_seal_found"
+      - from: "pse"
+        to: "accepted"
+        trigger: "all thresholds now satisfied"
+        guard: "tholder.satisfy(indices) and toader.satisfy(windices) and (not delegated or delegation_valid)"
+      - from: "pse"
+        to: "timed_out"
+        trigger: "PSE timeout exceeded"
+        guard: "elapsed > 3600"
+      - from: "pwe"
+        to: "accepted"
+        trigger: "witness threshold now satisfied"
+        guard: "toader.satisfy(windices)"
+      - from: "pwe"
+        to: "timed_out"
+        trigger: "PWE timeout exceeded"
+        guard: "elapsed > 3600"
+      - from: "pde"
+        to: "pwe"
+        trigger: "delegation resolved but witnesses insufficient"
+        guard: "delegation_seal_found and not toader.satisfy(windices)"
+      - from: "pde"
+        to: "accepted"
+        trigger: "delegation resolved and all thresholds met"
+        guard: "delegation_seal_found and toader.satisfy(windices)"
+      - from: "pde"
+        to: "timed_out"
+        trigger: "PDE timeout exceeded"
+        guard: "elapsed > 3600"
+      - from: "delegable"
+        to: "accepted"
+        trigger: "delegator's anchoring seal detected"
+        guard: "delegation_seal_found"
+      - from: "delegable"
+        to: "timed_out"
+        trigger: "delegable timeout exceeded"
+        guard: "elapsed > timeout"
+    invariants:
+      - "Every event reaches exactly one terminal state: accepted, timed_out, or lde (permanent)"
+      - "LDE events never transition out — they are permanent forensic evidence"
+      - "Misfit events only transition out via manual local re-submission (not modeled as automatic transition)"
+      - "OOE events are reprocessed when their prior event is accepted"
+      - "PSE can cascade to PWE or PDE but not back to OOE"
+      - "Timeout transitions are irreversible — timed-out events are pruned"
+      - "The cascade preserves validation ordering: sigs -> witnesses -> delegation"
+    initial_state: "received"
+    terminal_states: ["accepted", "timed_out", "lde"]

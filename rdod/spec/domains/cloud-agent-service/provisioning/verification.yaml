@@ -1,0 +1,192 @@
+# verification.yaml
+domain_ref: "cloud-agent-service/provisioning"
+
+# Formalized invariants from ubiquitous_language terms
+properties:
+  - invariant: "One-time per controller AID — idempotent on retry"
+    term: "Agency"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(inception_event=valid_inception_strategy())
+        def test_provision_idempotent(inception_event):
+            config1 = agency.provision_agent(inception_event)
+            config2 = agency.provision_agent(inception_event)
+            assert config1.agent_id == config2.agent_id
+            assert config1.controller_aid == config2.controller_aid
+    strategy: "valid_inception_strategy() producing valid inception events with unique controller AIDs"
+    notes: "Repeated provisioning for the same controller AID returns the same agent config"
+
+  - invariant: "Bound to exactly one controller AID (the authentication anchor)"
+    term: "Agent Instance"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        agent_id = String('agent_id')
+        caid1 = String('caid1')
+        caid2 = String('caid2')
+        bound = Function('bound_to', StringSort(), StringSort())
+        s = Solver()
+        s.add(bound(agent_id) == caid1)
+        s.add(bound(agent_id) == caid2)
+        s.add(caid1 != caid2)
+        assert s.check() == unsat  # One agent cannot be bound to two controllers
+    strategy: ""
+    notes: "SMT proves the 1:1 mapping between agent instance and controller AID is structurally enforced"
+
+  - invariant: "Isolated from other agent instances — no cross-tenant data access"
+    term: "Agent Instance"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            caid_a=keri_aid_strategy(),
+            caid_b=keri_aid_strategy(),
+            data=st.binary(min_size=1)
+        )
+        def test_agent_isolation(caid_a, caid_b, data):
+            assume(caid_a != caid_b)
+            agent_a = agency.provision_agent(make_inception(caid_a))
+            agent_b = agency.provision_agent(make_inception(caid_b))
+            agent_a.store_credential(data)
+            assert agent_b.list_credentials() == []
+    strategy: "keri_aid_strategy() generating distinct controller AIDs, st.binary() for credential data"
+    notes: "Agent instance isolation — one tenant's data invisible to another"
+
+  - invariant: "Bidirectional mappings: controller AID <-> agent AID (.agnt and .ctrl sub-databases)"
+    term: "Multi-tenancy"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(inception_event=valid_inception_strategy())
+        def test_bidirectional_registry_mappings(inception_event):
+            config = agency.provision_agent(inception_event)
+            caid = config.controller_aid
+            agent_aid = config.agent_id
+            # Forward lookup
+            assert registry.get_by_controller(caid).agent_aid == agent_aid
+            # Reverse lookup
+            assert registry.get_by_agent(agent_aid).controller_aid == caid
+    strategy: "valid_inception_strategy()"
+    notes: "Registry mappings must be consistent in both directions"
+
+  - invariant: "All three mappings updated atomically during provisioning"
+    term: "Agent Registry"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(inception_event=valid_inception_strategy())
+        def test_registry_atomic_update(inception_event):
+            config = agency.provision_agent(inception_event)
+            caid = config.controller_aid
+            agent_aid = config.agent_id
+            # All three mappings must exist after provisioning
+            assert registry.get_by_agent(agent_aid) is not None      # .agnt
+            assert registry.get_by_controller(caid) is not None       # .ctrl
+            assert registry.list_managed_aids(agent_aid) is not None  # .aids
+    strategy: "valid_inception_strategy()"
+    notes: "Partial registry state (some mappings missing) indicates failed atomicity"
+
+  - invariant: "Agent instance isolation (one controller per instance)"
+    term: "Agent Instance"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        AgentId, ControllerAid = Strings('agent_id caid')
+        owner = Function('owner', StringSort(), StringSort())
+        can_access = Function('can_access', StringSort(), StringSort(), BoolSort())
+        s = Solver()
+        # Access rule: only the owner can access
+        s.add(ForAll([AgentId, ControllerAid],
+            can_access(AgentId, ControllerAid) == (owner(AgentId) == ControllerAid)))
+        # Try to find a case where non-owner can access
+        agent = String('agent')
+        intruder = String('intruder')
+        s.add(owner(agent) != intruder)
+        s.add(can_access(agent, intruder) == True)
+        assert s.check() == unsat  # Non-owner can never access
+    strategy: ""
+    notes: "SMT proof that the access model prevents cross-tenant access by construction"
+
+# Formalized port contracts
+contracts:
+  - port_ref: "port://cloud-agent-service/provisioning/inbound/agent-lifecycle"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda inception_event: is_valid_inception(inception_event) and inception_event.signatures_valid()"
+        description: "provision_agent requires a valid, signed controller inception event"
+      - formal:
+          language: python
+          expression: "lambda agent_id: registry.get_by_agent(agent_id) is not None"
+        description: "destroy_agent requires a valid, existing agent_id"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda inception_event, config:
+                config.agent_id is not None
+                and config.controller_aid == inception_event.pre
+                and registry.get_by_controller(inception_event.pre) is not None
+        description: "provision_agent returns AgentConfig and registry is updated consistently"
+      - formal:
+          language: python
+          expression: |
+            lambda agent_id:
+                registry.get_by_agent(agent_id) is None
+                and registry.get_by_controller(old_caid) is None
+        description: "destroy_agent removes all registry mappings for the agent"
+
+  - port_ref: "port://cloud-agent-service/provisioning/outbound/agent-registry"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda agent_aid, caid: agent_aid is not None and caid is not None"
+        description: "store_agent requires non-null agent and controller AIDs"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda agent_aid, caid:
+                registry.get_by_agent(agent_aid).controller_aid == caid
+                and registry.get_by_controller(caid).agent_aid == agent_aid
+        description: "After store, both forward and reverse lookups are consistent"
+
+# State machine: Agent Instance lifecycle
+state_machines:
+  - name: "AgentInstanceLifecycle"
+    term: "Agent Instance"
+    states: ["unprovisioned", "provisioning", "active", "destroying", "destroyed"]
+    transitions:
+      - from: "unprovisioned"
+        to: "provisioning"
+        trigger: "POST /boot with valid inception event"
+        guard: "inception_event.valid() and not registry.has_controller(caid)"
+      - from: "provisioning"
+        to: "active"
+        trigger: "All registry mappings written, Habery/Reger/Verifier initialized"
+        guard: "registry.get_by_controller(caid) is not None and registry.get_by_agent(agent_aid) is not None"
+      - from: "provisioning"
+        to: "unprovisioned"
+        trigger: "Provisioning error (inception validation failure, registry write failure)"
+        guard: "error occurred during provisioning — partial state rolled back"
+      - from: "active"
+        to: "destroying"
+        trigger: "Controller or operator initiates destruction"
+        guard: "agent_exists(agent_id)"
+      - from: "destroying"
+        to: "destroyed"
+        trigger: "All owned resources (AIDs, credentials, contacts, mappings) removed"
+        guard: "registry.get_by_agent(agent_aid) is None"
+    invariants:
+      - "An agent in 'active' state has consistent bidirectional registry mappings"
+      - "An agent in 'destroyed' state has no remaining registry entries or owned resources"
+      - "Provisioning is idempotent — re-provisioning an active agent returns existing config without state change"
+    initial_state: "unprovisioned"
+    terminal_states: ["destroyed"]

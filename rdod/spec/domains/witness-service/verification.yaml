@@ -1,0 +1,213 @@
+# verification.yaml
+domain_ref: "witness-service"
+
+# Formalized invariants from ubiquitous_language terms
+properties:
+  - invariant: "Signs receipts with its own non-transferable key — never signs on behalf of a controller"
+    term: "Witness Node"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=valid_key_event_strategy())
+        def test_witness_signs_own_receipts(event):
+            witness = create_witness_node()
+            receipt = witness.receipt(event)
+            # Receipt is signed by witness AID, not by the controller
+            assert receipt.signer_aid == witness.aid
+            assert receipt.signer_aid != event.controller_aid
+            assert receipt.signer_aid.startswith('B')  # Non-transferable prefix
+    strategy: "valid_key_event_strategy() for properly formed key events from various controllers"
+    notes: "Witness receipts are always signed by the witness's own non-transferable key"
+
+  - invariant: "Accepts events under the first-seen rule — rejects conflicting events at the same (prefix, sn)"
+    term: "Witness Node"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            prefix=keri_prefix_strategy(),
+            sn=st.integers(min_value=0, max_value=1000),
+            event_a=key_event_bytes_strategy(),
+            event_b=key_event_bytes_strategy()
+        )
+        def test_first_seen_rule(prefix, sn, event_a, event_b):
+            assume(event_a != event_b)  # Conflicting events
+            witness = create_witness_node()
+            ev1 = make_event(prefix, sn, event_a)
+            ev2 = make_event(prefix, sn, event_b)
+            receipt1 = witness.submit(ev1)
+            assert receipt1.accepted  # First-seen accepted
+            receipt2 = witness.submit(ev2)
+            assert receipt2.rejected  # Conflicting event rejected
+    strategy: "keri_prefix_strategy() for AID prefixes, st.integers for sequence numbers"
+    notes: "First-seen rule is absolute — once accepted, conflicting events at same (prefix, sn) are permanently rejected"
+
+  - invariant: "Non-transferable — no key rotation, no pre-rotation commitment"
+    term: "Witness AID"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        has_rotation = Bool('has_rotation')
+        has_pre_rotation = Bool('has_pre_rotation')
+        is_non_transferable = Bool('is_non_transferable')
+        s = Solver()
+        # Non-transferable means no rotation and no pre-rotation
+        s.add(is_non_transferable == And(Not(has_rotation), Not(has_pre_rotation)))
+        s.add(is_non_transferable == True)
+        # Try to allow rotation
+        s.add(has_rotation == True)
+        assert s.check() == unsat  # Non-transferable AIDs cannot rotate
+    strategy: ""
+    notes: "SMT proof that non-transferable witness AIDs cannot support key rotation by definition"
+
+  - invariant: "B prefix indicates Ed25519 non-transferable"
+    term: "Witness AID"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(seed=st.binary(min_size=32, max_size=32))
+        def test_witness_aid_prefix(seed):
+            witness = create_witness_from_seed(seed)
+            assert witness.aid[0] == 'B'  # Ed25519 non-transferable prefix
+            assert is_valid_cesr_prefix(witness.aid)
+    strategy: "st.binary(min_size=32, max_size=32) for Ed25519 seeds"
+    notes: "All witness AIDs must use the B prefix (Ed25519 non-transferable)"
+
+  - invariant: "Receipt generated only on first-seen acceptance — duplicate events receive the existing receipt"
+    term: "Receipt Generation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=valid_key_event_strategy())
+        def test_receipt_idempotent_on_duplicate(event):
+            witness = create_witness_node()
+            receipt1 = witness.submit(event)
+            receipt2 = witness.submit(event)  # Same event, not conflicting
+            assert receipt1.accepted and receipt2.accepted
+            assert receipt1.signature == receipt2.signature  # Same receipt returned
+    strategy: "valid_key_event_strategy() for properly formed key events"
+    notes: "Submitting the exact same event twice returns the same receipt — idempotent"
+
+  - invariant: "One KERL per monitored AID — append-only"
+    term: "KERL Storage"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            events=st.lists(
+                st.tuples(st.integers(min_value=0, max_value=100), st.binary(min_size=10)),
+                min_size=1, max_size=50
+            )
+        )
+        def test_kerl_append_only(events):
+            witness = create_witness_node()
+            prefix = create_prefix()
+            # Submit events in sequence number order
+            sorted_events = sorted(events, key=lambda e: e[0])
+            for sn, data in sorted_events:
+                ev = make_event(prefix, sn, data)
+                witness.submit(ev)
+            kerl = witness.get_kerl(prefix)
+            # KERL entries are in sequence order and never modified
+            for i in range(len(kerl) - 1):
+                assert kerl[i].sn <= kerl[i + 1].sn
+    strategy: "st.lists of (sn, data) tuples for event sequences"
+    notes: "KERL is strictly append-only — events are never modified or deleted after acceptance"
+
+  - invariant: "TOAD <= witness_count, TOAD >= ample(witness_count)"
+    term: "Witness Node"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        witness_count = Int('witness_count')
+        toad = Int('toad')
+        s = Solver()
+        s.add(witness_count > 0)
+        # TOAD must be <= witness count
+        s.add(toad <= witness_count)
+        # TOAD must be >= ample (majority threshold)
+        # ample(n) = max(1, ceil((n + 1) / 2)) for odd n, ceil(n/2) + 1 for even n
+        # Simplified: toad >= ceil((witness_count + 1) / 2)
+        ample = If(witness_count % 2 == 0,
+                   witness_count / 2 + 1,
+                   (witness_count + 1) / 2)
+        s.add(toad >= ample)
+        # Prove: TOAD is always majority
+        s.add(toad * 2 < witness_count)  # Try less than majority
+        assert s.check() == unsat  # Cannot have sub-majority TOAD with ample constraint
+    strategy: ""
+    notes: "SMT proof that TOAD with ample constraint always requires a majority of witnesses"
+
+  - invariant: "Each witness in the pool is operationally independent — no shared state"
+    term: "Witness Pool Deployment"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            pool_size=st.integers(min_value=2, max_value=10),
+            event=valid_key_event_strategy()
+        )
+        def test_witness_independence(pool_size, event):
+            witnesses = [create_witness_node() for _ in range(pool_size)]
+            # Submit event to first witness only
+            witnesses[0].submit(event)
+            # Other witnesses should not have the event
+            for w in witnesses[1:]:
+                assert not w.has_event(event.prefix, event.sn)
+    strategy: "st.integers for pool size, valid_key_event_strategy() for events"
+    notes: "No inter-witness communication — each witness only knows about events submitted directly to it"
+
+# Formalized port contracts
+contracts:
+  - port_ref: "port://witness-service/inbound/event-receipt"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda key_event: is_valid_key_event(key_event) and key_event.signatures_valid()"
+        description: "Event must be a valid key event with valid controller signatures"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda key_event, receipt:
+                (receipt.accepted and receipt.witness_aid == witness.aid and receipt.signature_valid())
+                or (receipt.rejected and receipt.reason == 'conflicting_event_at_sn')
+        description: "First-seen event produces a valid receipt signed by witness; conflicting event is rejected"
+
+  - port_ref: "port://witness-service/inbound/kerl-query"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None and isinstance(aid, str)"
+        description: "Query requires a valid AID string"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, kerl:
+                all(e.prefix == aid for e in kerl.events)
+                and all(kerl.events[i].sn <= kerl.events[i+1].sn for i in range(len(kerl.events)-1))
+        description: "Returned KERL contains only events for the requested AID in sequence order"
+
+  - port_ref: "port://witness-service/outbound/witness-store"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, event, receipt: aid is not None and event.valid() and receipt.signature_valid()"
+        description: "append_event requires valid AID, event, and receipt"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, event: store.has_event(aid, event.sn) and store.get_kerl(aid)[-1] == event"
+        description: "After append, event is stored and retrievable via KERL query"
+
+# No state machine — witnesses are stateless processors (first-seen rule is per-event, not a lifecycle)
+state_machines: []

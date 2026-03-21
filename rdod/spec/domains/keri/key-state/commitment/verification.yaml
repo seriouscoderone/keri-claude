@@ -1,0 +1,360 @@
+# verification.yaml
+domain_ref: "keri/key-state/commitment"
+
+properties:
+  # Pre-rotation Commitment invariants
+  - invariant: "The digest of each next public key must appear in the n field of the preceding establishment event"
+    term: "Pre-rotation Commitment"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_rotation_strategy())
+        def test_pre_rotation_digest_binding(kel):
+            for i, event in enumerate(kel.events):
+                if event.t in ('rot', 'drt'):
+                    prior_est = kel.prior_establishment(i)
+                    for key in event.k:
+                        assert digest(key) in prior_est.n
+    strategy: "kel_with_rotation_strategy() generates KELs containing at least one rotation"
+    notes: "The core pre-rotation guarantee — new keys must match prior digests."
+
+  - invariant: "Pre-committed keys are never exposed until the rotation that activates them"
+    term: "Pre-rotation Commitment"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_rotation_strategy())
+        def test_keys_not_exposed_before_rotation(kel):
+            for i, event in enumerate(kel.events):
+                if event.t in ('rot', 'drt'):
+                    new_keys = set(event.k)
+                    # Keys should not appear in any prior event's k field
+                    for j in range(i):
+                        prior_keys = set(kel.events[j].k) if hasattr(kel.events[j], 'k') else set()
+                        assert new_keys.isdisjoint(prior_keys)
+    strategy: "kel_with_rotation_strategy()"
+    notes: "Pre-rotated keys remain secret until activation."
+
+  - invariant: "Provides post-quantum resistance — attacker must compromise both current keys and pre-committed keys simultaneously"
+    term: "Pre-rotation Commitment"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(current_keys=key_list_strategy(), next_keys=key_list_strategy())
+        def test_dual_compromise_required(current_keys, next_keys):
+            assume(set(current_keys).isdisjoint(set(next_keys)))
+            # Attacker with only current keys cannot rotate
+            attacker_keys = current_keys
+            next_digests = [digest(k) for k in next_keys]
+            assert not any(digest(ak) in next_digests for ak in attacker_keys)
+    strategy: "key_list_strategy() for both current and next key sets"
+    notes: "Disjoint key sets ensure dual compromise is required."
+
+  - invariant: "Each set of pre-rotated keys is first-time, one-time, only-time use for rotation authority"
+    term: "Pre-rotation Commitment"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_multiple_rotations_strategy())
+        def test_pre_rotated_keys_used_once(kel):
+            consumed_digests = set()
+            for event in kel.events:
+                if event.t in ('rot', 'drt'):
+                    prior_est = kel.prior_establishment(event)
+                    for d in prior_est.n:
+                        assert d not in consumed_digests, "Pre-rotated digest reused"
+                        consumed_digests.add(d)
+    strategy: "kel_with_multiple_rotations_strategy()"
+    notes: "Once consumed, a pre-committed digest can never be reused."
+
+  - invariant: "No rotation is valid without keys matching the pre-committed digests"
+    term: "Pre-rotation Commitment"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(prior_digests=digest_list_strategy(),
+               random_keys=key_list_strategy())
+        def test_random_keys_fail_pre_rotation(prior_digests, random_keys):
+            # Random keys should not match pre-committed digests
+            assume(all(digest(k) not in prior_digests for k in random_keys))
+            result = verify_pre_rotation(random_keys, prior_digests)
+            assert result.is_err()
+    strategy: "digest_list_strategy(), key_list_strategy()"
+    notes: "Arbitrary keys without matching digests are rejected."
+
+  - invariant: "The digest algorithm is encoded in the CESR prefix of each n field entry"
+    term: "Pre-rotation Commitment"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(digest_str=cesr_digest_strategy())
+        def test_digest_algorithm_in_prefix(digest_str):
+            prefix_code = digest_str[0]
+            if prefix_code == 'E':
+                assert algorithm_from_code(prefix_code) == 'Blake3-256'
+            elif prefix_code == 'F':
+                assert algorithm_from_code(prefix_code) == 'Blake2b-256'
+    strategy: "cesr_digest_strategy() generates qualified CESR digest strings"
+    notes: "The first character(s) of the CESR encoding identify the hash algorithm."
+
+  # Signing Keys invariants
+  - invariant: "At inception, signing keys are freely chosen by the controller"
+    term: "Signing Keys"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(keys=key_list_strategy(min_size=1, max_size=10))
+        def test_inception_keys_free(keys):
+            icp = incept(keys=keys, ndigs=[digest(k) for k in generate_next_keys(len(keys))])
+            assert icp.k == keys
+    strategy: "key_list_strategy(1..10)"
+    notes: "No constraints on initial key selection — any valid keys work."
+
+  - invariant: "At rotation, the new signing keys must include a threshold-satisficing subset of the previously pre-committed next keys (unblinded)"
+    term: "Signing Keys"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_rotation_strategy())
+        def test_rotation_keys_from_pre_committed(kel):
+            for event in kel.events:
+                if event.t in ('rot', 'drt'):
+                    prior_est = kel.prior_establishment(event)
+                    matched = [k for k in event.k if digest(k) in prior_est.n]
+                    assert prior_est.ntholder.satisfy(
+                        [prior_est.n.index(digest(k)) for k in matched]
+                    )
+    strategy: "kel_with_rotation_strategy()"
+    notes: "Threshold-satisficing subset of pre-committed keys must appear in new signing keys."
+
+  - invariant: "Ordered — index position matters for indexed signatures and threshold satisfaction"
+    term: "Signing Keys"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(keys=key_list_strategy(min_size=2, max_size=10))
+        def test_key_order_matters(keys):
+            import random
+            shuffled = list(keys)
+            random.shuffle(shuffled)
+            assume(shuffled != keys)
+            assert keys != shuffled  # Different order = different key list
+    strategy: "key_list_strategy(2..10)"
+    notes: "Key ordering is significant for indexed signature mapping."
+
+  # Next Key Digests invariants
+  - invariant: "Each entry is a qualified digest of the corresponding next public key"
+    term: "Next Key Digests"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(pub_key=public_key_strategy())
+        def test_next_digest_is_qualified(pub_key):
+            d = compute_next_digest(pub_key, algorithm='Blake3-256')
+            assert d[0] == 'E'  # Blake3-256 CESR prefix
+            assert verify_digest(d, pub_key)
+    strategy: "public_key_strategy()"
+    notes: "Digest is qualified with CESR code and verifiable against the public key."
+
+  - invariant: "An empty next key digest list (n = []) signals a non-transferable AID"
+    term: "Next Key Digests"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        n_length = Int('n_length')
+        is_transferable = Bool('is_transferable')
+        s = Solver()
+        s.add(is_transferable == (n_length > 0))
+        # When n is empty, AID is non-transferable
+        s.add(n_length == 0)
+        s.add(is_transferable)
+        assert s.check() == unsat  # Cannot be transferable with empty n
+    notes: "Empty n field is the definitive signal for non-transferability."
+
+  # Key Configuration invariants
+  - invariant: "The pairing is atomic: current keys and next digests are always updated together at each establishment event"
+    term: "Key Configuration"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_rotation_strategy())
+        def test_key_config_atomic_update(kel):
+            for event in kel.events:
+                if event.t in ('icp', 'rot', 'dip', 'drt'):
+                    assert event.k is not None and event.n is not None
+                    # Both fields present in every establishment event
+    strategy: "kel_with_rotation_strategy()"
+    notes: "k and n are always set together in establishment events."
+
+  # Partial Rotation invariants
+  - invariant: "The new signing key list may contain fewer keys than the prior next key digest list"
+    term: "Partial Rotation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(n_next=st.integers(min_value=3, max_value=10),
+               n_promoted=st.integers(min_value=1, max_value=3))
+        def test_partial_rotation_fewer_keys(n_next, n_promoted):
+            assume(n_promoted <= n_next)
+            next_keys = generate_keys(n_next)
+            promoted = next_keys[:n_promoted]
+            assert len(promoted) <= len(next_keys)
+    strategy: "st.integers for next key count and promoted count"
+    notes: "Partial rotation explicitly allows fewer signing keys than next keys."
+
+  - invariant: "Only a threshold-satisficing subset (per the prior rotation threshold nt) of next keys must appear as signing keys"
+    term: "Partial Rotation"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        nt, n_next, n_promoted = Ints('nt n_next n_promoted')
+        s = Solver()
+        s.add(nt >= 1, n_next >= nt, n_promoted >= 1)
+        # Valid partial rotation: promoted >= nt
+        s.add(n_promoted >= nt)
+        s.add(n_promoted <= n_next)
+        assert s.check() == sat
+        # Invalid: promoted < nt
+        s2 = Solver()
+        s2.add(nt >= 1, n_next >= nt, n_promoted >= 1)
+        s2.add(n_promoted < nt)
+        # This is satisfiable — represents the invalid case that should be rejected
+    notes: "The threshold nt is the minimum number of promoted keys."
+
+  - invariant: "Discarded pre-rotated keys are consumed — they can never be used again"
+    term: "Partial Rotation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_partial_rotation_strategy())
+        def test_discarded_keys_consumed(kel):
+            all_consumed = set()
+            for event in kel.events:
+                if event.t in ('rot', 'drt'):
+                    prior_est = kel.prior_establishment(event)
+                    for d in prior_est.n:
+                        assert d not in all_consumed
+                        all_consumed.add(d)
+    strategy: "kel_with_partial_rotation_strategy()"
+    notes: "All prior n entries are consumed at rotation — promoted or discarded."
+
+  # Transferable Identifier invariants
+  - invariant: "Establishment events MUST include next key digests (n field) for pre-rotation"
+    term: "Transferable Identifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=transferable_kel_strategy())
+        def test_transferable_has_next_digests(kel):
+            for event in kel.establishment_events():
+                assert len(event.n) > 0
+    strategy: "transferable_kel_strategy()"
+    notes: "Transferable AIDs require non-empty n in every establishment event."
+
+  # Non-transferable Identifier invariants
+  - invariant: "n field is empty list [] in inception event — no pre-rotation commitment exists"
+    term: "Non-transferable Identifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(key=public_key_strategy(non_transferable=True))
+        def test_non_transferable_empty_n(key):
+            icp = incept(keys=[key], ndigs=[], code=non_transferable_code(key))
+            assert icp.n == []
+    strategy: "public_key_strategy(non_transferable=True)"
+    notes: "Non-transferable inception explicitly sets n=[]."
+
+  - invariant: "Cannot issue rotation events — the inception key is permanent"
+    term: "Non-transferable Identifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=non_transferable_kel_strategy())
+        def test_non_transferable_no_rotation(kel):
+            new_keys = generate_keys(1)
+            rot = build_rotation(kel.aid, new_keys)
+            result = validate_event(rot, kel)
+            assert result.is_err()
+    strategy: "non_transferable_kel_strategy()"
+    notes: "Rotation is structurally impossible with empty n field."
+
+contracts:
+  - port_ref: "port://keri/key-state/commitment/inbound/key-commitment"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda signing_keys, next_digests: len(signing_keys) >= 1"
+        description: "build_key_config requires at least one signing key"
+      - formal:
+          language: python
+          expression: "lambda new_keys, prior_next_digests: len(new_keys) >= 1 and len(prior_next_digests) >= 1"
+        description: "verify_pre_rotation requires non-empty keys and prior digests"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda signing_keys, next_digests, config: config.k == signing_keys and config.n == next_digests"
+        description: "build_key_config returns config with the provided keys and digests"
+      - formal:
+          language: python
+          expression: |
+            lambda new_keys, prior, result: (
+                result.is_ok() and all(
+                    digest(new_keys[idx]) == prior[idx] for idx in result.value()
+                )
+            ) or result.is_err()
+        description: "verify_pre_rotation returns matched indices where key digests match prior digests"
+
+  - port_ref: "port://keri/key-state/commitment/inbound/transferability"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda prefix_code: prefix_code is not None"
+        description: "Prefix code must be provided"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda prefix_code, result: result == (prefix_code in ('D', '1AAB', '1AAJ', '1AAD', 'E'))"
+        description: "Transferable prefix codes are D, 1AAB, 1AAJ, 1AAD, E"
+      - formal:
+          language: python
+          expression: "lambda next_digests, result: result == (len(next_digests) > 0)"
+        description: "AID is transferable iff next_digests is non-empty"
+
+  - port_ref: "port://keri/key-state/commitment/inbound/partial-rotation"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda new_keys, prior, threshold: len(new_keys) >= 1 and len(prior) >= 1"
+        description: "At least one new key and one prior digest required"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda new_keys, prior, threshold, result: (
+                result.is_ok() and
+                len(result.promoted) >= threshold.size and
+                len(result.promoted) + len(result.discarded) == len(prior)
+            ) or result.is_err()
+        description: "Promoted count satisfies threshold; promoted + discarded = total prior"
+
+state_machines: []

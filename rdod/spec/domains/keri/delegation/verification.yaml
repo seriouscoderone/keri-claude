@@ -1,0 +1,124 @@
+# verification.yaml
+domain_ref: "keri/delegation"
+
+properties:
+  - invariant: "Must include di field with the delegator's AID"
+    term: "Delegated Inception"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda dip: dip.type == 'dip' implies (dip.di is not None and len(dip.di) > 0)"
+    strategy: "st.from_type(DelegatedInceptionEvent)"
+    notes: "The di field is the defining difference between dip and icp — it must always be present"
+
+  - invariant: "The AID (i field) is a SAID that incorporates the di field — cryptographically binding delegatee to delegator"
+    term: "Delegated Inception"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda dip: dip.i == said_of(dip.content_including_di()) and dip.di in dip.content_for_said()"
+    strategy: "st.from_type(DelegatedInceptionEvent)"
+    notes: "The delegatee's AID includes the delegator reference in its SAID computation — changing di changes the AID"
+
+  - invariant: "There is exactly one delegated inception per delegated KEL"
+    term: "Delegated Inception"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda kel: sum(1 for e in kel.events if e.type == 'dip') <= 1"
+    strategy: "st.from_type(KEL)"
+    notes: "At most one dip in any KEL — subsequent establishment events are drt, not dip"
+
+  - invariant: "Does NOT include the di field — inherits the delegator from the delegated inception event"
+    term: "Delegated Rotation"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda drt: drt.type == 'drt' implies not hasattr(drt, 'di')"
+    strategy: "st.from_type(DelegatedRotationEvent)"
+    notes: "The di field is only in dip — drt inherits the delegator relationship"
+
+  - invariant: "The 'drt' type signals validators to verify both delegatee and delegator approval"
+    term: "Delegated Rotation"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda event: event.type == 'drt' implies event.requires_delegator_approval()"
+    strategy: "st.from_type(KeyEvent)"
+    notes: "The drt type is the flag that triggers the delegation validation pipeline"
+
+  - invariant: "The root of any delegation chain must be a non-delegated (self-certifying) AID"
+    term: "Delegation Chain"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda chain: len(chain) >= 1 and not chain[0].is_delegated"
+    strategy: "st.from_type(DelegationChain)"
+    notes: "Every chain terminates at a self-certifying root — infinite delegation chains are not possible"
+
+  - invariant: "Verification of any delegated event requires walking up the delegation chain to the root"
+    term: "Delegation Chain"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda chain, level: (level > 0 and level < len(chain)) implies verify_delegation(chain[level]).requires(verify_delegation(chain[level-1]))"
+    strategy: "st.tuples(st.from_type(DelegationChain), st.integers(min_value=0, max_value=10))"
+    notes: "Recursive verification — each level depends on the level above"
+
+  - invariant: "Set in the c field of an establishment event"
+    term: "DID Configuration Trait"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda event, has_did_trait: has_did_trait == ('DID' in event.c)"
+    strategy: "st.tuples(st.from_type(EstablishmentEvent), st.booleans())"
+    notes: "DID trait is a simple membership check on the c field array"
+
+contracts:
+  - port_ref: "port://keri/delegation/inbound/delegation-lifecycle"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda config, delegator_aid: config.valid() and delegator_aid is not None and len(delegator_aid) > 0"
+        description: "Config must be valid and delegator AID must be non-empty"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: result.type == 'dip' and result.di is not None and result.i is not None"
+        description: "create_delegated_inception returns a dip event with both di and i fields set"
+      - formal:
+          language: python
+          expression: "lambda seal: seal.i is not None and seal.s >= 0 and seal.d is not None"
+        description: "approve_delegation returns a seal with delegatee AID, sn, and SAID"
+
+  - port_ref: "port://keri/delegation/inbound/delegation-verification"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda event: event.type in ('dip', 'drt') and event.signatures_verified()"
+        description: "Only delegated establishment events (dip, drt) with valid signatures can be verified"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: result.is_verified() implies result.seal_found and result.chain_valid"
+        description: "Verified result means both the delegation seal was found and the chain is valid"
+      - formal:
+          language: python
+          expression: "lambda result: result.is_error() implies result.error_type in ('seal_not_found', 'chain_invalid', 'signature_invalid')"
+        description: "Verification errors are one of the recognized failure types"
+
+  - port_ref: "port://keri/delegation/inbound/delegation-query"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None"
+        description: "AID must be a valid identifier"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, chain: len(chain) >= 1 and chain[-1] == aid and not is_delegated(chain[0])"
+        description: "get_delegation_chain returns a chain ending at the queried AID with a non-delegated root"
+      - formal:
+          language: python
+          expression: "lambda aid, result: result == (get_delegator(aid) is not None)"
+        description: "is_delegated returns true iff a delegator exists for the AID"

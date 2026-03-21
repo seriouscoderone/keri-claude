@@ -1,0 +1,123 @@
+# verification.yaml
+domain_ref: "keri/duplicity-detection/monitoring"
+
+properties:
+  - invariant: "Under the validator's control, NOT the controller's"
+    term: "Watcher"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda watcher, validator, controller: watcher.controlled_by == validator.aid and watcher.controlled_by != controller.aid"
+    strategy: "st.tuples(st.from_type(Watcher), st.from_type(Validator), st.from_type(Controller))"
+    notes: "Watchers are always under the validator's control — a controller-controlled watcher would defeat the purpose"
+
+  - invariant: "Collects KEL copies from multiple independent sources"
+    term: "Watcher"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda watcher: len(watcher.sources) >= 2 and len(set(s.operator for s in watcher.sources)) >= 2"
+    strategy: "st.from_type(Watcher)"
+    notes: "At least two independent sources needed for meaningful cross-checking"
+
+  - invariant: "Compares event histories to detect inconsistencies (different events at the same sn)"
+    term: "Watcher"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda kerl_a, kerl_b, discrepancies: discrepancies == [sn for sn in common_sns(kerl_a, kerl_b) if kerl_a.event_at(sn).said != kerl_b.event_at(sn).said]"
+    strategy: "st.tuples(st.from_type(KERL), st.from_type(KERL), st.from_type(list))"
+    notes: "Discrepancy detection is deterministic — compare SAIDs at every common sequence number"
+
+  - invariant: "Does not make trust decisions — only collects and presents evidence"
+    term: "Juror"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda juror, evidence: juror.stores(evidence) and not juror.has_trust_decision(evidence.aid)"
+    strategy: "st.tuples(st.from_type(Juror), st.from_type(DuplicityEvidence))"
+    notes: "Jurors are evidence collectors, not decision makers — the judge role is strictly separated"
+
+  - invariant: "Evaluates duplicity evidence to make trust/no-trust decisions"
+    term: "Judge"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda judge, evidence, decision: (len(evidence) > 0) implies (decision in ('trust', 'no_trust', 'reconcile'))"
+    strategy: "st.tuples(st.from_type(Judge), st.lists(st.from_type(DuplicityEvidence), min_size=1), st.from_type(TrustDecision))"
+    notes: "A judge must produce a trust decision when presented with evidence"
+
+  - invariant: "At sufficient distribution, verifiability becomes ambient — available to anyone, anywhere, at any time"
+    term: "Ambient Duplicity Detection"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda watcher_count, watcher_diversity, is_ambient: (watcher_count >= ambient_threshold and watcher_diversity >= diversity_threshold) implies is_ambient"
+    strategy: "st.tuples(st.integers(min_value=0, max_value=1000), st.integers(min_value=0, max_value=100), st.booleans())"
+    notes: "Ambient verifiability is a threshold property — sufficient count and diversity guarantees it"
+
+  - invariant: "Requires isolating the validator from all ambient sources of the authentic KERL"
+    term: "Eclipse Attack"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(And(eclipse_successful == True, ambient_sources > 0), all_sources_blocked == True)"
+    notes: "Eclipse attack success requires blocking all ambient sources — SMT verifies the all-or-nothing property"
+
+  - invariant: "Becomes prohibitively expensive with sufficient watcher diversity and distribution"
+    term: "Eclipse Attack"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda watcher_count, diversity, attack_cost: attack_cost >= watcher_count * diversity * base_cost_per_source"
+    strategy: "st.tuples(st.integers(min_value=1, max_value=1000), st.integers(min_value=1, max_value=100), st.floats(min_value=0))"
+    notes: "Attack cost scales with watcher count times diversity — asymmetric in favor of the defender"
+
+contracts:
+  - port_ref: "port://keri/duplicity-detection/monitoring/inbound/monitoring-lifecycle"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sources: aid is not None and len(sources) >= 1"
+        description: "Monitoring requires a valid AID and at least one source to poll"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda handle: handle.active and handle.aid is not None"
+        description: "monitor_aid returns an active handle bound to the specified AID"
+      - formal:
+          language: python
+          expression: "lambda result: result.is_no_duplicity() or (result.is_evidence() and len(result.evidence.events) >= 2)"
+        description: "check_duplicity returns clean status or evidence containing at least two conflicting events"
+
+  - port_ref: "port://keri/duplicity-detection/monitoring/inbound/trust-decisions"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, evidence: aid is not None and all(e.aid == aid for e in evidence)"
+        description: "Evidence must pertain to the specified AID"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda decision: decision.type in ('trust', 'no_trust', 'reconcile') and decision.aid is not None"
+        description: "Trust decisions must be one of the three valid types and reference a specific AID"
+      - formal:
+          language: python
+          expression: "lambda aid, evidence, decision: (len(evidence) > 0) implies decision.type in ('no_trust', 'reconcile')"
+        description: "When duplicity evidence exists, the decision must be no_trust or reconcile — not unconditional trust"
+
+  - port_ref: "port://keri/duplicity-detection/monitoring/outbound/kel-sources"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda witness_aid, monitored_aid: witness_aid is not None and monitored_aid is not None"
+        description: "Both the witness/watcher AID and the monitored AID must be valid"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda kerl: kerl is not None and all(kerl[i].sn <= kerl[i+1].sn for i in range(len(kerl)-1))"
+        description: "Returned KERL is non-null with events in non-decreasing sequence number order"
+      - formal:
+          language: python
+          expression: "lambda a, b, result: result.is_consistent() == all(a.event_at(sn).said == b.event_at(sn).said for sn in common_sns(a, b))"
+        description: "compare_kerls returns Consistent iff all common sequence numbers have matching SAIDs"

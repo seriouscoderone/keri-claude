@@ -1,0 +1,172 @@
+# verification.yaml
+domain_ref: "acdc"
+
+properties:
+  # ACDC structure invariants
+  - invariant: "Required fields: [v, d, i, s] — version string, SAID, issuer AID, schema"
+    term: "ACDC"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda acdc: all(f in acdc for f in ['v', 'd', 'i', 's'])"
+    strategy: "st.fixed_dictionaries with required keys always present, optional keys via st.one_of"
+    notes: "Fuzz ACDC dicts with random subsets of optional fields; required must always be present"
+
+  - invariant: "Must not have both an a field and an A field simultaneously"
+    term: "ACDC"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda acdc: not ('a' in acdc and acdc['a'] and 'A' in acdc and acdc['A'])"
+    strategy: "st.fixed_dictionaries with a and A fields drawn from st.one_of(st.none(), st.dictionaries(...))"
+    notes: "Mutual exclusion between attribute section and aggregate section"
+
+  - invariant: "The d field is the SAID computed via the most compact form algorithm"
+    term: "ACDC"
+    technique: smt
+    formal:
+      language: z3
+      expression: "ForAll([acdc], Implies(is_valid_acdc(acdc), acdc.d == said_compute(most_compact_form(acdc))))"
+    notes: "SAID self-referential integrity — the d field must be derivable from the block content"
+
+  - invariant: "All field maps use insertion-ordered serialization for reproducible round-trip encoding"
+    term: "Field Map"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda fm: deserialize(serialize(fm)) == fm"
+    strategy: "st.dictionaries with ordered keys; verify serialize(deserialize(serialize(x))) == serialize(x)"
+    notes: "Round-trip serialization identity for all supported kinds (JSON, CBOR, MGPK)"
+
+  - invariant: "Top-level field order when present: [v, t, d, u, i, rd, s, a, A, e, r]"
+    term: "ACDC"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda acdc: (
+          canonical := ['v', 't', 'd', 'u', 'i', 'rd', 's', 'a', 'A', 'e', 'r'],
+          present := [k for k in acdc.keys() if k in canonical],
+          expected := [k for k in canonical if k in acdc],
+          present == expected
+        )[-1]
+    strategy: "Generate ACDCs with random subsets of optional fields; verify key ordering"
+    notes: "Canonical field ordering constraint"
+
+  - invariant: "SAID must have >= 128 bits of cryptographic strength"
+    term: "SAID"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(is_said(s), bit_length(s) >= 128)"
+    notes: "Minimum entropy bound for SAID cryptographic strength"
+
+  - invariant: "The i field value must be an AID with verifiable key state via KERI"
+    term: "Issuer"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda acdc, kel: is_valid_aid(acdc['i']) and has_key_state(kel, acdc['i'])"
+    strategy: "Generate valid and invalid AIDs; verify only KERI-backed AIDs accepted"
+    notes: "Issuer AID must be resolvable to key state"
+
+  - invariant: "Schema must be completely self-contained and statically fixed (immutable)"
+    term: "Schema"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda schema: all(not is_remote_ref(ref) for ref in extract_refs(schema))"
+    strategy: "Generate schemas with mixed local/remote $ref values; verify remote refs rejected"
+    notes: "No dynamic, mutable, or non-local URI references"
+
+  - invariant: "Schema $id field value must be the SAID of the schema"
+    term: "Schema"
+    technique: smt
+    formal:
+      language: z3
+      expression: "ForAll([schema], Implies(is_valid_schema(schema), schema.dollar_id == said_compute(schema)))"
+    notes: "Schema self-addressing integrity"
+
+  - invariant: "Version string must be the first field in any top-level ACDC field map"
+    term: "Version String"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda acdc: list(acdc.keys())[0] == 'v'"
+    strategy: "Generate ACDCs with v field at various positions; only first-position accepted"
+    notes: ""
+
+  - invariant: "UUID must have cryptographic strength >= 128 bits"
+    term: "UUID"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(has_uuid(block), entropy_bits(block.u) >= 128)"
+    notes: "Blinding entropy minimum for rainbow table resistance"
+
+  - invariant: "An edge must contain a node n field pointing to the SAID of the far-node ACDC"
+    term: "Edge Section"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda edge: 'n' in edge and is_said(edge['n'])"
+    strategy: "Generate edges with and without n fields; verify n is required and is a valid SAID"
+    notes: "Edge-groups must NOT have n field — property distinguishes edges from edge-groups"
+
+  - invariant: "I2I requires issuer of near-node ACDC to be issuee of far-node ACDC"
+    term: "Edge Operator"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda near, far, op: op != 'I2I' or near['i'] == far['a']['i']"
+    strategy: "Generate edge pairs with matching/mismatching issuer-issuee AIDs"
+    notes: "Issuer-to-Issuee chain integrity"
+
+  - invariant: "Credential Verifier escrow timeout: 3600s per escrow type"
+    term: "Credential Verifier"
+    technique: smt
+    formal:
+      language: z3
+      expression: "And(timeout > 0, timeout == 3600)"
+    notes: "Boundary check on escrow timeout parameter"
+
+contracts:
+  - port_ref: "port://acdc/inbound/credential-lifecycle"
+    preconditions:
+      - formal:
+          language: python
+          expression: "is_valid_aid(issuer_aid) and is_valid_said(schema) and isinstance(attributes, dict)"
+        description: "Issuer AID must be valid, schema must be a valid SAID, attributes must be a dict"
+    postconditions:
+      - formal:
+          language: python
+          expression: "result.d == said_compute(result) and result.i == issuer_aid and result.s == schema"
+        description: "Issued ACDC has correct SAID, issuer, and schema binding"
+      - formal:
+          language: python
+          expression: "all(f in result for f in ['v', 'd', 'i', 's'])"
+        description: "Issued ACDC contains all required fields"
+
+  - port_ref: "port://acdc/inbound/schema-management"
+    preconditions:
+      - formal:
+          language: python
+          expression: "is_valid_json_schema(schema) and schema.get('$id') == said_compute(schema)"
+        description: "Schema must be valid JSON Schema 2020-12 with self-addressing $id"
+    postconditions:
+      - formal:
+          language: python
+          expression: "result == said_compute(schema)"
+        description: "Returned SAID matches the schema's computed digest"
+
+  - port_ref: "port://acdc/outbound/kel-anchoring"
+    preconditions:
+      - formal:
+          language: python
+          expression: "is_valid_aid(aid) and isinstance(seal_digest, str) and len(seal_digest) > 0"
+        description: "AID must be valid and seal digest must be non-empty"
+    postconditions:
+      - formal:
+          language: python
+          expression: "seal_digest in result.anchors"
+        description: "Returned interaction event contains the seal digest in its anchor field"

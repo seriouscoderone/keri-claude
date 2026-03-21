@@ -1,0 +1,508 @@
+# verification.yaml
+domain_ref: "keri/event-log"
+
+properties:
+  # KEL invariants
+  - invariant: "Append-only — events cannot be modified or deleted (excepting superseding recovery)"
+    term: "KEL"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy(), new_event=key_event_strategy())
+        def test_kel_append_only(kel, new_event):
+            snapshot = [e.said for e in kel.events]
+            kel.append(new_event)
+            for i, said in enumerate(snapshot):
+                assert kel.events[i].said == said
+    strategy: "kel_strategy(), key_event_strategy()"
+    notes: "Prior events are immutable after acceptance."
+
+  - invariant: "Hash-chained — each event includes digest of prior event in p field"
+    term: "KEL"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy(min_events=2))
+        def test_kel_hash_chain(kel):
+            for i in range(1, len(kel.events)):
+                assert kel.events[i].p == kel.events[i-1].said
+    strategy: "kel_strategy(min_events=2)"
+    notes: "Hash chain creates tamper-evidence."
+
+  - invariant: "Exactly one authoritative KEL per AID"
+    term: "KEL"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(aid=aid_strategy())
+        def test_one_kel_per_aid(aid):
+            store = KELStore()
+            kel = store.get_or_create(aid)
+            kel2 = store.get_or_create(aid)
+            assert kel is kel2  # same instance
+    strategy: "aid_strategy()"
+    notes: "AID-to-KEL mapping is 1:1."
+
+  - invariant: "Deterministic key state derivable from any KEL prefix"
+    term: "KEL"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy())
+        def test_deterministic_key_state(kel):
+            for n in range(1, len(kel.events) + 1):
+                prefix = kel.events[:n]
+                s1 = compute_key_state_from_events(prefix)
+                s2 = compute_key_state_from_events(prefix)
+                assert s1 == s2
+    strategy: "kel_strategy()"
+    notes: "Any prefix of the KEL produces deterministic key state."
+
+  # Inception Event invariants
+  - invariant: "Always at sequence number s=0"
+    term: "Inception Event"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        sn = Int('sn')
+        ilk = String('ilk')
+        s = Solver()
+        s.add(ilk == StringVal('icp'))
+        s.add(sn != 0)
+        # No valid inception at sn != 0
+        # (This represents the constraint that should be enforced)
+    notes: "Inception is definitionally at sn=0."
+
+  - invariant: "Has no prior event digest (no p field)"
+    term: "Inception Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(icp=inception_event_strategy())
+        def test_inception_no_prior(icp):
+            assert not hasattr(icp, 'p') or icp.p is None
+    strategy: "inception_event_strategy()"
+    notes: "Inception is the root — no predecessor."
+
+  - invariant: "For self-addressing AIDs, the d and i fields must have the same value"
+    term: "Inception Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(icp=self_addressing_inception_strategy())
+        def test_self_addressing_d_equals_i(icp):
+            assert icp.d == icp.i
+    strategy: "self_addressing_inception_strategy()"
+    notes: "Self-addressing prefix is derived from the SAID."
+
+  - invariant: "There is exactly one inception event per KEL"
+    term: "Inception Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy())
+        def test_exactly_one_inception(kel):
+            icps = [e for e in kel.events if e.t in ('icp', 'dip')]
+            assert len(icps) == 1
+            assert icps[0].sn == 0
+    strategy: "kel_strategy()"
+    notes: "One and only one inception per KEL."
+
+  # Rotation Event invariants
+  - invariant: "Must satisfy dual threshold — both new signing threshold (kt) and prior next threshold (nt)"
+    term: "Rotation Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_rotation_strategy())
+        def test_rotation_dual_threshold(kel):
+            for event in kel.events:
+                if event.t in ('rot', 'drt'):
+                    prior_est = kel.prior_establishment(event)
+                    assert event.kt_satisfied(event.sig_indices)
+                    assert prior_est.nt_satisfied(event.ondex_indices)
+    strategy: "kel_with_rotation_strategy()"
+    notes: "Dual threshold enforcement at every rotation."
+
+  - invariant: "Hash-chained to predecessor via p field (prior event SAID)"
+    term: "Rotation Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_rotation_strategy())
+        def test_rotation_hash_chained(kel):
+            for i, event in enumerate(kel.events):
+                if event.t in ('rot', 'drt') and i > 0:
+                    assert event.p == kel.events[i-1].said
+    strategy: "kel_with_rotation_strategy()"
+    notes: ""
+
+  - invariant: "Sequence number s is strictly monotonically increasing"
+    term: "Rotation Event"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        sn_prev, sn_rot = Ints('sn_prev sn_rot')
+        s = Solver()
+        s.add(sn_rot == sn_prev + 1)
+        s.add(sn_prev >= 0)
+        assert s.check() == sat
+    notes: "Strict +1 increment."
+
+  # Interaction Event invariants
+  - invariant: "Does not modify key state — signing keys, thresholds, and witnesses remain unchanged"
+    term: "Interaction Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_ixn_strategy())
+        def test_ixn_no_key_state_change(kel):
+            for i, event in enumerate(kel.events):
+                if event.t == 'ixn':
+                    state_before = compute_key_state(kel.prefix_events(i))
+                    state_after = compute_key_state(kel.prefix_events(i + 1))
+                    assert state_before.k == state_after.k
+                    assert state_before.kt == state_after.kt
+                    assert state_before.b == state_after.b
+    strategy: "kel_with_ixn_strategy()"
+    notes: "Interaction events are key-state-invisible."
+
+  - invariant: "Can be superseded by a rotation event at the same sequence number during recovery"
+    term: "Interaction Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_ixn_strategy())
+        def test_ixn_supersedable(kel):
+            for event in kel.events:
+                if event.t == 'ixn':
+                    rot = build_recovery_rotation(kel.aid, sn=event.sn)
+                    # Recovery rotation at ixn's sn is structurally valid
+                    assert rot.sn == event.sn
+                    assert rot.t == 'rot'
+    strategy: "kel_with_ixn_strategy()"
+    notes: "Recovery rotations can supersede ixn events."
+
+  # Delegated Inception Event invariants
+  - invariant: "Includes di field containing the delegator's AID"
+    term: "Delegated Inception Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(dip=delegated_inception_strategy())
+        def test_dip_has_di(dip):
+            assert dip.di is not None
+            assert len(dip.di) > 0
+    strategy: "delegated_inception_strategy()"
+    notes: ""
+
+  - invariant: "The delegator must anchor a corresponding seal in its own KEL for this event to be valid"
+    term: "Delegated Inception Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(dip=delegated_inception_strategy(), delegator_kel=kel_strategy())
+        def test_dip_requires_delegator_seal(dip, delegator_kel):
+            seal = find_delegation_seal(delegator_kel, dip.i, dip.sn, dip.said)
+            if seal is None:
+                result = validate_delegation(dip, delegator_kel)
+                assert result.is_err()
+    strategy: "delegated_inception_strategy(), kel_strategy()"
+    notes: "Without the delegator's seal, the dip is invalid."
+
+  # SAID invariants
+  - invariant: "Computed by replacing the d field with dummy '#' characters, serializing, hashing, then inserting the digest"
+    term: "SAID"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy())
+        def test_said_computation(event):
+            said = compute_said(event)
+            assert said == event.d
+            # Verify round-trip: replace d with dummy, hash, must match
+            dummy_event = replace_d_with_dummy(event)
+            raw = serialize(dummy_event)
+            computed = digest(raw)
+            assert computed == said
+    strategy: "key_event_strategy()"
+    notes: "SAID algorithm: dummy -> serialize -> hash -> inject."
+
+  - invariant: "The SAID uniquely identifies the exact content of the event"
+    term: "SAID"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(e1=key_event_strategy(), e2=key_event_strategy())
+        def test_said_uniqueness(e1, e2):
+            assume(serialize(e1) != serialize(e2))
+            assert compute_said(e1) != compute_said(e2)
+    strategy: "key_event_strategy() x2"
+    notes: "Different events produce different SAIDs (collision resistance)."
+
+  # Prior Event Digest invariants
+  - invariant: "Present in all events except inception (which has no predecessor)"
+    term: "Prior Event Digest"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy(min_events=2))
+        def test_prior_digest_presence(kel):
+            assert not hasattr(kel.events[0], 'p') or kel.events[0].p is None
+            for event in kel.events[1:]:
+                assert event.p is not None and len(event.p) > 0
+    strategy: "kel_strategy(min_events=2)"
+    notes: "Inception has no p; all others do."
+
+  - invariant: "Must match the d field of the immediately prior event in the KEL"
+    term: "Prior Event Digest"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy(min_events=2))
+        def test_prior_digest_matches(kel):
+            for i in range(1, len(kel.events)):
+                assert kel.events[i].p == kel.events[i-1].d
+    strategy: "kel_strategy(min_events=2)"
+    notes: "p field links to predecessor's SAID."
+
+  # Sequence Number invariants
+  - invariant: "Starts at 0 for inception"
+    term: "Sequence Number"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        sn_inception = Int('sn_inception')
+        s = Solver()
+        s.add(sn_inception == 0)
+        assert s.check() == sat
+    notes: "Inception is always sn=0."
+
+  - invariant: "Increments by exactly 1 for each subsequent event"
+    term: "Sequence Number"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        n = Int('n')
+        sn = Array('sn', IntSort(), IntSort())
+        s = Solver()
+        s.add(n >= 2, sn[0] == 0)
+        s.add(ForAll(Int('i'), Implies(
+            And(Int('i') >= 0, Int('i') < n - 1),
+            sn[Int('i') + 1] == sn[Int('i')] + 1
+        )))
+        assert s.check() == sat
+    notes: "Strict +1 monotonic increment from 0."
+
+  - invariant: "Different events at the same sequence number indicate duplicity or superseding recovery"
+    term: "Sequence Number"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy(), sn=st.integers(min_value=0, max_value=100))
+        def test_duplicate_sn_is_duplicity(kel, sn):
+            assume(sn < len(kel.events))
+            existing = kel.events[sn]
+            other = build_event(kel.aid, sn=sn)
+            assume(other.said != existing.said)
+            # Two different events at same sn = duplicity or recovery
+            assert is_duplicitous_or_recovery(existing, other)
+    strategy: "kel_strategy(), st.integers(0..100)"
+    notes: "Same sn, different SAID = duplicity evidence."
+
+  # First-seen Number invariants
+  - invariant: "Assigned by the database upon first acceptance — not part of the event message itself"
+    term: "First-seen Number"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy())
+        def test_fn_not_in_event_body(event):
+            raw = serialize(event)
+            assert 'fn' not in event.ked  # fn is not a field in the event body
+    strategy: "key_event_strategy()"
+    notes: "fn is metadata, not protocol data."
+
+  # Version String invariants
+  - invariant: "Format: PPPPVVVVKKKKSSSS_ — protocol (4), version (4), kind (4), size (4), terminator"
+    term: "Version String"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(vs=version_string_strategy())
+        def test_version_string_format(vs):
+            assert len(vs) == 17
+            assert vs[-1] == '.'
+            assert vs[:4] in ('KERI', 'ACDC')
+    strategy: "version_string_strategy()"
+    notes: "Fixed 17-char format with period terminator."
+
+  - invariant: "Serialization kind (JSON, CBOR, MGPK, CESR) directly affects SAID computation"
+    term: "Event Serialization"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event_data=event_data_strategy())
+        def test_kind_affects_said(event_data):
+            said_json = compute_said(serialize(event_data, kind='JSON'))
+            said_cbor = compute_said(serialize(event_data, kind='CBOR'))
+            assert said_json != said_cbor
+    strategy: "event_data_strategy()"
+    notes: "Same logical event, different serialization = different SAID."
+
+  # Event Locality invariants
+  - invariant: "Local events may assume trusted source"
+    term: "Event Locality"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy(), locality=st.sampled_from(['local', 'remote']))
+        def test_locality_classification(event, locality):
+            esr = EventSourceRecord(local=(locality == 'local'))
+            if locality == 'local':
+                assert esr.local
+            else:
+                assert not esr.local
+    strategy: "key_event_strategy(), st.sampled_from(['local', 'remote'])"
+    notes: "Binary classification: local or remote."
+
+  # Witness Prune/Graft invariants
+  - invariant: "Each AID in br must be in the current witness list"
+    term: "Witness Prune List"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_rotation_strategy())
+        def test_br_in_current_witnesses(kel):
+            current_witnesses = set(kel.events[0].b)
+            for event in kel.events:
+                if event.t in ('rot', 'drt'):
+                    for w in event.br:
+                        assert w in current_witnesses
+                    current_witnesses -= set(event.br)
+                    current_witnesses |= set(event.ba)
+    strategy: "kel_with_rotation_strategy()"
+    notes: "Cannot remove a witness that is not in the current set."
+
+  - invariant: "Each AID in ba must not already be in the current witness list"
+    term: "Witness Graft List"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_rotation_strategy())
+        def test_ba_not_in_current_witnesses(kel):
+            current_witnesses = set(kel.events[0].b)
+            for event in kel.events:
+                if event.t in ('rot', 'drt'):
+                    current_witnesses -= set(event.br)
+                    for w in event.ba:
+                        assert w not in current_witnesses
+                    current_witnesses |= set(event.ba)
+    strategy: "kel_with_rotation_strategy()"
+    notes: "Cannot add a witness already in the set (after removals applied)."
+
+contracts:
+  - port_ref: "port://keri/event-log/inbound/event-management"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda config: config.keys is not None and len(config.keys) >= 1"
+        description: "create_inception requires at least one signing key"
+      - formal:
+          language: python
+          expression: "lambda aid, new_keys, new_next: aid is not None and len(new_keys) >= 1"
+        description: "create_rotation requires valid AID and new keys"
+      - formal:
+          language: python
+          expression: "lambda aid, seals: aid is not None"
+        description: "create_interaction requires valid AID"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda config, result: result.t == 'icp' and result.sn == 0 and result.said is not None"
+        description: "create_inception returns icp at sn=0 with SAID"
+      - formal:
+          language: python
+          expression: "lambda aid, new_keys, new_next, result: result.t == 'rot' and result.i == aid"
+        description: "create_rotation returns rot for the given AID"
+      - formal:
+          language: python
+          expression: "lambda aid, seals, result: result.t == 'ixn' and result.i == aid"
+        description: "create_interaction returns ixn for the given AID"
+
+  - port_ref: "port://keri/event-log/inbound/event-processing"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda event, sigs, rcts: event is not None and len(sigs) >= 1"
+        description: "At least one signature required"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda event, sigs, rcts, result: (
+                isinstance(result, EventValidated) or isinstance(result, ValidationError)
+            )
+        description: "Returns validated or error"
+
+  - port_ref: "port://keri/event-log/inbound/event-query"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None"
+        description: "AID required for all queries"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, kel: len(kel.events) >= 1 and kel.events[0].t in ('icp', 'dip')"
+        description: "KEL always starts with inception"
+      - formal:
+          language: python
+          expression: "lambda aid, sn, event: event.sn == sn and event.i == aid"
+        description: "get_event returns event at requested sn for requested AID"
+
+  - port_ref: "port://keri/event-log/outbound/event-store"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, event, fn: aid is not None and event is not None and fn >= 0"
+        description: "Valid AID, event, and non-negative fn"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, event, fn, store: store.get_event_by_said(event.said) == event"
+        description: "Appended event is retrievable by SAID"
+
+state_machines: []

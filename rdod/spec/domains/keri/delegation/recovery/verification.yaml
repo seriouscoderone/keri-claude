@@ -1,0 +1,125 @@
+# verification.yaml
+domain_ref: "keri/delegation/recovery"
+
+properties:
+  - invariant: "An exploiter that compromises only the delegatee's keys cannot fully capture the delegated AID — delegator approval still required"
+    term: "Delegation Recovery"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda delegatee_keys_compromised, delegator_keys_compromised: (delegatee_keys_compromised and not delegator_keys_compromised) implies not full_exploit_possible()"
+    strategy: "st.tuples(st.booleans(), st.just(False))"
+    notes: "Delegator approval is required for establishment events — compromising only the delegatee is insufficient"
+
+  - invariant: "An exploiter that compromises only the delegator's signing keys cannot force a delegated rotation without also compromising the delegatee's pre-rotated keys"
+    term: "Delegation Recovery"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda delegator_signing_compromised, delegatee_prerotated_compromised: (delegator_signing_compromised and not delegatee_prerotated_compromised) implies not forced_rotation_possible()"
+    strategy: "st.tuples(st.just(True), st.just(False))"
+    notes: "The delegatee's pre-rotated keys are needed to create a valid rotation event"
+
+  - invariant: "Merely compromising the delegatee's keys is insufficient — the delegator must also approve"
+    term: "Joint Compromise Requirement"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda compromise: full_exploit(compromise) implies (compromise.delegatee_keys and compromise.delegator_keys)"
+    strategy: "st.from_type(CompromiseScenario)"
+    notes: "Full exploit requires both key sets — this is the combined arms property"
+
+  - invariant: "This joint requirement significantly raises the bar for successful exploitation"
+    term: "Joint Compromise Requirement"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(full_exploit == True, And(delegatee_compromised == True, delegator_compromised == True))"
+    notes: "SMT proves the implication exhaustively — no partial compromise scenario leads to full exploit"
+
+  - invariant: "Extends recursively through delegation chains — each level adds an independent key set"
+    term: "Joint Compromise Requirement"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(And(chain_length > 0, full_exploit == True), ForAll(level, Implies(And(level >= 0, level < chain_length), keys_compromised_at(level) == True)))"
+    notes: "For an N-level chain, all N key sets must be simultaneously compromised"
+
+  - invariant: "B1: Superseding delegation has a higher sn delegating event than the superseded delegation"
+    term: "Delegated Superseding Rules"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(And(is_delegated_rot(candidate), is_delegated_rot(incumbent), delegating_sn(candidate) > delegating_sn(incumbent)), supersedes_b1(candidate, incumbent) == True)"
+    notes: "Rule B1 — higher delegating event sn wins"
+
+  - invariant: "B2: Same delegating event, but superseding seal appears later in the seal list"
+    term: "Delegated Superseding Rules"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(And(delegating_sn(candidate) == delegating_sn(incumbent), delegating_said(candidate) == delegating_said(incumbent), seal_index(candidate) > seal_index(incumbent)), supersedes_b2(candidate, incumbent) == True)"
+    notes: "Rule B2 — later seal index within the same delegating event wins"
+
+  - invariant: "B3: Same sn delegating events, but superseding event's delegating event is a rotation superseding the superseded event's delegating interaction"
+    term: "Delegated Superseding Rules"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(And(delegating_sn(candidate) == delegating_sn(incumbent), delegating_type(candidate) == ROT, delegating_type(incumbent) == IXN), supersedes_b3(candidate, incumbent) == True)"
+    notes: "Rule B3 — applies rule A0 recursively to the delegator's KEL"
+
+  - invariant: "Only the latest-seen delegated rotation at a given sn can be superseded — earlier ones are final"
+    term: "Delegated Superseding Rules"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda rotations_at_sn: len(rotations_at_sn) <= 1 or only_latest_supersedable(rotations_at_sn)"
+    strategy: "st.lists(st.from_type(DelegatedRotation), min_size=1, max_size=5)"
+    notes: "Only the most recently seen delegated rotation can be superseded — this limits the attack window"
+
+  - invariant: "The delegator holds or controls the delegatee's pre-rotated private keys"
+    term: "Custodial Delegation"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda custodial: custodial.delegator_controls(custodial.delegatee.pre_rotated_keys)"
+    strategy: "st.from_type(CustodialDelegation)"
+    notes: "Defining property of custodial delegation — the delegator has the recovery keys"
+
+contracts:
+  - port_ref: "port://keri/delegation/recovery/inbound/recovery-rules"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda candidate, incumbent, delegator_kel: candidate.type == 'drt' and incumbent.type == 'drt' and candidate.sn == incumbent.sn and delegator_kel is not None"
+        description: "Both candidate and incumbent must be delegated rotations at the same sn, with access to the delegator's KEL"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: result.is_superseding() implies result.rule in ('B1', 'B2', 'B3', 'C')"
+        description: "Superseding delegated rotations must cite one of rules B1, B2, B3, or C"
+      - formal:
+          language: python
+          expression: "lambda delegation_chain, requirement: requirement.keys_needed == len(delegation_chain)"
+        description: "check_joint_compromise returns a requirement equal to the chain length"
+
+  - port_ref: "port://keri/delegation/recovery/inbound/superseding-comparison"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda a, b: a.delegating_sn >= 0 and b.delegating_sn >= 0"
+        description: "Delegating event references must have non-negative sequence numbers"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda a, b, order: (a.delegating_sn > b.delegating_sn) implies order == CANDIDATE_SUPERSEDES"
+        description: "compare_delegating_events returns CANDIDATE_SUPERSEDES when candidate has higher delegating sn"
+      - formal:
+          language: python
+          expression: "lambda candidate_sn, incumbent_sn, result: (candidate_sn > incumbent_sn) implies result.is_supersedes()"
+        description: "apply_rule_b1 returns Supersedes when candidate delegating sn is higher"
+      - formal:
+          language: python
+          expression: "lambda candidate_idx, incumbent_idx, same_event, result: (same_event and candidate_idx > incumbent_idx) implies result.is_supersedes()"
+        description: "apply_rule_b2 returns Supersedes when within the same event and candidate seal index is higher"

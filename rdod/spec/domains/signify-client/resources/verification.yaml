@@ -1,0 +1,228 @@
+# verification.yaml
+domain_ref: "signify-client/resources"
+
+# Formalized invariants from ubiquitous_language terms
+properties:
+  - invariant: "All resource operations return Operation handles (API contract)"
+    term: "Operation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            operation=st.sampled_from([
+                ('create_identifier', {'alias': 'test', 'wits': [], 'toad': 0}),
+                ('rotate', {'aid': 'EDP1...'}),
+                ('issue_credential', {'registry': 'reg', 'schema': 'SAID', 'recipient': 'AID', 'data': {}}),
+                ('create_registry', {'aid': 'EDP1...', 'name': 'reg'}),
+                ('add_end_role', {'aid': 'EDP1...', 'role': 'agent', 'eid': 'AID'}),
+                ('resolve_oobi', {'url': 'http://example.com/oobi/...'})
+            ])
+        )
+        def test_mutating_ops_return_operation_handle(operation):
+            op_name, kwargs = operation
+            result = getattr(client.resources(), op_name)(**kwargs)
+            assert hasattr(result, 'name')
+            assert hasattr(result, 'done')
+            assert isinstance(result.done, bool)
+    strategy: "st.sampled_from for all mutating resource operations"
+    notes: "All async resource operations must return an Operation handle with name and done flag"
+
+  - invariant: "Polled via client.operations().get(name) until done=true"
+    term: "Operation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(op_name=st.text(min_size=5, max_size=50))
+        def test_operation_polling(op_name):
+            op = client.operations().get(op_name)
+            assert op.name == op_name
+            assert isinstance(op.done, bool)
+            if op.done:
+                assert op.response is not None or op.error is not None
+    strategy: "st.text for operation names"
+    notes: "Operations are polled by name — done=true means completion (success or error)"
+
+  - invariant: "The controller AID's KEL is the trust anchor for the entire agent relationship"
+    term: "Controller AID"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            method=st.sampled_from(['GET', 'POST', 'PUT', 'DELETE']),
+            path=st.text(min_size=1, max_size=100)
+        )
+        def test_controller_aid_is_trust_anchor(method, path):
+            # All KRAM headers reference the controller AID
+            headers = client.sign_request(method, path, b'')
+            assert client.controller_aid in headers['Signify-Resource']
+            # Rotating controller AID rotates the authentication relationship
+            old_aid = client.controller_aid
+            client.rotate_controller()
+            new_headers = client.sign_request(method, path, b'')
+            assert old_aid not in new_headers['Signify-Resource']
+    strategy: "st.sampled_from for HTTP methods, st.text for paths"
+    notes: "Controller AID is the authentication anchor — all KRAM headers reference it"
+
+  - invariant: "create() returns inception event + signatures + operation handle"
+    term: "Identifier Resource"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            alias=st.text(min_size=1, max_size=30, alphabet=st.characters(whitelist_categories=('L',))),
+            wits=st.lists(st.text(min_size=44, max_size=44), max_size=5),
+            toad=st.integers(min_value=0, max_value=5)
+        )
+        def test_identifier_create_returns_complete_result(alias, wits, toad):
+            assume(toad <= len(wits))
+            result = client.identifiers().create(alias, wits=wits, toad=toad)
+            assert result.aid is not None  # AID assigned
+            assert result.operation is not None  # Operation handle
+            assert isinstance(result.operation.name, str)
+            assert result.operation.name.startswith('witness.')
+    strategy: "st.text for alias, st.lists for witnesses, st.integers for toad"
+    notes: "create() must return both the AID and an operation handle for tracking witness receipting"
+
+  - invariant: "Issuance returns a long-running operation (credential + TEL anchoring)"
+    term: "Credential Resource"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            schema_said=st.text(min_size=44, max_size=44),
+            recipient=st.text(min_size=44, max_size=44)
+        )
+        def test_credential_issuance_returns_operation(schema_said, recipient):
+            result = client.credentials().issue(
+                name='test', registry_name='reg',
+                schema_said=schema_said, recipient=recipient, data={}
+            )
+            assert result.operation is not None
+            assert result.operation.name.startswith('credential.')
+            assert isinstance(result.operation.done, bool)
+    strategy: "st.text for SAIDs and AIDs (44-char CESR qualified)"
+    notes: "Credential issuance is always async — TEL anchoring is a long-running operation"
+
+  - invariant: "Credential issuance requires a registry — the registry must be created before any credential can be issued"
+    term: "Credential Resource"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            schema_said=st.text(min_size=44, max_size=44),
+            recipient=st.text(min_size=44, max_size=44)
+        )
+        def test_credential_requires_registry(schema_said, recipient):
+            # Issuing without a registry must fail
+            with pytest.raises(RegistryNotFound):
+                client.credentials().issue(
+                    name='test', registry_name='nonexistent',
+                    schema_said=schema_said, recipient=recipient, data={}
+                )
+    strategy: "st.text for SAIDs/AIDs"
+    notes: "Registry creation is a prerequisite for credential issuance — order matters"
+
+  - invariant: "Roles: witness, controller, agent, watcher, mediator"
+    term: "End-Role"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(role=st.text(min_size=1, max_size=20))
+        def test_end_role_valid_roles(role):
+            valid_roles = {'witness', 'controller', 'agent', 'watcher', 'mediator'}
+            if role in valid_roles:
+                # Valid role accepted
+                result = client.identifiers().addEndRole('test', role, 'EID...')
+                assert result is not None
+            else:
+                # Invalid role rejected
+                with pytest.raises(InvalidRole):
+                    client.identifiers().addEndRole('test', role, 'EID...')
+    strategy: "st.text for exhaustive role name testing"
+    notes: "End-role authorization is restricted to the five defined roles"
+
+  - invariant: "All resource operations require KRAM-authenticated requests — unsigned requests are rejected"
+    term: "Controller AID"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            method=st.sampled_from(['GET', 'POST', 'PUT', 'DELETE']),
+            path=st.sampled_from(['/identifiers', '/credentials', '/contacts', '/notifications', '/operations'])
+        )
+        def test_all_resources_require_kram(method, path):
+            # Request without KRAM headers must be rejected by the cloud agent
+            response = raw_http_request(method, path, headers={})
+            assert response.status_code == 401
+    strategy: "st.sampled_from for HTTP methods and resource paths"
+    notes: "All resource endpoints reject unauthenticated requests"
+
+# Formalized port contracts
+contracts:
+  - port_ref: "port://signify-client/resources/inbound/resource-ops"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda: client.session_active"
+        description: "All resource operations require an active session (keys unlocked)"
+      - formal:
+          language: python
+          expression: "lambda alias, config: isinstance(alias, str) and len(alias) > 0"
+        description: "create_identifier requires a non-empty string alias"
+      - formal:
+          language: python
+          expression: "lambda registry, schema, recipient, data: registry is not None and schema is not None and data is not None"
+        description: "issue_credential requires registry, schema SAID, and credential data"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda result:
+                (hasattr(result, 'operation') and result.operation is not None)
+                or (isinstance(result, list))
+                or (isinstance(result, dict))
+        description: "Mutating operations return operation handles; list/get operations return data"
+      - formal:
+          language: python
+          expression: |
+            lambda aid, operation:
+                operation.name.startswith(('witness.', 'delegation.', 'group.', 'credential.', 'registry.', 'endrole.', 'oobi.'))
+        description: "Returned operation names follow the {type}.{oid} naming convention"
+
+  - port_ref: "port://signify-client/resources/outbound/cloud-agent-comms"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda method, path, body, headers: 'Signature' in headers and 'Signify-Resource' in headers"
+        description: "All outbound requests must include KRAM signature and resource headers"
+      - formal:
+          language: python
+          expression: "lambda inception_event: is_valid_inception(inception_event)"
+        description: "boot requires a valid inception event"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda inception_event, config:
+                config.agent_id is not None
+                and config.controller_aid == inception_event.pre
+        description: "boot returns AgentConfig with valid agent_id and matching controller_aid"
+      - formal:
+          language: python
+          expression: |
+            lambda name, status:
+                status.name == name
+                and isinstance(status.done, bool)
+        description: "poll_operation returns status for the named operation"
+
+# No state machine — resource operations are stateless request/response
+# (the operation lifecycle state machine is in cloud-agent-service/processing)
+state_machines: []

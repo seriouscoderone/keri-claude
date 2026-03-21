@@ -1,0 +1,139 @@
+# verification.yaml
+domain_ref: "signify-client"
+
+# Formalized invariants from ubiquitous_language terms
+properties:
+  - invariant: "Private keys generated and stored locally — never transmitted"
+    term: "Signify Client"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            url=st.text(min_size=5, max_size=100),
+            bran=st.text(min_size=21, max_size=21, alphabet=st.characters(whitelist_categories=('L', 'N')))
+        )
+        def test_private_keys_never_transmitted(url, bran):
+            client = create_signify_client(url, bran)
+            # Capture all outbound network traffic
+            with capture_network_traffic() as traffic:
+                client.connect()
+                client.identifiers().create('test')
+            # No private key material in any outbound request
+            for request in traffic.requests:
+                assert not contains_private_key_material(request.body)
+                assert not contains_private_key_material(request.headers)
+    strategy: "st.text for URL and passcode (bran) generation"
+    notes: "Critical security property — private key bytes must never appear in any network request"
+
+  - invariant: "All requests to cloud agent signed via KRAM"
+    term: "Signify Client"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            method=st.sampled_from(['GET', 'POST', 'PUT', 'DELETE']),
+            path=st.text(min_size=1, max_size=100)
+        )
+        def test_all_requests_kram_signed(method, path):
+            client = create_connected_client()
+            with capture_network_traffic() as traffic:
+                client.request(method, path)
+            for request in traffic.requests:
+                if request.port == 3901:  # Admin API
+                    assert 'Signature' in request.headers
+                    assert 'Signify-Resource' in request.headers
+                    assert verify_kram_headers(request.headers)
+    strategy: "st.sampled_from for HTTP methods, st.text for paths"
+    notes: "Every request to admin API port (3901) must carry KRAM signature headers"
+
+  - invariant: "Cloud agent can never produce a valid signature — only request one"
+    term: "Signing Request"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(content=st.binary(min_size=1, max_size=512))
+        def test_agent_cannot_sign(content):
+            agent = create_keria_agent()
+            # Agent can request a signature but cannot produce one
+            request = agent.request_signature(content)
+            assert request is not None
+            assert request.signature is None  # No signature attached by agent
+            # Agent has no method to produce a valid signature
+            with pytest.raises((AttributeError, NotImplementedError)):
+                agent.sign(content)
+    strategy: "st.binary() for arbitrary content"
+    notes: "Fundamental security boundary — agent can assemble but never sign"
+
+  - invariant: "Private keys accessible only to background script and popup — never to websites"
+    term: "Browser Extension"
+    technique: property-based
+    formal:
+      language: typescript
+      expression: |
+        fc.assert(
+          fc.property(fc.string(), (origin) => {
+            const ext = createExtension();
+            // Content script and websites cannot access key material
+            const contentScriptAccess = ext.getKeysFromContentScript(origin);
+            expect(contentScriptAccess).toBeNull();
+            // Only background script and popup have access
+            const bgAccess = ext.getKeysFromBackground();
+            expect(bgAccess).not.toBeNull();
+          })
+        );
+    strategy: "fc.string() for website origins"
+    notes: "Browser extension security model — key isolation between execution contexts"
+
+  - invariant: "Established by explicit user approval in the extension"
+    term: "Signing Association"
+    technique: property-based
+    formal:
+      language: typescript
+      expression: |
+        fc.assert(
+          fc.property(fc.string(), fc.string(), (origin, aid) => {
+            const ext = createExtension();
+            // No signing association exists without user approval
+            expect(ext.hasSigningAssociation(origin)).toBe(false);
+            // Cannot sign without association
+            expect(() => ext.signForOrigin(origin, new Uint8Array())).toThrow();
+            // User approval creates association
+            ext.approveAssociation(origin, aid);
+            expect(ext.hasSigningAssociation(origin)).toBe(true);
+          })
+        );
+    strategy: "fc.string() for origins and AIDs"
+    notes: "Signing associations require explicit user action — no implicit or automatic association"
+
+# Formalized port contracts
+contracts:
+  - port_ref: "port://signify-client/inbound/user-operations"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda url, passcode: url is not None and len(passcode) >= 21"
+        description: "connect requires valid URL and passcode meeting minimum length"
+      - formal:
+          language: python
+          expression: "lambda: client.session_active"
+        description: "All operations (except connect) require an active session"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda result:
+                isinstance(result, tuple) and len(result) == 2
+                and result[0] is not None  # AID or SAID
+                and isinstance(result[1], Operation)  # Operation handle
+        description: "Mutating operations (create, rotate, issue) return (resource, operation) tuples"
+      - formal:
+          language: python
+          expression: "lambda: not client.session_active and client.keys_zeroed"
+        description: "lock() ends the session and zeroes all key material from memory"
+
+# No state machine for this orchestrator — session lifecycle is in key-management,
+# resource operation patterns are stateless request/response
+state_machines: []

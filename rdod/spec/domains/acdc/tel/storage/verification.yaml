@@ -1,0 +1,181 @@
+# verification.yaml
+domain_ref: "acdc/tel/storage"
+
+properties:
+  - invariant: "Event storage (.tvts, .tels): append-only, keyed by registry SAID + digest or sn"
+    term: "TEL Subdatabase Pattern"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda db, regid, event: (
+          log_event(db, regid, event),
+          stored := get_event(db, regid, event.said),
+          stored == event  # written correctly
+          and not can_overwrite(db, regid, event.said)  # append-only
+        )[-1]
+    strategy: "Write events then attempt overwrites; verify original preserved"
+    notes: "Append-only semantics — events are immutable after first write"
+
+  - invariant: "Event bytes in .tvts are immutable after first write"
+    term: "TEL Storage Schema"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda db, regid, digest, event_bytes, new_bytes: (
+          db.tvts.put(dgKey(regid, digest), event_bytes),
+          db.tvts.put(dgKey(regid, digest), new_bytes),  # attempt overwrite
+          db.tvts.get(dgKey(regid, digest)) == event_bytes  # original preserved
+        )[-1]
+    strategy: "Write event bytes, attempt overwrite with different bytes; verify first write wins"
+    notes: "Immutability of accepted TEL event data"
+
+  - invariant: "Backer signature sets in .tibs are append-only per event — entries are never removed, only accumulated"
+    term: "TEL Storage Schema"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda db, regid, digest, sig1, sig2: (
+          db.tibs.add(dgKey(regid, digest), sig1),
+          db.tibs.add(dgKey(regid, digest), sig2),
+          sigs := db.tibs.get(dgKey(regid, digest)),
+          sig1 in sigs and sig2 in sigs and len(sigs) == 2
+        )[-1]
+    strategy: "Add signatures incrementally; verify all accumulated, none removed"
+    notes: "IoSet semantics — insertion-ordered, append-only"
+
+  - invariant: "All write operations are idempotent"
+    term: "TEL Subdatabase Pattern"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda db, regid, event: (
+          log_event(db, regid, event),
+          state1 := snapshot(db),
+          log_event(db, regid, event),  # duplicate
+          state2 := snapshot(db),
+          state1 == state2
+        )[-1]
+    strategy: "Write same event twice; verify database state unchanged after duplicate"
+    notes: "Idempotency prevents corruption from reprocessing"
+
+  - invariant: "snKey and dgKey are the two canonical access patterns for TEL event data"
+    term: "TEL Key Patterns"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda regid, sn, digest: (
+          sn_key := snKey(regid, sn),
+          dg_key := dgKey(regid, digest),
+          len(sn_key) > 0 and len(dg_key) > 0
+          and sn_key != dg_key  # distinct patterns
+          and sn_key.startswith(regid.encode()) and dg_key.startswith(regid.encode())
+        )
+    strategy: "Generate key pairs for same registry; verify distinct patterns with common prefix"
+    notes: "Both patterns produce fixed-length binary keys suitable for B+ tree indexing"
+
+  - invariant: "Credential indexes (.issus, .subjs, .schms) are maintained as secondary indexes"
+    term: "Credential Storage"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda db, acdc: (
+          store_credential(db, acdc),
+          acdc.said in db.issus.get(acdc.issuer)
+          and (acdc.issuee is None or acdc.said in db.subjs.get(acdc.issuee))
+          and acdc.said in db.schms.get(acdc.schema)
+          and db.saved.contains(acdc.said)
+        )
+    strategy: "Store credentials; verify all secondary indexes updated consistently"
+    notes: "Index consistency after credential storage"
+
+  - invariant: "The state cache (.states) is a performance optimization — registry state is always derivable from the management TEL"
+    term: "Registry Metadata"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda db, regid: (
+          cached := db.states.get(regid),
+          replayed := replay_registry_state(db, regid),
+          cached == replayed
+        )
+    strategy: "Compare cached state against fresh replay for multiple registries"
+    notes: "Cache must always agree with replay — replay is ground truth"
+
+  - invariant: "Timestamps (.tets) are immutable after first write — the first-seen time is permanent"
+    term: "TEL Storage Schema"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda db, regid, digest, time1, time2: (
+          db.tets.put(dgKey(regid, digest), time1),
+          db.tets.put(dgKey(regid, digest), time2),  # attempt overwrite
+          db.tets.get(dgKey(regid, digest)) == time1  # first write preserved
+        )[-1]
+    strategy: "Write timestamp, attempt overwrite; verify first timestamp preserved"
+    notes: "First-seen time is permanent"
+
+contracts:
+  - port_ref: "port://acdc/tel/storage/inbound/event-logging"
+    preconditions:
+      - formal:
+          language: python
+          expression: "is_valid_said(regid) and isinstance(event, bytes) and len(event) > 0 and sn >= 0"
+        description: "Registry ID valid, event bytes non-empty, sequence number non-negative"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            get_event_by_sn(regid, sn) == event
+            and get_event_by_digest(regid, said_compute(event)) == event
+        description: "Logged event retrievable by both sequence number and digest"
+
+  - port_ref: "port://acdc/tel/storage/inbound/credential-index"
+    preconditions:
+      - formal:
+          language: python
+          expression: "is_valid_said(acdc_said) and isinstance(acdc_bytes, bytes) and len(acdc_bytes) > 0"
+        description: "Credential SAID valid and bytes non-empty"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            get_credential(acdc_said) == acdc_bytes
+            and acdc_said in get_by_issuer(issuer)
+            and (subject is None or acdc_said in get_by_subject(subject))
+            and acdc_said in get_by_schema(schema)
+            and is_saved(acdc_said)
+        description: "Credential stored and indexed across all secondary indexes"
+
+  - port_ref: "port://acdc/tel/storage/inbound/escrow-management"
+    preconditions:
+      - formal:
+          language: python
+          expression: "is_valid_said(regid) and sn >= 0 and isinstance(event, bytes)"
+        description: "Valid registry ID, non-negative sn, non-empty event bytes"
+    postconditions:
+      - formal:
+          language: python
+          expression: "event in list(get_escrowed(escrow_type, regid))"
+        description: "Escrowed event is retrievable from the escrow queue"
+
+  - port_ref: "port://acdc/tel/storage/inbound/tel-replay"
+    preconditions:
+      - formal:
+          language: python
+          expression: "is_valid_said(regid)"
+        description: "Registry ID must be valid"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            events := list(replay_by_sn(regid)),
+            all(events[i][0] < events[i+1][0] for i in range(len(events)-1))
+        description: "Replayed events are in strictly ascending sequence number order"

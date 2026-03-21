@@ -1,0 +1,888 @@
+# verification.yaml
+domain_ref: "cesr/cesr-primitives"
+
+# Formalized invariants from ubiquitous_language terms
+properties:
+  # --- CESR Primitive Pattern ---
+  - invariant: "Every primitive extends Matter (non-indexed) or Indexer (indexed signatures)"
+    term: "CESR Primitive Pattern"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive_instance())
+        def test_primitive_base_type(prim):
+            assert isinstance(prim, Matter) or isinstance(prim, Indexer)
+    strategy: "cesr_primitive_instance() — generates Verfer, Diger, Siger, Cigar, Salter, Signer, etc."
+    notes: "All CESR primitives must be rooted in one of the two base types."
+
+  - invariant: "The code determines the algorithm -- there is no separate algorithm parameter"
+    term: "CESR Primitive Pattern"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive_instance())
+        def test_code_is_algorithm(prim):
+            entry = CODE_TABLE[prim.code]
+            assert entry.algorithm is not None
+            # No separate .algorithm attribute -- code IS the identifier
+            assert not hasattr(prim, 'algorithm') or prim.algorithm == entry.algorithm
+    strategy: "cesr_primitive_instance()"
+    notes: "The code is the sole algorithm identifier. No secondary dispatch."
+
+  - invariant: "Raw size must match the size specified by the code's Sizage entry"
+    term: "CESR Primitive Pattern"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive_instance())
+        def test_raw_size_matches_code(prim):
+            sizage = lookup_sizage(prim.code)
+            if sizage.fs != VARIABLE:
+                expected_raw = (sizage.fs * 3 // 4) - sizage.ls
+                assert len(prim.raw) == expected_raw
+    strategy: "cesr_primitive_instance()"
+    notes: "Raw byte length is fully determined by the code table entry."
+
+  - invariant: "All three domain representations (qb64, qb2, raw) are derivable from any one"
+    term: "CESR Primitive Pattern"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive_instance())
+        def test_domain_representations_consistent(prim):
+            # From qb64
+            from_qb64 = type(prim)(qb64=prim.qb64)
+            assert from_qb64.raw == prim.raw
+            assert from_qb64.code == prim.code
+            assert from_qb64.qb2 == prim.qb2
+            # From qb2
+            from_qb2 = type(prim)(qb2=prim.qb2)
+            assert from_qb2.raw == prim.raw
+            assert from_qb2.code == prim.code
+            assert from_qb2.qb64 == prim.qb64
+            # From (code, raw)
+            from_raw = type(prim)(raw=prim.raw, code=prim.code)
+            assert from_raw.qb64 == prim.qb64
+            assert from_raw.qb2 == prim.qb2
+    strategy: "cesr_primitive_instance()"
+    notes: "Any single domain representation must fully determine the other two."
+
+  # --- Matter ---
+  - invariant: "Every Matter instance holds exactly one code (text) and one raw (bytes) value"
+    term: "Matter"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(matter_instance())
+        def test_matter_code_raw(matter):
+            assert isinstance(matter.code, str)
+            assert len(matter.code) > 0
+            assert isinstance(matter.raw, bytes)
+    strategy: "matter_instance() — generates Matter with random valid code and raw"
+    notes: "Matter is fundamentally a (code, raw) pair."
+
+  - invariant: "Code MUST be a valid entry in the master code table for the active protocol genus"
+    term: "Matter"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(matter_instance())
+        def test_matter_code_in_table(matter):
+            assert matter.code in MATTER_CODE_TABLE
+    strategy: "matter_instance()"
+    notes: "Invalid codes must be rejected at construction time."
+
+  - invariant: "Raw size MUST match the size specified by the code table entry"
+    term: "Matter"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(matter_instance())
+        def test_matter_raw_size(matter):
+            sizage = MATTER_CODE_TABLE[matter.code]
+            if sizage.fs != VARIABLE:
+                expected = (sizage.fs * 3 // 4) - sizage.ls
+                assert len(matter.raw) == expected
+    strategy: "matter_instance()"
+    notes: "Size mismatch between code and raw is a construction error."
+
+  # --- Verfer ---
+  - invariant: "Ed25519 public keys are 32 bytes raw (44 chars qb64, code 'D')"
+    term: "Verfer"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(ed25519_keypair())
+        def test_verfer_ed25519_sizes(keypair):
+            verfer = Verfer(raw=keypair.public, code='D')
+            assert len(verfer.raw) == 32
+            assert len(verfer.qb64) == 44
+            assert verfer.qb64[0] == 'D'
+    strategy: "ed25519_keypair() — generates valid Ed25519 key pairs"
+    notes: "Ed25519 Verfer geometry is fixed: 1-char code + 43-char value = 44 total."
+
+  - invariant: "ECDSA secp256k1/r1 public keys are 33 bytes raw (48 chars qb64, code '1AAB'/'1AAJ')"
+    term: "Verfer"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(ecdsa_keypair(curve=st.sampled_from(['secp256k1', 'secp256r1'])))
+        def test_verfer_ecdsa_sizes(keypair):
+            code = '1AAB' if keypair.curve == 'secp256k1' else '1AAJ'
+            verfer = Verfer(raw=keypair.public, code=code)
+            assert len(verfer.raw) == 33
+            assert len(verfer.qb64) == 48
+            assert verfer.qb64[:4] == code
+    strategy: "ecdsa_keypair()"
+    notes: "ECDSA compressed public keys are 33 bytes: 4-char code + 44-char value = 48 total."
+
+  - invariant: "verify() returns True if signature is valid for the given serialization"
+    term: "Verfer"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(ed25519_keypair(), st.binary(min_size=1, max_size=1024))
+        def test_verfer_verify_valid(keypair, message):
+            signer = Signer(raw=keypair.private, code='A')
+            verfer = signer.verfer
+            sig = signer.sign(message)
+            assert verfer.verify(sig.raw, message) == True
+    strategy: "ed25519_keypair() x st.binary()"
+    notes: "Sign-then-verify must always succeed for matching key pairs."
+
+  - invariant: "verify() returns False for tampered data"
+    term: "Verfer"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(ed25519_keypair(), st.binary(min_size=2, max_size=1024))
+        def test_verfer_verify_tampered(keypair, message):
+            signer = Signer(raw=keypair.private, code='A')
+            verfer = signer.verfer
+            sig = signer.sign(message)
+            tampered = bytearray(message)
+            tampered[0] ^= 0xFF
+            assert verfer.verify(sig.raw, bytes(tampered)) == False
+    strategy: "ed25519_keypair() x st.binary(min_size=2)"
+    notes: "Tampered messages must fail verification."
+
+  # --- Diger ---
+  - invariant: "256-bit digests are 32 bytes raw (44 chars qb64)"
+    term: "Diger"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.binary(min_size=1, max_size=1024),
+               st.sampled_from(['E', 'F', 'G', 'H', 'I']))
+        def test_diger_256_sizes(data, code):
+            diger = Diger(ser=data, code=code)
+            assert len(diger.raw) == 32
+            assert len(diger.qb64) == 44
+    strategy: "st.binary() x sampled_from 256-bit digest codes"
+    notes: "All 256-bit digest algorithms produce 32-byte raw, 44-char qb64."
+
+  - invariant: "512-bit digests are 64 bytes raw (88 chars qb64)"
+    term: "Diger"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.binary(min_size=1, max_size=1024),
+               st.sampled_from(['0D', '0E', '0F', '0G']))
+        def test_diger_512_sizes(data, code):
+            diger = Diger(ser=data, code=code)
+            assert len(diger.raw) == 64
+            assert len(diger.qb64) == 88
+    strategy: "st.binary() x sampled_from 512-bit digest codes"
+    notes: "All 512-bit digest algorithms produce 64-byte raw, 88-char qb64."
+
+  - invariant: "compare(ser, diger) verifies that the digest of ser matches diger's value"
+    term: "Diger"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.binary(min_size=1, max_size=1024))
+        def test_diger_compare_self(data):
+            diger = Diger(ser=data, code='E')
+            assert diger.compare(ser=data, diger=diger) == True
+            tampered = data + b'\x00'
+            assert diger.compare(ser=tampered, diger=diger) == False
+    strategy: "st.binary()"
+    notes: "Digest comparison must be true for same data and false for different data."
+
+  - invariant: "Digest determinism: same input always produces same digest"
+    term: "Diger"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.binary(min_size=1, max_size=1024),
+               st.sampled_from(['E', 'F', 'G', 'H', 'I']))
+        def test_diger_deterministic(data, code):
+            d1 = Diger(ser=data, code=code)
+            d2 = Diger(ser=data, code=code)
+            assert d1.qb64 == d2.qb64
+            assert d1.raw == d2.raw
+    strategy: "st.binary() x digest code"
+    notes: "Cryptographic hash functions are deterministic."
+
+  # --- Signer ---
+  - invariant: "The corresponding Verfer (public key) is derivable from the Signer"
+    term: "Signer"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(ed25519_keypair())
+        def test_signer_verfer_derivation(keypair):
+            signer = Signer(raw=keypair.private, code='A')
+            verfer = signer.verfer
+            assert isinstance(verfer, Verfer)
+            assert verfer.raw == keypair.public
+    strategy: "ed25519_keypair()"
+    notes: "Every Signer must produce a matching Verfer."
+
+  - invariant: "sign(ser, index) returns a Siger (indexed); sign(ser) returns a Cigar (unindexed)"
+    term: "Signer"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(ed25519_keypair(), st.binary(min_size=1, max_size=256),
+               st.integers(min_value=0, max_value=63))
+        def test_signer_sign_types(keypair, message, index):
+            signer = Signer(raw=keypair.private, code='A')
+            cigar = signer.sign(message)
+            siger = signer.sign(message, index=index)
+            assert isinstance(cigar, Cigar)
+            assert isinstance(siger, Siger)
+    strategy: "ed25519_keypair() x binary() x index"
+    notes: "Index parameter determines whether Siger or Cigar is produced."
+
+  # --- Siger ---
+  - invariant: "Ed25519 indexed signatures are 64 bytes raw (88 chars qb64 with 2-char code)"
+    term: "Siger"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(ed25519_indexed_signature())
+        def test_siger_ed25519_sizes(siger):
+            assert len(siger.raw) == 64
+            assert len(siger.qb64) == 88
+            assert siger.code in ('A', 'B')  # first char of 2-char code
+    strategy: "ed25519_indexed_signature()"
+    notes: "Indexed Ed25519 signatures: 2-char code + 86-char value = 88 total."
+
+  - invariant: "Index encodes position in the public key list; ondex encodes position in the rotation key list"
+    term: "Siger"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.integers(min_value=0, max_value=63),
+               st.integers(min_value=0, max_value=63),
+               ed25519_signature_raw())
+        def test_siger_index_ondex(index, ondex, raw_sig):
+            # Both-same variant: index == ondex
+            siger_same = Siger(raw=raw_sig, code='A', index=index, ondex=index)
+            assert siger_same.index == index
+            assert siger_same.ondex == index
+            # Dual-indexed: index != ondex
+            if index != ondex:
+                siger_dual = Siger(raw=raw_sig, code='2A', index=index, ondex=ondex)
+                assert siger_dual.index == index
+                assert siger_dual.ondex == ondex
+    strategy: "index x ondex x raw signature"
+    notes: "Index/ondex are preserved through qualification round-trip."
+
+  - invariant: "Index must satisfy: index <= 64^ms - 1"
+    term: "Indexer"
+    technique: "smt"
+    formal:
+      language: "z3"
+      expression: |
+        index, ms = Ints('index ms')
+        s = Solver()
+        # Small codes (2-char): ms=1, max index=63
+        s.push()
+        s.add(ms == 1)
+        s.add(index >= 0, index <= 64**ms - 1)
+        s.add(index > 63)
+        assert s.check() == unsat  # can't exceed 63 with ms=1
+        s.pop()
+        # Big codes (4-char): ms=2, max index=4095
+        s.push()
+        s.add(ms == 2)
+        s.add(index >= 0, index <= 64**ms - 1)
+        s.add(index > 4095)
+        assert s.check() == unsat  # can't exceed 4095 with ms=2
+        s.pop()
+    notes: "Index range is bounded by the number of soft chars allocated."
+
+  # --- Cigar ---
+  - invariant: "Ed25519 signatures are 64 bytes raw (88 chars qb64 with 2-char code '0B')"
+    term: "Cigar"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(ed25519_unindexed_signature())
+        def test_cigar_ed25519_sizes(cigar):
+            assert len(cigar.raw) == 64
+            assert len(cigar.qb64) == 88
+            assert cigar.code == '0B'
+    strategy: "ed25519_unindexed_signature()"
+    notes: "Unindexed Ed25519: code '0B' (2 chars) + 86-char value = 88 total."
+
+  - invariant: "Carries a .verfer property linking to the public key that produced the signature"
+    term: "Cigar"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(ed25519_keypair(), st.binary(min_size=1, max_size=256))
+        def test_cigar_verfer_link(keypair, message):
+            signer = Signer(raw=keypair.private, code='A')
+            cigar = signer.sign(message)
+            assert isinstance(cigar.verfer, Verfer)
+            assert cigar.verfer.qb64 == signer.verfer.qb64
+    strategy: "ed25519_keypair() x binary()"
+    notes: "Cigar retains a reference to the public key for standalone verification."
+
+  # --- Salter ---
+  - invariant: "Code 0A for 128-bit (16-byte) random salt -- 24 chars qb64"
+    term: "Salter"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.binary(min_size=16, max_size=16))
+        def test_salter_sizes(salt):
+            salter = Salter(raw=salt)
+            assert salter.code == '0A'
+            assert len(salter.raw) == 16
+            assert len(salter.qb64) == 24
+    strategy: "st.binary(min_size=16, max_size=16)"
+    notes: "128-bit salt: 2-char code '0A' + 22-char value = 24 total."
+
+  - invariant: "signer(path, code) generates a Signer for the given derivation path and algorithm"
+    term: "Salter"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.binary(min_size=16, max_size=16),
+               st.text(min_size=1, max_size=5, alphabet='0123456789'))
+        def test_salter_signer_derivation(salt, path):
+            salter = Salter(raw=salt)
+            signer = salter.signer(path=path, code='A')
+            assert isinstance(signer, Signer)
+            assert signer.code == 'A'
+            assert len(signer.raw) == 32
+    strategy: "salt x path"
+    notes: "Salter derives deterministic Signers via argon2 key stretching."
+
+  - invariant: "Salter derivation is deterministic: same salt + path = same key"
+    term: "Salter"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.binary(min_size=16, max_size=16),
+               st.text(min_size=1, max_size=3, alphabet='0123456789'))
+        def test_salter_deterministic(salt, path):
+            s1 = Salter(raw=salt).signer(path=path, code='A')
+            s2 = Salter(raw=salt).signer(path=path, code='A')
+            assert s1.raw == s2.raw
+            assert s1.verfer.qb64 == s2.verfer.qb64
+    strategy: "salt x path"
+    notes: "Determinism is critical for key recovery from salt."
+
+  # --- Prefixer ---
+  - invariant: "Non-transferable basic prefix uses code B; Transferable basic prefix uses code D"
+    term: "Prefixer"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(ed25519_keypair())
+        def test_prefixer_transferability_codes(keypair):
+            non_trans = Prefixer(raw=keypair.public, code='B')
+            trans = Prefixer(raw=keypair.public, code='D')
+            assert non_trans.code == 'B'
+            assert non_trans.qb64[0] == 'B'
+            assert trans.code == 'D'
+            assert trans.qb64[0] == 'D'
+    strategy: "ed25519_keypair()"
+    notes: "First character visually distinguishes transferable (D) from non-transferable (B)."
+
+  - invariant: "Self-addressing prefix uses a digest code applied to the inception event"
+    term: "Prefixer"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.binary(min_size=100, max_size=500))
+        def test_prefixer_self_addressing(inception_bytes):
+            prefixer = Prefixer(ked=inception_bytes, code='E')
+            assert prefixer.code == 'E'
+            assert len(prefixer.raw) == 32
+            # Re-derive should match
+            diger = Diger(ser=inception_bytes, code='E')
+            assert prefixer.qb64 == diger.qb64
+    strategy: "st.binary() for inception event bytes"
+    notes: "Self-addressing prefixes are digests of their inception events."
+
+  # --- SAD / Saidify ---
+  - invariant: "The SAID is computed by replacing 'd' field with dummy value, serializing, then digesting"
+    term: "Saidify"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(sad_structure())
+        def test_saidify_algorithm(sad):
+            code = 'E'
+            dummy_len = 44  # Blake3-256 qb64 length
+            # Step 1: replace d field with dummy
+            sad_dummy = dict(sad)
+            sad_dummy['d'] = '#' * dummy_len
+            # Step 2: serialize
+            ser = json.dumps(sad_dummy, separators=(',', ':')).encode()
+            # Step 3: digest
+            expected_said = Diger(ser=ser, code=code).qb64
+            # Step 4: inject
+            sad['d'] = expected_said
+            # Verify: re-running saidify produces same result
+            _, saidified = Saider.saidify(sad, label='d', code=code)
+            assert saidified['d'] == expected_said
+    strategy: "sad_structure() — generates dict with 'd', 'i', 't' fields"
+    notes: "Saidify is a 4-step deterministic algorithm."
+
+  - invariant: "The dummy string must be exactly the qb64 length of the target digest code"
+    term: "Saidify"
+    technique: "smt"
+    formal:
+      language: "z3"
+      expression: |
+        digest_code_len, dummy_len = Ints('digest_code_len dummy_len')
+        s = Solver()
+        # Blake3-256 (code E): fs=44 chars
+        s.push()
+        s.add(digest_code_len == 44)
+        s.add(dummy_len != 44)
+        # Saidify requires dummy_len == digest_code_len
+        # If they differ, SAID verification will fail
+        assert s.check() == sat  # counterexample exists when lengths mismatch
+        s.pop()
+        # SHA2-256 (code I): fs=44 chars
+        s.push()
+        s.add(digest_code_len == 44)
+        s.add(dummy_len == digest_code_len)
+        assert s.check() == sat  # correct length is satisfiable
+        s.pop()
+    notes: "Dummy string length must exactly match the target digest's qb64 length."
+
+  - invariant: "The resulting SAID is self-referential -- digesting the structure with its own 'd' field reproduces the same SAID"
+    term: "Saidify"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(sad_structure())
+        def test_said_self_referential(sad):
+            _, saidified = Saider.saidify(sad, label='d', code='E')
+            said = saidified['d']
+            # Verify: replace d with dummy, serialize, digest -> same SAID
+            verify_sad = dict(saidified)
+            verify_sad['d'] = '#' * 44
+            ser = json.dumps(verify_sad, separators=(',', ':')).encode()
+            verification_said = Diger(ser=ser, code='E').qb64
+            assert verification_said == said
+    strategy: "sad_structure()"
+    notes: "The SAID embedded in the data structure verifies itself."
+
+  # --- Seqner ---
+  - invariant: "Code M for short 2-byte numbers (0-65535) -- 4 chars qb64"
+    term: "Seqner"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.integers(min_value=0, max_value=65535))
+        def test_seqner_short(sn):
+            seqner = Seqner(sn=sn)
+            assert seqner.code == 'M'
+            assert len(seqner.qb64) == 4
+            assert seqner.sn == sn
+    strategy: "st.integers(0, 65535)"
+    notes: "Short Seqner covers most common sequence numbers."
+
+  - invariant: "Seqner round-trip: construction from sn and from qb64 produce same value"
+    term: "Seqner"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.integers(min_value=0, max_value=2**64 - 1))
+        def test_seqner_roundtrip(sn):
+            seqner = Seqner(sn=sn)
+            from_qb64 = Seqner(qb64=seqner.qb64)
+            assert from_qb64.sn == sn
+    strategy: "st.integers(0, 2^64-1)"
+    notes: "Sequence number round-trip through qb64."
+
+  # --- Sizage ---
+  - invariant: "hs: number of hard (type) characters in the code"
+    term: "Sizage"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_code())
+        def test_sizage_hs(code):
+            sizage = lookup_sizage(code)
+            assert sizage.hs == len(code) - sizage.ss if sizage.ss >= 0 else sizage.hs > 0
+            assert sizage.hs >= 1
+    strategy: "cesr_code()"
+    notes: "Hard size is always at least 1 (the type portion of the code)."
+
+  - invariant: "ls: number of lead pad bytes (0, 1, or 2)"
+    term: "Sizage"
+    technique: "smt"
+    formal:
+      language: "z3"
+      expression: |
+        ls = Int('ls')
+        s = Solver()
+        s.add(Or(ls == 0, ls == 1, ls == 2))
+        s.add(ls < 0)
+        assert s.check() == unsat  # ls is never negative
+        s = Solver()
+        s.add(Or(ls == 0, ls == 1, ls == 2))
+        s.add(ls > 2)
+        assert s.check() == unsat  # ls never exceeds 2
+    notes: "Lead size is strictly 0, 1, or 2 -- the three residues of mod-3 alignment."
+
+  - invariant: "For variable-length codes: fs = (count * 4) + hs + ss"
+    term: "Sizage"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_variable_length_primitive())
+        def test_variable_length_fs(prim):
+            sizage = lookup_sizage(prim.code)
+            assert sizage.fs == VARIABLE  # sentinel
+            actual_fs = len(prim.qb64)
+            count = parse_soft_value(prim.qb64, sizage)
+            assert actual_fs == (count * 4) + sizage.hs + sizage.ss
+    strategy: "cesr_variable_length_primitive()"
+    notes: "Variable-length primitives encode their size in soft characters."
+
+  # --- Code Table Constants ---
+  - invariant: "Each MtrDex attribute maps a descriptive name to its code string; values are immutable"
+    term: "MtrDex"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        def test_mtrdex_immutability():
+            original = {k: v for k, v in MtrDex.__dict__.items() if not k.startswith('_')}
+            # Attempt mutation should fail (frozen dataclass)
+            for name, code in original.items():
+                assert isinstance(code, str)
+                with pytest.raises((AttributeError, FrozenInstanceError)):
+                    setattr(MtrDex, name, 'X')
+            # Values unchanged
+            for name, code in original.items():
+                assert getattr(MtrDex, name) == code
+    strategy: "exhaustive — enumerate all MtrDex attributes"
+    notes: "Code table constants must be frozen/immutable."
+
+  - invariant: "MtrDex entries match the master code table for the active protocol genus"
+    term: "MtrDex"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        def test_mtrdex_in_code_table():
+            for name in dir(MtrDex):
+                if name.startswith('_'):
+                    continue
+                code = getattr(MtrDex, name)
+                if isinstance(code, str):
+                    assert code in MATTER_CODE_TABLE, f"MtrDex.{name}={code} not in code table"
+    strategy: "exhaustive"
+    notes: "Every MtrDex constant must correspond to a valid code table entry."
+
+  # --- One/Two/Four-Character Codes ---
+  - invariant: "1-char codes: 52 possible codes (letters only), pad size 1"
+    term: "One-Character Code"
+    technique: "smt"
+    formal:
+      language: "z3"
+      expression: |
+        code_char = Int('code_char')
+        is_letter = Function('is_letter', IntSort(), BoolSort())
+        s = Solver()
+        # A-Z: 65-90, a-z: 97-122
+        s.add(ForAll([code_char],
+            is_letter(code_char) == Or(
+                And(code_char >= 65, code_char <= 90),
+                And(code_char >= 97, code_char <= 122)
+            )))
+        # Count letters: 26 + 26 = 52
+        count = Int('count')
+        s.add(count == 52)
+        assert s.check() == sat
+    notes: "Exactly 52 one-character codes available (A-Z, a-z)."
+
+  - invariant: "2-char codes: selector '0', pad size 2"
+    term: "Two-Character Code"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_two_char_code())
+        def test_two_char_code_structure(code):
+            assert len(code) == 2
+            assert code[0] == '0'
+            sizage = lookup_sizage(code)
+            assert sizage.ls == 2  # pad size 2
+            assert sizage.hs == 2
+    strategy: "cesr_two_char_code() — generates valid 2-character codes"
+    notes: "All 2-char codes use selector '0' and have pad size 2."
+
+  - invariant: "4-char codes: selector '1' ps=0, '2' ps=1, '3' ps=2"
+    term: "Four-Character Code"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_four_char_code())
+        def test_four_char_code_structure(code):
+            assert len(code) == 4
+            selector = code[0]
+            sizage = lookup_sizage(code)
+            if selector == '1':
+                assert sizage.ls == 0
+            elif selector == '2':
+                assert sizage.ls == 1
+            elif selector == '3':
+                assert sizage.ls == 2
+    strategy: "cesr_four_char_code() — generates valid 4-character codes"
+    notes: "Selector digit determines lead size for 4-character codes."
+
+  # --- Number ---
+  - invariant: "Auto-selects the smallest code that fits the value"
+    term: "Number"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.integers(min_value=0, max_value=2**64 - 1))
+        def test_number_auto_code(value):
+            num = Number(num=value)
+            if value <= 65535:
+                assert num.code == 'M'
+            elif value <= 4294967295:
+                assert num.code == '0H'
+            else:
+                assert num.code == 'N'
+    strategy: "st.integers(0, 2^64-1)"
+    notes: "Number constructor must pick the most compact encoding."
+
+  # --- Tholder ---
+  - invariant: "Simple: integer M-of-N"
+    term: "Tholder"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.integers(min_value=1, max_value=10))
+        def test_tholder_simple(threshold):
+            th = Tholder(sith=str(threshold))
+            assert th.num == threshold
+            assert th.weighted == False
+    strategy: "st.integers(1, 10)"
+    notes: "Simple thresholds are integer M-of-N."
+
+  - invariant: "satisfy(indices) checks whether the given key indices meet the threshold"
+    term: "Tholder"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.integers(min_value=1, max_value=5),
+               st.integers(min_value=1, max_value=10))
+        def test_tholder_satisfy(threshold, num_keys):
+            assume(threshold <= num_keys)
+            th = Tholder(sith=str(threshold))
+            # Exactly threshold indices should satisfy
+            indices = list(range(threshold))
+            assert th.satisfy(indices) == True
+            # One fewer should not
+            if threshold > 1:
+                assert th.satisfy(indices[:-1]) == False
+    strategy: "threshold x num_keys"
+    notes: "Threshold satisfaction requires exactly M valid indices."
+
+  # --- Dater ---
+  - invariant: "Code '1AAG' -- 32-char ISO-8601 string (36 chars qb64)"
+    term: "Dater"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.datetimes())
+        def test_dater_sizes(dt):
+            dater = Dater(dt=dt)
+            assert dater.code == '1AAG'
+            assert len(dater.qb64) == 36
+    strategy: "st.datetimes()"
+    notes: "Dater is always code 1AAG, 36 chars qb64."
+
+  - invariant: "Character substitution: colon->c, dot->d, plus->p for Base64 safety"
+    term: "Dater"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.datetimes())
+        def test_dater_char_substitution(dt):
+            dater = Dater(dt=dt)
+            dts = dater.dts  # date-time string
+            assert ':' not in dts
+            assert '.' not in dts
+            assert '+' not in dts
+            # But the canonical chars are present
+            assert 'c' in dts or 'T' in dts  # colons replaced with 'c'
+    strategy: "st.datetimes()"
+    notes: "Non-Base64-safe characters are substituted for CESR compatibility."
+
+  # --- ZeroizeOnDrop ---
+  - invariant: "All bytes of raw key material are zeroed on object destruction"
+    term: "ZeroizeOnDrop"
+    technique: "property-based"
+    formal:
+      language: "rust"
+      expression: |
+        #[test]
+        fn test_zeroize_on_drop() {
+            let raw_ptr: *const u8;
+            let raw_len: usize;
+            {
+                let signer = Signer::new(None, Some(Code::Ed25519_Seed), None, None)?;
+                raw_ptr = signer.raw().as_ptr();
+                raw_len = signer.raw().len();
+            } // signer dropped here
+            // Memory at raw_ptr should be zeroed (best-effort check)
+            unsafe {
+                let slice = std::slice::from_raw_parts(raw_ptr, raw_len);
+                assert!(slice.iter().all(|&b| b == 0));
+            }
+        }
+    strategy: "single test — create Signer, drop, inspect memory"
+    notes: "Zeroize verification is language-specific. Rust uses unsafe memory inspection."
+
+# Formalized port contracts
+contracts:
+  - port_ref: "port://cesr/cesr-primitives/inbound/qualification"
+    preconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda raw, code: (
+                code in CODE_TABLE and
+                len(raw) == CODE_TABLE[code].raw_size and
+                isinstance(raw, bytes) and
+                isinstance(code, str)
+            )
+        description: "Raw bytes must match the size specified by the code table entry"
+      - formal:
+          language: "python"
+          expression: |
+            lambda qb64: (
+                isinstance(qb64, str) and
+                len(qb64) >= 1 and
+                len(qb64) % 4 == 0 and
+                all(c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_' for c in qb64)
+            )
+        description: "qb64 input must be valid Base64 with mod-4 length"
+    postconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda result: (
+                len(result.qb64) % 4 == 0 and
+                len(result.qb2) % 3 == 0 and
+                result.code in CODE_TABLE and
+                len(result.raw) == CODE_TABLE[result.code].raw_size
+            )
+        description: "Result is a valid primitive with consistent code, raw, qb64, qb2"
+      - formal:
+          language: "python"
+          expression: |
+            lambda code, raw, result: (
+                result.code == code and
+                result.raw == raw and
+                base64url_decode(result.qb64.encode()) == result.qb2
+            )
+        description: "Qualification preserves input (code, raw) and domains are consistent"
+
+  - port_ref: "port://cesr/cesr-primitives/inbound/code-resolution"
+    preconditions:
+      - formal:
+          language: "python"
+          expression: "lambda code: isinstance(code, str) and len(code) >= 1 and len(code) <= 8"
+        description: "Code is a string of 1-8 characters"
+    postconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda code, entry: (
+                entry.hs >= 1 and
+                entry.ss >= 0 and
+                (entry.fs > 0 or entry.fs == VARIABLE) and
+                entry.ls >= 0 and entry.ls <= 2 and
+                entry.hs + entry.ss == len(code)
+            )
+        description: "Resolved entry has valid sizage and code size matches input"
+
+  - port_ref: "port://cesr/cesr-primitives/outbound/crypto"
+    preconditions:
+      - formal:
+          language: "python"
+          expression: "lambda privkey, msg: len(privkey) == 32 and isinstance(msg, bytes)"
+        description: "Ed25519 private key is 32 bytes, message is bytes"
+      - formal:
+          language: "python"
+          expression: "lambda pubkey, sig, msg: len(pubkey) == 32 and len(sig) == 64 and isinstance(msg, bytes)"
+        description: "Ed25519 verify inputs: 32-byte pubkey, 64-byte sig, bytes message"
+    postconditions:
+      - formal:
+          language: "python"
+          expression: "lambda sig: isinstance(sig, bytes) and len(sig) == 64"
+        description: "Ed25519 signature is always 64 bytes"
+      - formal:
+          language: "python"
+          expression: "lambda result: isinstance(result, bool)"
+        description: "Verification returns a boolean"
+
+# State machines — cesr-primitives is stateless (pure transforms)
+state_machines: []

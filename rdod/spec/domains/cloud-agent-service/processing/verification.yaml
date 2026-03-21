@@ -1,0 +1,293 @@
+# verification.yaml
+domain_ref: "cloud-agent-service/processing"
+
+# Formalized invariants from ubiquitous_language terms
+properties:
+  - invariant: "Non-blocking — each recur() call processes available work and returns"
+    term: "Doer"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(work_items=st.lists(st.binary(min_size=1), max_size=100))
+        def test_doer_recur_nonblocking(work_items):
+            doer = create_test_doer()
+            for item in work_items:
+                doer.deck.append(item)
+            start = time.monotonic()
+            doer.recur(tyme=0.0)
+            elapsed = time.monotonic() - start
+            # recur must return within a bounded time — no blocking
+            assert elapsed < 1.0  # 1 second upper bound for cooperative scheduling
+    strategy: "st.lists(st.binary()) for work item queues of varying size"
+    notes: "Cooperative scheduling requires each recur() to be non-blocking"
+
+  - invariant: "Pattern: while deck: item = deck.popleft(); process(item)"
+    term: "Deck"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(items=st.lists(st.integers(), min_size=1, max_size=100))
+        def test_deck_fifo_drain(items):
+            deck = Deck()
+            for item in items:
+                deck.append(item)
+            drained = []
+            while deck:
+                drained.append(deck.popleft())
+            assert drained == items  # FIFO order preserved
+            assert len(deck) == 0   # Fully drained
+    strategy: "st.lists(st.integers()) for work items — FIFO ordering must be preserved"
+    notes: "Deck is a FIFO deque — items come out in the order they were appended"
+
+  - invariant: "Escrowed items have a timeout after which they are discarded"
+    term: "Escrow"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        timeout = Real('timeout')
+        escrow_age = Real('escrow_age')
+        is_active = Bool('is_active')
+        s = Solver()
+        # Escrow is active when age < timeout
+        s.add(is_active == (escrow_age < timeout))
+        s.add(timeout > 0)
+        # Prove: if age >= timeout, escrow is not active
+        s.add(escrow_age >= timeout)
+        s.add(is_active == True)
+        assert s.check() == unsat  # Cannot be active after timeout
+    strategy: ""
+    notes: "SMT proof that escrow timeout is strictly enforced — no expired items remain active"
+
+  - invariant: "Operations named {type}.{oid} — type identifies the workflow, oid the resource"
+    term: "Long-running Operation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            op_type=st.sampled_from(['witness', 'delegation', 'group', 'query', 'registry', 'credential', 'endrole', 'oobi']),
+            oid=st.text(min_size=1, max_size=44, alphabet=st.characters(whitelist_categories=('L', 'N')))
+        )
+        def test_operation_naming(op_type, oid):
+            op = create_operation(op_type, oid)
+            assert op.name == f"{op_type}.{oid}"
+            parts = op.name.split('.', 1)
+            assert parts[0] in VALID_OP_TYPES
+            assert len(parts[1]) > 0
+    strategy: "st.sampled_from for valid operation types, st.text for resource OIDs"
+    notes: "Operation naming convention is deterministic and parseable"
+
+  - invariant: "Operations have a done flag, optional error, and response payload"
+    term: "Long-running Operation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            op_type=st.sampled_from(['witness', 'delegation', 'group', 'credential']),
+            oid=st.text(min_size=1, max_size=44)
+        )
+        def test_operation_structure(op_type, oid):
+            op = create_operation(op_type, oid)
+            assert isinstance(op.done, bool)
+            assert hasattr(op, 'error')
+            assert hasattr(op, 'response')
+            if op.done and op.error is None:
+                assert op.response is not None
+    strategy: "st.sampled_from for types, st.text for OIDs"
+    notes: "Operation structure: done=True with no error implies response payload exists"
+
+  - invariant: "Assembly is threshold-aware (kt satisfaction check)"
+    term: "Multi-sig Assembly"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        threshold = Int('threshold')
+        collected = Int('collected')
+        total_members = Int('total_members')
+        is_assembled = Bool('is_assembled')
+        s = Solver()
+        s.add(threshold > 0)
+        s.add(threshold <= total_members)
+        s.add(total_members > 0)
+        s.add(collected >= 0)
+        s.add(collected <= total_members)
+        # Assembly requires meeting threshold
+        s.add(is_assembled == (collected >= threshold))
+        # Prove: cannot assemble with fewer than threshold signatures
+        s.add(collected < threshold)
+        s.add(is_assembled == True)
+        assert s.check() == unsat  # Cannot assemble below threshold
+    strategy: ""
+    notes: "SMT proof that multi-sig assembly requires at least threshold signatures"
+
+  - invariant: "Incomplete signature sets escrowed with timeout"
+    term: "Multi-sig Assembly"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            threshold=st.integers(min_value=2, max_value=10),
+            collected=st.integers(min_value=0, max_value=10)
+        )
+        def test_incomplete_multisig_escrowed(threshold, collected):
+            assume(collected < threshold)
+            group = create_group(threshold=threshold)
+            for i in range(collected):
+                group.submit_partial_sig(make_siger(i))
+            assert group.is_escrowed()
+            assert not group.is_assembled()
+    strategy: "st.integers for threshold and collected signature counts"
+    notes: "Below-threshold signature sets must be escrowed, not rejected"
+
+  - invariant: "Monitor checks completion by querying the relevant component (Counselor for group, Boatswain for delegation, etc.)"
+    term: "Long-running Operation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(op_type=st.sampled_from(['group', 'delegation', 'credential', 'registry', 'witness']))
+        def test_monitor_delegates_to_component(op_type):
+            monitor = create_monitor()
+            op = create_operation(op_type, 'test_oid')
+            component = monitor.get_component_for(op_type)
+            assert component is not None
+            expected_components = {
+                'group': 'Counselor',
+                'delegation': 'Boatswain',
+                'credential': 'Credentialer',
+                'registry': 'Registrar',
+                'witness': 'Witnesser'
+            }
+            assert type(component).__name__ == expected_components[op_type]
+    strategy: "st.sampled_from for operation types"
+    notes: "Monitor dispatches completion checks to the correct specialized component"
+
+  - invariant: "Indexes built from credential schema — each schema field becomes a searchable index"
+    term: "Seeker"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            fields=st.dictionaries(
+                keys=st.text(min_size=1, max_size=20, alphabet=st.characters(whitelist_categories=('L',))),
+                values=st.text(min_size=1, max_size=50),
+                min_size=1, max_size=10
+            )
+        )
+        def test_seeker_indexes_all_schema_fields(fields):
+            schema = create_schema(fields)
+            credential = create_credential(schema, fields)
+            seeker = create_seeker()
+            seeker.index(credential)
+            for field_name, field_value in fields.items():
+                results = seeker.find({f'-a-{field_name}': field_value})
+                assert credential.said in results
+    strategy: "st.dictionaries for credential payload fields"
+    notes: "Every scalar field in a credential schema must become a searchable index"
+
+# Formalized port contracts
+contracts:
+  - port_ref: "port://cloud-agent-service/processing/inbound/process-work"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda deck, item: deck in VALID_DECK_NAMES and item is not None"
+        description: "enqueue_work requires a valid deck name and non-null work item"
+      - formal:
+          language: python
+          expression: "lambda name: isinstance(name, str) and '.' in name"
+        description: "get_operation requires a valid operation name in {type}.{oid} format"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda deck, item, result: result.success and item in get_deck(deck)"
+        description: "After enqueue, item is present in the specified deck"
+      - formal:
+          language: python
+          expression: |
+            lambda name, op:
+                op.name == name
+                and isinstance(op.done, bool)
+                and (op.response is not None if op.done and op.error is None else True)
+        description: "get_operation returns the operation with correct name and valid structure"
+
+  - port_ref: "port://cloud-agent-service/processing/inbound/multisig"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda group_aid, siger, event: group_aid is not None and siger.valid() and event.valid()"
+        description: "submit_partial_signature requires valid group AID, signature, and event"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda group_aid, siger, result:
+                result.success
+                and (result.assembled if siger_count(group_aid) >= threshold(group_aid) else result.escrowed)
+        description: "Partial signature accepted — if threshold met, event assembled; otherwise escrowed"
+
+  - port_ref: "port://cloud-agent-service/processing/inbound/credential-ops"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda schema, issuer, issuee, data: schema is not None and issuer is not None and data is not None"
+        description: "issue_credential requires schema SAID, issuer AID, and credential data"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: isinstance(result, Operation) and result.name.startswith('credential.')"
+        description: "Returns a long-running Operation with credential type prefix"
+
+  - port_ref: "port://cloud-agent-service/processing/outbound/processing-store"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda type, key, item, timeout: type in VALID_ESCROW_TYPES and key is not None and timeout.total_seconds() > 0"
+        description: "store_escrow requires valid escrow type, non-null key, and positive timeout"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda type, key: get_escrowed(type) contains item with key"
+        description: "After store, escrowed item is retrievable by type and key"
+
+# State machine: Long-running Operation lifecycle
+state_machines:
+  - name: "OperationLifecycle"
+    term: "Long-running Operation"
+    states: ["submitted", "processing", "done", "error", "timeout"]
+    transitions:
+      - from: "submitted"
+        to: "processing"
+        trigger: "Monitor begins tracking the operation"
+        guard: "operation.name is valid and component exists for operation type"
+      - from: "processing"
+        to: "done"
+        trigger: "Monitor queries component and component reports completion"
+        guard: "component.complete(oid) == True and no error"
+      - from: "processing"
+        to: "error"
+        trigger: "Component reports failure or invalid state"
+        guard: "component.error(oid) is not None"
+      - from: "processing"
+        to: "timeout"
+        trigger: "Operation exceeds maximum processing duration"
+        guard: "operation.age > MAX_OPERATION_TIMEOUT"
+      - from: "timeout"
+        to: "processing"
+        trigger: "Edge client retries the operation or missing data arrives"
+        guard: "operation can be retried and prerequisite data now available"
+    invariants:
+      - "An operation in 'done' state has a non-null response payload"
+      - "An operation in 'error' state has a non-null error description"
+      - "An operation in 'processing' state is being actively monitored by the Monitor"
+      - "Edge client can poll any operation regardless of state — done operations return immediately"
+      - "Operation names are immutable once created — {type}.{oid} never changes"
+    initial_state: "submitted"
+    terminal_states: ["done", "error"]

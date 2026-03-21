@@ -1,0 +1,143 @@
+# verification.yaml
+domain_ref: "keri/duplicity-detection/evidence"
+
+properties:
+  - invariant: "Consists of at least two different verified events at the same sn for the same AID"
+    term: "Duplicity Evidence"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda evidence: len(evidence.events) >= 2 and all(e.aid == evidence.aid for e in evidence.events) and all(e.sn == evidence.sn for e in evidence.events) and len(set(e.said for e in evidence.events)) >= 2"
+    strategy: "st.from_type(DuplicityEvidence)"
+    notes: "Minimum structure: two events, same AID, same sn, different SAIDs"
+
+  - invariant: "Non-repudiable — the signatures on both events are cryptographic proof of duplicity"
+    term: "Duplicity Evidence"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda evidence: all(e.signatures_verified() for e in evidence.events)"
+    strategy: "st.from_type(DuplicityEvidence)"
+    notes: "Both events in the evidence must carry valid signatures — without valid signatures, evidence is not non-repudiable"
+
+  - invariant: "A fork requires two events with the same AID prefix and sequence number but different SAIDs"
+    term: "Fork Detection"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda event_a, event_b: is_fork(event_a, event_b) == (event_a.aid == event_b.aid and event_a.sn == event_b.sn and event_a.said != event_b.said)"
+    strategy: "st.tuples(st.from_type(KeyEvent), st.from_type(KeyEvent))"
+    notes: "Fork detection is a pure function of (aid, sn, said) comparison — no state needed"
+
+  - invariant: "Fork detection compares SAIDs, not event content — different SAIDs at the same (prefix, sn) is sufficient"
+    term: "Fork Detection"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda event_a, event_b: (event_a.aid == event_b.aid and event_a.sn == event_b.sn) implies (is_fork(event_a, event_b) == (event_a.said != event_b.said))"
+    strategy: "st.tuples(st.from_type(KeyEvent), st.from_type(KeyEvent))"
+    notes: "SAID comparison is sufficient — no need to compare full event content"
+
+  - invariant: "Timeout: 3600 seconds — escrowed events are pruned after expiry"
+    term: "Likely Duplicitous Escrow"
+    technique: smt
+    formal:
+      language: z3
+      expression: "And(timeout == 3600, Implies(current_time - escrow_time > timeout, state == PRUNED), Implies(current_time - escrow_time <= timeout, state != PRUNED))"
+    notes: "Exact timeout boundary — Z3 catches any off-by-one in the pruning logic"
+
+  - invariant: "Distinguished from the DEL — LDE holds suspected duplicity, DEL holds confirmed duplicity"
+    term: "Likely Duplicitous Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda lde_entry: lde_entry.status == 'suspected' and lde_entry.db == '.ldes'"
+    strategy: "st.from_type(LDEEntry)"
+    notes: "LDE entries are always in 'suspected' status until promoted or pruned"
+
+  - invariant: "Entries are never automatically pruned or timed out — they are permanent evidence"
+    term: "Duplicitous Event Log"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda del_before, time_elapsed, del_after: all(entry in del_after for entry in del_before)"
+    strategy: "st.tuples(st.from_type(DEL), st.integers(min_value=0, max_value=86400*365), st.from_type(DEL))"
+    notes: "DEL entries are never removed regardless of time — they are forensic evidence"
+
+  - invariant: "KeyEventAdded is the primary notification — triggers escrow draining, receipt generation, and delegation processing"
+    term: "Notification Bus"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda notification, subscribers: notification.type == 'KeyEventAdded' implies all(s.notified(notification) for s in subscribers if s.subscribes_to('KeyEventAdded'))"
+    strategy: "st.tuples(st.from_type(Notification), st.lists(st.from_type(Subscriber), min_size=1))"
+    notes: "All subscribers registered for KeyEventAdded must receive the notification"
+
+contracts:
+  - port_ref: "port://keri/duplicity-detection/evidence/inbound/evidence-management"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sn, incoming, accepted: aid is not None and sn >= 0 and incoming.said != accepted.said"
+        description: "detect_fork requires two events with different SAIDs at the same (aid, sn)"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: isinstance(result, ForkDetected) and result.aid is not None and result.sn >= 0"
+        description: "detect_fork returns a ForkDetected event with the AID and sn of the forked location"
+      - formal:
+          language: python
+          expression: "lambda evidence: all(e.aid == evidence[0].aid for e in evidence)"
+        description: "get_evidence returns only evidence for the requested AID"
+
+  - port_ref: "port://keri/duplicity-detection/evidence/inbound/notification"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda notification_type, observer: notification_type is not None and observer is not None"
+        description: "Subscription requires a valid notification type and observer"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda subscription: subscription.active and subscription.notification_type is not None"
+        description: "Returned subscription is active and bound to the specified notification type"
+
+  - port_ref: "port://keri/duplicity-detection/evidence/outbound/escrow-storage"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sn, event: aid is not None and sn >= 0 and event is not None"
+        description: "All storage operations require valid AID, non-negative sn, and a non-null event"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sn, event: event in get_ldes(aid) after put_ldes(aid, sn, event)"
+        description: "After put_ldes, the event is retrievable via get_ldes for the same AID"
+      - formal:
+          language: python
+          expression: "lambda aid, sn, evidence: evidence in get_dels(aid) after put_dels(aid, sn, evidence)"
+        description: "After put_dels, the evidence is retrievable via get_dels for the same AID"
+
+state_machines:
+  - name: "evidence-lifecycle"
+    term: "Likely Duplicitous Escrow"
+    states: ["undetected", "suspected", "confirmed", "expired"]
+    transitions:
+      - from: "undetected"
+        to: "suspected"
+        trigger: "ForkDetected — conflicting event at same (prefix, sn)"
+        guard: "incoming_event.said != accepted_event.said and both events have valid signatures"
+      - from: "suspected"
+        to: "confirmed"
+        trigger: "EvidencePromoted — suspected evidence promoted to permanent DEL"
+        guard: "Both events independently verified as cryptographically valid"
+      - from: "suspected"
+        to: "expired"
+        trigger: "EvidenceExpired — escrow timeout exceeded"
+        guard: "current_time - escrow_time > 3600"
+    invariants:
+      - "Once confirmed, evidence is permanent — there is no transition out of confirmed"
+      - "Expiration only applies to suspected (LDE) entries, never to confirmed (DEL) entries"
+      - "Both suspected and confirmed states require at least two verified events at the same (aid, sn)"
+    initial_state: "undetected"
+    terminal_states: ["confirmed", "expired"]

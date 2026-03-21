@@ -1,0 +1,198 @@
+# verification.yaml
+domain_ref: "watcher-service"
+
+# Formalized invariants from ubiquitous_language terms
+properties:
+  - invariant: "Under the validator's control — not the controller's"
+    term: "Watcher Node"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            validator=keri_aid_strategy(),
+            controller=keri_aid_strategy()
+        )
+        def test_watcher_controlled_by_validator(validator, controller):
+            assume(validator != controller)
+            watcher = create_watcher_node()
+            # Only the validator can configure the watcher
+            watcher.configure(validator_aid=validator)
+            assert watcher.validator == validator
+            # Controller cannot influence which AIDs the watcher monitors
+            with pytest.raises(Unauthorized):
+                watcher.configure(validator_aid=controller)
+    strategy: "keri_aid_strategy() for distinct validator and controller AIDs"
+    notes: "Watchers are under validator control — controllers cannot influence watcher behavior"
+
+  - invariant: "Compares events at the same (prefix, sn) across witness sources"
+    term: "KEL Cross-Check"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            prefix=keri_prefix_strategy(),
+            sn=st.integers(min_value=0, max_value=100),
+            event_data=st.binary(min_size=10, max_size=200),
+            witness_count=st.integers(min_value=2, max_value=5)
+        )
+        def test_cross_check_consistent_events(prefix, sn, event_data, witness_count):
+            watcher = create_watcher_node()
+            event = make_event(prefix, sn, event_data)
+            # All witnesses return the same event
+            for i in range(witness_count):
+                watcher.submit_witness_kerl(witness_aid=f'B_wit_{i}', events=[event])
+            result = watcher.cross_check(prefix)
+            assert result.consistent  # Same event from all witnesses -> consistent
+    strategy: "keri_prefix_strategy() for AID, st.integers for sn, st.binary for event data"
+    notes: "Identical events across all witness sources confirms consistency"
+
+  - invariant: "Conflicting events at the same position indicate potential duplicity"
+    term: "KEL Cross-Check"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            prefix=keri_prefix_strategy(),
+            sn=st.integers(min_value=0, max_value=100),
+            event_a=st.binary(min_size=10, max_size=200),
+            event_b=st.binary(min_size=10, max_size=200)
+        )
+        def test_cross_check_detects_duplicity(prefix, sn, event_a, event_b):
+            assume(event_a != event_b)
+            watcher = create_watcher_node()
+            watcher.submit_witness_kerl('B_wit_1', [make_event(prefix, sn, event_a)])
+            watcher.submit_witness_kerl('B_wit_2', [make_event(prefix, sn, event_b)])
+            result = watcher.cross_check(prefix)
+            assert not result.consistent
+            assert result.duplicity_detected
+            assert result.conflicting_sn == sn
+    strategy: "Different event data at same (prefix, sn) for duplicity detection"
+    notes: "Different events at the same sequence number from different witnesses is duplicity evidence"
+
+  - invariant: "Once duplicity is detected for an AID, the alert persists permanently"
+    term: "Duplicity Alert"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            prefix=keri_prefix_strategy(),
+            sn=st.integers(min_value=0, max_value=100)
+        )
+        def test_duplicity_alert_persistent(prefix, sn):
+            watcher = create_watcher_node()
+            # Create duplicity
+            watcher.submit_witness_kerl('B_wit_1', [make_event(prefix, sn, b'event_a')])
+            watcher.submit_witness_kerl('B_wit_2', [make_event(prefix, sn, b'event_b')])
+            watcher.cross_check(prefix)
+            # Duplicity alert persists
+            alert1 = watcher.get_duplicity(prefix)
+            assert alert1 is not None
+            # Even after time passes, alert remains
+            alert2 = watcher.get_duplicity(prefix)
+            assert alert2 is not None
+            assert alert1.sn == alert2.sn == sn
+    strategy: "keri_prefix_strategy() for AID, st.integers for sn"
+    notes: "Duplicity alerts are permanent — they are never retracted or expired"
+
+  - invariant: "Stored in the DEL (Duplicitous Event Log)"
+    term: "Duplicity Alert"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(prefix=keri_prefix_strategy(), sn=st.integers(min_value=0, max_value=100))
+        def test_duplicity_stored_in_del(prefix, sn):
+            watcher = create_watcher_node()
+            watcher.submit_witness_kerl('B_wit_1', [make_event(prefix, sn, b'event_a')])
+            watcher.submit_witness_kerl('B_wit_2', [make_event(prefix, sn, b'event_b')])
+            watcher.cross_check(prefix)
+            # DEL contains the conflicting events with their sources
+            del_entry = watcher.store.get_duplicity(prefix)
+            assert del_entry is not None
+            assert del_entry.sn == sn
+            assert len(del_entry.conflicting_events) == 2
+            assert len(del_entry.sources) == 2
+    strategy: "keri_prefix_strategy() and st.integers for generating duplicity scenarios"
+    notes: "DEL entries contain the conflicting events and their witness sources for evidence"
+
+  - invariant: "Sufficient diversity means a duplicitous controller cannot partition all watchers"
+    term: "Watcher Pool Deployment"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        num_watchers = Int('num_watchers')
+        num_partitioned = Int('num_partitioned')
+        detection_possible = Bool('detection_possible')
+        s = Solver()
+        s.add(num_watchers >= 2)
+        s.add(num_partitioned >= 0)
+        s.add(num_partitioned < num_watchers)
+        # Detection is possible if at least one watcher is not partitioned
+        s.add(detection_possible == (num_watchers - num_partitioned >= 1))
+        # For the system to fail, ALL watchers must be partitioned
+        s.add(Not(detection_possible))
+        s.add(num_partitioned < num_watchers)
+        assert s.check() == unsat  # If even one watcher is not partitioned, detection remains possible
+    strategy: ""
+    notes: "SMT proof that diverse watcher pools resist partitioning — at least one unpartitioned watcher ensures detection"
+
+# Formalized port contracts
+contracts:
+  - port_ref: "port://watcher-service/inbound/query"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None and isinstance(aid, str)"
+        description: "Query requires a valid AID string"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, kel_state:
+                kel_state.aid == aid
+                and kel_state.sn >= 0
+                and isinstance(kel_state.key_state, dict)
+        description: "query_kel returns key state for the requested AID with valid sequence number"
+      - formal:
+          language: python
+          expression: |
+            lambda aid, duplicity_status:
+                duplicity_status.aid == aid
+                and isinstance(duplicity_status.is_duplicitous, bool)
+                and (len(duplicity_status.evidence) > 0 if duplicity_status.is_duplicitous else True)
+        description: "query_duplicity returns duplicity status with evidence if duplicitous"
+
+  - port_ref: "port://watcher-service/outbound/witness-poll"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda witness_aid, target_aid: witness_aid is not None and target_aid is not None"
+        description: "Polling requires valid witness and target AIDs"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda witness_aid, target_aid, kerl:
+                all(e.prefix == target_aid for e in kerl.events)
+                and kerl.source == witness_aid
+        description: "Returned KERL contains only events for target AID and is attributed to the source witness"
+
+  - port_ref: "port://watcher-service/outbound/watcher-store"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sn, evidence: aid is not None and sn >= 0 and len(evidence) >= 2"
+        description: "store_duplicity requires valid AID, non-negative sn, and at least 2 conflicting events as evidence"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: store.get_duplicity(aid) is not None"
+        description: "After storing duplicity, it is permanently retrievable"
+
+# No state machine — watchers are stateless cross-checkers (duplicity is an observation, not a lifecycle)
+state_machines: []

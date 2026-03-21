@@ -1,0 +1,118 @@
+# verification.yaml
+domain_ref: "acdc/disclosure/privacy"
+
+properties:
+  - invariant: "Top-level UUID u field present but empty — distinguishes from private (non-empty) and public (absent)"
+    term: "Metadata ACDC"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda acdc: (
+          is_metadata(acdc) == ('u' in acdc and acdc['u'] == '')
+        )
+    strategy: "Generate ACDCs with u field absent, empty, and non-empty; classify each"
+    notes: "Three-way classification based on u field presence and value"
+
+  - invariant: "Top-level SAID differs from the actual ACDC's SAID because UUID value differs"
+    term: "Metadata ACDC"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        Implies(
+          And(is_metadata(m), is_private(p), same_content_except_uuid(m, p)),
+          m.d != p.d
+        )
+    notes: "Metadata variant has different SAID than the actual private ACDC — prevents correlation"
+
+  - invariant: "Top-level UUID u field present with >= 128 bits cryptographic entropy"
+    term: "Private ACDC"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(is_private(acdc), And(has_uuid(acdc), entropy_bits(acdc.u) >= 128))"
+    notes: "Minimum entropy for blinding security"
+
+  - invariant: "Top-level UUID u field absent"
+    term: "Public ACDC"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda acdc: is_public(acdc) == ('u' not in acdc)"
+    strategy: "Generate ACDCs with and without u field; verify classification"
+    notes: ""
+
+  - invariant: "Must have d (SAID) and u (UUID) fields"
+    term: "Blinded Attribute Block"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda block: 'd' in block and 'u' in block and len(block['u']) > 0"
+    strategy: "Generate blocks with various field subsets; only d+u present accepted"
+    notes: "Both fields required for blinding"
+
+  - invariant: "UUID provides sufficient entropy to prevent rainbow table discovery of content"
+    term: "Blinded Attribute Block"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(is_blinded_block(b), entropy_bits(b.u) >= 128)"
+    notes: "Same 128-bit minimum as top-level UUID"
+
+  - invariant: "Each instance has a unique blinded SAID"
+    term: "Bulk-Issued Instance Disclosure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda instances: len(set(inst['d'] for inst in instances)) == len(instances)
+    strategy: "Generate bulk issuance sets; verify all SAIDs are unique"
+    notes: "No two instances share a SAID — prevents cross-presentation correlation"
+
+  - invariant: "Instances are not correlatable to each other via their identifiers"
+    term: "Bulk-Issued Instance Disclosure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda instances: all(
+          instances[i]['d'] != instances[j]['d']
+          and instances[i].get('u') != instances[j].get('u')
+          for i in range(len(instances))
+          for j in range(i+1, len(instances))
+        )
+    strategy: "Generate bulk instances from same source ACDC; verify no shared identifiers"
+    notes: "Both SAID and UUID must differ across instances"
+
+contracts:
+  - port_ref: "port://acdc/disclosure/privacy/inbound/privacy-mechanisms"
+    preconditions:
+      - formal:
+          language: python
+          expression: "is_valid_acdc(acdc)"
+        description: "Input ACDC must be structurally valid"
+    postconditions:
+      - formal:
+          language: python
+          expression: "result in ['public', 'private', 'metadata']"
+        description: "classify_privacy_level returns one of the three privacy levels"
+      - formal:
+          language: python
+          expression: |
+            (result == 'public') == ('u' not in acdc) and
+            (result == 'private') == ('u' in acdc and acdc['u'] != '') and
+            (result == 'metadata') == ('u' in acdc and acdc['u'] == '')
+        description: "Classification matches the u field presence/value rule"
+
+  - port_ref: "port://acdc/disclosure/privacy/outbound/digest"
+    preconditions:
+      - formal:
+          language: python
+          expression: "'d' in block and 'u' in block and entropy_bits(block['u']) >= 128"
+        description: "Block must have SAID placeholder and UUID with sufficient entropy"
+    postconditions:
+      - formal:
+          language: python
+          expression: "len(result) >= 44 and is_valid_said(result)"
+        description: "Returned SAID is valid and has sufficient length for cryptographic strength"

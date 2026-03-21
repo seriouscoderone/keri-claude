@@ -1,0 +1,371 @@
+# verification.yaml
+domain_ref: "local-agent"
+
+# Formalized invariants from ubiquitous_language terms
+properties:
+  - invariant: "Each Habitat maps to exactly one AID"
+    term: "Habitat"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        HabName = String('hab_name')
+        Aid1 = String('aid1')
+        Aid2 = String('aid2')
+        hab_aid = Function('hab_aid', StringSort(), StringSort())
+        s = Solver()
+        s.add(hab_aid(HabName) == Aid1)
+        s.add(hab_aid(HabName) == Aid2)
+        s.add(Aid1 != Aid2)
+        assert s.check() == unsat  # One Hab cannot map to two AIDs
+    strategy: ""
+    notes: "SMT proof that Hab-to-AID mapping is a function (1:1)"
+
+  - invariant: "Hab wraps Kever + signing capability (Hab.verfers == Kever.verfers)"
+    term: "Habitat"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            icount=st.integers(min_value=1, max_value=5),
+            ncount=st.integers(min_value=1, max_value=5)
+        )
+        def test_hab_wraps_kever(icount, ncount):
+            habery = create_habery()
+            hab = habery.makeHab('test', icount=icount, ncount=ncount)
+            # Hab.verfers must match Kever.verfers (key state consistency)
+            assert hab.kever is not None
+            assert hab.kever.verfers == hab.verfers
+            # Hab can sign (controller capability)
+            content = b'test content'
+            sigs = hab.sign(content)
+            assert len(sigs) > 0
+            # Kever can verify (validator capability)
+            for sig, verfer in zip(sigs, hab.kever.verfers):
+                assert verfer.verify(sig.raw, content)
+    strategy: "st.integers for key count and next-key count"
+    notes: "Hab combines verification (Kever) with signing (Manager) — verfers must be consistent between them"
+
+  - invariant: "A Habery provides a shared database (Baser), key manager (Manager), and event processor (Kevery) to all its Habitats"
+    term: "Habitat"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(hab_count=st.integers(min_value=2, max_value=10))
+        def test_habery_shared_resources(hab_count):
+            habery = create_habery()
+            habs = [habery.makeHab(f'hab_{i}') for i in range(hab_count)]
+            # All habs share the same database
+            assert all(h.db is habery.db for h in habs)
+            # All habs share the same key manager
+            assert all(h.mgr is habery.mgr for h in habs)
+            # All habs share the same event processor
+            assert all(h.kvy is habery.kvy for h in habs)
+    strategy: "st.integers for number of habs to create"
+    notes: "Habery is the resource owner — all Habs created from it share Baser, Manager, and Kevery"
+
+  - invariant: "Append-only semantics for KEL events — events are never modified after acceptance"
+    term: "Local Database"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            event_count=st.integers(min_value=1, max_value=20)
+        )
+        def test_kel_append_only(event_count):
+            habery = create_habery()
+            hab = habery.makeHab('test')
+            events_before = []
+            for i in range(event_count):
+                hab.interact(data=[{'test': i}])
+                kel = habery.db.getKel(hab.pre)
+                events_before.append(list(kel))
+            # Verify no earlier events were modified
+            final_kel = list(habery.db.getKel(hab.pre))
+            for i, snapshot in enumerate(events_before):
+                for j in range(len(snapshot)):
+                    assert final_kel[j] == snapshot[j]  # Earlier events unchanged
+    strategy: "st.integers for event count"
+    notes: "KEL is strictly append-only — adding new events never modifies existing events"
+
+  - invariant: "Controller sends events directly to each witness in the AID's witness list"
+    term: "Direct Witness Communication"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            witness_count=st.integers(min_value=1, max_value=5),
+            toad=st.integers(min_value=1, max_value=5)
+        )
+        def test_direct_witness_communication(witness_count, toad):
+            assume(toad <= witness_count)
+            witnesses = [create_mock_witness() for _ in range(witness_count)]
+            wit_aids = [w.aid for w in witnesses]
+            habery = create_habery()
+            hab = habery.makeHab('test', wits=wit_aids, toad=toad)
+            # Send inception to witnesses
+            for w in witnesses:
+                receipt = hab.send_event(w.url)
+                assert receipt is not None
+                assert receipt.witness_aid == w.aid
+    strategy: "st.integers for witness count and toad"
+    notes: "Direct witness communication — controller sends to each witness, no intermediary"
+
+  - invariant: "TOAD satisfaction checked locally — the controller knows when enough receipts have arrived"
+    term: "Direct Witness Communication"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        toad = Int('toad')
+        receipts_collected = Int('receipts_collected')
+        witness_count = Int('witness_count')
+        toad_satisfied = Bool('toad_satisfied')
+        s = Solver()
+        s.add(toad > 0)
+        s.add(toad <= witness_count)
+        s.add(witness_count > 0)
+        s.add(receipts_collected >= 0)
+        s.add(receipts_collected <= witness_count)
+        # TOAD is satisfied when receipts >= toad
+        s.add(toad_satisfied == (receipts_collected >= toad))
+        # Prove: cannot be satisfied with fewer receipts than toad
+        s.add(receipts_collected < toad)
+        s.add(toad_satisfied == True)
+        assert s.check() == unsat  # Cannot satisfy TOAD with insufficient receipts
+    strategy: ""
+    notes: "SMT proof that TOAD satisfaction requires at least 'toad' number of valid receipts"
+
+  - invariant: "Private keys live on the controller's device for the entire lifecycle — no cloud agent involved"
+    term: "Local Key Manager"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            salt=st.binary(min_size=16, max_size=32),
+            icount=st.integers(min_value=1, max_value=5)
+        )
+        def test_keys_never_leave_device(salt, icount):
+            with capture_network_traffic() as traffic:
+                habery = create_habery(salt=salt)
+                hab = habery.makeHab('test', icount=icount)
+                # Sign something
+                hab.sign(b'test content')
+                # Rotate keys
+                hab.rotate()
+            # Verify no private key material in any network traffic
+            for request in traffic.requests:
+                assert not contains_private_key_material(request.body)
+                # Only witness receipt requests should appear (public events)
+    strategy: "st.binary for salt, st.integers for key count"
+    notes: "Local key manager is entirely in-process — private keys never transmitted anywhere"
+
+  - invariant: "Validates events against current key state — same rules as any Kevery instance"
+    term: "Local Event Processor"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            valid_event=valid_key_event_strategy(),
+            invalid_event=invalid_key_event_strategy()
+        )
+        def test_kevery_validates_consistently(valid_event, invalid_event):
+            habery = create_habery()
+            # Valid events accepted
+            result = habery.kvy.process(valid_event)
+            assert result.accepted
+            # Invalid events rejected (bad signatures, wrong sn, etc.)
+            with pytest.raises(ValidationError):
+                habery.kvy.process(invalid_event)
+    strategy: "Custom strategies for valid and invalid key events"
+    notes: "Local Kevery applies the same validation rules as any KERI event processor"
+
+  - invariant: "Registry TEL events (vcp, iss, rev, bis, brv) created and stored in the local Baser"
+    term: "Local Credential Management"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            event_type=st.sampled_from(['vcp', 'iss', 'rev', 'bis', 'brv'])
+        )
+        def test_tel_events_stored_locally(event_type):
+            habery = create_habery()
+            hab = habery.makeHab('test')
+            regery = create_regery(habery)
+            if event_type == 'vcp':
+                event = regery.incept()
+            elif event_type == 'iss':
+                event = regery.issue(hab=hab, said=make_said())
+            elif event_type == 'rev':
+                event = regery.revoke(hab=hab, said=make_said())
+            else:
+                return  # bis/brv are for backerless registries
+            # Event stored in local database
+            stored = habery.db.getTelEvent(event.said)
+            assert stored is not None
+    strategy: "st.sampled_from for TEL event types"
+    notes: "All TEL events are created and stored locally — no cloud agent interaction"
+
+  - invariant: "Memory-mapped databases (LMDB) require a stable local filesystem — incompatible with ephemeral/serverless"
+    term: "Local Database"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(temp_dir=st.booleans())
+        def test_lmdb_requires_stable_filesystem(temp_dir):
+            if temp_dir:
+                db = create_baser(temp=True)
+                assert db.temp is True
+                # Temp DB works but data lost on close
+            else:
+                db = create_baser(temp=False, path='/stable/path')
+                assert db.temp is False
+                # Persistent DB requires stable filesystem
+                db.close()
+                db2 = create_baser(temp=False, path='/stable/path')
+                # Data survives restart
+                assert db2.get_kel(test_prefix) is not None
+    strategy: "st.booleans() for temp vs persistent mode"
+    notes: "LMDB memory-mapped I/O requires persistent local filesystem — Lambda/serverless is incompatible"
+
+  - invariant: "kli commands map directly to Habery/Hab/Manager operations"
+    term: "CLI Interface"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            command=st.sampled_from([
+                ('init', 'create_habery'),
+                ('incept', 'makeHab'),
+                ('rotate', 'rotate'),
+                ('interact', 'interact'),
+                ('status', 'get_key_state')
+            ])
+        )
+        def test_cli_maps_to_hab_operations(command):
+            cli_cmd, hab_method = command
+            # kli command has a corresponding Habery/Hab method
+            if cli_cmd == 'init':
+                assert hasattr(Habery, hab_method) or callable(hab_method)
+            else:
+                assert hasattr(Hab, hab_method)
+    strategy: "st.sampled_from for CLI command to method mapping"
+    notes: "CLI is a thin layer — each kli command maps directly to a domain operation"
+
+# Formalized port contracts
+contracts:
+  - port_ref: "port://local-agent/inbound/controller-operations"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda name, salt, config: name is not None and salt is not None"
+        description: "init requires a name and salt for the Habery"
+      - formal:
+          language: python
+          expression: "lambda alias, icount, ncount, wits, toad: alias is not None and icount >= 1 and ncount >= 0 and toad <= len(wits)"
+        description: "incept requires valid alias, at least 1 signing key, and toad <= witness count"
+      - formal:
+          language: python
+          expression: "lambda aid: hab_exists(aid)"
+        description: "rotate, interact, sign, and get_key_state require an existing hab for the AID"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda name, salt, config, habery:
+                habery.db is not None
+                and habery.mgr is not None
+                and habery.kvy is not None
+        description: "init creates a Habery with shared database, key manager, and event processor"
+      - formal:
+          language: python
+          expression: |
+            lambda alias, hab:
+                hab.pre is not None
+                and hab.kever is not None
+                and hab.kever.verfers == hab.verfers
+                and hab.kever.sn == 0
+        description: "incept creates a Hab at sn=0 with consistent verfers between Hab and Kever"
+      - formal:
+          language: python
+          expression: |
+            lambda aid, content, sigs:
+                len(sigs) > 0
+                and all(verify_sig(s, content, hab.kever.verfers) for s in sigs)
+        description: "sign produces valid indexed signatures verifiable against the Hab's key state"
+
+  - port_ref: "port://local-agent/inbound/cli-commands"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda name, salt, config: name is not None"
+        description: "kli_init requires a name for the local agent"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda name, result: result.success and local_db_exists(name)"
+        description: "kli_init creates a persistent local database for the agent"
+
+  - port_ref: "port://local-agent/outbound/local-storage"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda name, path: name is not None"
+        description: "open_db requires a database name"
+      - formal:
+          language: python
+          expression: "lambda aid, event, sigs: aid is not None and event.valid() and len(sigs) > 0"
+        description: "append_event requires valid AID, event, and at least one signature"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, event:
+                store.get_kel(aid)[-1] == event
+                and store.get_key_state(aid).sn == event.sn
+        description: "After append, event is the latest in the KEL and key state is updated"
+
+  - port_ref: "port://local-agent/outbound/witness-comms"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda witness_url, event, sigs: witness_url is not None and event.valid() and len(sigs) > 0"
+        description: "send_event requires valid witness URL, event, and signatures"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda witness_url, event, receipt:
+                receipt.witness_aid is not None
+                and receipt.witness_aid.startswith('B')
+                and receipt.event_digest == event.said
+        description: "Witness returns a receipt signed by its non-transferable AID matching the event digest"
+
+  - port_ref: "port://local-agent/outbound/watcher-comms"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda watcher_url, aid: watcher_url is not None and aid is not None"
+        description: "All watcher operations require valid watcher URL and target AID"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda watcher_url, aid, key_state:
+                key_state.aid == aid
+                and key_state.sn >= 0
+        description: "Watcher returns key state for the requested AID"
+
+# No lifecycle state machine for local-agent — Hab is created and used directly,
+# with no provisioning/destruction lifecycle like cloud agents.
+# Key rotation and event processing are stateless operations on the Hab.
+state_machines: []
