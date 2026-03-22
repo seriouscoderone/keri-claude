@@ -1,0 +1,49 @@
+# ubiquitous-language.yaml
+domain_ref: "watcher-service/api"
+
+terms:
+  - term: "KEL State Query"
+    synonyms: ["Watcher KEL Endpoint"]
+    definition: "The HTTP endpoint through which validators query for the current key state of a monitored AID as observed by the watcher."
+    invariants:
+      - "Returns the watcher's view of key state based on cross-checked witness KELs"
+      - "Response is CESR-encoded"
+      - "Authenticated by the watcher's own AID signature"
+    examples:
+      - "GET /query/kel/{aid} — returns cross-checked key state"
+    related_terms: ["Duplicity Query"]
+
+  - term: "Duplicity Query"
+    synonyms: ["Watcher Duplicity Endpoint"]
+    definition: "The HTTP endpoint through which validators query for duplicity alerts on a specific AID."
+    invariants:
+      - "Returns duplicity status with evidence if duplicity detected"
+      - "Once duplicity is reported, it persists permanently"
+      - "Response includes conflicting events and their witness sources"
+    examples:
+      - "GET /query/duplicity/{aid} — returns duplicity status and evidence"
+    related_terms: ["KEL State Query"]
+
+  - term: "OOBI Resolution"
+    synonyms: ["Well-Known OOBI Endpoint"]
+    definition: "The HTTP endpoint at /.well-known/keri/oobi/{aid}/{role}/{eid} enabling bootstrap discovery of the watcher."
+    invariants:
+      - "Follows RFC 8615 .well-known URI convention"
+      - "Unauthenticated — discovery is open"
+    examples:
+      - "GET /.well-known/keri/oobi/BWat.../watcher/BWat... — resolves watcher OOBI"
+    related_terms: ["KEL State Query", "Duplicity Query"]
+
+events:
+  - name: "KELQueryServed"
+    payload: "aid: AID, requester: AID, key_state_sn: int"
+    triggers: "Validator queries the watcher API for key state"
+
+  - name: "DuplicityQueryServed"
+    payload: "aid: AID, requester: AID, is_duplicitous: bool"
+    triggers: "Validator queries the watcher API for duplicity status"
+
+rules:
+  - "All responses are CESR-encoded and signed by the watcher's AID"
+  - "Duplicity alerts persist permanently — once reported, always reported"
+  - "OOBI resolution is unauthenticated — discovery is open"

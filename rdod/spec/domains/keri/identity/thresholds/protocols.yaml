@@ -1,0 +1,58 @@
+domain_ref: "keri/identity/thresholds"
+
+protocols:
+  - name: "MultisigInception"
+    description: "Create a multi-signature identifier requiring coordination between N group members. Each member contributes their key and signature via exchange messages."
+    participants:
+      - domain: "domain://keri/identity/thresholds"
+        role: "Coordinates signature collection and threshold satisfaction"
+      - domain: "domain://keri/identity/establishment"
+        role: "Validates and accepts the group inception event"
+      - domain: "domain://keri/accountability/receipting"
+        role: "Witnesses receipt the group inception"
+      - domain: "domain://cloud-agent-service/api"
+        role: "Routes exchange messages between group members"
+    trigger: "Lead member proposes a group inception with member list and threshold"
+    steps:
+      - seq: 1
+        domain: "domain://keri/identity/thresholds"
+        action: "propose_group_inception"
+        input: "Member AIDs, signing threshold, key list, next key digests, witnesses"
+        output: "Unsigned inception event (icp) + exn proposal message to all members"
+      - seq: 2
+        domain: "domain://cloud-agent-service/api"
+        action: "distribute_proposal"
+        input: "exn with route=/multisig/icp containing the inception parameters"
+        output: "Each member receives the proposal"
+        depends_on: [1]
+      - seq: 3
+        domain: "domain://keri/identity/thresholds"
+        action: "accumulate_signatures"
+        input: "Each member signs the inception event and returns their signature via exn"
+        output: "Signatures accumulated in Partially-Signed Escrow (PSE)"
+        depends_on: [2]
+        on_failure:
+          - error: "GroupCoordinationTimeoutError"
+            action: "abort"
+            compensation: "Signatures pruned from PSE after timeout"
+      - seq: 4
+        domain: "domain://keri/identity/establishment"
+        action: "validate_and_accept"
+        input: "Inception event with accumulated signatures meeting threshold"
+        output: "Group AID created with key state"
+        depends_on: [3]
+        on_failure:
+          - error: "ThresholdNotSatisfiedError"
+            action: "escrow"
+            compensation: "Remain in PSE — await more signatures"
+      - seq: 5
+        domain: "domain://keri/accountability/receipting"
+        action: "collect_witness_receipts"
+        input: "Accepted group inception event"
+        output: "Witness receipts"
+        depends_on: [4]
+    timeout: "3600s for signature collection, 3600s for witness receipts"
+    compensation: "If threshold never met, all accumulated signatures pruned from PSE"
+    terminal_states:
+      success: "Group AID exists with all member keys, threshold met, witnesses receipted"
+      failure: "Coordination timeout — no group AID created"

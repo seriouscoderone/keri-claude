@@ -42,7 +42,7 @@ subdomains:
     relationship: "Owns the three service endpoints — Admin API (KRAM-authenticated management), Message Router (protocol message routing), notification/end-role systems"
     via_port: "port://cloud-agent-service/api/inbound/admin-api"
   - ref: "domain://cloud-agent-service/processing"
-    relationship: "Owns the HIO-based async event processing pipeline — Doers, Decks, escrow management, long-running operation tracking, and specialized processing components"
+    relationship: "Owns the async event processing pipeline — Processing Units, Message Queues, escrow management, long-running operation tracking, and specialized processing components"
     via_port: "port://cloud-agent-service/processing/inbound/process-work"
 
 kernels: []
@@ -60,9 +60,9 @@ adjacents:
     relationship: "Conformist — issues, stores, and presents ACDC credentials"
     via_port: "port://acdc/inbound/credential-lifecycle"
     is_cross_cutting: false
-  - ref: "domain://oobi"
+  - ref: "domain://discovery"
     relationship: "Customer-Supplier — resolves OOBIs for endpoint discovery and contact resolution"
-    via_port: "port://oobi/inbound/discovery"
+    via_port: "port://discovery/inbound/discovery"
     is_cross_cutting: false
   - ref: "domain://witness-service"
     relationship: "Customer-Supplier — forwards events to witnesses, collects receipts"

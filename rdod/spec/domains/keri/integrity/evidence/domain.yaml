@@ -1,0 +1,65 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/integrity/evidence"
+name: "Duplicity Evidence"
+description: >
+  Detection and storage of duplicitous events — fork detection, evidence collection, the Likely
+  Duplicitous Escrow (temporary holding), the Duplicitous Event Log (permanent forensic evidence),
+  and the notification bus for cross-component coordination. When an incoming event conflicts with
+  an already-accepted event at the same (prefix, sn), this subdomain detects the fork, stages the
+  evidence in .ldes, promotes confirmed duplicity to .dels, and notifies dependent components.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Duplicity, First Seen Policy, Validation Rules"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: Duplicity Detection, Recovery"
+  - type: implementation
+    reference: "keripy — src/keri/core/eventing.py (Kevery.processEscrowLikelyDuplicitous), src/keri/app/storing.py (.ldes, .dels), src/keri/core/eventing.py (processCues, cues deque)"
+  - type: implementation
+    reference: "keriox — keriox_core/src/processor/escrow.rs (DuplicitousEvents escrow), keriox_core/src/processor/notification.rs (NotificationBus, KeyEventAdded)"
+
+ubiquitous_language:
+  - term: "Duplicity Evidence"
+    definition: "The pair of verified but different events at the same sequence number that proves duplicity occurred"
+    invariants:
+      - "Non-repudiable — both events bear valid signatures from the controller's keys"
+      - "Evidence can be stored and presented to any party for independent verification"
+
+  - term: "Fork Detection"
+    definition: "Identifying when multiple events exist at the same (prefix, sequence number) with different digests"
+    invariants:
+      - "Both events must have valid signatures against the key state at that sn"
+      - "Detected forks trigger escrow to the Likely Duplicitous Escrow"
+
+domain_clients:
+  - ref: "domain://keri/integrity"
+    relationship: "Parent domain drives evidence collection when duplicity is suspected during event processing"
+    via_port: "port://keri/integrity/evidence/inbound/evidence-management"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals:
+  - ref: "external://persistence"
+    source: "Escrow storage (.ldes temporary, .dels permanent)"
+    relationship: "Evidence lifecycle requires persistent storage — temporary escrow with timeout for likely duplicitous events, permanent append-only storage for confirmed duplicity evidence"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In keripy, fork detection occurs in Kevery when an incoming event at an occupied sn has a
+    different digest. Likely duplicitous events are stored in .ldes and processed by
+    Kevery.processEscrowLikelyDuplicitous() with a 3600s timeout. Confirmed duplicity is promoted
+    to .dels. The cues deque provides the notification bus — components push cue dicts and consumers
+    pop and handle them. In keriox, the DuplicitousEvents escrow and NotificationBus with observer
+    pattern serve the same roles.
+
+issues: []
+
+tags: ["evidence", "fork-detection", "escrow", "notification", "ldes", "dels"]

@@ -3,11 +3,11 @@ template_version: "1.0"
 id: "cloud-agent-service/processing"
 name: "Agent Processing"
 description: >
-  The HIO-based async event processing pipeline — Doers, Decks, escrow management,
+  The async event processing pipeline — Processing Units, Message Queues, escrow management,
   long-running operation tracking (Monitor), and the specialized processing components
   (Counselor, Boatswain, Registrar, Credentialer, Seeker, Postman). Owns the cooperative
-  scheduling model where producers append to Decks and consumer Doers drain work in
-  their recur() loops. Tracks all async operations via the Monitor for edge-client polling.
+  scheduling model where producers append to Message Queues and consumer Processing Units drain work in
+  their periodic work cycles. Tracks all async operations via the Monitor for edge-client polling.
   Implementation: keria (Python), serious-keri (TypeScript/Lambda).
 version: "0.1.0"
 
@@ -22,11 +22,11 @@ source_material:
     reference: "CLAUDE.md — HIO orchestration, Doer/Deck pattern"
 
 ubiquitous_language:
-  - term: "Doer"
-    definition: "HIO event-driven processing unit with recur() method — the cooperative scheduling primitive for all async work"
+  - term: "Processing Unit"
+    definition: "Event-driven processing unit with a periodic work cycle — the cooperative scheduling primitive for all async work (Doer in HIO/keripy)"
     invariants:
-      - "Non-blocking — each recur() call processes available work and returns"
-      - "Doers drain work from Decks (FIFO queues)"
+      - "Non-blocking — each work cycle processes available work and returns"
+      - "Processing Units drain work from Message Queues (FIFO queues)"
       - "No threads — concurrency via cooperative scheduling"
 
   - term: "Long-running Operation"
@@ -55,7 +55,7 @@ externals:
   - name: "Timer"
     abstraction: "Service"
     ref: "port://cloud-agent-service/processing/outbound/timer"
-    implementation_notes: "Provides escrow timeouts and operation timeouts. Implementations: HIO scheduler (keria), Lambda timeout + DynamoDB TTL (serious-keri)"
+    implementation_notes: "Provides escrow timeouts and operation timeouts. Implementations: HIO scheduler (keria/keripy), Lambda timeout + DynamoDB TTL (serious-keri)"
 
 implementation_guidance:
   suggested_type: "module"
@@ -69,4 +69,4 @@ implementation_guidance:
 
 issues: []
 
-tags: ["processing", "doer", "deck", "escrow", "monitor", "hio", "async"]
+tags: ["processing", "processing-unit", "message-queue", "escrow", "monitor", "async"]

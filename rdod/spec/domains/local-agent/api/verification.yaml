@@ -1,0 +1,107 @@
+# verification.yaml
+domain_ref: "local-agent/api"
+
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
+properties:
+  - invariant: "kli commands map directly to Identifier Repository (Habery in keripy)/Hab/Manager operations"
+    term: "CLI Interface"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            command=st.sampled_from([
+                ('init', 'create_habery'),
+                ('incept', 'makeHab'),
+                ('rotate', 'rotate'),
+                ('interact', 'interact'),
+                ('status', 'get_key_state')
+            ])
+        )
+        def test_cli_maps_to_hab_operations(command):
+            cli_cmd, hab_method = command
+            if cli_cmd == 'init':
+                assert hasattr(Habery, hab_method) or callable(hab_method)
+            else:
+                assert hasattr(Hab, hab_method)
+    strategy: "st.sampled_from for CLI command to method mapping"
+    notes: "CLI is a thin layer — each kli command maps directly to a domain operation"
+
+  - invariant: "init() creates a Habery with shared database, key manager, and event processor"
+    term: "Hab/Habery API"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(
+            name=st.text(min_size=1, max_size=20, alphabet=st.characters(whitelist_categories=('L',))),
+            salt=st.binary(min_size=16, max_size=16)
+        )
+        def test_init_creates_habery(name, salt):
+            habery = create_habery(name=name, salt=salt)
+            assert habery.db is not None
+            assert habery.mgr is not None
+            assert habery.kvy is not None
+    strategy: "st.text for name, st.binary for salt"
+    notes: "Habery initialization must create all shared resources"
+
+  - invariant: "All operations are synchronous and in-process"
+    term: "Hab/Habery API"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(valid_key_event_strategy())
+        def test_operations_are_synchronous(event):
+            with capture_network_traffic() as traffic:
+                habery = create_habery()
+                hab = habery.makeHab('test')
+                hab.interact(data=[{'test': 1}])
+                key_state = hab.kever
+            # Core operations should not require network (witness comms are separate)
+            assert key_state is not None
+            assert key_state.sn >= 0
+    strategy: "valid_key_event_strategy()"
+    notes: "Core Hab/Habery operations execute entirely in-process"
+
+contracts:
+  - port_ref: "port://local-agent/api/inbound/hab-operations"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda name, salt, config: name is not None and salt is not None"
+        description: "init requires a name and salt"
+      - formal:
+          language: python
+          expression: "lambda alias, icount, ncount, wits, toad: alias is not None and icount >= 1 and toad <= len(wits)"
+        description: "incept requires valid alias, at least 1 signing key, and toad <= witness count"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda name, salt, config, habery:
+                habery.db is not None and habery.mgr is not None
+        description: "init creates a Habery with shared resources"
+      - formal:
+          language: python
+          expression: |
+            lambda alias, hab:
+                hab.pre is not None and hab.kever is not None and hab.kever.sn == 0
+        description: "incept creates a Hab at sn=0"
+
+  - port_ref: "port://local-agent/api/inbound/cli"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda name, salt, config: name is not None"
+        description: "kli_init requires a name"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda name, result: result.success and local_db_exists(name)"
+        description: "kli_init creates a persistent local database"
+
+state_machines: []

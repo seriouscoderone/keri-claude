@@ -1,0 +1,49 @@
+# ubiquitous-language.yaml
+domain_ref: "witness-service/api"
+
+terms:
+  - term: "Event Submission"
+    synonyms: ["Witness Submission Endpoint"]
+    definition: "The HTTP endpoint through which controllers and agents submit CESR-encoded key events for receipting by the witness."
+    invariants:
+      - "Accepts CESR-encoded key events via HTTP POST"
+      - "Verifies controller signatures before applying first-seen rule"
+      - "Returns a witness receipt on acceptance, or a rejection on conflict"
+    examples:
+      - "POST /submit — CESR stream containing inception event + controller signatures"
+    related_terms: ["KERL Query", "OOBI Resolution"]
+
+  - term: "KERL Query"
+    synonyms: ["Witness KERL Endpoint"]
+    definition: "The HTTP endpoint through which validators and watchers retrieve receipted key event logs for a given AID."
+    invariants:
+      - "Returns CESR-encoded KERL for the requested AID"
+      - "Supports optional sequence number range filtering"
+      - "No authentication required for read access"
+    examples:
+      - "GET /query/{aid} — returns full KERL as CESR stream"
+    related_terms: ["Event Submission"]
+
+  - term: "OOBI Resolution"
+    synonyms: ["Well-Known OOBI Endpoint"]
+    definition: "The HTTP endpoint at /.well-known/keri/oobi/{aid}/{role}/{eid} enabling bootstrap discovery of the witness."
+    invariants:
+      - "Follows RFC 8615 .well-known URI convention"
+      - "Returns endpoint information for the requested AID/role/eid combination"
+    examples:
+      - "GET /.well-known/keri/oobi/EDP1.../witness/BDg3... — resolves witness OOBI"
+    related_terms: ["Event Submission", "KERL Query"]
+
+events:
+  - name: "EventSubmitted"
+    payload: "aid: AID, sn: int, event_type: string, cesr_size: int"
+    triggers: "Controller or agent submits a CESR-encoded key event to the witness API"
+
+  - name: "QueryServed"
+    payload: "aid: AID, sn_range: string, response_size: int"
+    triggers: "Validator or watcher queries the witness API for a KERL"
+
+rules:
+  - "All inbound messages are CESR-encoded — the API boundary parses CESR streams"
+  - "All outbound responses are CESR-encoded — receipts, KERLs, and errors are CESR streams"
+  - "OOBI resolution is unauthenticated — discovery is open"

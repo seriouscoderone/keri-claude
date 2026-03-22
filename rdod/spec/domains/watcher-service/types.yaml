@@ -1,0 +1,71 @@
+domain_ref: "watcher-service"
+
+types:
+  - name: "WatcherConfiguration"
+    description: "Configuration for a watcher node instance."
+    variants:
+      - name: "default"
+        fields:
+          - name: "watcher_aid"
+            type: "string"
+            required: true
+            description: "This watcher's AID"
+          - name: "listen_port"
+            type: "integer"
+            required: true
+            description: "HTTP port"
+          - name: "check_interval_seconds"
+            type: "integer"
+            required: false
+            description: "How often to perform duplicity checks"
+            constraints:
+              min: 60
+          - name: "monitored_prefixes"
+            type: "array[string]"
+            required: true
+            description: "List of AIDs this watcher monitors for duplicity"
+
+  - name: "DuplicityReport"
+    description: "Report generated after a watcher cross-checks witnesses for a monitored identifier."
+    variants:
+      - name: "clean"
+        fields:
+          - name: "prefix"
+            type: "string"
+            required: true
+            description: "The monitored AID"
+          - name: "checked_at"
+            type: "string"
+            required: true
+            description: "ISO 8601 datetime of the check"
+          - name: "witnesses_queried"
+            type: "integer"
+            required: true
+            description: "Number of witnesses contacted"
+          - name: "latest_sn"
+            type: "integer"
+            required: true
+            description: "Highest sequence number observed"
+        invariants:
+          - "All witnesses report consistent events — no duplicity found"
+      - name: "duplicitous"
+        fields:
+          - name: "prefix"
+            type: "string"
+            required: true
+            description: "The AID with duplicity"
+          - name: "checked_at"
+            type: "string"
+            required: true
+            description: "Datetime of detection"
+          - name: "evidence"
+            type: "array[DuplicityEvidence]"
+            required: true
+            description: "One entry per conflicting (prefix, sn) pair found"
+          - name: "witnesses_queried"
+            type: "integer"
+            required: true
+            description: "Number of witnesses contacted"
+        invariants:
+          - "At least one DuplicityEvidence entry with two different SAIDs at the same sn"
+          - "Evidence is immutable — stored permanently in DEL"

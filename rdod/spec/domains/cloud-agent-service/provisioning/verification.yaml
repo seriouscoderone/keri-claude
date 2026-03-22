@@ -1,6 +1,10 @@
 # verification.yaml
 domain_ref: "cloud-agent-service/provisioning"
 
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
 # Formalized invariants from ubiquitous_language terms
 properties:
   - invariant: "One-time per controller AID — idempotent on retry"
@@ -56,7 +60,7 @@ properties:
     strategy: "keri_aid_strategy() generating distinct controller AIDs, st.binary() for credential data"
     notes: "Agent instance isolation — one tenant's data invisible to another"
 
-  - invariant: "Bidirectional mappings: controller AID <-> agent AID (.agnt and .ctrl sub-databases)"
+  - invariant: "Bidirectional mappings: controller AID <-> agent AID (agent-to-controller and controller-to-agent indexes [.agnt and .ctrl in keripy])"
     term: "Multi-tenancy"
     technique: property-based
     formal:
@@ -170,7 +174,7 @@ state_machines:
         guard: "inception_event.valid() and not registry.has_controller(caid)"
       - from: "provisioning"
         to: "active"
-        trigger: "All registry mappings written, Habery/Reger/Verifier initialized"
+        trigger: "All registry mappings written, Identifier Repository (Habery in keripy)/Registry State Manager (Reger in keripy)/Verifier initialized"
         guard: "registry.get_by_controller(caid) is not None and registry.get_by_agent(agent_aid) is not None"
       - from: "provisioning"
         to: "unprovisioned"

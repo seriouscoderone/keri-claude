@@ -1,0 +1,28 @@
+# ports.yaml
+domain_ref: "keri/integrity"
+
+ports:
+  # Inbound — what clients call (delegates to subdomains)
+  - id: "port://keri/integrity/inbound/monitoring"
+    type: inbound
+    name: "Duplicity Monitoring"
+    contract: "monitor_aid(aid: AID, sources: [Endpoint]) -> MonitorHandle; check_duplicity(aid: AID) -> Result<NoDuplicity, DuplicityEvidence>; get_del(aid: AID) -> DEL"
+    protocol: "method-call"
+    delegates_to: ["port://keri/integrity/detection/inbound/monitoring-lifecycle", "port://keri/integrity/evidence/inbound/evidence-management"]
+    refs: ["domain://keri"]
+
+  - id: "port://keri/integrity/inbound/recovery"
+    type: inbound
+    name: "Superseding Recovery"
+    contract: "apply_superseding_event(aid: AID, event: RotationEvent) -> Result<RecoveryApplied, SupersedingError>; reconcile(aid: AID) -> Result<Trunk, IrreconcilableError>"
+    protocol: "method-call"
+    delegates_to: ["port://keri/integrity/recovery/inbound/superseding-rules", "port://keri/integrity/recovery/inbound/reconciliation"]
+    refs: ["domain://keri"]
+
+  - id: "port://keri/integrity/inbound/evidence-query"
+    type: inbound
+    name: "Evidence Query"
+    contract: "get_evidence(aid: AID) -> [DuplicityEvidence]; get_disputed_branches(aid: AID) -> [DisputedBranch]; has_duplicity(aid: AID) -> bool"
+    protocol: "method-call"
+    delegates_to: ["port://keri/integrity/evidence/inbound/evidence-management", "port://keri/integrity/recovery/inbound/reconciliation"]
+    refs: ["domain://keri"]

@@ -1,0 +1,268 @@
+# keripy → DDD domain mapping
+# Extracted: 18 files, 71 classes, 19 functions, 138 public methods
+# Auto-mapped by module/symbol heuristics — review UNMAPPED items
+
+acdc/credential-exchange:  # 2 items
+  - app.messaging.MessageCollectionEnd  # class @ keria/app/messaging.py:20
+    # .on_get (L23)
+  - app.messaging.loadEnds  # fn @ keria/app/messaging.py:15
+
+acdc/credential-exchange/negotiation:  # 5 items
+  - app.presenting.PresentationCollectionEnd  # class @ keria/app/presenting.py:23
+    # .on_post (L30)
+  - app.presenting.PresentationRequestsCollectionEnd  # class @ keria/app/presenting.py:113
+    # .on_post (L116)
+  - app.presenting.loadEnds  # fn @ keria/app/presenting.py:16
+  - peer.exchanging.ExchangeCollectionEnd  # class @ keria/peer/exchanging.py:20
+    # .on_post (L23)
+  - peer.exchanging.loadEnds  # fn @ keria/peer/exchanging.py:15
+
+acdc/credential-lifecycle:  # 6 items
+  - app.credentialing.CredentialQueryCollectionEnd  # class @ keria/app/credentialing.py:248
+    # .on_post (L260)
+  - app.credentialing.SchemaCollectionEnd  # class @ keria/app/credentialing.py:219
+    # .on_get (L222)
+  - app.credentialing.SchemaResourceEnd  # class @ keria/app/credentialing.py:180
+    # .on_get (L183)
+  - app.credentialing.loadEnds  # fn @ keria/app/credentialing.py:22
+  - app.credentialing.signPaths  # fn @ keria/app/credentialing.py:629
+  - db.basing.Seeker  # class @ keria/db/basing.py:105
+    # .reopen (L153)
+    # .createIndex (L176)
+    # .index (L181)
+    # .generateIndexes (L205)
+    # .find (L278)
+
+acdc/credential-lifecycle/registry:  # 1 items
+  - app.credentialing.RegistryCollectionEnd  # class @ keria/app/credentialing.py:41
+    # .on_get (L57)
+    # .on_post (L96)
+
+acdc/credential-lifecycle/status:  # 4 items
+  - app.credentialing.CredentialCollectionEnd  # class @ keria/app/credentialing.py:345
+    # .on_post (L356)
+  - app.credentialing.CredentialResourceEnd  # class @ keria/app/credentialing.py:460
+    # .on_get (L471)
+    # .outputCred (L530)
+    # .on_delete (L579)
+  - app.credentialing.Credentialer  # class @ keria/app/credentialing.py:955
+    # .validate (L966)
+    # .issue (L990)
+    # .processCredentialMissingSigEscrow (L1015)
+    # .complete (L1032)
+    # .processEscrows (L1035)
+  - app.credentialing.Registrar  # class @ keria/app/credentialing.py:652
+    # .incept (L664)
+    # .issue (L693)
+    # .revoke (L729)
+    # .multisigIxn (L766)
+    # .complete (L779)
+    # .processEscrows (L784)
+    # .processWitnessEscrow (L793)
+    # .processMultisigEscrow (L824)
+    # .processDiseminationEscrow (L849)
+    # .sendToRecipients (L874)
+
+cloud-agent-service:  # 3 items
+  - app.cli.commands.start.launch  # fn @ keria/app/cli/commands/start.py:59
+  - app.cli.commands.start.runAgent  # fn @ keria/app/cli/commands/start.py:81
+  - app.cli.keria.main  # fn @ keria/app/cli/keria.py:16
+
+cloud-agent-service/api:  # 20 items
+  - app.agenting.setup  # fn @ keria/app/agenting.py:49
+  - app.aiding.AgentResourceEnd  # class @ keria/app/aiding.py:68
+    # .on_get (L75)
+    # .on_put (L119)
+    # .interact (L199)
+    # .anchorSeals (L223)
+  - app.aiding.ContactCollectionEnd  # class @ keria/app/aiding.py:972
+    # .on_get (L974)
+    # .authn (L1050)
+  - app.aiding.ContactImageResourceEnd  # class @ keria/app/aiding.py:1072
+    # .on_post (L1075)
+    # .on_get (L1121)
+  - app.aiding.ContactResourceEnd  # class @ keria/app/aiding.py:1166
+    # .on_get (L1169)
+    # .on_post (L1208)
+    # .on_put (L1268)
+    # .on_delete (L1325)
+  - app.aiding.GroupMemberCollectionEnd  # class @ keria/app/aiding.py:1359
+    # .on_get (L1362)
+  - app.aiding.IdentifierOOBICollectionEnd  # class @ keria/app/aiding.py:614
+    # .on_get (L621)
+  - app.aiding.info  # fn @ keria/app/aiding.py:589
+  - app.aiding.loadEnds  # fn @ keria/app/aiding.py:26
+  - app.indirecting.HttpEnd  # class @ keria/app/indirecting.py:17
+    # .on_post (L40)
+  - app.indirecting.loadEnds  # fn @ keria/app/indirecting.py:103
+  - app.notifying.NotificationCollectionEnd  # class @ keria/app/notifying.py:21
+    # .on_get (L24)
+  - app.notifying.NotificationResourceEnd  # class @ keria/app/notifying.py:72
+    # .on_put (L75)
+    # .on_delete (L111)
+  - app.notifying.loadEnds  # fn @ keria/app/notifying.py:14
+  - app.specing.AgentSpecResource  # class @ keria/app/specing.py:12
+    # .addRoutes (L29)
+    # .on_get (L53)
+  - core.authing.Authenticater  # class @ keria/core/authing.py:15
+    # .resource (L35)
+    # .verify (L42)
+    # .sign (L112)
+  - core.authing.SignatureValidationComponent  # class @ keria/core/authing.py:140
+    # .process_request (L156)
+    # .process_response (L188)
+  - core.httping.HandleCORS  # class @ keria/core/httping.py:11
+    # .process_request (L12)
+  - core.httping.getRequiredParam  # fn @ keria/core/httping.py:21
+  - core.httping.parseRangeHeader  # fn @ keria/core/httping.py:29
+
+cloud-agent-service/processing:  # 7 items
+  - app.agenting.Escrower  # class @ keria/app/agenting.py:512
+    # .recur (L537)
+  - core.longrunning.Monitor  # class @ keria/core/longrunning.py:82
+    # .submit (L108)
+    # .get (L133)
+    # .rem (L141)
+    # .status (L145)
+  - core.longrunning.Op  # class @ keria/core/longrunning.py:45
+  - core.longrunning.Operation  # class @ keria/core/longrunning.py:36
+  - core.longrunning.OperationResourceEnd  # class @ keria/core/longrunning.py:345
+    # .on_get (L354)
+    # .on_delete (L372)
+  - core.longrunning.Operator  # class @ keria/core/longrunning.py:52
+    # .reopen (L71)
+  - core.longrunning.Status  # class @ keria/core/longrunning.py:28
+
+cloud-agent-service/provisioning:  # 18 items
+  - app.agenting.Agency  # class @ keria/app/agenting.py:113
+    # .create (L140)
+    # .delete (L185)
+    # .get (L193)
+    # .lookup (L220)
+    # .incept (L235)
+  - app.agenting.Agent  # class @ keria/app/agenting.py:239
+    # .pre (L337)
+    # .inceptSalty (L340)
+    # .inceptRandy (L346)
+    # .inceptGroup (L352)
+    # .inceptExtern (L358)
+  - app.agenting.BootEnd  # class @ keria/app/agenting.py:571
+    # .on_post (L584)
+  - app.agenting.Initer  # class @ keria/app/agenting.py:437
+    # .recur (L443)
+  - app.agenting.KeyEventCollectionEnd  # class @ keria/app/agenting.py:715
+    # .on_get (L718)
+  - app.agenting.KeyStateCollectionEnd  # class @ keria/app/agenting.py:664
+    # .on_get (L667)
+  - app.agenting.OOBICollectionEnd  # class @ keria/app/agenting.py:766
+    # .on_post (L773)
+  - app.agenting.OobiResourceEnd  # class @ keria/app/agenting.py:835
+    # .on_get (L838)
+  - app.agenting.ParserDoer  # class @ keria/app/agenting.py:365
+    # .recur (L372)
+  - app.agenting.QueryCollectionEnd  # class @ keria/app/agenting.py:919
+    # .on_post (L922)
+  - app.agenting.SeekerDoer  # class @ keria/app/agenting.py:420
+    # .recur (L428)
+  - app.agenting.loadEnds  # fn @ keria/app/agenting.py:552
+  - db.basing.AgencyBaser  # class @ keria/db/basing.py:29
+    # .reopen (L83)
+  - db.basing.Begins  # class @ keria/db/basing.py:493
+    # .index (L512)
+    # .name (L516)
+  - db.basing.Cursor  # class @ keria/db/basing.py:282
+    # .sort (L313)
+    # .skip (L317)
+    # .limit (L321)
+    # .indexSearch (L337)
+    # .indexScan (L351)
+    # .fullTableScan (L379)
+    # .tableScan (L383)
+    # .order (L393)
+    # .indexOrder (L402)
+    # .slice (L428)
+    # .tableScanOrder (L435)
+  - db.basing.Eq  # class @ keria/db/basing.py:472
+    # .name (L486)
+    # .index (L489)
+  - db.basing.IndexRecord  # class @ keria/db/basing.py:22
+  - db.basing.operators  # fn @ keria/db/basing.py:448
+
+discovery:  # 4 items
+  - app.aiding.EndRoleCollectionEnd  # class @ keria/app/aiding.py:684
+    # .on_get (L687)
+    # .on_post (L714)
+  - app.aiding.EndRoleResourceEnd  # class @ keria/app/aiding.py:778
+    # .on_delete (L780)
+  - end.ending.OOBIEnd  # class @ keria/end/ending.py:22
+    # .on_get (L40)
+  - end.ending.loadEnds  # fn @ keria/end/ending.py:14
+
+keri/accountability/receipting:  # 1 items
+  - app.agenting.Witnesser  # class @ keria/app/agenting.py:379
+    # .recur (L386)
+
+keri/delegation/lifecycle:  # 1 items
+  - app.agenting.Delegator  # class @ keria/app/agenting.py:403
+    # .recur (L411)
+
+keri/identity:  # 1 items
+  - app.aiding.RpyEscrowCollectionEnd  # class @ keria/app/aiding.py:784
+    # .on_get (L787)
+
+keri/identity/establishment:  # 1 items
+  - app.aiding.IdentifierCollectionEnd  # class @ keria/app/aiding.py:240
+    # .on_options (L244)
+    # .on_get (L249)
+    # .on_post (L294)
+
+keri/identity/key-commitment:  # 2 items
+  - app.aiding.ChallengeCollectionEnd  # class @ keria/app/aiding.py:803
+    # .on_get (L807)
+  - app.aiding.ChallengeResourceEnd  # class @ keria/app/aiding.py:853
+    # .on_post (L857)
+    # .on_put (L916)
+
+keri/identity/state:  # 2 items
+  - app.agenting.Querier  # class @ keria/app/agenting.py:484
+    # .recur (L494)
+  - app.aiding.IdentifierResourceEnd  # class @ keria/app/aiding.py:430
+    # .on_get (L434)
+    # .on_put (L453)
+    # .rotate (L480)
+    # .interact (L552)
+
+keri/identity/thresholds:  # 4 items
+  - app.agenting.GroupRequester  # class @ keria/app/agenting.py:452
+    # .recur (L463)
+  - app.grouping.MultisigRequestCollectionEnd  # class @ keria/app/grouping.py:23
+    # .on_post (L27)
+  - app.grouping.MultisigRequestResourceEnd  # class @ keria/app/grouping.py:83
+    # .on_get (L87)
+  - app.grouping.loadEnds  # fn @ keria/app/grouping.py:16
+
+signify-client/key-management:  # 8 items
+  - core.keeping.ExternKeeper  # class @ keria/core/keeping.py:396
+    # .incept (L401)
+  - core.keeping.GroupManager  # class @ keria/core/keeping.py:334
+    # .incept (L340)
+    # .rotate (L361)
+    # .params (L375)
+  - core.keeping.Prefix  # class @ keria/core/keeping.py:17
+  - core.keeping.RandyManager  # class @ keria/core/keeping.py:237
+    # .incept (L242)
+    # .rotate (L277)
+    # .params (L307)
+  - core.keeping.RemoteKeeper  # class @ keria/core/keeping.py:41
+    # .reopen (L99)
+  - core.keeping.RemoteManager  # class @ keria/core/keeping.py:134
+    # .get (L144)
+    # .sxlt (L161)
+    # .sxlt (L165)
+    # .delete_sxlt (L168)
+  - core.keeping.SaltyManager  # class @ keria/core/keeping.py:172
+    # .incept (L177)
+    # .rotate (L202)
+    # .params (L223)
+  - core.keeping.SaltyPrm  # class @ keria/core/keeping.py:23
+

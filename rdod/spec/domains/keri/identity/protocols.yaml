@@ -1,0 +1,277 @@
+domain_ref: "keri/identity"
+
+protocols:
+  - name: "SingleSigInception"
+    description: "Create a new single-signature identifier with witness accountability. The simplest inception flow — one controller, one key, witnesses for accountability."
+    participants:
+      - domain: "domain://keri/identity/establishment"
+        role: "Validates and accepts the inception event"
+      - domain: "domain://keri/accountability/receipting"
+        role: "Witnesses receipt the inception event"
+      - domain: "domain://keri/accountability/dissemination"
+        role: "Disseminates the receipted event to other validators"
+      - domain: "domain://discovery"
+        role: "Publishes OOBI endpoints for the new identifier"
+    trigger: "Controller requests inception with keys, witness list, and threshold"
+    steps:
+      - seq: 1
+        domain: "domain://keri/identity/establishment"
+        action: "construct_inception_event"
+        input: "Signing keys, next key digests, witness list, TOAD, configuration traits"
+        output: "Signed inception event (icp) with SAID as new AID prefix"
+        on_failure:
+          - error: "ValidationError"
+            action: "abort"
+            compensation: "No state created — nothing to clean up"
+      - seq: 2
+        domain: "domain://keri/identity/establishment"
+        action: "validate_and_accept"
+        input: "Signed inception event + controller signatures"
+        output: "Key state created in database, event logged to KEL"
+        depends_on: [1]
+        on_failure:
+          - error: "MissingSignatureError"
+            action: "escrow"
+            compensation: "Event held in Partially-Signed Escrow (PSE)"
+      - seq: 3
+        domain: "domain://keri/accountability/receipting"
+        action: "collect_witness_receipts"
+        input: "Accepted inception event sent to designated witnesses"
+        output: "Witness receipt signatures (one per witness)"
+        depends_on: [2]
+        on_failure:
+          - error: "WitnessThresholdNotMetError"
+            action: "escrow"
+            compensation: "Event held in Partially-Witnessed Escrow (PWE) — retried as receipts arrive"
+      - seq: 4
+        domain: "domain://keri/accountability/dissemination"
+        action: "disseminate_receipted_event"
+        input: "Inception event + witness receipts meeting TOAD"
+        output: "Event published to watchers and other validators"
+        depends_on: [3]
+      - seq: 5
+        domain: "domain://discovery"
+        action: "publish_oobi"
+        input: "New AID + endpoint URLs + witness roles"
+        output: "OOBI URL resolvable by others"
+        depends_on: [4]
+    timeout: "3600s for witness receipt collection (configurable per escrow type)"
+    compensation: "If witness threshold never met, event remains in PWE until timeout, then pruned"
+    terminal_states:
+      success: "AID exists with established key state, witness receipts meet TOAD, OOBI published"
+      failure: "Event pruned from escrow after timeout — no AID created"
+
+  - name: "KeyRotation"
+    description: "Rotate signing keys for an existing transferable identifier. Pre-rotation binding ensures the new keys match prior commitments."
+    participants:
+      - domain: "domain://keri/identity/establishment"
+        role: "Validates rotation event against pre-rotation commitments"
+      - domain: "domain://keri/identity/key-commitment"
+        role: "Verifies new keys match prior next key digest commitments"
+      - domain: "domain://keri/accountability/receipting"
+        role: "Witnesses receipt the rotation event"
+    trigger: "Controller requests rotation with new keys matching prior next key commitments"
+    steps:
+      - seq: 1
+        domain: "domain://keri/identity/establishment"
+        action: "construct_rotation_event"
+        input: "New keys, new next digests, witness changes (br/ba), new thresholds"
+        output: "Signed rotation event (rot)"
+      - seq: 2
+        domain: "domain://keri/identity/key-commitment"
+        action: "verify_pre_rotation_binding"
+        input: "New key digests compared against prior establishment event's n field"
+        output: "Binding confirmed — new keys are authentic pre-rotated keys"
+        depends_on: [1]
+        on_failure:
+          - error: "ValidationError"
+            action: "abort"
+            compensation: "Rotation rejected — prior key state unchanged"
+      - seq: 3
+        domain: "domain://keri/identity/establishment"
+        action: "validate_and_accept"
+        input: "Rotation event + verified signatures meeting threshold"
+        output: "Key state updated — new keys, new witnesses, new thresholds active"
+        depends_on: [2]
+        on_failure:
+          - error: "MissingSignatureError"
+            action: "escrow"
+            compensation: "PSE — accumulates signatures"
+      - seq: 4
+        domain: "domain://keri/accountability/receipting"
+        action: "collect_witness_receipts"
+        input: "Accepted rotation event"
+        output: "Witness receipts for the rotation"
+        depends_on: [3]
+        on_failure:
+          - error: "WitnessThresholdNotMetError"
+            action: "escrow"
+            compensation: "PWE — retried as receipts arrive"
+    timeout: "3600s"
+    terminal_states:
+      success: "Key state updated, witness receipts collected, old keys no longer valid for new events"
+      failure: "Rotation escrowed or rejected — prior key state remains active"
+
+  - name: "DelegatedInception"
+    description: "Create a delegated identifier requiring approval from a delegator. Two-party flow: delegate constructs the event, delegator anchors approval in their KEL."
+    participants:
+      - domain: "domain://keri/identity/establishment"
+        role: "Validates the delegated inception event"
+      - domain: "domain://keri/delegation/authorization"
+        role: "Verifies delegator's approval seal"
+      - domain: "domain://keri/identity/anchoring"
+        role: "Delegator anchors approval seal via interaction event"
+      - domain: "domain://keri/accountability/receipting"
+        role: "Witnesses receipt both the delegate's and delegator's events"
+    trigger: "Delegate requests inception with delegator AID specified"
+    steps:
+      - seq: 1
+        domain: "domain://keri/identity/establishment"
+        action: "construct_delegated_inception"
+        input: "Keys, next digests, witnesses, TOAD, delegator AID"
+        output: "Signed delegated inception event (dip) with di field"
+      - seq: 2
+        domain: "domain://keri/identity/establishment"
+        action: "validate_basic_structure"
+        input: "Delegated inception event + controller signatures"
+        output: "Event structurally valid, signatures verified"
+        depends_on: [1]
+        on_failure:
+          - error: "MissingSignatureError"
+            action: "escrow"
+            compensation: "PSE"
+      - seq: 3
+        domain: "domain://keri/delegation/authorization"
+        action: "await_delegator_seal"
+        input: "Delegate's dip event SAID, delegator's AID"
+        output: "Delegator's interaction event containing seal anchoring this dip"
+        depends_on: [2]
+        on_failure:
+          - error: "MissingDelegatorSealError"
+            action: "escrow"
+            compensation: "Partially-Delegated Escrow (PDE) — retried when delegator's ixn arrives"
+      - seq: 4
+        domain: "domain://keri/identity/anchoring"
+        action: "delegator_anchors_seal"
+        input: "Delegator creates ixn with digest seal of delegate's dip SAID"
+        output: "Delegator's ixn accepted to their KEL"
+        depends_on: [2]
+      - seq: 5
+        domain: "domain://keri/identity/establishment"
+        action: "accept_delegated_inception"
+        input: "dip event + delegator seal confirmation"
+        output: "Delegated AID established with key state"
+        depends_on: [3, 4]
+      - seq: 6
+        domain: "domain://keri/accountability/receipting"
+        action: "collect_witness_receipts"
+        input: "Both delegate's dip and delegator's ixn"
+        output: "Witness receipts for both events"
+        depends_on: [5]
+    timeout: "86400s (24 hours — delegation may require human approval)"
+    compensation: "If delegator never approves, event pruned from PDE after timeout"
+    terminal_states:
+      success: "Delegated AID exists, delegator's KEL contains approval seal, witnesses have receipted both"
+      failure: "Delegation request expired — no AID created"
+
+  - name: "MultisigRotation"
+    description: "Rotate keys for a multi-signature identifier. All group members must coordinate to produce a rotation event meeting the signing threshold. Similar to MultisigInception but modifies existing key state."
+    participants:
+      - domain: "domain://keri/identity/thresholds"
+        role: "Coordinates signature collection across group members"
+      - domain: "domain://keri/identity/establishment"
+        role: "Validates rotation event with pre-rotation binding"
+      - domain: "domain://keri/identity/key-commitment"
+        role: "Verifies new keys match prior next commitments"
+      - domain: "domain://keri/accountability/receipting"
+        role: "Witnesses receipt the rotation"
+      - domain: "domain://cloud-agent-service/api"
+        role: "Routes coordination messages between members"
+    trigger: "Lead member proposes group rotation with new keys"
+    steps:
+      - seq: 1
+        domain: "domain://keri/identity/thresholds"
+        action: "propose_group_rotation"
+        input: "New keys (matching prior next commitments), new next digests, new thresholds, witness changes"
+        output: "Unsigned rotation event (rot) + exn proposal (route=/multisig/rot)"
+      - seq: 2
+        domain: "domain://cloud-agent-service/api"
+        action: "distribute_rotation_proposal"
+        input: "exn with route=/multisig/rot"
+        output: "Each member receives the rotation proposal"
+        depends_on: [1]
+      - seq: 3
+        domain: "domain://keri/identity/key-commitment"
+        action: "verify_pre_rotation_binding"
+        input: "Each member verifies new keys match prior next key digests"
+        output: "Pre-rotation binding confirmed"
+        depends_on: [2]
+        on_failure:
+          - error: "ValidationError"
+            action: "abort"
+            compensation: "Members reject rotation — prior key state unchanged"
+      - seq: 4
+        domain: "domain://keri/identity/thresholds"
+        action: "accumulate_rotation_signatures"
+        input: "Each member signs the rotation event, returns via exn"
+        output: "Signatures accumulated in PSE until threshold met"
+        depends_on: [3]
+        on_failure:
+          - error: "GroupCoordinationTimeoutError"
+            action: "abort"
+            compensation: "Signatures pruned after timeout"
+      - seq: 5
+        domain: "domain://keri/identity/establishment"
+        action: "validate_and_accept_rotation"
+        input: "Rotation event with threshold-satisfying signatures"
+        output: "Key state updated"
+        depends_on: [4]
+      - seq: 6
+        domain: "domain://keri/accountability/receipting"
+        action: "collect_witness_receipts"
+        input: "Accepted rotation event"
+        output: "Witness receipts meeting TOAD"
+        depends_on: [5]
+    timeout: "3600s for signatures, 3600s for witness receipts"
+    terminal_states:
+      success: "Group AID rotated — new keys active, old keys invalid for new events"
+      failure: "Rotation timeout — prior key state remains active"
+
+  - name: "KeyStateQuery"
+    description: "Query another controller or service for the current key state of an identifier. Returns the key state notice (ksn) which can be verified against the queried identifier's KEL."
+    participants:
+      - domain: "domain://keri/identity/state"
+        role: "Processes the query and returns key state"
+      - domain: "domain://keri/identity/establishment"
+        role: "Validates returned KEL events if key state is unknown locally"
+    trigger: "Controller or service needs current key state of a remote identifier"
+    steps:
+      - seq: 1
+        domain: "domain://keri/identity/state"
+        action: "construct_query"
+        input: "Target AID prefix, query route (ksn or logs)"
+        output: "qry message with route and target prefix"
+      - seq: 2
+        domain: "domain://keri/identity/state"
+        action: "send_query"
+        input: "Signed qry message sent to target's known endpoints"
+        output: "rpy message with key state notice or KEL replay"
+        depends_on: [1]
+        on_failure:
+          - error: "QueryNotFoundError"
+            action: "escrow"
+            compensation: "Query escrowed — retried when target's KEL becomes available"
+      - seq: 3
+        domain: "domain://keri/identity/state"
+        action: "process_reply"
+        input: "Signed rpy with key state data"
+        output: "Key state updated locally if reply is fresher than cached state (BADA policy)"
+        depends_on: [2]
+        on_failure:
+          - error: "BADARejectError"
+            action: "abort"
+            compensation: "Reply is stale — cached state is already newer"
+    timeout: "30s"
+    terminal_states:
+      success: "Local key state updated to latest from remote source"
+      failure: "Query unanswered or reply rejected — cached state unchanged"

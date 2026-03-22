@@ -1,0 +1,55 @@
+domain_ref: "cloud-agent-service"
+
+protocols:
+  - name: "AgentProvisioning"
+    description: "Bootstrap a new cloud agent for a controller. The controller generates their keys at the edge (Signify), then provisions an agent that will manage identifiers on their behalf."
+    participants:
+      - domain: "domain://cloud-agent-service/provisioning"
+        role: "Creates and configures the agent instance"
+      - domain: "domain://cloud-agent-service/api"
+        role: "Provides the boot endpoint for provisioning"
+      - domain: "domain://signify-client/key-management"
+        role: "Generates edge keys and inception event"
+      - domain: "domain://keri/identity/establishment"
+        role: "Validates the agent's inception event"
+    trigger: "Controller's Signify client sends POST /boot with inception event"
+    steps:
+      - seq: 1
+        domain: "domain://signify-client/key-management"
+        action: "generate_agent_keys"
+        input: "Controller passcode, salt, key tier"
+        output: "Agent inception event signed with edge keys"
+      - seq: 2
+        domain: "domain://cloud-agent-service/api"
+        action: "receive_boot_request"
+        input: "POST /boot with signed inception event"
+        output: "Request validated for structure"
+        on_failure:
+          - error: "MissingParameterError"
+            action: "abort"
+      - seq: 3
+        domain: "domain://cloud-agent-service/provisioning"
+        action: "create_agent"
+        input: "Controller AID, inception event"
+        output: "Agent instance created with dedicated databases (Identifier Repository, Registry Manager, Event Database)"
+        depends_on: [2]
+        on_failure:
+          - error: "AgentAlreadyExistsError"
+            action: "abort"
+            compensation: "Return existing agent reference"
+      - seq: 4
+        domain: "domain://keri/identity/establishment"
+        action: "validate_agent_inception"
+        input: "Agent's inception event"
+        output: "Agent AID established with key state"
+        depends_on: [3]
+      - seq: 5
+        domain: "domain://cloud-agent-service/provisioning"
+        action: "register_controller_mapping"
+        input: "Controller AID → Agent AID mapping"
+        output: "Agent discoverable by controller AID"
+        depends_on: [4]
+    timeout: "30s — provisioning is synchronous"
+    terminal_states:
+      success: "Agent running, databases initialized, controller can authenticate via Signify signatures"
+      failure: "Boot request rejected — no agent created"

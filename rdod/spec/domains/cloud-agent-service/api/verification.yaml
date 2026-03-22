@@ -1,6 +1,10 @@
 # verification.yaml
 domain_ref: "cloud-agent-service/api"
 
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
 # Formalized invariants from ubiquitous_language terms
 properties:
   - invariant: "All requests require valid KRAM signatures — unsigned requests rejected"
@@ -97,7 +101,7 @@ properties:
             # Message router accepts KERI-authenticated messages without KRAM
             response = message_router.receive_message(keri_message)
             assert response.status_code != 401  # Not rejected for auth
-    strategy: "valid_keri_message_strategy() generating properly signed KERI protocol messages"
+    strategy: "valid_keri_message_strategy() generating KERI protocol messages with valid event signatures"
     notes: "Message router uses KERI protocol authentication, not KRAM"
 
   - invariant: "Async operations return HTTP 202 with operation handle for polling"
@@ -171,6 +175,42 @@ contracts:
             lambda msg, result:
                 result.routed and notification_queued_for(msg.target_aid)
         description: "Message routed to correct agent and notification queued for edge polling"
+
+  - port_ref: "port://cloud-agent-service/api/inbound/admin-api"
+    preconditions:
+      - description: "Request must have valid Signify HTTP signature headers"
+        formal:
+          language: "pseudocode"
+          expression: "has_header('Signature') AND has_header('Signature-Input') AND has_header('Signify-Resource')"
+      - description: "Signature must verify against the controller's current key state"
+        formal:
+          language: "pseudocode"
+          expression: "verify_http_signature(request, controller_key_state) == true"
+      - description: "Agent must be provisioned for this controller"
+        formal:
+          language: "pseudocode"
+          expression: "agency.get(controller_aid) != null"
+    postconditions:
+      - description: "On success: request routed to the appropriate resource handler"
+        formal:
+          language: "pseudocode"
+          expression: "response.status in [200, 201, 202, 204]"
+      - description: "On auth failure: 401 returned, no state change"
+        formal:
+          language: "pseudocode"
+          expression: "auth_failed implies response.status == 401 AND no_state_change"
+
+  - port_ref: "port://cloud-agent-service/api/inbound/boot"
+    preconditions:
+      - description: "POST body must contain valid inception event"
+        formal:
+          language: "pseudocode"
+          expression: "body.icp != null AND is_valid_inception(body.icp)"
+    postconditions:
+      - description: "On success: agent provisioned and ready for authenticated requests"
+        formal:
+          language: "pseudocode"
+          expression: "agency.get(controller_aid) != null AND response.status == 202"
 
 # No state machine for the API subdomain — it is stateless request/response
 # The lifecycle state machines live in provisioning (agent lifecycle) and processing (operation lifecycle)

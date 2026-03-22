@@ -1,0 +1,78 @@
+# domain.yaml
+template_version: "1.0"
+id: "acdc/credential-lifecycle/verification"
+name: "Credential Verification"
+description: >
+  Verifying the credential chain — ACDC anchored to TEL anchored to issuer's KEL.
+  Multi-step validation pipeline for TEL events and escrow management. Verifies
+  KEL anchor seals, registry existence, issuer state, and credential state
+  transitions. When a TEL event cannot be immediately validated (missing registry,
+  missing issuer KEL event, out-of-order sequence number), it is placed in a
+  typed escrow queue and reprocessed when the blocking condition resolves. The
+  validation pipeline is re-entrant: escrowed events pass through the same steps
+  as freshly received events.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "acdc-specification.md -- Transaction Event Logs (TELs) as ACDC State Registries section"
+  - type: document
+    reference: "acdc-specification.md -- Binding to Key State at Time of ACDC State Change section"
+  - type: implementation
+    reference: "keripy -- src/keri/vdr/verifying.py: Verifier class (processCues(), processEscrows()), verification pipeline"
+  - type: implementation
+    reference: "keripy -- src/keri/vdr/eventing.py: Tevery.processEvent(), Tever.vcState(), escrow subdatabases (.oots, .twes, .taes)"
+  - type: implementation
+    reference: "keriox/teliox -- src/processor.rs: TelEventProcessor.process(), process_management_event(), process_tel_event()"
+  - type: implementation
+    reference: "keriox/teliox -- src/event/verifiable_event.rs: VerifiableEvent struct (event + attached_seal)"
+  - type: implementation
+    reference: "keriox/teliox -- src/tel/mod.rs: Tel.verify_binding() (KEL anchor check)"
+
+ubiquitous_language:
+  - term: "TEL Validation Pipeline"
+    definition: "The multi-step sequence that validates an incoming TEL event from receipt to acceptance or escrow"
+    invariants:
+      - "Steps: extract registry ID, compute registry state, verify KEL anchor seal, compute credential state, apply transition"
+      - "Failure at any step routes to the appropriate escrow queue for later reprocessing"
+
+  - term: "TEL Escrows"
+    definition: "Typed escrow queues for TEL events that cannot be immediately validated"
+    invariants:
+      - "Three escrow types: out-of-order, missing registry, missing issuer"
+      - "Events are reprocessed when the blocking condition resolves"
+
+domain_clients:
+  - ref: "domain://acdc/credential-lifecycle"
+    relationship: "Parent domain delegates all incoming TEL event validation to this subdomain"
+    via_port: "port://acdc/credential-lifecycle/verification/inbound/validate-tel-event"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Blake3-256 digest comparison for seal verification (comparing TEL event SAID against the seal digest in the issuer's KEL)"
+    relationship: "Digest comparison is a kernel operation invoked during KEL anchor verification"
+
+adjacents: []
+
+externals:
+  - name: "Persistence (read KEL and registry state)"
+    abstraction: "Repository (read-only)"
+    ref: "port://acdc/credential-lifecycle/verification/outbound/kel-and-state-lookup"
+    implementation_notes: "Reads issuer's KEL to verify anchor seals, reads registry state and credential state for validation context. Implementations: Reger + Baser (keripy), TelEventDatabase + EventStorage (keriox)"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In keripy, the validation pipeline spans Verifier (src/keri/vdr/verifying.py) and
+    Tevery.processEvent() (src/keri/vdr/eventing.py). The Verifier class manages cues
+    (notification messages) and escrow processing. In keriox, TelEventProcessor.process()
+    in src/processor.rs implements the pipeline, with TelNotificationBus providing pub-sub
+    escrow reprocessing. The pipeline is stateless given a registry state snapshot and
+    the issuer's KEL -- it takes a VerifiableEvent and returns accept/reject/escrow-reason.
+
+issues: []
+
+tags: ["validation", "pipeline", "escrow", "seal-verification", "kel-anchor"]

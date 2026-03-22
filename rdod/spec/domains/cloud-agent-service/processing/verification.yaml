@@ -1,10 +1,14 @@
 # verification.yaml
 domain_ref: "cloud-agent-service/processing"
 
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
 # Formalized invariants from ubiquitous_language terms
 properties:
-  - invariant: "Non-blocking — each recur() call processes available work and returns"
-    term: "Doer"
+  - invariant: "Each work cycle (recur call) MUST process available work items and return within 1 second; the processing loop MUST NOT block on I/O or wait for external events — it drains the deck and returns"
+    term: "Processing Unit"
     technique: property-based
     formal:
       language: python
@@ -20,10 +24,10 @@ properties:
             # recur must return within a bounded time — no blocking
             assert elapsed < 1.0  # 1 second upper bound for cooperative scheduling
     strategy: "st.lists(st.binary()) for work item queues of varying size"
-    notes: "Cooperative scheduling requires each recur() to be non-blocking"
+    notes: "Cooperative scheduling requires each work cycle to be non-blocking"
 
-  - invariant: "Pattern: while deck: item = deck.popleft(); process(item)"
-    term: "Deck"
+  - invariant: "Pattern: while queue: item = queue.popleft(); process(item)"
+    term: "Message Queue"
     technique: property-based
     formal:
       language: python
@@ -39,9 +43,9 @@ properties:
             assert drained == items  # FIFO order preserved
             assert len(deck) == 0   # Fully drained
     strategy: "st.lists(st.integers()) for work items — FIFO ordering must be preserved"
-    notes: "Deck is a FIFO deque — items come out in the order they were appended"
+    notes: "Message Queue (Deck in HIO/keripy) is a FIFO deque — items come out in the order they were appended"
 
-  - invariant: "Escrowed items have a timeout after which they are discarded"
+  - invariant: "Escrowed items MUST be discarded when their age exceeds the configured timeout; items where age < timeout MUST remain active; items where age >= timeout MUST be pruned and MUST NOT be processed further"
     term: "Escrow"
     technique: smt
     formal:
@@ -100,7 +104,7 @@ properties:
     strategy: "st.sampled_from for types, st.text for OIDs"
     notes: "Operation structure: done=True with no error implies response payload exists"
 
-  - invariant: "Assembly is threshold-aware (kt satisfaction check)"
+  - invariant: "Multi-sig assembly MUST check threshold satisfaction: the event is assembled (complete) when collected signatures >= threshold; collected < threshold MUST result in the event remaining escrowed; collected == 0 with threshold > 0 MUST NOT trigger assembly"
     term: "Multi-sig Assembly"
     technique: smt
     formal:
@@ -125,7 +129,7 @@ properties:
     strategy: ""
     notes: "SMT proof that multi-sig assembly requires at least threshold signatures"
 
-  - invariant: "Incomplete signature sets escrowed with timeout"
+  - invariant: "Signature sets where collected < threshold MUST be escrowed (not rejected); escrowed partial signatures MUST be accumulated until threshold is met or timeout expires; zero signatures submitted MUST result in an empty escrow entry"
     term: "Multi-sig Assembly"
     technique: property-based
     formal:
@@ -259,35 +263,33 @@ contracts:
 
 # State machine: Long-running Operation lifecycle
 state_machines:
-  - name: "OperationLifecycle"
-    term: "Long-running Operation"
-    states: ["submitted", "processing", "done", "error", "timeout"]
+  - name: "LongRunningOperation"
+    term: "Operation Lifecycle"
+    states: ["Submitted", "Processing", "Done", "Failed", "Timedout"]
+    initial_state: "Submitted"
+    terminal_states: ["Done", "Failed", "Timedout"]
     transitions:
-      - from: "submitted"
-        to: "processing"
-        trigger: "Monitor begins tracking the operation"
-        guard: "operation.name is valid and component exists for operation type"
-      - from: "processing"
-        to: "done"
-        trigger: "Monitor queries component and component reports completion"
-        guard: "component.complete(oid) == True and no error"
-      - from: "processing"
-        to: "error"
-        trigger: "Component reports failure or invalid state"
-        guard: "component.error(oid) is not None"
-      - from: "processing"
-        to: "timeout"
-        trigger: "Operation exceeds maximum processing duration"
-        guard: "operation.age > MAX_OPERATION_TIMEOUT"
-      - from: "timeout"
-        to: "processing"
-        trigger: "Edge client retries the operation or missing data arrives"
-        guard: "operation can be retried and prerequisite data now available"
+      - from: "Submitted"
+        to: "Processing"
+        trigger: "Operation picked up by processing loop"
+        guard: "Operation type is recognized (oobi, witness, delegation, group, query, registry, credential, endrole)"
+      - from: "Processing"
+        to: "Done"
+        trigger: "All prerequisites met"
+        guard: "Depends on type: witness receipts >= TOAD, or group sigs >= threshold, or OOBI resolved, etc."
+      - from: "Processing"
+        to: "Failed"
+        trigger: "Unrecoverable error during processing"
+        guard: "Fatal error encountered"
+      - from: "Processing"
+        to: "Timedout"
+        trigger: "Operation exceeded maximum processing time"
+        guard: "elapsed_time > operation_timeout"
     invariants:
-      - "An operation in 'done' state has a non-null response payload"
-      - "An operation in 'error' state has a non-null error description"
-      - "An operation in 'processing' state is being actively monitored by the Monitor"
-      - "Edge client can poll any operation regardless of state — done operations return immediately"
+      - "Client polls via GET /operations/{name} — returns 200 with done=true or 202 with done=false"
+      - "Done operations include the response payload"
+      - "Failed operations include error details (code, message)"
+      - "Operations are persisted — survive agent restart"
       - "Operation names are immutable once created — {type}.{oid} never changes"
-    initial_state: "submitted"
-    terminal_states: ["done", "error"]
+      - "An operation in 'Processing' state is being actively monitored by the Monitor"
+      - "Monitor dispatches completion checks to correct component (Counselor for group, Boatswain for delegation, etc.)"

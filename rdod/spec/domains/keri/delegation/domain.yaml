@@ -55,15 +55,15 @@ domain_clients:
     via_port: "port://keri/delegation/inbound/delegation-lifecycle"
 
 subdomains:
-  - ref: "keri/delegation/binding"
-    name: "Delegation Binding"
-    relationship: "Owns cooperative binding mechanics — seals, di field, source seal couples, two-way peg"
-  - ref: "keri/delegation/recovery"
+  - ref: "domain://keri/delegation/authorization"
+    name: "Delegation Authorization"
+    relationship: "Owns cooperative binding mechanics — delegator approves or denies via seals, di field, source seal couples, two-way peg"
+  - ref: "domain://keri/delegation/recovery"
     name: "Delegation Recovery"
     relationship: "Owns recovery logic — superseding rules B1-B3-C, joint compromise requirement, custodial delegation"
-  - ref: "keri/delegation/validation"
-    name: "Delegation Validation"
-    relationship: "Owns validation pipeline and escrow queues — .pdes, .delegables, .aess"
+  - ref: "domain://keri/delegation/lifecycle"
+    name: "Delegation Lifecycle"
+    relationship: "Owns delegated inception and rotation event lifecycle — validation pipeline and escrow queues"
 
 kernels:
   - ref: "kernel://cryptographic-algorithms"

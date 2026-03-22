@@ -1,0 +1,55 @@
+# ubiquitous-language.yaml
+domain_ref: "local-agent/api"
+
+terms:
+  - term: "Hab/Habery API"
+    synonyms: ["Habery Interface", "Programmatic API"]
+    definition: "The direct function interface through which application code interacts with the local KERI stack. The Identifier Repository (Habery in keripy) manages the collection; Hab represents a single AID with signing capability."
+    invariants:
+      - "init() creates an Identifier Repository (Habery in keripy) with shared database, key manager, and event processor"
+      - "incept() creates a new Hab (AID) under the Identifier Repository"
+      - "rotate(), interact(), sign() operate on an existing Hab"
+      - "All operations are synchronous and in-process"
+    examples:
+      - "habery = Habery(name='controller', salt=salt)"
+      - "hab = habery.makeHab('myaid', icount=1, ncount=1, wits=[wit1, wit2])"
+    related_terms: ["CLI Interface", "Credential Operations"]
+
+  # Inherits: "CLI Interface" from domain://local-agent
+  - term: "CLI Interface"
+    synonyms: ["kli", "KERI Command Line"]
+    specializes: "CLI Interface"
+    definition: "In the context of the API subdomain, the CLI interface is the command-line boundary through which human operators interact with the local KERI stack. Specializes the parent definition with the API perspective: each kli command maps to an Identifier Repository (Habery in keripy)/Hab operation through the programmatic API layer."
+    invariants:
+      - "kli commands map directly to Identifier Repository (Habery in keripy)/Hab/Manager operations"
+      - "Configuration via --config-dir and --config-file"
+      - "Each invocation opens the local database, performs the operation, and closes"
+    examples:
+      - "kli init --name controller --salt 0ACDEy..."
+      - "kli incept --name controller --alias myaid --file inception-config.json"
+    related_terms: ["Hab/Habery API"]
+
+  - term: "Credential Operations"
+    synonyms: ["Local Credential API"]
+    definition: "The interface for credential lifecycle operations — issuance, revocation, and verification — all executed locally."
+    invariants:
+      - "issue_credential anchors ACDC SAID to the controller's KEL"
+      - "revoke_credential creates TEL revocation event"
+      - "All operations execute in-process against the local database"
+    examples:
+      - "kli vc issue --name controller --alias myaid --registry myreg --schema SAID --data @payload.json"
+    related_terms: ["Hab/Habery API", "CLI Interface"]
+
+events:
+  - name: "APIOperationInvoked"
+    payload: "operation: string, aid: AID, source: cli | method-call"
+    triggers: "Controller invokes an operation via kli command or Hab/Habery method call"
+
+  - name: "APIOperationCompleted"
+    payload: "operation: string, aid: AID, result: success | error, duration_ms: int"
+    triggers: "API operation completes with success or error"
+
+rules:
+  - "CLI is a thin layer — each kli command maps directly to a domain operation"
+  - "All API operations are synchronous and in-process — no network dependency for core operations"
+  - "Private keys never leave the process boundary — the API boundary enforces this"

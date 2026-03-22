@@ -3,9 +3,10 @@ template_version: "1.0"
 id: "keri"
 name: "KERI Protocol"
 description: >
-  Key Event Receipt Infrastructure — a decentralized key management protocol
-  providing self-certifying identifiers, append-only key event logs, witness-based
-  consensus, pre-rotation for post-quantum key compromise recovery, and delegated
+  How you prove who you are — decentralized key management providing cryptographic identity
+  with delegation, accountability through witnesses, and integrity through watchers. Key Event
+  Receipt Infrastructure provides self-certifying identifiers, append-only key event logs,
+  witness-based consensus, pre-rotation for post-quantum key compromise recovery, and delegated
   hierarchical key management. The central orchestrating domain of the ecosystem.
 version: "0.1.0"
 
@@ -78,28 +79,25 @@ domain_clients:
     relationship: "Cloud agent service runs KERI protocol on behalf of thin wallet controllers"
     via_port: "port://keri/inbound/identifier-lifecycle"
   - ref: "domain://witness-service"
-    relationship: "Witness nodes implement the witness-agreement protocol"
+    relationship: "Witness nodes implement the accountability protocol"
     via_port: "port://keri/inbound/event-verification"
   - ref: "domain://watcher-service"
-    relationship: "Watcher nodes implement duplicity-detection monitoring"
+    relationship: "Watcher nodes implement integrity monitoring protocol"
     via_port: "port://keri/inbound/event-verification"
 
 subdomains:
-  - ref: "domain://keri/key-state"
-    relationship: "KERI drives key state computation from the event log"
-    via_port: "port://keri/key-state/inbound/state-computation"
-  - ref: "domain://keri/event-log"
-    relationship: "KERI drives event creation, validation, and log management"
-    via_port: "port://keri/event-log/inbound/event-management"
-  - ref: "domain://keri/witness-agreement"
-    relationship: "KERI drives witness receipting and consensus"
-    via_port: "port://keri/witness-agreement/inbound/receipting"
-  - ref: "domain://keri/duplicity-detection"
-    relationship: "KERI drives duplicity monitoring and evidence handling"
-    via_port: "port://keri/duplicity-detection/inbound/monitoring"
+  - ref: "domain://keri/identity"
+    relationship: "KERI drives identity creation, key rotation, data anchoring, and key state computation"
+    via_port: "port://keri/identity/inbound/identity-management"
   - ref: "domain://keri/delegation"
     relationship: "KERI drives delegated identifier lifecycle"
     via_port: "port://keri/delegation/inbound/delegation-lifecycle"
+  - ref: "domain://keri/accountability"
+    relationship: "KERI drives witness receipting, consensus, and event dissemination"
+    via_port: "port://keri/accountability/inbound/receipting"
+  - ref: "domain://keri/integrity"
+    relationship: "KERI drives duplicity detection, evidence handling, and superseding recovery"
+    via_port: "port://keri/integrity/inbound/monitoring"
 
 kernels:
   - ref: "kernel://cryptographic-algorithms"
@@ -115,9 +113,9 @@ adjacents:
     relationship: "Partnership — ACDC credentials anchor to KERI identifiers for issuer authentication"
     via_port: "port://acdc/inbound/credential-lifecycle"
     is_cross_cutting: false
-  - ref: "domain://oobi"
+  - ref: "domain://discovery"
     relationship: "Partnership — OOBIs bootstrap discovery of KERI identifiers and their service endpoints"
-    via_port: "port://oobi/inbound/discovery"
+    via_port: "port://discovery/inbound/discovery"
     is_cross_cutting: false
 
 externals:

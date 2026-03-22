@@ -1,0 +1,181 @@
+domain_ref: "cesr/primitives"
+
+types:
+  - name: "Matter"
+    description: "Base type for all CESR-qualified cryptographic primitives. Encapsulates a (code, raw) pair with domain transforms to/from qb64 (Text) and qb2 (Binary)."
+    variants:
+      - name: "default"
+        fields:
+          - name: "code"
+            type: "string"
+            required: true
+            description: "CESR type code — identifies the cryptographic algorithm and raw size"
+          - name: "raw"
+            type: "bytes"
+            required: true
+            description: "Raw cryptographic material (key bytes, digest bytes, etc.)"
+          - name: "qb64"
+            type: "string"
+            required: false
+            description: "Text domain representation — Base64url-encoded with code prefix"
+          - name: "qb2"
+            type: "bytes"
+            required: false
+            description: "Binary domain representation — binary-encoded with code prefix"
+        invariants:
+          - "code + raw ↔ qb64 ↔ qb2 — all three representations are equivalent and convertible"
+          - "code determines the expected raw length — mismatches are errors"
+          - "qb64 length is always a multiple of 4 characters (quadlet-aligned)"
+          - "qb2 length is always a multiple of 3 bytes (triplet-aligned)"
+          - "Construction from any one representation yields the other two"
+
+  - name: "SigningThreshold"
+    description: "Threshold expression for multi-signature requirements. Determines how many (or which combination of) keys must sign."
+    variants:
+      - name: "simple"
+        fields:
+          - name: "value"
+            type: "integer"
+            required: true
+            description: "Simple M-of-N threshold — M keys must sign"
+            constraints:
+              min: 1
+        invariants:
+          - "value >= 1"
+          - "value <= number of signing keys"
+          - "satisfied when len(verified_indices) >= value"
+      - name: "weighted"
+        fields:
+          - name: "weights"
+            type: "array[string]"
+            required: true
+            description: "Fractional weight per key position — e.g., ['1/2', '1/2', '1/2']"
+        invariants:
+          - "Each weight is a fraction (numerator/denominator)"
+          - "len(weights) must equal number of signing keys"
+          - "satisfied when sum of weights at verified indices >= 1.0"
+      - name: "combination"
+        fields:
+          - name: "clauses"
+            type: "array[array[string]]"
+            required: true
+            description: "List of weighted clauses — each clause is a weight list, any clause satisfied = threshold satisfied"
+        invariants:
+          - "Each clause is independently evaluated as a weighted threshold"
+          - "Overall threshold satisfied if ANY clause is satisfied (OR semantics across clauses)"
+
+  - name: "Seal"
+    description: "Cryptographic commitment binding external data to a KEL event via the anchors (a) field."
+    variants:
+      - name: "digest"
+        fields:
+          - name: "d"
+            type: "string"
+            required: true
+            description: "Digest (SAID) of the anchored data"
+        invariants:
+          - "Binds a single data item by its content hash"
+      - name: "event"
+        fields:
+          - name: "i"
+            type: "string"
+            required: true
+            description: "AID prefix of the referenced event"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Sequence number of the referenced event"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID of the referenced event"
+        invariants:
+          - "References a specific event in another identifier's KEL"
+          - "Used for delegation seals and cross-KEL anchoring"
+      - name: "event-location"
+        fields:
+          - name: "i"
+            type: "string"
+            required: true
+            description: "AID prefix"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Sequence number"
+          - name: "t"
+            type: "string"
+            required: true
+            description: "Event type (ilk)"
+          - name: "p"
+            type: "string"
+            required: true
+            description: "Prior event SAID"
+        invariants:
+          - "Locates an event by its position and type in another KEL"
+
+  - name: "VersionString"
+    description: "Self-describing header encoding protocol, version, serialization format, and message size."
+    variants:
+      - name: "v2"
+        fields:
+          - name: "protocol"
+            type: "string"
+            required: true
+            description: "4-char protocol identifier"
+            constraints:
+              enum: ["KERI", "ACDC"]
+          - name: "major"
+            type: "integer"
+            required: true
+            description: "Protocol major version"
+          - name: "minor"
+            type: "integer"
+            required: true
+            description: "Protocol minor version"
+          - name: "cesr_major"
+            type: "integer"
+            required: true
+            description: "CESR genus major version"
+          - name: "cesr_minor"
+            type: "integer"
+            required: true
+            description: "CESR genus minor version"
+          - name: "kind"
+            type: "string"
+            required: true
+            description: "Serialization format"
+            constraints:
+              enum: ["JSON", "CBOR", "MGPK", "CESR"]
+          - name: "size"
+            type: "integer"
+            required: true
+            description: "Total serialized message size in bytes"
+        invariants:
+          - "v2 format: PPPPMmmGggKKKKBBBB. (19 characters, period terminated)"
+          - "Size is Base64-encoded (max 16,777,216)"
+          - "Must be the FIRST field in any field map"
+      - name: "v1"
+        fields:
+          - name: "protocol"
+            type: "string"
+            required: true
+            description: "4-char protocol identifier"
+          - name: "major"
+            type: "integer"
+            required: true
+            description: "Major version (hex)"
+          - name: "minor"
+            type: "integer"
+            required: true
+            description: "Minor version (hex)"
+          - name: "kind"
+            type: "string"
+            required: true
+            description: "Serialization format"
+          - name: "size"
+            type: "integer"
+            required: true
+            description: "Total size"
+        invariants:
+          - "v1 format: PPPPvvKKKKllllll_ (17 characters, underscore terminated)"
+          - "Size is hex-encoded (max 16,777,215)"

@@ -21,11 +21,11 @@ source_material:
 
 ubiquitous_language:
   - term: "Habitat"
-    definition: "Controller's view of a managed AID. Hab = one AID, Habery = collection sharing database. Wraps Kever with signing capability"
+    definition: "Controller's view of a managed AID. Hab = one AID, Identifier Repository (Habery in keripy) = collection sharing database. Wraps Key State Tracker (Kever in keripy) with signing capability"
     invariants:
       - "Each Habitat maps to exactly one AID"
-      - "Habery provides shared database, key manager, and event processor to all its Habitats"
-      - "Habitat combines key state verification (Kever) with local signing capability"
+      - "Identifier Repository (Habery in keripy) provides shared database, key manager, and event processor to all its Habitats"
+      - "Habitat combines key state verification (Key State Tracker / Kever in keripy) with local signing capability"
 
   - term: "Local Key Manager"
     definition: "Manages private keys on device without network dependency. Generates Signers from Salter with configurable tiers"
@@ -35,16 +35,16 @@ ubiquitous_language:
       - "Deterministic key derivation from local salt"
 
   - term: "Local Event Processor"
-    definition: "Full Kevery event validation pipeline running in-process, not proxied via cloud agent. Includes all escrow processing"
+    definition: "Full Event Processor (Kevery in keripy) validation pipeline running in-process, not proxied via cloud agent. Includes all escrow processing"
     invariants:
       - "Validates events against current key state"
       - "Manages all escrow types locally (partial signatures, out-of-order events, unverified receipts)"
       - "Emits cues for receipting and notification"
 
   - term: "Local Database"
-    definition: "LMDB/redb with all subdatabases running on local storage — the Baser on device"
+    definition: "LMDB/redb with all subdatabases running on local storage — the Event Database (Baser in keripy) on device"
     invariants:
-      - "Subdatabases: .evts, .kels, .sigs, .wigs, .rcts, .ures, .ooes, .dels, .ldes"
+      - "Subdatabases: event store [.evts], KEL index [.kels], controller signatures [.sigs], witness signatures [.wigs], receipts [.rcts], unverified receipt escrow [.ures], out-of-order escrow [.ooes], delegator approval [.dels], likely duplicitous escrow [.ldes] in keripy"
       - "Append-only semantics for KEL events"
       - "Supports indexed access by prefix, sequence number, digest, and first-seen number"
 
@@ -62,7 +62,7 @@ ubiquitous_language:
       - "Watcher duplicity reports received and processed locally"
 
   - term: "Local Credential Management"
-    definition: "Full TEL processing and credential storage locally — Regery, Verifier, and Credentialer running on device"
+    definition: "Full TEL processing and credential storage locally — Registry Manager (Regery in keripy), Verifier, and Credentialer running on device"
     invariants:
       - "Registry TEL events created and stored locally"
       - "Credential issuance, revocation, and verification all in-process"
@@ -71,13 +71,16 @@ ubiquitous_language:
   - term: "CLI Interface"
     definition: "Command-line tool (kli in keripy) for local agent operations: inception, rotation, credential issuance, OOBI resolution, and more"
     invariants:
-      - "kli commands map to Habery/Hab operations"
+      - "kli commands map to Identifier Repository (Habery in keripy)/Hab operations"
       - "Interactive workflows for multi-sig coordination"
       - "Configuration via config files and command-line arguments"
 
 domain_clients: []
 
-subdomains: []
+subdomains:
+  - ref: "domain://local-agent/api"
+    relationship: "CLI and direct function interface — the boundary through which controllers interact with their local KERI stack"
+    via_port: "port://local-agent/api/inbound/hab-operations"
 
 kernels:
   - ref: "kernel://cryptographic-algorithms"
@@ -97,9 +100,9 @@ adjacents:
     relationship: "Conformist — uses ACDC credential types, TEL events, and IPEX exchange protocol directly"
     via_port: "port://acdc/inbound/credential-lifecycle"
     is_cross_cutting: false
-  - ref: "domain://oobi"
+  - ref: "domain://discovery"
     relationship: "Customer-Supplier — resolves OOBIs directly over HTTP for endpoint and key state discovery"
-    via_port: "port://oobi/inbound/discovery"
+    via_port: "port://discovery/inbound/discovery"
     is_cross_cutting: false
   - ref: "domain://witness-service"
     relationship: "Customer-Supplier — connects to witnesses directly via HTTP for event receipting and key state verification"

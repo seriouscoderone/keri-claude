@@ -1,0 +1,106 @@
+# verification.yaml
+domain_ref: "witness-service/api"
+
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
+properties:
+  - invariant: "HTTP POST to /submit with Content-Type application/cesr MUST return exactly one of: 200 (accepted with receipt), 202 (escrowed pending additional info), or 409 (conflicting event at same prefix+sn); any other Content-Type MUST return 415"
+    term: "Event Submission"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(cesr_stream=cesr_key_event_stream(),
+               content_type=st.sampled_from(['application/cesr', 'application/json', 'text/plain', '']))
+        def test_api_accepts_only_cesr(cesr_stream, content_type):
+            response = http_post('/submit', body=cesr_stream, content_type=content_type)
+            if content_type == 'application/cesr':
+                assert response.status_code in (200, 202, 409)
+            else:
+                assert response.status_code == 415, (
+                    f"Non-CESR Content-Type '{content_type}' MUST return 415, got {response.status_code}"
+                )
+    strategy: "cesr_key_event_stream() x st.sampled_from for content types"
+    notes: "Only application/cesr is accepted. Other content types are rejected at the API boundary."
+
+  - invariant: "On HTTP 200 (accepted): response body MUST contain a CESR-encoded receipt where the witness AID starts with 'B' (Ed25519 non-transferable prefix) and the receipt's event SAID matches the submitted event's SAID; on HTTP 409 (conflict): response MUST contain a CESR-encoded rejection with reason 'conflicting_event_at_sn'"
+    term: "Event Submission"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=valid_key_event_strategy())
+        def test_api_returns_receipt_or_rejection(event):
+            cesr_stream = encode_cesr(event)
+            response = http_post('/submit', body=cesr_stream, content_type='application/cesr')
+            if response.status_code == 200:
+                receipt = parse_cesr_receipt(response.body)
+                assert receipt.witness_aid.startswith('B'), (
+                    f"Witness AID must be non-transferable (B prefix), got '{receipt.witness_aid[0]}'"
+                )
+                assert receipt.event_said == event.said, (
+                    f"Receipt SAID {receipt.event_said} must match submitted event SAID {event.said}"
+                )
+            elif response.status_code == 409:
+                rejection = parse_cesr_error(response.body)
+                assert rejection.reason == 'conflicting_event_at_sn'
+    strategy: "valid_key_event_strategy() for key events"
+    notes: "First-seen events get receipts with witness attribution; conflicting events get specific rejection reason."
+
+  - invariant: "Submitting a malformed CESR stream (truncated, invalid prefix codes, or zero-length body) MUST return HTTP 400; the witness MUST NOT store any partial data from malformed submissions"
+    term: "Event Submission"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(malformed=st.one_of(
+            st.just(b''),                          # empty body
+            st.binary(min_size=1, max_size=5),     # truncated
+            st.binary(min_size=100, max_size=200)   # random bytes, not valid CESR
+        ))
+        def test_malformed_cesr_rejected(malformed):
+            response = http_post('/submit', body=malformed, content_type='application/cesr')
+            assert response.status_code == 400, (
+                f"Malformed CESR must return 400, got {response.status_code}"
+            )
+    strategy: "st.one_of for empty, truncated, and random byte payloads"
+    notes: "The API boundary MUST reject malformed CESR before any processing occurs."
+
+  - invariant: "Submitting the exact same event twice MUST return the same receipt both times (idempotent); the receipt signature and witness AID MUST be identical across resubmissions"
+    term: "Event Submission"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=valid_key_event_strategy())
+        def test_resubmission_idempotent(event):
+            cesr_stream = encode_cesr(event)
+            r1 = http_post('/submit', body=cesr_stream, content_type='application/cesr')
+            r2 = http_post('/submit', body=cesr_stream, content_type='application/cesr')
+            assert r1.status_code == r2.status_code == 200
+            receipt1 = parse_cesr_receipt(r1.body)
+            receipt2 = parse_cesr_receipt(r2.body)
+            assert receipt1.witness_aid == receipt2.witness_aid
+            assert receipt1.signature == receipt2.signature
+    strategy: "valid_key_event_strategy() submitted twice"
+    notes: "Duplicate submission returns the cached receipt. No double-receipting."
+
+contracts:
+  - port_ref: "port://witness-service/api/inbound/event-submission"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda cesr_message: is_valid_cesr_stream(cesr_message) and contains_key_event(cesr_message)"
+        description: "Inbound message must be a valid CESR stream containing a key event"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda cesr_message, response:
+                (is_cesr_receipt(response) and response.witness_aid.startswith('B'))
+                or is_cesr_rejection(response)
+        description: "Response is either a CESR-encoded receipt or a CESR-encoded rejection"
+
+state_machines: []

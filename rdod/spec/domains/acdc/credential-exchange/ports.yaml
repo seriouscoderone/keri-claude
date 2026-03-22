@@ -1,0 +1,18 @@
+# ports.yaml
+domain_ref: "acdc/credential-exchange"
+
+ports:
+  # Inbound -- what the parent ACDC domain calls
+  - id: "port://acdc/credential-exchange/inbound/exchange-protocol"
+    type: inbound
+    name: "Exchange Protocol"
+    contract: "initiate_issuance(issuer_aid, issuee_aid, acdc) -> GrantMessage; initiate_presentation(discloser_aid, disclosee_aid, acdc, variant) -> OfferMessage; process_exchange(exn_message) -> ExchangeResult"
+    protocol: "method-call"
+    refs: ["domain://acdc"]
+
+  - id: "port://acdc/credential-exchange/inbound/direct-issuance"
+    type: inbound
+    name: "Direct Issuance"
+    contract: "grant(issuer_aid, issuee_aid, acdc, signature) -> GrantMessage; admit(grant_msg, disclosee_signature) -> AdmitMessage"
+    protocol: "method-call"
+    refs: ["domain://acdc"]

@@ -168,7 +168,7 @@ terms:
 
   - term: "Event Database"
     synonyms: ["Baser"]
-    definition: "Persistent storage for KELs, escrows, receipts, key state, and application data. Organized as named subdatabases (.evts, .kels, .sigs, .wigs, .rcts, etc.)."
+    definition: "Persistent storage for KELs, escrows, receipts, key state, and application data. Organized as named subdatabases (event store, KEL index, signature store, witness signature store, receipt store, etc. [.evts, .kels, .sigs, .wigs, .rcts in keripy])."
     invariants:
       - "Provides append-only semantics for KEL events"
       - "Supports indexed access by prefix, sequence number, digest, and first-seen number"
@@ -255,6 +255,39 @@ terms:
       - "t='exn' → Exchanger.processEvent() (routes by inner 'r' field to IPEX, multisig, etc.)"
       - "t='iss' → Tevery.processEvent()"
     related_terms: ["Message Parser", "Event Processor", "Key Event", "Witness", "IPEX"]
+
+  - term: "Exchange Message (exn)"
+    definition: "Generic routed message envelope for peer-to-peer communication between KERI controllers. Any domain can communicate by constructing an exn with a route field and registering a handler for inbound routes via the Exchanger. The exn message type is the standard carrier for IPEX credential exchange, multisig coordination, endpoint authorization, and any future peer protocol."
+    invariants:
+      - "Route (r) field determines which domain protocol handles the message"
+      - "Known route prefixes: /ipex/* (credential exchange), /multisig/* (group coordination), /end/role and /loc/scheme (discovery), /watcher/* (integrity), /ksn (key state), /tsn/* (credential status)"
+      - "Every exn is signed by the sender's AID — provides non-repudiable attribution"
+      - "Subject to KRAM replay protection before domain dispatch"
+      - "Prior (p) field links messages in multi-step conversations"
+    examples:
+      - "IPEX grant: exn with route=/ipex/grant, payload=credential data, embeds=ACDC+TEL+seal"
+      - "Multisig inception: exn with route=/multisig/icp, payload=inception parameters"
+      - "Endpoint authorization: exn with route=/end/role, payload=endpoint data"
+    related_terms: ["Exchanger", "KRAM"]
+
+  - term: "Exchanger"
+    definition: "Generic message router that dispatches inbound exchange (exn) messages to handlers registered by route prefix. Domains register their route handlers at startup. The Exchanger validates message signatures before dispatching to the appropriate handler. Any domain can participate in peer-to-peer communication by registering a route handler."
+    invariants:
+      - "Routes incoming exn messages to the handler registered for the message's route field"
+      - "Validates message signatures before dispatching"
+      - "Escrows messages awaiting prerequisites — never silently drops"
+      - "Multiple domains can register handlers simultaneously"
+    related_terms: ["Exchange Message (exn)"]
+
+  - term: "KERI Field Map"
+    definition: "The ordered key-value structure of a KERI message body. Field maps use short field labels (v, t, d, i, s, etc.) for wire efficiency, but each field represents a specific domain concept. The presence or absence of optional fields signals semantic meaning — for example, the di field signals delegation, the n field signals transferability. Implementations SHOULD provide domain-typed construction interfaces that map human-readable concepts to field labels."
+    invariants:
+      - "Field order is canonical per message type — deviations invalidate the SAID"
+      - "Required fields MUST always be present; optional fields signal semantic variation"
+      - "The d field is always a SAID (self-addressing identifier) computed over the field map"
+      - "The v field is always first — enables protocol and version detection"
+      - "The t field identifies the message type (ilk)"
+    related_terms: ["SAID", "Identifier Type Dimensions"]
 
 events:
   - name: "InceptionCreated"

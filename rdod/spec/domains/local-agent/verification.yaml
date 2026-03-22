@@ -1,6 +1,10 @@
 # verification.yaml
 domain_ref: "local-agent"
 
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
 # Formalized invariants from ubiquitous_language terms
 properties:
   - invariant: "Each Habitat maps to exactly one AID"
@@ -21,7 +25,7 @@ properties:
     strategy: ""
     notes: "SMT proof that Hab-to-AID mapping is a function (1:1)"
 
-  - invariant: "Hab wraps Kever + signing capability (Hab.verfers == Kever.verfers)"
+  - invariant: "Hab wraps Key State Tracker (Kever in keripy) + signing capability (Hab.verfers == Key State Tracker.verfers)"
     term: "Habitat"
     technique: property-based
     formal:
@@ -45,9 +49,9 @@ properties:
             for sig, verfer in zip(sigs, hab.kever.verfers):
                 assert verfer.verify(sig.raw, content)
     strategy: "st.integers for key count and next-key count"
-    notes: "Hab combines verification (Kever) with signing (Manager) — verfers must be consistent between them"
+    notes: "Hab combines verification (Key State Tracker / Kever in keripy) with signing (Manager) — verfers must be consistent between them"
 
-  - invariant: "A Habery provides a shared database (Baser), key manager (Manager), and event processor (Kevery) to all its Habitats"
+  - invariant: "An Identifier Repository (Habery in keripy) provides a shared Event Database (Baser in keripy), key manager (Manager), and Event Processor (Kevery in keripy) to all its Habitats"
     term: "Habitat"
     technique: property-based
     formal:
@@ -64,7 +68,7 @@ properties:
             # All habs share the same event processor
             assert all(h.kvy is habery.kvy for h in habs)
     strategy: "st.integers for number of habs to create"
-    notes: "Habery is the resource owner — all Habs created from it share Baser, Manager, and Kevery"
+    notes: "Identifier Repository (Habery in keripy) is the resource owner — all Habs created from it share Event Database (Baser), Manager, and Event Processor (Kevery)"
 
   - invariant: "Append-only semantics for KEL events — events are never modified after acceptance"
     term: "Local Database"
@@ -165,11 +169,11 @@ properties:
     strategy: "st.binary for salt, st.integers for key count"
     notes: "Local key manager is entirely in-process — private keys never transmitted anywhere"
 
-  - invariant: "Validates events against current key state — same rules as any Kevery instance"
+  - invariant: "Validates events against current key state — same rules as any Event Processor (Kevery in keripy) instance"
     term: "Local Event Processor"
     technique: property-based
     formal:
-      language: python
+      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
       expression: |
         @given(
             valid_event=valid_key_event_strategy(),
@@ -184,9 +188,9 @@ properties:
             with pytest.raises(ValidationError):
                 habery.kvy.process(invalid_event)
     strategy: "Custom strategies for valid and invalid key events"
-    notes: "Local Kevery applies the same validation rules as any KERI event processor"
+    notes: "Local Event Processor (Kevery in keripy) applies the same validation rules as any KERI event processor"
 
-  - invariant: "Registry TEL events (vcp, iss, rev, bis, brv) created and stored in the local Baser"
+  - invariant: "Registry TEL events (vcp, iss, rev, bis, brv) created and stored in the local Event Database (Baser in keripy)"
     term: "Local Credential Management"
     technique: property-based
     formal:
@@ -236,7 +240,7 @@ properties:
     strategy: "st.booleans() for temp vs persistent mode"
     notes: "LMDB memory-mapped I/O requires persistent local filesystem — Lambda/serverless is incompatible"
 
-  - invariant: "kli commands map directly to Habery/Hab/Manager operations"
+  - invariant: "kli commands map directly to Identifier Repository (Habery in keripy)/Hab/Manager operations"
     term: "CLI Interface"
     technique: property-based
     formal:
@@ -268,7 +272,7 @@ contracts:
       - formal:
           language: python
           expression: "lambda name, salt, config: name is not None and salt is not None"
-        description: "init requires a name and salt for the Habery"
+        description: "init requires a name and salt for the Identifier Repository (Habery in keripy)"
       - formal:
           language: python
           expression: "lambda alias, icount, ncount, wits, toad: alias is not None and icount >= 1 and ncount >= 0 and toad <= len(wits)"
@@ -285,7 +289,7 @@ contracts:
                 habery.db is not None
                 and habery.mgr is not None
                 and habery.kvy is not None
-        description: "init creates a Habery with shared database, key manager, and event processor"
+        description: "init creates an Identifier Repository (Habery in keripy) with shared database, key manager, and event processor"
       - formal:
           language: python
           expression: |
@@ -294,7 +298,7 @@ contracts:
                 and hab.kever is not None
                 and hab.kever.verfers == hab.verfers
                 and hab.kever.sn == 0
-        description: "incept creates a Hab at sn=0 with consistent verfers between Hab and Kever"
+        description: "incept creates a Hab at sn=0 with consistent verfers between Hab and Key State Tracker (Kever in keripy)"
       - formal:
           language: python
           expression: |

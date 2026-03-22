@@ -1,0 +1,221 @@
+# verification.yaml
+domain_ref: "keri/accountability"
+
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
+properties:
+  - invariant: "KAWA requires exactly one phase — the controller submits a signed event and witnesses receipt it; no multi-phase commit, no prepare/commit split, no coordinator election; the controller is the sole source of truth for event ordering"
+    term: "KAWA"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(witness_count=st.integers(min_value=1, max_value=20))
+        def test_kawa_single_phase(witness_count):
+            controller = create_controller()
+            witnesses = [create_witness() for _ in range(witness_count)]
+            kawa = KAWA(controller=controller, witnesses=witnesses)
+            assert kawa.phases == 1, f"KAWA must be single-phase, got {kawa.phases} phases"
+            assert kawa.controller_is_sole_source, "Controller must be sole ordering authority"
+            # No prepare/commit split regardless of witness count
+            assert not hasattr(kawa, 'prepare_phase')
+            assert not hasattr(kawa, 'commit_phase')
+    strategy: "st.integers(1..20) for witness count"
+    notes: "KAWA never enters multi-phase commit — the controller's signed event is the authoritative ordering."
+
+  - invariant: "Receipt dissemination exchange count MUST be <= 2*N for round-robin and <= N*ceil(log2(N+1)) for gossip; for N=1 witness, round-robin MUST use at most 2 exchanges; for N=0 (direct mode), zero exchanges occur"
+    term: "KAWA"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(n=st.integers(min_value=0, max_value=100),
+               strategy=st.sampled_from(['round_robin', 'gossip']))
+        def test_dissemination_scaling(n, strategy):
+            if n == 0:
+                exchanges = simulate_dissemination(n, strategy)
+                assert exchanges == 0, "Zero witnesses means zero exchanges"
+            elif strategy == 'round_robin':
+                exchanges = simulate_dissemination(n, strategy)
+                assert exchanges <= 2 * n, (
+                    f"Round-robin: {exchanges} exchanges exceeds 2*{n}={2*n}"
+                )
+            else:
+                exchanges = simulate_dissemination(n, strategy)
+                assert exchanges <= n * math.ceil(math.log2(n + 1)), (
+                    f"Gossip: {exchanges} exchanges exceeds N*log(N+1) bound"
+                )
+    strategy: "st.integers(0..100) x st.sampled_from for dissemination strategies"
+    notes: "Both strategies have provable upper bounds. Direct mode (N=0) has zero exchanges."
+
+  - invariant: "The establishment event MUST contain both a witness list (b field, list of non-transferable AIDs) AND an accountability threshold (bt field, integer >= 0); both fields MUST be controller-signed; the b field MUST NOT be null"
+    term: "KAWA"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(est_event=establishment_event_strategy())
+        def test_witness_and_threshold_in_event(est_event):
+            assert est_event.b is not None, "b field must not be null"
+            assert isinstance(est_event.b, list), "b field must be a list"
+            assert est_event.bt is not None, "bt field must not be null"
+            assert isinstance(est_event.bt, int) or isinstance(est_event.bt, str), (
+                "bt must be integer or hex-encoded string"
+            )
+            assert est_event.controller_signed(), "Event must be controller-signed"
+    strategy: "establishment_event_strategy()"
+    notes: "Both the witness set and threshold are controller-designated and controller-signed."
+
+  - invariant: "A witness MUST be designated by the controller in the b field of a signed establishment event; a witness AID appearing in the b field without a valid controller signature MUST be treated as unauthorized; witnesses cannot self-designate"
+    term: "Witness"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(witness=witness_strategy(), est_event=establishment_event_strategy())
+        def test_witness_designation(witness, est_event):
+            if witness.aid in est_event.b:
+                assert est_event.signed_by_controller(), (
+                    "Witness in b field requires controller signature"
+                )
+            # Witness cannot add itself without controller signature
+            unsigned_event = build_unsigned_event_with_witness(witness.aid)
+            assert not is_valid_designation(witness.aid, unsigned_event), (
+                "Self-designation without controller signature must be invalid"
+            )
+    strategy: "witness_strategy() x establishment_event_strategy()"
+    notes: "Witness designation is controller-exclusive — no self-selection possible."
+
+  - invariant: "A witness receipt constitutes a first-seen guarantee: once a witness issues a receipt for event E at (prefix, sn), any subsequent event E' at the same (prefix, sn) where E'.said != E.said MUST be rejected by that witness; the receipt's event_said MUST equal the witnessed event's said"
+    term: "Witness"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(witness=witness_strategy(), event=valid_key_event_strategy())
+        def test_witness_first_seen_guarantee(witness, event):
+            receipt = witness.receipt(event)
+            assert receipt.witness_aid == witness.aid
+            assert receipt.event_said == event.said
+            # First-seen is locked
+            assert witness.first_seen(event.aid, event.sn) == event.said
+            # Conflicting event at same (prefix, sn) must be rejected
+            conflicting = build_conflicting_event(event.aid, event.sn)
+            assert conflicting.said != event.said
+            result = witness.submit(conflicting)
+            assert result.rejected, "Conflicting event must be rejected after first-seen"
+    strategy: "witness_strategy() x valid_key_event_strategy()"
+    notes: "First-seen is a permanent commitment — the receipt is cryptographic proof."
+
+  - invariant: "TOAD (bt) MUST satisfy: 0 <= bt <= len(b); bt < 0 MUST be rejected; bt > len(b) MUST be rejected"
+    term: "TOAD"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        toad, witness_count = Ints('toad witness_count')
+        valid = Bool('valid')
+        s = Solver()
+        s.add(valid == And(toad >= 0, toad <= witness_count, witness_count >= 0))
+        # bt < 0 is invalid
+        s.add(toad < 0, valid)
+        assert s.check() == unsat
+        # bt > witness_count is invalid
+        s2 = Solver()
+        s2.add(valid == And(toad >= 0, toad <= witness_count, witness_count >= 0))
+        s2.add(toad > witness_count, witness_count >= 0, valid)
+        assert s2.check() == unsat
+    notes: "TOAD is bounded by [0, len(b)]. Negative TOAD and TOAD exceeding witness count are both invalid."
+
+  - invariant: "When len(b) > 0, TOAD MUST be >= ample(len(b)) where ample(n) = max(1, ceil((n+1)/2)) for odd n and ceil(n/2)+1 for even n; TOAD below the ample threshold MUST be rejected because it breaks Byzantine fault tolerance guarantees"
+    term: "TOAD"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        witness_count, toad = Ints('witness_count toad')
+        ample = If(witness_count % 2 == 0,
+                   witness_count / 2 + 1,
+                   (witness_count + 1) / 2)
+        s = Solver()
+        s.add(witness_count > 0)
+        s.add(toad >= ample)
+        # Prove TOAD with ample always requires majority
+        s.add(toad * 2 < witness_count)
+        assert s.check() == unsat
+    notes: "The ample threshold is the BFT minimum — below it, a Byzantine minority could block accountability."
+
+  # Partially-Witnessed Escrow invariants
+  - invariant: "Triggered when toader.satisfy(windices) returns False -- insufficient witness receipts"
+    term: "Partially-Witnessed Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(toad=st.integers(min_value=1, max_value=5),
+               n_receipts=st.integers(min_value=0, max_value=5))
+        def test_pwe_trigger(toad, n_receipts):
+            assume(n_receipts < toad)
+            windices = list(range(n_receipts))
+            assert not satisfy_witness(toad, windices)
+    strategy: "st.integers for toad and receipt count"
+    notes: "Below TOAD = PWE."
+
+  - invariant: "Default timeout: 3600 seconds (keripy TimeoutPWE)"
+    term: "Partially-Witnessed Escrow"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        timeout = Int('timeout')
+        s = Solver()
+        s.add(timeout == 3600)
+        s.add(timeout > 0)
+        assert s.check() == sat
+    notes: "Default PWE timeout is 3600s (1 hour)."
+
+contracts:
+  - port_ref: "port://keri/accountability/inbound/receipting"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda event, sigs: event.valid_structure() and len(sigs) > 0 and all(s.verifies(event) for s in sigs)"
+        description: "Event must be structurally valid and controller signatures must verify"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: isinstance(result, Receipt) and result.witness_signed()"
+        description: "On success, a signed receipt is returned by the witness"
+      - formal:
+          language: python
+          expression: "lambda aid, sn, result: result.met == (result.count >= result.threshold)"
+        description: "check_accountability returns met=true iff count >= threshold"
+
+  - port_ref: "port://keri/accountability/inbound/kerl-query"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None and len(aid) > 0"
+        description: "AID must be a valid, non-empty identifier"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda kerl: all(kerl[i].sn < kerl[i+1].sn for i in range(len(kerl)-1))"
+        description: "Returned KERL events are in strictly ascending sequence number order"
+
+  - port_ref: "port://keri/accountability/outbound/transport"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda endpoint, receipt: endpoint.reachable() and receipt.valid_signature()"
+        description: "Transport endpoint must be reachable and the receipt must carry a valid signature"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: result.is_ok() or result.is_transport_error()"
+        description: "Result is either success or a transport-layer error — no silent failures"

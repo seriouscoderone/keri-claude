@@ -1,0 +1,19 @@
+# ports.yaml
+domain_ref: "acdc/credential-lifecycle/registry"
+
+ports:
+  # Inbound -- what the parent domain calls
+  - id: "port://acdc/credential-lifecycle/registry/inbound/registry-management"
+    type: inbound
+    name: "Registry Management"
+    contract: "create_registry(issuer_aid: AID, name: str, config_traits: [str], backers: [AID]?, toad: int?) -> REGID; rotate_registry(regid: REGID, cuts: [AID]?, adds: [AID]?, toad: int?) -> RegistryRotationEvent; get_registry(regid: REGID) -> RegistryStateSnapshot; get_registry_by_name(name: str) -> RegistryStateSnapshot"
+    protocol: "method-call"
+    refs: ["domain://acdc/credential-lifecycle"]
+
+  # Outbound -- what registry calls
+  - id: "port://acdc/credential-lifecycle/registry/outbound/registry-store"
+    type: outbound
+    name: "Registry Persistence"
+    contract: "save_registry(name: str, record: RegistryRecord) -> Result; load_registry(name: str) -> RegistryRecord?; save_state(regid: REGID, state: RegistryStateSnapshot) -> Result; load_state(regid: REGID) -> RegistryStateSnapshot?"
+    protocol: "method-call"
+    refs: ["persistence"]

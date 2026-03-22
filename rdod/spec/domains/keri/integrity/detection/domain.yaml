@@ -1,0 +1,64 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/integrity/detection"
+name: "Integrity Detection"
+description: >
+  Finding forks in event logs — detecting when compromised keys were used. The infrastructure for
+  detecting duplicity — watchers that cross-check KEL copies from multiple independent sources,
+  jurors that collect and present evidence, judges that make trust/no-trust decisions, and the
+  ambient verifiability property that arises from sufficient watcher diversity. Monitoring
+  components are always under the validator's control, not the controller's.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Duplicity, Validation Rules, Watchers"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: Watchers, Jurors, Judges, Ambient Verifiability"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — sections: Inconsistency and Duplicity, Ambient Verifiability, Eclipse Attacks"
+  - type: implementation
+    reference: "keriox — components/watcher/ (watcher node)"
+
+ubiquitous_language:
+  - term: "Watcher"
+    definition: "An entity under the validator's control that monitors for duplicity by collecting and comparing KEL copies from multiple sources"
+    invariants:
+      - "Under the validator's control, NOT the controller's"
+      - "Cross-checks KEL copies from witnesses, other watchers, or the controller"
+
+  - term: "Judge"
+    definition: "An entity that makes trust decisions based on duplicity evidence"
+    invariants:
+      - "The final arbiter of trust for the validator"
+      - "Evaluates evidence to decide trust or no-trust"
+
+domain_clients:
+  - ref: "domain://keri/integrity"
+    relationship: "Parent domain delegates monitoring lifecycle — watcher enrollment, evidence queries, trust decisions"
+    via_port: "port://keri/integrity/detection/inbound/monitoring-lifecycle"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals:
+  - ref: "external://transport"
+    source: "Watcher network — polling witnesses, cross-checking KERL copies"
+    relationship: "Watchers require network transport to poll witnesses and other watchers for KEL copies; this is external infrastructure not owned by the monitoring domain"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In keripy, the Watcher class polls multiple witnesses and compares KERLs. In keriox,
+    the watcher component lives under components/watcher/. Jurors and judges are logical roles
+    that may be implemented as separate services or combined with watchers. The ambient
+    verifiability property emerges from deployment — sufficient watcher diversity and distribution
+    makes eclipse attacks prohibitively expensive.
+
+issues: []
+
+tags: ["monitoring", "watcher", "juror", "judge", "ambient-verifiability", "eclipse-attack"]

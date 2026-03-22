@@ -1,0 +1,18 @@
+# ports.yaml
+domain_ref: "keri/delegation/authorization"
+
+ports:
+  # Inbound — what clients call
+  - id: "port://keri/delegation/authorization/inbound/binding-lifecycle"
+    type: inbound
+    name: "Binding Lifecycle"
+    contract: "create_delegation_seal(delegatee_aid: AID, delegated_event_sn: int, delegated_event_said: SAID) -> DelegationSeal; create_source_seal(delegator_sn: int, delegator_said: SAID) -> DelegationSealSource; bind_di_field(delegator_aid: AID) -> DiFieldValue; verify_two_way_binding(delegated_event: EstablishmentEvent, delegator_kel: KEL) -> Result<TwoWayBinding, BindingError>"
+    protocol: "method-call"
+    refs: ["domain://keri/delegation"]
+
+  - id: "port://keri/delegation/authorization/inbound/seal-construction"
+    type: inbound
+    name: "Seal Construction"
+    contract: "construct_delegating_event_payload(seals: [DelegationSeal]) -> AnchorPayload; extract_delegation_seals(event: Event) -> [DelegationSeal]; match_seal_to_event(seal: DelegationSeal, delegated_event: EstablishmentEvent) -> Result<Matched, SealMismatch>"
+    protocol: "method-call"
+    refs: ["domain://keri/delegation"]

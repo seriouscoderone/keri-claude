@@ -1,0 +1,24 @@
+# ports.yaml
+domain_ref: "witness-service/api"
+
+ports:
+  - id: "port://witness-service/api/inbound/event-submission"
+    type: inbound
+    name: "Event Submission"
+    contract: "submit_event(cesr_message) -> Receipt | Rejection — accepts CESR-encoded key events, verifies signatures, applies first-seen rule"
+    protocol: "HTTP"
+    refs: ["domain://cloud-agent-service", "domain://local-agent"]
+
+  - id: "port://witness-service/api/inbound/kerl-query"
+    type: inbound
+    name: "KERL Query"
+    contract: "query_kerl(aid, sn_range?) -> CESR Stream — returns receipted key event log as CESR stream"
+    protocol: "HTTP"
+    refs: ["domain://watcher-service"]
+
+  - id: "port://witness-service/api/inbound/oobi-resolution"
+    type: inbound
+    name: "OOBI Resolution"
+    contract: "resolve_oobi(aid, role, eid) -> OOBIResponse — serves witness OOBI at /.well-known/keri/oobi/{aid}/{role}/{eid}"
+    protocol: "HTTP"
+    refs: []

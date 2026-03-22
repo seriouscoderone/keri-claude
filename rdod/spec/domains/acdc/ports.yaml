@@ -8,14 +8,14 @@ ports:
     name: "Credential Lifecycle"
     contract: "issue(issuer_aid, schema, attributes, edges?, rules?) -> ACDC; revoke(acdc_said, registry_said) -> RevocationEvent; get_credential(said) -> ACDC; validate(acdc, schema) -> Result<Valid, ValidationError>"
     protocol: "method-call"
-    refs: ["domain://agent"]
+    refs: []
 
   - id: "port://acdc/inbound/schema-management"
     type: inbound
     name: "Schema Management"
     contract: "register_schema(schema) -> SAID; get_schema(said) -> JSONSchema; validate_against_schema(acdc, schema) -> Result<Valid, SchemaError>"
     protocol: "method-call"
-    refs: ["domain://agent"]
+    refs: []
 
   # Outbound — what ACDC calls
   - id: "port://acdc/outbound/credential-store"

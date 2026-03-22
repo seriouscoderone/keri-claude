@@ -1,0 +1,24 @@
+# ports.yaml
+domain_ref: "watcher-service/api"
+
+ports:
+  - id: "port://watcher-service/api/inbound/kel-query"
+    type: inbound
+    name: "KEL State Query"
+    contract: "query_kel(aid) -> KELState — validators query for current key state of a monitored AID"
+    protocol: "HTTP"
+    refs: ["domain://cloud-agent-service", "domain://local-agent"]
+
+  - id: "port://watcher-service/api/inbound/duplicity-query"
+    type: inbound
+    name: "Duplicity Query"
+    contract: "query_duplicity(aid) -> DuplicityStatus — validators query for duplicity alerts on an AID"
+    protocol: "HTTP"
+    refs: ["domain://cloud-agent-service", "domain://local-agent"]
+
+  - id: "port://watcher-service/api/inbound/oobi-resolution"
+    type: inbound
+    name: "OOBI Resolution"
+    contract: "resolve_oobi(aid, role, eid) -> OOBIResponse — serves watcher OOBI for discovery"
+    protocol: "HTTP"
+    refs: []

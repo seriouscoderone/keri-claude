@@ -1,0 +1,133 @@
+# errors.yaml
+domain_ref: "keri/integrity/detection"
+
+# Error catalog for the Integrity Detection domain.
+# Maps to exception classes in keripy/src/keri/kering.py and
+# raise sites in keripy/src/keri/core/eventing.py (Kevery.processEvent
+# duplicity detection, LDE escrow processing).
+#
+# The detection domain deals with identifying and handling conflicting
+# events — where two different SAIDs exist for the same (prefix, sn).
+# These errors represent protocol-level trust violations, not transient
+# processing failures.
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action (trust decision)
+#   fatal      — unrecoverable; event is permanently rejected
+
+errors:
+  - name: "LikelyDuplicitousError"
+    keripy_class: "kering.LikelyDuplicitousError"
+    description: "Two different events with different SAIDs exist for the same (prefix, sequence number)"
+    cause: "An event arrived at (prefix, sn) with a SAID different from the already-accepted event at that (prefix, sn) — this is the primary duplicity detection trigger indicating possible key compromise or Byzantine controller behavior"
+    recovery: "escrow"
+    escrow_queue: "LDE"
+    severity: "recoverable"
+    context:
+      - field: "prefix"
+        type: "string"
+        description: "The AID with detected duplicity"
+      - field: "sn"
+        type: "integer"
+        description: "The conflicting sequence number"
+      - field: "accepted_said"
+        type: "string"
+        description: "SAID of the previously accepted event at this sn"
+      - field: "conflicting_said"
+        type: "string"
+        description: "SAID of the newly received conflicting event"
+    related_port: "port://keri/integrity/detection/inbound/monitoring-lifecycle"
+    keripy_raise_site: "eventing.py:Kevery.processEvent — both inception and post-inception duplicity paths"
+
+  - name: "DuplicitousInceptionError"
+    keripy_class: "kering.LikelyDuplicitousError"
+    description: "A second inception event with a different SAID was received for an already-incepted prefix"
+    cause: "An icp or dip event arrived for a prefix that already has an accepted inception event, and the new inception has a different SAID — this is duplicity at the root of the KEL"
+    recovery: "escrow"
+    escrow_queue: "LDE"
+    severity: "recoverable"
+    context:
+      - field: "prefix"
+        type: "string"
+        description: "The AID prefix with the conflicting inception"
+      - field: "accepted_inception_said"
+        type: "string"
+        description: "SAID of the already-accepted inception event"
+      - field: "conflicting_inception_said"
+        type: "string"
+        description: "SAID of the new conflicting inception event"
+    related_port: "port://keri/integrity/detection/inbound/monitoring-lifecycle"
+    keripy_raise_site: "eventing.py:Kevery.processEvent — inception duplicity check: 'Likely duplicitous event'"
+
+  - name: "KELForkDetectedError"
+    keripy_class: "kering.LikelyDuplicitousError"
+    description: "A fork in the KEL has been detected — two divergent event sequences from the same prefix"
+    cause: "Events diverge at some sequence number, creating two incompatible KEL branches — detected via comparison of event SAIDs at the same (prefix, sn) across multiple sources (witnesses, watchers)"
+    recovery: "escalate"
+    severity: "recoverable"
+    context:
+      - field: "prefix"
+        type: "string"
+        description: "The AID with the forked KEL"
+      - field: "fork_point_sn"
+        type: "integer"
+        description: "The sequence number where the fork begins"
+      - field: "branch_a_said"
+        type: "string"
+        description: "SAID of the event from branch A at the fork point"
+      - field: "branch_b_said"
+        type: "string"
+        description: "SAID of the event from branch B at the fork point"
+      - field: "source_a"
+        type: "string"
+        description: "The source (witness/watcher AID) reporting branch A"
+      - field: "source_b"
+        type: "string"
+        description: "The source (witness/watcher AID) reporting branch B"
+    related_port: "port://keri/integrity/detection/outbound/kel-sources"
+    keripy_raise_site: "eventing.py:cross-source KERL comparison — detected when polling multiple witnesses/watchers"
+
+  - name: "FirstSeenReplayError"
+    keripy_class: "kering.ValidationError"
+    description: "An event at a previously-seen (prefix, sn) arrived with the same SAID but from a different source"
+    cause: "The event is an idempotent duplicate (same SAID) — not duplicitous, but if the first-seen ordering differs across sources, it may indicate timing manipulation"
+    recovery: "abort"
+    severity: "transient"
+    context:
+      - field: "prefix"
+        type: "string"
+        description: "The AID prefix"
+      - field: "sn"
+        type: "integer"
+        description: "The sequence number"
+      - field: "said"
+        type: "string"
+        description: "The SAID of the duplicate event"
+      - field: "first_seen_sn"
+        type: "integer"
+        description: "The first-seen ordering number from the local database"
+    related_port: "port://keri/integrity/detection/inbound/monitoring-lifecycle"
+    keripy_raise_site: "eventing.py:Kevery.processEvent — accepted duplicate at same sn with same SAID (no-op path)"
+
+  - name: "DuplicityEscrowTimeoutError"
+    keripy_class: "kering.ValidationError"
+    description: "Likely-duplicitous event exceeded the escrow timeout without resolution"
+    cause: "An event in the LDE escrow (Likely Duplicitous Events) has exceeded the maximum escrow duration without the duplicity being resolved through recovery rotation or operator decision"
+    recovery: "abort"
+    severity: "recoverable"
+    context:
+      - field: "prefix"
+        type: "string"
+        description: "The AID with the unresolved duplicity"
+      - field: "sn"
+        type: "integer"
+        description: "The conflicting sequence number"
+      - field: "escrowed_said"
+        type: "string"
+        description: "The SAID of the escrowed duplicitous event"
+      - field: "age_seconds"
+        type: "integer"
+        description: "How long the event was escrowed before timeout"
+    related_port: "port://keri/integrity/detection/inbound/trust-decisions"
+    keripy_raise_site: "eventing.py:Kevery — LDE escrow timeout processing"

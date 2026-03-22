@@ -51,13 +51,16 @@ domain_clients:
     relationship: "Queries watchers for duplicity status on behalf of controllers"
     via_port: "port://watcher-service/inbound/query"
 
-subdomains: []
+subdomains:
+  - ref: "domain://watcher-service/api"
+    relationship: "Inbound message boundary — collects KEL copies, cross-checks for duplicity, reports evidence to validators"
+    via_port: "port://watcher-service/api/inbound/kel-query"
 
 kernels: []
 
 adjacents:
   - ref: "domain://keri"
-    relationship: "Conformist — implements duplicity-detection monitoring protocol"
+    relationship: "Conformist — implements integrity detection and evidence collection"
     via_port: "port://keri/inbound/identifier-lifecycle"
     is_cross_cutting: false
   - ref: "domain://witness-service"
@@ -86,4 +89,4 @@ implementation_guidance:
 
 issues: []
 
-tags: ["watcher", "service", "duplicity-detection", "monitoring", "infrastructure"]
+tags: ["watcher", "service", "integrity", "detection", "infrastructure"]

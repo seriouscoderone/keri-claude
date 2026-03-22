@@ -32,9 +32,11 @@ terms:
       - "IPEX grant message delivering a credential"
     related_terms: ["Admin API", "Notification", "KERIA"]
 
+  # Inherits: "KERIA" from domain://cloud-agent-service
   - term: "KERIA"
     synonyms: ["Cloud Agent", "KERI Agent"]
-    definition: "The overall cloud agent service — a brief reference to the three-port architecture (boot 3903, admin 3901, message router 3902) that this subdomain exposes as API endpoints."
+    specializes: "KERIA"
+    definition: "In the context of the API subdomain, KERIA is referenced as the three-port architecture (boot 3903, admin 3901, message router 3902) that this subdomain exposes as API endpoints. Specializes the parent definition with the API perspective of the service's endpoint structure."
     invariants:
       - "Three endpoints share agent state and persistence — they are ports, not separate services"
       - "Zero access to private signing or decryption keys"

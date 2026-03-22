@@ -3,8 +3,8 @@ template_version: "1.0"
 id: "acdc"
 name: "ACDC Credential Protocol"
 description: >
-  Authentic Chained Data Containers — a protocol for issuing, presenting, and
-  verifying cryptographically authentic, chainable data containers (credentials).
+  How you prove what's true about you — cryptographically authentic credentials
+  with lifecycle management, secure exchange, and privacy-preserving disclosure.
   ACDCs provide granular provenanced proof-of-authorship via a directed acyclic
   graph (DAG) of linked containers, graduated disclosure mechanisms, Ricardian
   contract rule sections, and schema-enforced structure. ACDCs leverage KERI
@@ -49,21 +49,18 @@ ubiquitous_language:
       - "Computed using the most compact form algorithm with depth-first SAIDification"
       - "Provides collision-resistant unique reference with >= 128 bits cryptographic strength"
 
-domain_clients:
-  - ref: "domain://agent"
-    relationship: "Agent infrastructure consumes ACDC to issue credentials, manage registries, and coordinate disclosure exchanges"
-    via_port: "port://acdc/inbound/credential-lifecycle"
+domain_clients: []
 
 subdomains:
-  - ref: "domain://acdc/disclosure"
-    relationship: "ACDC drives disclosure mechanisms for graduated, selective, partial, and full disclosure of credential content"
-    via_port: "port://acdc/disclosure/inbound/disclosure-management"
-  - ref: "domain://acdc/tel"
-    relationship: "ACDC drives transaction event logs for tracking credential state (issuance, revocation)"
-    via_port: "port://acdc/tel/inbound/state-management"
-  - ref: "domain://acdc/ipex"
+  - ref: "domain://acdc/credential-lifecycle"
+    relationship: "ACDC drives credential lifecycle for tracking credential state (issuance, revocation) via transaction event logs"
+    via_port: "port://acdc/credential-lifecycle/inbound/state-management"
+  - ref: "domain://acdc/credential-exchange"
     relationship: "ACDC drives the issuance and presentation exchange protocol for credential negotiation and delivery"
-    via_port: "port://acdc/ipex/inbound/exchange-protocol"
+    via_port: "port://acdc/credential-exchange/inbound/exchange-protocol"
+  - ref: "domain://acdc/privacy"
+    relationship: "ACDC drives privacy mechanisms for graduated, selective, partial, and full disclosure of credential content"
+    via_port: "port://acdc/privacy/inbound/privacy-management"
 
 kernels:
   - ref: "kernel://cryptographic-algorithms"
@@ -95,6 +92,11 @@ implementation_guidance:
     All implementations must use CESR encoding, insertion-ordered field maps, and JSON Schema
     2020-12 for schema validation. The type-is-schema principle means no explicit type fields —
     the schema SAID in the s field defines the ACDC's type.
+
+    Credential Type Dimensions: Every ACDC is characterized by six orthogonal dimensions (Privacy,
+    Targeting, Disclosure Model, Chaining, Governance, Registry Binding) expressed through field
+    presence/absence. Implementations SHOULD provide typed builders that make these dimensions
+    explicit rather than exposing raw field map manipulation.
 
 issues: []
 

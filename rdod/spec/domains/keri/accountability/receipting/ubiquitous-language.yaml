@@ -1,0 +1,94 @@
+# ubiquitous-language.yaml
+domain_ref: "keri/accountability/receipting"
+
+terms:
+  - term: "Receipt"
+    synonyms: ["Witness Receipt", "rct"]
+    definition: "A signed acknowledgment by a witness that it has verified and accepted (first-seen) a specific version of an event. The receipt message type is 'rct' with fields: v, t, d, i, s."
+    invariants:
+      - "Created by a witness after verifying the controller's signatures and event consistency"
+      - "Constitutes the witness's first-seen guarantee"
+      - "Receipt signatures are attached as CESR attachment codes"
+      - "Receipts are stored in the witness's KERL"
+      - "Later receipts from other witnesses for the same event version are appended to the log entry"
+    examples:
+      - "rct message: {v: version, t: 'rct', d: event_SAID, i: event_AID, s: event_sn} with attached witness signature"
+      - "A controller collecting 3 receipts from different witnesses for a single event"
+    related_terms: ["Receipt Types", "KERL", "Witness Receipt Generator", "Receipt Escrows"]
+
+  - term: "Receipt Types"
+    synonyms: []
+    definition: "Three distinct receipt message types in the KERI protocol, each carrying different signature and identifier structures depending on the signer's transferability and role."
+    invariants:
+      - "Non-transferable Receipt Couple: (Prefixer, Cigar) — witness AID prefix + unindexed signature. Used by non-transferable witness AIDs. Stored in the non-transferable receipt store [.rcts in keripy]"
+      - "Transferable Receipt Quadruple: (Prefixer, Seqner, Saider, Siger) — validator prefix + sn + digest + indexed signature. Used by transferable validator/delegator AIDs. Stored in the transferable receipt store [.vrcs in keripy]"
+      - "Witness Indexed Receipt: (Diger, Siger) — event digest + indexed witness signature. Used in indirect mode. Stored in the witness signature store [.wigs in keripy]"
+      - "Receipt type is determined by the signer's AID type (transferable vs. non-transferable) and role (witness vs. validator)"
+    examples:
+      - "A non-transferable witness receipts via Couple: its AID prefix + Cigar (unindexed Ed25519 signature)"
+      - "A transferable validator receipts via Quadruple: its AID + current sn + event digest + indexed Siger"
+      - "An indexed witness receipt in the witness signature store [.wigs in keripy]: event Diger + Siger with the witness's index in the b list"
+    related_terms: ["Receipt", "KERL", "CESR Attachment Codes"]
+
+  - term: "Receipt Escrows"
+    synonyms: []
+    definition: "Typed escrow queues for receipts that cannot yet be verified because the corresponding key event has not been processed."
+    invariants:
+      - "Unverified Witness Receipts (.uwes): witness receipts for events not yet in the KEL"
+      - "Unverified Non-transferable Receipts (.ures): non-transferable receipts for unknown events"
+      - "Unverified Transferable Receipts (.vres): transferable receipts for unknown events"
+      - "Default timeout: 3600 seconds — escrowed receipts are pruned after expiry"
+      - "Drained by Kevery.processEscrowUnverWitness(), processEscrowUnverNonTrans(), processEscrowUnverTrans() in keripy"
+      - "When the missing event arrives, matching escrowed receipts are promoted to verified storage"
+    examples:
+      - "A witness receipt for sn=5 arrives before the event at sn=5 — escrowed in .uwes until the event is processed"
+      - "After event at sn=5 is accepted, .uwes is drained and matching receipts are attached to the event"
+    related_terms: ["Receipt", "Receipt Types"]
+
+  - term: "Witness Receipt Generator"
+    synonyms: ["WitnessReceiptGenerator [keriox]", "Receiptor [keripy]"]
+    definition: "Component that automatically generates a witness receipt (non-transferable signature) when a new key event is accepted into the KEL."
+    invariants:
+      - "Triggers on new key event acceptance — KeyEventAdded notification in keriox, cues in keripy"
+      - "Generates a non-transferable receipt using the witness's signing keys"
+      - "In keriox: observes KeyEventAdded notification from the NotificationBus"
+      - "In keripy: the Receiptor class processes cues from Kevery to generate receipts"
+      - "The generated receipt is then disseminated to the controller and other witnesses"
+    examples:
+      - "In keriox: WitnessReceiptGenerator subscribes to KeyEventAdded, creates receipt for each accepted event"
+      - "In keripy: Receiptor.processCues() iterates cues, generating receipts for witnessed events"
+    related_terms: ["Receipt", "Receipt Types"]
+
+  # Inherits: "KERL" from domain://keri
+  - term: "KERL"
+    synonyms: ["Key Event Receipt Log"]
+    specializes: "KERL"
+    definition: "In the context of receipting, the KERL is the receipted event log maintained by witnesses — an immutable, deletion-proof record. Specializes the parent definition with structural properties: immutability guarantees, deletion-proof properties from witness redundancy, and the invariant that a proper KERL at a witness implies proper KERLs for all prior events."
+    invariants:
+      - "Immutable — later messages or receipts cannot change existing entries (append-only)"
+      - "Made deletion-proof by virtue of being provided by a set of witnesses of which only F may be faulty"
+      - "A proper KERL at a witness implies proper KERLs for all prior events at that witness"
+    examples:
+      - "A KERL with 3-of-5 witness receipts on each event, providing accountability for indirect mode"
+    related_terms: ["Receipt", "Receipt Types", "Receipt Escrows"]
+
+events:
+  - name: "EventReceipted"
+    payload: "aid: AID, sn: int, event_said: SAID, witness_aid: WitnessAID, receipt_signature: Signature"
+    triggers: "A witness verifies and receipts a first-seen event"
+
+  - name: "ReceiptEscrowed"
+    payload: "aid: AID, sn: int, event_said: SAID, witness_aid: WitnessAID, escrow_type: EscrowType"
+    triggers: "A receipt arrives for an event not yet in the KEL — placed in typed escrow (.uwes, .ures, or .vres)"
+
+  - name: "EscrowDrained"
+    payload: "aid: AID, sn: int, event_said: SAID, promoted_count: int, escrow_type: EscrowType"
+    triggers: "A missing event arrives and matching escrowed receipts are promoted to verified storage"
+
+rules:
+  - "A witness must verify controller signatures and event consistency before receipting"
+  - "Receipt type is determined by the signer's AID type (transferable vs. non-transferable) and role"
+  - "Receipts for unknown events are escrowed, not discarded"
+  - "Escrowed receipts are pruned after timeout (default 3600 seconds)"
+  - "When the missing event arrives, matching escrowed receipts are promoted to verified storage"
+  - "The KERL is append-only — existing entries cannot be modified"

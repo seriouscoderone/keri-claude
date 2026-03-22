@@ -1,0 +1,65 @@
+# ubiquitous-language.yaml
+domain_ref: "acdc/credential-lifecycle/registry"
+
+terms:
+  # Inherits: "Registry Inception" from domain://acdc/credential-lifecycle
+  - term: "Registry Inception"
+    synonyms: ["rip event", "vcp event"]
+    specializes: "Registry Inception"
+    definition: "In the context of the registry subdomain, registry inception is the initialization event that establishes the registry's REGID, binds it to the issuer AID, and sets immutable configuration traits. Specializes the parent definition with backer configuration details and the vcp legacy format synonym."
+    invariants:
+      - "Message type t field must be 'rip' (or 'vcp' in legacy format)"
+      - "Field order: [v, t, d, u, i, n, dt] — all required"
+      - "Sequence number n must be 0"
+      - "SAID of this event becomes the REGID referenced by the rd field in ACDCs"
+      - "Must be anchored (sealed) in the issuer's KEL"
+      - "Config traits (e.g., NoBackers) set at inception are immutable"
+    examples:
+      - "Registry inception with issuer AID, NoBackers config trait, and UUID for unique identification"
+      - "Backed registry inception with three backer witnesses and a threshold of two"
+    related_terms: ["REGID", "Registry Rotation", "Backer Configuration"]
+
+  - term: "Registry Rotation"
+    synonyms: ["vrt event"]
+    definition: "A management event that updates a registry's backer configuration — modifying the backer witness list and/or threshold without affecting any credential state within the registry."
+    invariants:
+      - "Only valid for registries that have backers (not NoBackers trait)"
+      - "Updates the backer list via cuts (removals) and adds (additions)"
+      - "May update the backer threshold (toad)"
+      - "Does not affect per-credential state — only registry management state"
+      - "Must be anchored in the issuer's KEL"
+    examples:
+      - "Adding a new backer witness to a registry: vrt event with adds=[new_backer_AID]"
+      - "Adjusting threshold from 2 to 3 after adding backers"
+    related_terms: ["Registry Inception", "Backer Configuration", "Registry State Snapshot"]
+
+  # Inherits: "REGID" from domain://acdc/credential-lifecycle (identical definition — parent owns this term)
+
+  - term: "Backer Configuration"
+    synonyms: ["NoBackers trait", "Backer mode"]
+    definition: "The configuration of a registry's backer witness infrastructure, set at inception via config traits. Determines whether credential events use backed (bis/brv) or backerless (iss/rev) event types."
+    invariants:
+      - "NoBackers trait means no backer witnesses — credential events use iss/rev"
+      - "Without NoBackers, backer witnesses are required — credential events use bis/brv"
+      - "Backer mode is immutable after registry inception"
+      - "Backer list and threshold can be updated via registry rotation (vrt) events"
+    examples:
+      - "NoBackers registry: simple mode with iss/rev events, no witness infrastructure"
+      - "Backed registry: three backer witnesses, threshold of two, uses bis/brv events"
+    related_terms: ["Registry Inception", "Registry Rotation", "Backed vs Backerless"]
+
+events:
+  - name: "RegistryIncepted"
+    payload: "regid: REGID, issuer_aid: AID, config_traits: [str], backers: [AID], toad: int"
+    triggers: "Issuer creates a new registry via a registry inception event"
+
+  - name: "RegistryRotated"
+    payload: "regid: REGID, new_sn: int, cuts: [AID], adds: [AID], new_toad: int"
+    triggers: "Issuer rotates the registry's backer configuration via a vrt event"
+
+rules:
+  - "Registry inception must have sequence number 0"
+  - "Config traits (e.g., NoBackers) are set at inception and cannot be changed"
+  - "Registry rotation is only valid for registries with backers"
+  - "Every registry management event must be anchored in the issuer's KEL"
+  - "REGID is the SAID of the inception event — it uniquely identifies the registry"

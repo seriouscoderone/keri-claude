@@ -1,0 +1,57 @@
+domain_ref: "keri/integrity"
+
+protocols:
+  - name: "DuplicityCheck"
+    description: "A watcher cross-checks KEL copies from multiple witnesses to detect duplicity (forked event logs). If the same identifier has different events at the same sequence number across witnesses, duplicity is flagged."
+    participants:
+      - domain: "domain://keri/integrity/detection"
+        role: "Compares events across witness sources, detects forks"
+      - domain: "domain://keri/integrity/evidence"
+        role: "Records duplicity evidence in the DEL"
+      - domain: "domain://keri/identity/state"
+        role: "Provides current key state for the monitored identifier"
+      - domain: "domain://discovery"
+        role: "Resolves witness OOBIs to fetch their KEL copies"
+    trigger: "Periodic watcher sweep or on-demand duplicity adjudication request"
+    steps:
+      - seq: 1
+        domain: "domain://discovery"
+        action: "resolve_witness_endpoints"
+        input: "AID prefix + its witness list from key state"
+        output: "Resolvable URLs for each designated witness"
+      - seq: 2
+        domain: "domain://keri/integrity/detection"
+        action: "fetch_kel_from_witnesses"
+        input: "Witness endpoints for the monitored AID"
+        output: "KEL copy from each witness"
+        depends_on: [1]
+        on_failure:
+          - error: "OOBIResolutionError"
+            action: "retry"
+            compensation: "Retry unreachable witnesses, proceed with available copies"
+      - seq: 3
+        domain: "domain://keri/integrity/detection"
+        action: "compare_events_by_sn"
+        input: "Multiple KEL copies"
+        output: "List of (prefix, sn) positions where SAIDs differ across witnesses"
+        depends_on: [2]
+      - seq: 4
+        domain: "domain://keri/integrity/evidence"
+        action: "record_duplicity_evidence"
+        input: "Conflicting events with their signatures"
+        output: "DuplicityEvidence entries stored permanently in DEL"
+        depends_on: [3]
+        on_failure:
+          - error: "NoDuplicity"
+            action: "abort"
+            compensation: "No duplicity found — normal case, nothing to record"
+      - seq: 5
+        domain: "domain://keri/integrity/detection"
+        action: "alert_validators"
+        input: "Duplicity evidence"
+        output: "Cue with kin='duplicity' sent to interested parties"
+        depends_on: [4]
+    timeout: "60s per witness fetch"
+    terminal_states:
+      success: "Duplicity detected and recorded in DEL, validators alerted"
+      failure: "No duplicity found (this is the normal, good outcome)"

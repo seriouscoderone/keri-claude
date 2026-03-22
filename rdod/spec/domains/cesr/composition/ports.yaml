@@ -1,0 +1,33 @@
+# ports.yaml
+domain_ref: "cesr/composition"
+
+ports:
+  # Inbound — what the parent CESR domain calls
+  - id: "port://cesr/composition/inbound/stream-composition"
+    type: inbound
+    name: "Stream Composition"
+    contract: "compose(body, attachments) -> Stream; group(count_code_type, primitives) -> Group; frame(groups) -> Frame"
+    protocol: "method-call"
+    refs: ["domain://cesr"]
+
+  - id: "port://cesr/composition/inbound/stream-parsing"
+    type: inbound
+    name: "Stream Parsing"
+    contract: "parse(stream) -> [Frame]; sniff(byte) -> FrameType; extract_group(stream) -> (CountCode, content); extract_version_string(serialization) -> VersionString"
+    protocol: "method-call"
+    refs: ["domain://cesr"]
+
+  - id: "port://cesr/composition/inbound/attachment-management"
+    type: inbound
+    name: "Attachment Management"
+    contract: "attach_signatures(body, sigs, code_type) -> Stream; attach_receipts(body, receipts) -> Stream; parse_attachments(stream) -> [AttachmentGroup]"
+    protocol: "method-call"
+    refs: ["domain://cesr"]
+
+  # Outbound — what cesr-composition depends on
+  - id: "port://cesr/composition/outbound/transport"
+    type: outbound
+    name: "Transport Layer"
+    contract: "send(endpoint, stream) -> Result; receive(endpoint) -> Stream"
+    protocol: "method-call"
+    refs: ["transport"]

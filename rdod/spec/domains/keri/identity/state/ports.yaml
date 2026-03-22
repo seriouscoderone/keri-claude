@@ -1,0 +1,33 @@
+# ports.yaml
+domain_ref: "keri/identity/state"
+
+ports:
+  # Inbound — what the parent key-state domain calls
+  - id: "port://keri/identity/state/inbound/state-tracking"
+    type: inbound
+    name: "State Tracking"
+    contract: "create_kever(aid: AID, inception: InceptionEvent) -> KeyEventVerifier; update_kever(aid: AID, event: Event, sigs: [Siger]) -> Result<KeyState, ValidationError>; get_current_state(aid: AID) -> KeyState?"
+    protocol: "method-call"
+    refs: ["domain://keri/identity"]
+
+  - id: "port://keri/identity/state/inbound/state-reconstruction"
+    type: inbound
+    name: "State Reconstruction"
+    contract: "reconstruct_state(aid: AID, target_sn?: int) -> Result<KeyState, ReconstructionError>; reload_from_cache(aid: AID, record: KeyStateRecord) -> KeyEventVerifier"
+    protocol: "method-call"
+    refs: ["domain://keri/identity"]
+
+  - id: "port://keri/identity/state/inbound/state-query"
+    type: inbound
+    name: "State Query"
+    contract: "get_last_establishment(aid: AID) -> LastEstablishmentData?; get_config_traits(aid: AID) -> [TraitCode]; is_transferable(aid: AID) -> bool; get_establishment_subsequence_sn(aid: AID) -> int?"
+    protocol: "method-call"
+    refs: ["domain://keri/identity"]
+
+  # Outbound — what tracking depends on
+  - id: "port://keri/identity/state/outbound/persistence"
+    type: outbound
+    name: "Persistence"
+    contract: "get_cached_state(aid: AID) -> KeyStateRecord?; put_cached_state(aid: AID, state: KeyStateRecord); get_event(aid: AID, dig: SAID) -> bytes?; replay_events(aid: AID, start_sn: int, end_sn: int) -> Iterator<Event>"
+    protocol: "method-call"
+    refs: ["persistence"]

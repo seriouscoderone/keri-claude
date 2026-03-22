@@ -1,0 +1,71 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/identity/thresholds"
+name: "Signing Thresholds"
+description: >
+  Multi-signature requirements and threshold satisfaction. Signing, rotation, dual, and weighted
+  threshold mechanics. Determines when a set of signatures
+  or witness receipts satisfies the required quorum. This subdomain owns the Tholder abstraction
+  that parses threshold expressions (simple integer or fractionally weighted), the satisfy()
+  check that tests whether a set of indices meets a threshold, and the three threshold roles in
+  KERI key state: signing threshold (kt), rotation threshold (nt), and witness threshold (bt/TOAD).
+  It also owns the witness configuration — the witness list paired with the witness threshold —
+  and the dual threshold requirement that rotation events must satisfy both kt and nt.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Signing Threshold, Next Threshold, Witness Threshold, Fractionally Weighted Threshold, Rotation Event Validation"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: Thresholds, Witness Accountability, TOAD"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — sections: Combined Arms, Immune Constraint"
+  - type: document
+    reference: "keripy eventing.py — Tholder class (sith parsing, satisfy(), limen, size, weighted), Kever (tholder, ntholder, toader, wits)"
+  - type: document
+    reference: "keriox keriox_core/src/event/sections/key_config.rs — SignatureThreshold (Simple/Weighted), enough() method; state/ — WitnessConfig, toad"
+
+ubiquitous_language:
+  - term: "Signing Threshold"
+    definition: "The threshold expression that determines the minimum satisficing subset of current signing keys required for a valid signature"
+    invariants:
+      - "Must be satisfiable given the number of keys in the signing key list"
+      - "Can be a simple integer M (M-of-N) or a fractionally weighted threshold"
+
+  - term: "Witness Threshold"
+    definition: "The minimum number of witness receipts required for an event to be considered sufficiently accountable"
+    invariants:
+      - "Must be an integer no greater than the number of witnesses"
+      - "Determines the M in M-of-N witness accountability"
+
+domain_clients:
+  - ref: "domain://keri/identity"
+    relationship: "Parent domain delegates threshold satisfaction checking, threshold parsing, and witness configuration management to this subdomain"
+    via_port: "port://keri/identity/thresholds/inbound/threshold-satisfaction"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cesr/primitives"
+    source: "Tholder type for threshold representation (simple integer and fractionally weighted), satisfaction checking via satisfy() / enough()"
+    relationship: "The Tholder/SignatureThreshold type is a kernel primitive that parses threshold expressions and evaluates them against index sets — this subdomain uses it for all three threshold roles"
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In keripy, the Tholder class encapsulates threshold logic. It parses a sith parameter (either
+    an integer string like '2' or a list of fraction strings like ['1/2', '1/2', '1/2']),
+    exposes a satisfy(indices) method, and provides size (minimum keys to satisfy) and weighted
+    (bool) properties. The Kever class holds three Tholder instances: tholder (signing), ntholder
+    (next/rotation), and toader (witness). In keriox, SignatureThreshold is an enum with Simple(u64)
+    and Weighted(Vec<Vec<(u64, u64)>>) variants, providing an enough() method. WitnessConfig pairs
+    the witness list with the toad threshold.
+
+issues: []
+
+tags: ["threshold", "signing-threshold", "rotation-threshold", "witness-threshold", "weighted-threshold", "dual-threshold"]

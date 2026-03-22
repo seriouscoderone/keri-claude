@@ -1,0 +1,45 @@
+# domain.yaml
+template_version: "1.0"
+id: "witness-service/api"
+name: "Witness Service API"
+description: >
+  Inbound message boundary for witness nodes — receives key events from controllers,
+  verifies signatures, applies the first-seen rule, and returns receipts. Consumes
+  the KERI accountability protocol as an adjacent context. Handles CESR deserialization,
+  signature verification, and message dispatch for all inbound witness traffic.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keriox components/witness — Rust witness implementation (axum HTTP handler)"
+  - type: document
+    reference: "keripy witness module — Python witness implementation"
+
+domain_clients:
+  - ref: "domain://witness-service"
+    relationship: "Parent domain"
+
+subdomains: []
+
+adjacents:
+  - ref: "domain://keri/accountability/receipting"
+    relationship: "Conformist — implements receipting protocol"
+    pattern: "Conformist"
+  - ref: "domain://cesr"
+    relationship: "Published Language — CESR encoding for all inbound/outbound messages"
+    pattern: "Published Language"
+
+externals: []
+kernels: []
+
+invariants:
+  - "All inbound messages must be CESR-deserialized before processing"
+  - "Signatures must be verified against current key state before accepting events"
+  - "First-seen rule must be applied to all key events"
+
+implementation_guidance:
+  suggested_type: "service"
+  language_affinity: "any"
+  notes: "The witness API is a thin HTTP endpoint that deserializes CESR messages, verifies signatures, and delegates to the accountability domain for receipting logic."
+
+tags: ["witness", "api", "receipting", "service"]

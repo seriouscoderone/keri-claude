@@ -1,0 +1,72 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/accountability/consensus"
+name: "Witness Consensus"
+description: >
+  The mathematical and algorithmic foundations of witness agreement — the first-seen rule,
+  the immune constraint, accountability thresholds, proper KERL properties, and BFT quorum
+  calculations. This subdomain owns the invariants that make KAWA work: why a single-phase
+  agreement suffices, what threshold guarantees uniqueness of agreement, and what "proper"
+  means for a receipted log. It does not handle receipt creation, storage, or network
+  propagation — only the rules and computations that govern correctness.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: KERI's Algorithm for Witness Agreement (KAWA), Immunity and Availability, Security Properties, Proper Agreement"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: KAWA, Immune Constraint, BFT Quorum"
+  - type: implementation
+    reference: "keripy — src/keri/core/eventing.py (ample() — BFT quorum calculation)"
+  - type: implementation
+    reference: "keriox — keriox_core/src/event/sections/threshold.rs (tally validation)"
+
+ubiquitous_language:
+  - term: "First-seen Rule"
+    definition: "The first verified version of an event at a given sequence number wins — first seen, always seen, never unseen"
+    invariants:
+      - "Once accepted, an event cannot be unseen or replaced (except by superseding recovery)"
+      - "All subsequent versions of the same event at the same location are discarded"
+
+  - term: "Immune Constraint"
+    definition: "M > (N + F + 1) / 2 — the mathematical guarantee that at most one sufficient agreement exists despite F faulty witnesses"
+    invariants:
+      - "When satisfied, the service cannot produce multiple divergent proper KERLs"
+      - "Any non-faulty witness with a proper agreement will keep and provide it on demand"
+
+  - term: "Accountability Threshold"
+    definition: "The minimum M of N designated witnesses that must receipt an event for the controller to accept accountability"
+    invariants:
+      - "Set in the bt field of establishment events"
+      - "M must be no greater than N (the number of witnesses)"
+      - "Can be changed at rotation along with the witness set"
+
+domain_clients:
+  - ref: "domain://keri/accountability"
+    relationship: "Parent orchestrates witness agreement; consensus provides the mathematical rules, quorum calculation, and proper-KERL invariants"
+    via_port: "port://keri/accountability/consensus/inbound/quorum-evaluation"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519/ECDSA signature verification for receipt validation, Blake3-256/SHA-256 for event digest verification"
+    relationship: "Receipt validation requires verifying witness signatures against their public keys — kernel cryptographic primitives appear directly in quorum checks"
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    In keripy, the ample() function in the kering module computes BFT quorum floors.
+    The immune constraint is a documented property enforced at the controller's discretion
+    (the protocol defines it; the controller chooses whether to satisfy it). Proper KERL
+    verification is implicit in the event processing pipeline — a KERL is proper when
+    every event has been verified against controller signatures and prior state.
+
+issues: []
+
+tags: ["consensus", "bft", "quorum", "first-seen", "immunity", "proper-kerl", "accountability"]

@@ -2,45 +2,45 @@
 domain_ref: "cloud-agent-service/processing"
 
 terms:
-  - term: "Doer"
-    synonyms: ["HIO Doer", "DoDoer"]
-    definition: "HIO (Hierarchical Input/Output) event-driven processing unit. Each Doer has a recur() method called repeatedly by the HIO scheduler. The Agent is a DoDoer composing many sub-doers. No threads — concurrency via cooperative scheduling."
+  - term: "Processing Unit"
+    synonyms: ["Async Worker", "Doer (HIO in keripy)", "DoDoer (composite, HIO in keripy)"]
+    definition: "Event-driven processing unit in the async processing framework. Each Processing Unit has a periodic work cycle called repeatedly by the scheduler. The Agent is a Composite Processing Unit composing many sub-workers. No threads — concurrency via cooperative scheduling."
     invariants:
-      - "Non-blocking — each recur() call processes available work and returns"
-      - "Doers drain work from Decks (FIFO queues)"
-      - "Key doers: Witnesser (witness receipting), Delegator (delegation events), Escrower (escrow processing), ParserDoer (message parsing)"
+      - "Non-blocking — each work cycle processes available work and returns"
+      - "Processing Units drain work from Message Queues (FIFO queues)"
+      - "Key workers: Witnesser (witness receipting), Delegator (delegation events), Escrow Processor (escrow processing), Parser Worker (message parsing)"
       - "No threads — concurrency via cooperative scheduling"
     examples:
-      - "Witnesser.recur(): pops from witners deck, sends receipt requests"
-      - "Escrower.recur(): calls processEscrows() on Kevery, Tevery, Exchanger, Verifier"
-    related_terms: ["Deck", "Escrow", "Long-running Operation"]
+      - "Witnesser work cycle: pops from witness queue, sends receipt requests"
+      - "Escrow Processing Worker (Escrower in keripy): calls processEscrows() on Identity Event Processor (Kevery in keripy), Credential Event Processor (Tevery in keripy), Exchanger, Verifier"
+    related_terms: ["Message Queue", "Escrow", "Long-running Operation"]
 
-  - term: "Deck"
-    synonyms: ["Work Queue"]
-    definition: "Thread-safe FIFO deque used to queue work items between doers. The standard pattern is: producer appends to deck, consumer doer drains in recur() loop."
+  - term: "Message Queue"
+    synonyms: ["Work Queue", "Cue Queue", "Deck (HIO in keripy)"]
+    definition: "Thread-safe FIFO deque used to queue work items between processing units. The standard pattern is: producer appends to queue, consumer processing unit drains in its work cycle."
     invariants:
-      - "Pattern: while deck: item = deck.popleft(); process(item)"
-      - "Key decks on Agent: cues, groups, anchors, witners, queries"
+      - "Pattern: while queue: item = queue.popleft(); process(item)"
+      - "Key queues on Agent: cues, groups, anchors, witnesses, queries"
       - "Producers: API handlers, message router, escrow reprocessing"
-      - "Consumers: Doer subclasses (Witnesser, Delegator, Escrower, etc.)"
+      - "Consumers: Processing Unit subclasses (Witnesser, Delegator, Escrow Processor, etc.)"
     examples:
-      - "Admin API appends to witners deck -> Witnesser doer drains and processes"
-      - "Message Router appends to groups deck -> Counselor-related doer processes"
-    related_terms: ["Doer", "Escrow"]
+      - "Admin API appends to witness queue -> Witnesser processing unit drains and processes"
+      - "Message Router appends to groups queue -> Counselor-related processing unit processes"
+    related_terms: ["Processing Unit", "Escrow"]
 
   - term: "Escrow"
     synonyms: ["Pending Escrow"]
-    definition: "Temporary storage for incomplete or out-of-order operations — partial multi-sig events, unverified receipts, pending IPEX exchanges. Each component maintains its own escrows, processed periodically by the Escrower doer."
+    definition: "Temporary storage for incomplete or out-of-order operations — partial multi-sig events, unverified receipts, pending IPEX exchanges. Each component maintains its own escrows, processed periodically by the Escrow Processing Worker."
     invariants:
       - "Escrowed items have a timeout after which they are discarded"
       - "Items automatically complete when missing data arrives"
       - "Multiple escrow types: partial signature, out-of-order event, unverified receipt"
-      - "Each component (Kevery, Tevery, Exchanger, Verifier, Registrar, Credentialer) maintains its own escrows"
-      - "Escrows processed periodically by the Escrower doer in the HIO loop"
+      - "Each component (Identity Event Processor [Kevery in keripy], Credential Event Processor [Tevery in keripy], Exchanger, Verifier, Registrar, Credentialer) maintains its own escrows"
+      - "Escrows processed periodically by the Escrow Processing Worker in the async processing loop"
     examples:
       - "A multi-sig event with 1 of 3 required signatures is escrowed until others arrive"
       - "An out-of-order event escrowed until its predecessor is received"
-    related_terms: ["Doer", "Multi-sig Assembly", "Counselor"]
+    related_terms: ["Processing Unit", "Multi-sig Assembly", "Counselor"]
 
   - term: "Long-running Operation"
     synonyms: ["Operation", "Monitor"]
@@ -54,7 +54,7 @@ terms:
     examples:
       - "POST /identifiers returns op name 'witness.EDP1...' — poll until done"
       - "POST /credentials returns op name 'credential.EDP1...' — poll until TEL anchored"
-    related_terms: ["Doer", "Counselor", "Boatswain", "Registrar", "Credentialer"]
+    related_terms: ["Processing Unit", "Counselor", "Boatswain", "Registrar", "Credentialer"]
 
   - term: "Counselor"
     synonyms: []
@@ -110,7 +110,7 @@ terms:
     examples:
       - "seeker.find({'schema': schemaSaid, '-a-i': issuerAid}) -> [SAID, ...]"
       - "Dynamic index: credential attribute 'LEI' becomes searchable via '-a-LEI'"
-    related_terms: ["Credentialer", "Doer"]
+    related_terms: ["Credentialer", "Processing Unit"]
 
   - term: "Postman"
     synonyms: ["Message Sender"]
@@ -122,7 +122,7 @@ terms:
     examples:
       - "Postman delivers multi-sig partial signature to co-signer's agent"
       - "Postman delivers IPEX grant to credential recipient's agent"
-    related_terms: ["Doer", "Deck"]
+    related_terms: ["Processing Unit", "Message Queue"]
 
   - term: "Multi-sig Assembly"
     synonyms: ["Signature Assembly", "Group Signing"]
@@ -135,7 +135,7 @@ terms:
     examples:
       - "3-of-5 group inception: 5 controllers sign independently, KERIA assembles when 3 arrive"
       - "Group credential issuance: partial signatures collected, ACDC issued when threshold met"
-    related_terms: ["Counselor", "Escrow", "Deck"]
+    related_terms: ["Counselor", "Escrow", "Message Queue"]
 
 events:
   - name: "OperationCreated"
@@ -163,10 +163,10 @@ events:
     triggers: "Seeker indexes a newly saved credential from Verifier cue"
 
 rules:
-  - "All async work flows through Decks — producers append, consumer Doers drain in their recur() loop"
+  - "All async work flows through Message Queues (Decks in HIO/keripy) — producers append, consumer Processing Units drain in their work cycle"
   - "Long-running operations are the ONLY mechanism for tracking async completion — no callbacks to edge"
-  - "Incomplete events are escrowed with timeout, not rejected — escrows processed periodically by Doers"
-  - "Each component (Kevery, Tevery, Exchanger, Verifier, Registrar, Credentialer) maintains its own escrows"
+  - "Incomplete events are escrowed with timeout, not rejected — escrows processed periodically by Processing Units"
+  - "Each component (Identity Event Processor [Kevery in keripy], Credential Event Processor [Tevery in keripy], Exchanger, Verifier, Registrar, Credentialer) maintains its own escrows"
   - "Monitor checks completion by querying the relevant specialized component"
   - "Credential search indexes are rebuilt from schema structure — each scalar attribute becomes a searchable field"
   - "Credential wallet operations (present, revoke) require edge-signed authorization — the agent cannot present credentials unilaterally"

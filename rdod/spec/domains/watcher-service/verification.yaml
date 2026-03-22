@@ -1,13 +1,17 @@
 # verification.yaml
 domain_ref: "watcher-service"
 
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
 # Formalized invariants from ubiquitous_language terms
 properties:
   - invariant: "Under the validator's control — not the controller's"
     term: "Watcher Node"
     technique: property-based
     formal:
-      language: python
+      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
       expression: |
         @given(
             validator=keri_aid_strategy(),

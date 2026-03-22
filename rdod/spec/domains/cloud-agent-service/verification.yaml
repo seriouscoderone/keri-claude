@@ -1,13 +1,17 @@
 # verification.yaml
 domain_ref: "cloud-agent-service"
 
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
 # Formalized invariants from ubiquitous_language terms
 properties:
   - invariant: "Zero access to private signing or decryption keys"
     term: "KERIA"
     technique: property-based
     formal:
-      language: python
+      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
       expression: |
         @given(st.binary(min_size=1, max_size=512))
         def test_keria_never_holds_private_keys(payload):
@@ -39,7 +43,7 @@ properties:
     term: "KERIA"
     technique: property-based
     formal:
-      language: python
+      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
       expression: |
         @given(
             controller_a=keri_aid_strategy(),
@@ -63,7 +67,7 @@ contracts:
       - formal:
           language: python
           expression: "lambda inception_event: is_valid_inception(inception_event) and has_valid_signatures(inception_event)"
-        description: "Inception event must be valid and properly signed"
+        description: "Inception event must be structurally valid (t=='icp', sn==0, valid prefix) and all signatures must verify against the inception keys"
     postconditions:
       - formal:
           language: python

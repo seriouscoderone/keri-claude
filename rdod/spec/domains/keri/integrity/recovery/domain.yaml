@@ -1,0 +1,60 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/integrity/recovery"
+name: "Superseding Recovery"
+description: >
+  The mechanics of recovering from key compromise via superseding rotation. Defines the superseding
+  rules (A0-A2 for non-delegated, B1-B3 for delegated, C for recursive delegation), the
+  reconciliation process that determines the authoritative trunk, and the trunk/disputed-branch
+  model that preserves both the recovered path and the forensic record of compromised events.
+  This is pure protocol logic — no cryptography, no persistence, no networking.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Superseding Recovery and Reconciliation, Superseding Rules, Dead-Attacks, Live-Attacks"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: Recovery, Superseding Rotation"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — sections: Survivability, Superseding Recovery"
+
+ubiquitous_language:
+  - term: "Superseding Recovery"
+    definition: "Recovery from key compromise by issuing a rotation event that supersedes a compromised event at the same sequence number"
+    invariants:
+      - "Creates a fork with a recovered trunk and a disputed branch"
+      - "The controller is still accountable for harm caused by compromised events"
+
+  - term: "Superseding Rules"
+    definition: "The formal rules determining when one event can supersede another at the same sn"
+    invariants:
+      - "A0-A2 for non-delegated events, B1-B3 for delegated events, C for recursive delegation"
+      - "Non-delegated rotations cannot supersede other rotations"
+
+domain_clients:
+  - ref: "domain://keri/integrity"
+    relationship: "Parent domain invokes superseding recovery when a validator receives a superseding rotation event"
+    via_port: "port://keri/integrity/recovery/inbound/superseding-rules"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    This is a leaf domain — pure protocol logic with no kernel or external dependencies.
+    The superseding rules define an ordering relation over events at the same sn. In keripy,
+    the superseding logic is embedded in Kevery's event processing pipeline. In keriox, it is
+    part of the validator module. Reconciliation applies the superseding rules to determine
+    which path through the KEL DAG is the undisputed trunk. The trunk/disputed-branch model
+    is a logical partitioning — implementations may store both paths and mark branch membership.
+
+issues: []
+
+tags: ["recovery", "superseding", "reconciliation", "trunk", "disputed-branch", "protocol-logic"]

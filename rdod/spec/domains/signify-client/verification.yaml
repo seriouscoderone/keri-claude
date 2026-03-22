@@ -1,6 +1,10 @@
 # verification.yaml
 domain_ref: "signify-client"
 
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
 # Formalized invariants from ubiquitous_language terms
 properties:
   - invariant: "Private keys generated and stored locally — never transmitted"
@@ -52,7 +56,7 @@ properties:
     term: "Signing Request"
     technique: property-based
     formal:
-      language: python
+      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
       expression: |
         @given(content=st.binary(min_size=1, max_size=512))
         def test_agent_cannot_sign(content):

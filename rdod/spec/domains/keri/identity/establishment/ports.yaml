@@ -1,0 +1,33 @@
+# ports.yaml
+domain_ref: "keri/identity/establishment"
+
+ports:
+  # Inbound -- what clients call
+  - id: "port://keri/identity/establishment/inbound/validate-event"
+    type: inbound
+    name: "Event Validation"
+    contract: "validate_event(event: SignedEventMessage, key_state: KeyState) -> Result<ValidationPassed, ValidationFailure>; validate_signatures(raw: bytes, sigers: [Siger], verfers: [Verfer]) -> [int]; check_threshold(tholder: Tholder, indices: [int]) -> bool"
+    protocol: "method-call"
+    refs: ["domain://keri/identity"]
+
+  - id: "port://keri/identity/establishment/inbound/validate-rotation"
+    type: inbound
+    name: "Rotation Validation"
+    contract: "validate_pre_rotation(sigers: [Siger], new_keys: [PublicKey], prior_next_digests: [Digest], ntholder: Tholder) -> Result<[int], PreRotationError>; validate_dual_threshold(tholder: Tholder, ntholder: Tholder, indices: [int], ondices: [int]) -> Result<bool, ThresholdError>"
+    protocol: "method-call"
+    refs: ["domain://keri/identity"]
+
+  - id: "port://keri/identity/establishment/inbound/validate-delegation"
+    type: inbound
+    name: "Delegation Validation"
+    contract: "validate_delegation(delegated_event: SignedEventMessage, delegator_aid: AID) -> Result<bool, DelegationError>"
+    protocol: "method-call"
+    refs: ["domain://keri/identity"]
+
+  # Outbound -- what validation calls
+  - id: "port://keri/identity/establishment/outbound/state-lookup"
+    type: outbound
+    name: "Key State and KEL Lookup"
+    contract: "get_key_state(aid: AID) -> KeyState; get_event_by_sn(aid: AID, sn: int) -> KeyEvent; get_delegator_seal(delegator_aid: AID, delegatee_aid: AID, sn: int, said: SAID) -> Result<EventSeal, NotFound>"
+    protocol: "method-call"
+    refs: ["persistence"]

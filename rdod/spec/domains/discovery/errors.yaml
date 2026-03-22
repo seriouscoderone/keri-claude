@@ -1,0 +1,138 @@
+# errors.yaml
+domain_ref: "discovery"
+
+# Error catalog for the Discovery domain.
+# Maps to exception classes in keripy/src/keri/kering.py and raise sites in
+# keripy/src/keri/app/oobiing.py (Oobiery, OobiDoer) and
+# keripy/src/keri/core/routing.py (Router.processReply).
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action
+#   fatal      — unrecoverable; resolution is permanently rejected
+
+errors:
+  - name: "ValidationError"
+    keripy_class: "kering.ValidationError"
+    description: "OOBI reply message failed structural validation"
+    cause: "The rpy message has an unsupported route, is missing required attributes (cid, role, eid), or contains an invalid URL scheme"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "oobi_url"
+        type: "string"
+        description: "The OOBI URL that produced the invalid reply"
+      - field: "route"
+        type: "string"
+        description: "The reply route (/end/role, /loc/scheme, /ksn)"
+      - field: "reason"
+        type: "string"
+        description: "Specific validation failure (unsupported route, missing element, invalid url scheme)"
+    related_port: "port://discovery/inbound/discovery"
+    keripy_raise_site: "oobiing.py:Oobiery — 'Usupported route', 'Missing element', 'Invalid url scheme'"
+
+  - name: "UnverifiedReplyError"
+    keripy_class: "kering.UnverifiedReplyError"
+    description: "OOBI introduction reply could not be cryptographically verified"
+    cause: "The rpy message signatures do not verify against the signer's key state — the introduction is untrusted"
+    recovery: "escrow"
+    escrow_queue: "RPE"
+    severity: "transient"
+    context:
+      - field: "oobi_url"
+        type: "string"
+        description: "The OOBI URL that produced the unverified reply"
+      - field: "signer_aid"
+        type: "string"
+        description: "The AID of the reply signer (if parseable)"
+      - field: "reply_said"
+        type: "string"
+        description: "The SAID of the unverified reply message"
+    related_port: "port://discovery/inbound/discovery"
+    keripy_raise_site: "oobiing.py:Oobiery — 'Unverified introduction reply'"
+
+  - name: "ConfigurationError"
+    keripy_class: "kering.ConfigurationError"
+    description: "OOBI resolution infrastructure is not configured to handle this type"
+    cause: "The Oobiery instance was not configured to handle rpy introductions — missing introduction handler configuration"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "oobi_url"
+        type: "string"
+        description: "The OOBI URL that triggered the configuration error"
+      - field: "reason"
+        type: "string"
+        description: "Configuration limitation description"
+    related_port: "port://discovery/inbound/discovery"
+    keripy_raise_site: "oobiing.py:Oobiery — 'this oobiery is not configured to handle rpy introductions'"
+
+  - name: "StaleReplyError"
+    keripy_class: "N/A (BADA RUN policy rejection)"
+    description: "Reply data rejected by Best Available Data Accepted (BADA) policy"
+    cause: "The rpy message's datetime or sequence number is not newer than the currently accepted data for this route — BADA RUN logic rejects stale updates"
+    recovery: "abort"
+    severity: "recoverable"
+    context:
+      - field: "route"
+        type: "string"
+        description: "The reply route (/end/role, /loc/scheme, /ksn)"
+      - field: "signer_aid"
+        type: "string"
+        description: "The AID of the reply signer"
+      - field: "current_datetime"
+        type: "string"
+        description: "Datetime of the currently accepted data"
+      - field: "received_datetime"
+        type: "string"
+        description: "Datetime of the rejected reply"
+    related_port: "port://discovery/inbound/discovery"
+    keripy_raise_site: "routing.py:Router.processReply — BADA Logic comparison"
+
+  - name: "OOBIResolutionTimeoutError"
+    keripy_class: "N/A (retry-based eviction)"
+    description: "OOBI URL could not be resolved within the retry window"
+    cause: "The OOBI endpoint is unreachable, the remote service returned invalid data, or the returned KEL fails validation after multiple retry attempts"
+    recovery: "retry"
+    severity: "transient"
+    context:
+      - field: "oobi_url"
+        type: "string"
+        description: "The OOBI URL that failed to resolve"
+      - field: "reason"
+        type: "string"
+        description: "Last failure reason (connection timeout, invalid KEL, signature mismatch)"
+    related_port: "port://discovery/outbound/url-resolution"
+    keripy_raise_site: "oobiing.py:OobiDoer — OOBI table retry/escrow eviction"
+
+  - name: "EndRoleValidationError"
+    keripy_class: "kering.ValidationError"
+    description: "End-role authorization reply has missing or invalid attributes"
+    cause: "The /end/role rpy message is missing required fields (cid, role, eid) or the AID/endpoint values are malformed"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "aid"
+        type: "string"
+        description: "The AID whose endpoint was being authorized"
+      - field: "role"
+        type: "string"
+        description: "The role being authorized (witness, watcher, agent, etc.)"
+      - field: "missing_field"
+        type: "string"
+        description: "The specific field that was missing or invalid"
+    related_port: "port://discovery/inbound/discovery"
+    keripy_raise_site: "oobiing.py:Oobiery — 'Missing element={k} from attributes'"
+
+  - name: "MissingRouteHandlerError"
+    keripy_class: "kering.ValidationError"
+    description: "No handler registered for the reply route"
+    cause: "The rpy message route does not match any registered resource handler in the Router"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "route"
+        type: "string"
+        description: "The unhandled reply route"
+    related_port: "port://discovery/inbound/discovery"
+    keripy_raise_site: "routing.py:Router.processReply — 'No resource is registered to handle route'"

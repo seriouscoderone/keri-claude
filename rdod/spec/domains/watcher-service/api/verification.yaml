@@ -1,0 +1,111 @@
+# verification.yaml
+domain_ref: "watcher-service/api"
+
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
+properties:
+  - invariant: "GET /query/kel/{aid} MUST return HTTP 200 with a key state object where kel_state.aid == requested aid AND kel_state.sn >= 0; if the AID is unknown to the watcher, MUST return HTTP 404"
+    term: "KEL State Query"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(aid=keri_aid_strategy())
+        def test_api_returns_key_state(aid):
+            response = http_get(f'/query/kel/{aid}')
+            assert response.status_code in (200, 404), (
+                f"KEL query must return 200 or 404, got {response.status_code}"
+            )
+            if response.status_code == 200:
+                kel_state = parse_cesr_response(response.body)
+                assert kel_state.aid == aid, (
+                    f"Returned AID {kel_state.aid} must match requested AID {aid}"
+                )
+                assert kel_state.sn >= 0
+                assert kel_state.key_state is not None
+    strategy: "keri_aid_strategy() for valid AIDs"
+    notes: "KEL state query returns the watcher's cross-checked view or 404 for unknown AIDs."
+
+  - invariant: "GET /query/duplicity/{aid} MUST return HTTP 200 with is_duplicitous boolean; if is_duplicitous == true, evidence MUST contain >= 2 conflicting events at the same (prefix, sn) with different SAIDs; if is_duplicitous == false, evidence MUST be empty"
+    term: "Duplicity Query"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(aid=keri_aid_strategy())
+        def test_api_returns_duplicity_status(aid):
+            response = http_get(f'/query/duplicity/{aid}')
+            assert response.status_code in (200, 404)
+            if response.status_code == 200:
+                status = parse_cesr_response(response.body)
+                assert status.aid == aid
+                assert isinstance(status.is_duplicitous, bool)
+                if status.is_duplicitous:
+                    assert len(status.evidence) >= 2, (
+                        f"Duplicity evidence must have >= 2 events, got {len(status.evidence)}"
+                    )
+                    # All evidence events must share the same sn but differ in SAID
+                    sns = {e.sn for e in status.evidence}
+                    saids = {e.said for e in status.evidence}
+                    assert len(sns) == 1, "Evidence events must share the same sn"
+                    assert len(saids) >= 2, "Evidence events must have different SAIDs"
+                else:
+                    assert len(status.evidence) == 0, (
+                        "Non-duplicitous status must have empty evidence"
+                    )
+    strategy: "keri_aid_strategy() for valid AIDs"
+    notes: "Duplicity query is definitive: true requires evidence, false requires empty evidence."
+
+  - invariant: "Querying with a malformed AID (empty string, None, or non-CESR-qualified string) MUST return HTTP 400; the watcher MUST NOT attempt to look up malformed identifiers"
+    term: "KEL State Query"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(malformed_aid=st.one_of(
+            st.just(''),
+            st.just('not-a-valid-aid'),
+            st.text(min_size=1, max_size=10, alphabet=st.characters(whitelist_categories=('P',)))
+        ))
+        def test_malformed_aid_rejected(malformed_aid):
+            response = http_get(f'/query/kel/{malformed_aid}')
+            assert response.status_code == 400, (
+                f"Malformed AID '{malformed_aid}' must return 400, got {response.status_code}"
+            )
+    strategy: "st.one_of for empty, non-CESR, and garbage AID strings"
+    notes: "Input validation at the API boundary prevents downstream processing of garbage."
+
+contracts:
+  - port_ref: "port://watcher-service/api/inbound/kel-query"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None and isinstance(aid, str) and len(aid) >= 44"
+        description: "Query requires a valid CESR-qualified AID string"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, kel_state:
+                kel_state.aid == aid and kel_state.sn >= 0
+        description: "Returns key state for the requested AID"
+
+  - port_ref: "port://watcher-service/api/inbound/duplicity-query"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None and isinstance(aid, str) and len(aid) >= 44"
+        description: "Query requires a valid CESR-qualified AID string"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, status:
+                status.aid == aid
+                and isinstance(status.is_duplicitous, bool)
+                and (len(status.evidence) >= 2 if status.is_duplicitous else True)
+        description: "Returns duplicity status with evidence if duplicitous"
+
+state_machines: []

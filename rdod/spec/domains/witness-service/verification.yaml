@@ -1,6 +1,10 @@
 # verification.yaml
 domain_ref: "witness-service"
 
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
 # Formalized invariants from ubiquitous_language terms
 properties:
   - invariant: "Signs receipts with its own non-transferable key — never signs on behalf of a controller"
@@ -17,7 +21,7 @@ properties:
             assert receipt.signer_aid == witness.aid
             assert receipt.signer_aid != event.controller_aid
             assert receipt.signer_aid.startswith('B')  # Non-transferable prefix
-    strategy: "valid_key_event_strategy() for properly formed key events from various controllers"
+    strategy: "valid_key_event_strategy() for structurally valid key events with verified controller signatures"
     notes: "Witness receipts are always signed by the witness's own non-transferable key"
 
   - invariant: "Accepts events under the first-seen rule — rejects conflicting events at the same (prefix, sn)"
@@ -90,7 +94,7 @@ properties:
             receipt2 = witness.submit(event)  # Same event, not conflicting
             assert receipt1.accepted and receipt2.accepted
             assert receipt1.signature == receipt2.signature  # Same receipt returned
-    strategy: "valid_key_event_strategy() for properly formed key events"
+    strategy: "valid_key_event_strategy() for structurally valid key events"
     notes: "Submitting the exact same event twice returns the same receipt — idempotent"
 
   - invariant: "One KERL per monitored AID — append-only"

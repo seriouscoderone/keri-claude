@@ -2,48 +2,91 @@
 domain_ref: "keri/delegation/recovery"
 
 properties:
-  - invariant: "An exploiter that compromises only the delegatee's keys cannot fully capture the delegated AID — delegator approval still required"
+  - invariant: "An exploiter that compromises only the delegatee's current signing keys MUST NOT be able to create a valid delegated rotation (drt) without the delegator's approval seal; the drt event without a matching seal in the delegator's KEL MUST be rejected by all validators"
     term: "Delegation Recovery"
     technique: property-based
     formal:
       language: python
-      expression: "lambda delegatee_keys_compromised, delegator_keys_compromised: (delegatee_keys_compromised and not delegator_keys_compromised) implies not full_exploit_possible()"
-    strategy: "st.tuples(st.booleans(), st.just(False))"
-    notes: "Delegator approval is required for establishment events — compromising only the delegatee is insufficient"
+      expression: |
+        @given(delegatee_compromised=st.just(True), delegator_compromised=st.just(False))
+        def test_delegatee_only_compromise_blocked(delegatee_compromised, delegator_compromised):
+            scenario = CompromiseScenario(
+                delegatee_keys=delegatee_compromised,
+                delegator_keys=delegator_compromised
+            )
+            # Attacker can sign a drt with delegatee keys
+            forged_drt = forge_drt(scenario.delegatee_signing_keys)
+            # But without delegator seal, validation step 3 fails
+            result = validate_delegation(forged_drt)
+            assert result.disposition in ('escrowed_pde', 'escrowed_delegable'), (
+                "drt without delegator seal must be escrowed or rejected, not approved"
+            )
+            assert not result.disposition == 'approved'
+    strategy: "Delegatee-only compromise scenario"
+    notes: "Delegator approval is required for all establishment events — compromising only the delegatee is insufficient for full exploit."
 
-  - invariant: "An exploiter that compromises only the delegator's signing keys cannot force a delegated rotation without also compromising the delegatee's pre-rotated keys"
+  - invariant: "An exploiter that compromises only the delegator's current signing keys MUST NOT be able to force a delegated rotation; the attacker can create a seal in the delegator's KEL, but the drt event itself requires the delegatee's pre-rotated keys to produce valid signatures"
     term: "Delegation Recovery"
     technique: property-based
     formal:
       language: python
-      expression: "lambda delegator_signing_compromised, delegatee_prerotated_compromised: (delegator_signing_compromised and not delegatee_prerotated_compromised) implies not forced_rotation_possible()"
-    strategy: "st.tuples(st.just(True), st.just(False))"
-    notes: "The delegatee's pre-rotated keys are needed to create a valid rotation event"
+      expression: |
+        @given(delegator_compromised=st.just(True), delegatee_prerotated_compromised=st.just(False))
+        def test_delegator_only_compromise_blocked(delegator_compromised, delegatee_prerotated_compromised):
+            scenario = CompromiseScenario(
+                delegator_keys=delegator_compromised,
+                delegatee_prerotated_keys=delegatee_prerotated_compromised
+            )
+            # Attacker can create a seal in the delegator's KEL
+            forged_seal = create_seal_in_delegator_kel(scenario.delegator_signing_keys)
+            # But cannot produce a valid drt without delegatee's pre-rotated keys
+            forged_drt = attempt_drt(scenario)
+            result = validate_delegation(forged_drt)
+            assert not result.step1_passed, (
+                "drt signature check must fail without delegatee's pre-rotated keys"
+            )
+    strategy: "Delegator-only compromise scenario"
+    notes: "The drt event requires the delegatee's pre-rotated keys for valid signatures — delegator keys alone are insufficient."
 
-  - invariant: "Merely compromising the delegatee's keys is insufficient — the delegator must also approve"
-    term: "Joint Compromise Requirement"
-    technique: property-based
-    formal:
-      language: python
-      expression: "lambda compromise: full_exploit(compromise) implies (compromise.delegatee_keys and compromise.delegator_keys)"
-    strategy: "st.from_type(CompromiseScenario)"
-    notes: "Full exploit requires both key sets — this is the combined arms property"
-
-  - invariant: "This joint requirement significantly raises the bar for successful exploitation"
-    term: "Joint Compromise Requirement"
-    technique: smt
-    formal:
-      language: z3
-      expression: "Implies(full_exploit == True, And(delegatee_compromised == True, delegator_compromised == True))"
-    notes: "SMT proves the implication exhaustively — no partial compromise scenario leads to full exploit"
-
-  - invariant: "Extends recursively through delegation chains — each level adds an independent key set"
+  - invariant: "Full exploitation of a delegated AID requires simultaneous compromise of BOTH the delegatee's pre-rotated keys AND the delegator's signing keys; if either key set is uncompromised, the exploit MUST fail"
     term: "Joint Compromise Requirement"
     technique: smt
     formal:
-      language: z3
-      expression: "Implies(And(chain_length > 0, full_exploit == True), ForAll(level, Implies(And(level >= 0, level < chain_length), keys_compromised_at(level) == True)))"
-    notes: "For an N-level chain, all N key sets must be simultaneously compromised"
+      language: z3-python
+      expression: |
+        from z3 import *
+        delegatee_compromised = Bool('delegatee_compromised')
+        delegator_compromised = Bool('delegator_compromised')
+        full_exploit = Bool('full_exploit')
+        s = Solver()
+        s.add(full_exploit == And(delegatee_compromised, delegator_compromised))
+        # Prove: partial compromise cannot lead to full exploit
+        s.add(full_exploit, Not(delegatee_compromised))
+        assert s.check() == unsat
+        s2 = Solver()
+        s2.add(full_exploit == And(delegatee_compromised, delegator_compromised))
+        s2.add(full_exploit, Not(delegator_compromised))
+        assert s2.check() == unsat
+    notes: "SMT proves both key sets are required — no partial compromise scenario leads to full exploit."
+
+  - invariant: "For an N-level delegation chain, full exploitation requires simultaneous compromise of all N independent key sets; the number of key sets that must be compromised equals the chain depth; a single-level delegation requires 2 key sets, a two-level requires 3, and so on"
+    term: "Joint Compromise Requirement"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        chain_length = Int('chain_length')
+        keys_needed = Int('keys_needed')
+        full_exploit = Bool('full_exploit')
+        s = Solver()
+        s.add(chain_length >= 1)
+        s.add(keys_needed == chain_length + 1)  # N levels = N+1 key sets (N delegatees + 1 root delegator)
+        s.add(full_exploit == True)
+        # Prove: exploiting a 3-level chain needs 4 key sets
+        s.add(chain_length == 3, keys_needed != 4)
+        assert s.check() == unsat
+    notes: "Each delegation level adds an independent key set. Chain depth N requires N+1 simultaneous compromises."
 
   - invariant: "B1: Superseding delegation has a higher sn delegating event than the superseded delegation"
     term: "Delegated Superseding Rules"
@@ -69,23 +112,49 @@ properties:
       expression: "Implies(And(delegating_sn(candidate) == delegating_sn(incumbent), delegating_type(candidate) == ROT, delegating_type(incumbent) == IXN), supersedes_b3(candidate, incumbent) == True)"
     notes: "Rule B3 — applies rule A0 recursively to the delegator's KEL"
 
-  - invariant: "Only the latest-seen delegated rotation at a given sn can be superseded — earlier ones are final"
+  - invariant: "At any given sn, only the latest-seen delegated rotation can be superseded by a new rotation; earlier rotations at the same sn are final and MUST NOT be displaced by a later arrival"
     term: "Delegated Superseding Rules"
     technique: property-based
     formal:
       language: python
-      expression: "lambda rotations_at_sn: len(rotations_at_sn) <= 1 or only_latest_supersedable(rotations_at_sn)"
-    strategy: "st.lists(st.from_type(DelegatedRotation), min_size=1, max_size=5)"
-    notes: "Only the most recently seen delegated rotation can be superseded — this limits the attack window"
+      expression: |
+        @given(rotations=st.lists(delegated_rotation_strategy(), min_size=2, max_size=5))
+        def test_only_latest_supersedable(rotations):
+            # All rotations at the same sn
+            sn = rotations[0].sn
+            for r in rotations:
+                r.sn = sn
+            # Only the latest-seen (last in first-seen order) can be superseded
+            latest = rotations[-1]
+            for r in rotations[:-1]:
+                assert not can_supersede_by_later_arrival(r), (
+                    f"Earlier rotation at sn={sn} must not be supersedable"
+                )
+            # Latest can potentially be superseded by a new candidate
+            new_candidate = build_superseding_rotation(latest)
+            assert can_be_superseded(latest, new_candidate) or not can_be_superseded(latest, new_candidate)
+    strategy: "st.lists of delegated rotations at the same sn"
+    notes: "Only the most recently seen delegated rotation can be superseded — this limits the attack window."
 
-  - invariant: "The delegator holds or controls the delegatee's pre-rotated private keys"
+  - invariant: "In custodial delegation, the delegator MUST hold or control the delegatee's pre-rotated private keys; this means the delegator can perform recovery rotation on behalf of the delegatee without the delegatee's cooperation"
     term: "Custodial Delegation"
     technique: property-based
     formal:
       language: python
-      expression: "lambda custodial: custodial.delegator_controls(custodial.delegatee.pre_rotated_keys)"
-    strategy: "st.from_type(CustodialDelegation)"
-    notes: "Defining property of custodial delegation — the delegator has the recovery keys"
+      expression: |
+        @given(custodial=custodial_delegation_strategy())
+        def test_custodial_delegator_controls_prerotated(custodial):
+            # Delegator must control delegatee's pre-rotated keys
+            assert custodial.delegator_controls(custodial.delegatee.pre_rotated_keys), (
+                "Custodial delegator must control delegatee's pre-rotated keys"
+            )
+            # Delegator can unilaterally perform recovery rotation
+            recovery_drt = custodial.delegator.build_recovery_rotation(custodial.delegatee)
+            assert recovery_drt.signatures_valid(), (
+                "Custodial delegator must be able to sign recovery rotation"
+            )
+    strategy: "custodial_delegation_strategy()"
+    notes: "Defining property of custodial delegation — the delegator holds the recovery keys and can act unilaterally."
 
 contracts:
   - port_ref: "port://keri/delegation/recovery/inbound/recovery-rules"

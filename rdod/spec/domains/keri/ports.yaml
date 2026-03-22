@@ -8,14 +8,14 @@ ports:
     name: "Identifier Lifecycle"
     contract: "incept(config) -> AID; rotate(aid, new_keys) -> RotationEvent; interact(aid, seals) -> InteractionEvent; get_key_state(aid) -> KeyState"
     protocol: "method-call"
-    refs: ["domain://agent"]
+    refs: []
 
   - id: "port://keri/inbound/event-verification"
     type: inbound
     name: "Event Verification"
     contract: "process_event(event, signatures, receipts) -> Result<KeyState, ValidationError>"
     protocol: "method-call"
-    refs: ["domain://agent"]
+    refs: []
 
   # Outbound — what KERI calls
   - id: "port://keri/outbound/event-store"

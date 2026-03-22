@@ -1,0 +1,71 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/integrity"
+name: "KERI Integrity"
+description: >
+  Detecting and recovering from identifier compromise through fork detection, evidence collection,
+  and superseding recovery. Duplicity is the external inconsistency where two different verifiable
+  event histories exist for the same AID. Detection is performed by watchers, jurors, and judges
+  under the validator's control (not the controller's). A validator decides trust based on the
+  presence or absence of duplicity evidence. Recovery from key compromise is possible via
+  superseding rotation using pre-committed keys, which forks the KEL into a recovered trunk and a
+  disputed branch. KERI provides duplicity-evident DKMI — duplicity may not be prevented, but it
+  is always detectable.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Duplicity, Superseding Recovery and Reconciliation, First Seen Policy, Superseding Rules, Dead-Attacks, Live-Attacks, Validation Rules"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: Duplicity Detection, Watchers, Jurors, Judges, Recovery"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — sections: Inconsistency and Duplicity, Survivability, Ambient Verifiability"
+  - type: implementation
+    reference: "keripy — src/keri/core/eventing.py (Kevery.processEscrowLikelyDuplicitous), src/keri/app/storing.py (.ldes, .dels), src/keri/core/eventing.py (processCues, cues deque)"
+  - type: implementation
+    reference: "keriox — keriox_core/src/processor/escrow.rs (DuplicitousEvents escrow), keriox_core/src/processor/notification.rs (NotificationBus, KeyEventAdded)"
+
+ubiquitous_language:
+  - term: "Duplicity"
+    definition: "The existence of two or more verified but different versions of an event at the same sequence number in a KEL"
+    invariants:
+      - "Both versions are cryptographically verifiable but mutually inconsistent"
+      - "Indicates either key compromise or malicious controller behavior"
+      - "Always detectable given access to both versions"
+      - "KERI is duplicity-evident — duplicity cannot be prevented but is always detectable"
+
+domain_clients:
+  - ref: "domain://keri"
+    relationship: "Parent domain drives duplicity monitoring and evidence handling"
+    via_port: "port://keri/integrity/inbound/monitoring"
+
+subdomains:
+  - ref: "domain://keri/integrity/evidence"
+    relationship: "Owns fork detection, evidence escrow lifecycle (.ldes -> .dels), and notification bus"
+  - ref: "domain://keri/integrity/recovery"
+    relationship: "Owns superseding rules (A0-A2, B1-B3, C), reconciliation, and trunk/disputed-branch model"
+  - ref: "domain://keri/integrity/detection"
+    relationship: "Owns watcher/juror/judge roles, ambient verifiability, and eclipse attack modeling"
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519 (signature verification on conflicting events), Blake3-256/SHA-256 (event digest comparison)"
+    relationship: "Duplicity detection requires verifying signatures on both conflicting events — cryptographic verification is a kernel operation"
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    This is an orchestrating domain decomposed into three subdomains: evidence (fork detection,
+    escrow lifecycle, notification bus), recovery (superseding rules, reconciliation, trunk/branch
+    model), and monitoring (watcher/juror/judge roles, ambient verifiability). The parent domain
+    owns the threat model overview — duplicity vs internal inconsistency, live vs dead attacks —
+    and coordinates the subdomains. Implementation-specific details live in the subdomains.
+
+issues: []
+
+tags: ["duplicity", "security", "recovery", "watcher", "monitoring"]

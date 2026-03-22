@@ -1,0 +1,61 @@
+domain_ref: "discovery"
+
+protocols:
+  - name: "OOBIResolution"
+    description: "Resolve an Out-of-Band Introduction URL to establish key state for a remote identifier. Bootstraps trust by fetching and validating a remote AID's KEL."
+    participants:
+      - domain: "domain://discovery"
+        role: "Resolves the OOBI URL and processes reply messages"
+      - domain: "domain://keri/identity/establishment"
+        role: "Validates the fetched KEL events"
+      - domain: "domain://keri/identity/state"
+        role: "Stores the resulting key state"
+      - domain: "domain://keri/accountability/receipting"
+        role: "Validates witness receipts included in the KEL replay"
+    trigger: "User or system provides an OOBI URL for a remote identifier"
+    steps:
+      - seq: 1
+        domain: "domain://discovery"
+        action: "fetch_oobi"
+        input: "OOBI URL (e.g., http://witness.example.com/oobi/{aid}/{role}/{eid})"
+        output: "KEL replay stream + end-role reply messages"
+        on_failure:
+          - error: "OOBIResolutionError"
+            action: "retry"
+            compensation: "Retry with exponential backoff up to 3 attempts"
+      - seq: 2
+        domain: "domain://keri/identity/establishment"
+        action: "validate_kel_replay"
+        input: "Stream of KEL events from the OOBI response"
+        output: "Each event validated and accepted to local database"
+        depends_on: [1]
+        on_failure:
+          - error: "ValidationError"
+            action: "abort"
+            compensation: "Reject entire OOBI — do not partially accept a KEL"
+      - seq: 3
+        domain: "domain://keri/accountability/receipting"
+        action: "validate_witness_receipts"
+        input: "Witness receipts included in the replay"
+        output: "Receipts verified — events are fully witnessed"
+        depends_on: [2]
+      - seq: 4
+        domain: "domain://keri/identity/state"
+        action: "establish_key_state"
+        input: "Validated KEL events"
+        output: "Remote AID's key state available locally"
+        depends_on: [3]
+      - seq: 5
+        domain: "domain://discovery"
+        action: "process_endpoint_replies"
+        input: "End-role reply messages from OOBI response"
+        output: "Remote AID's service endpoints stored locally (witness URLs, agent URLs, etc.)"
+        depends_on: [4]
+        on_failure:
+          - error: "BADARejectError"
+            action: "abort"
+            compensation: "Endpoint data rejected as stale — key state still valid"
+    timeout: "30s for HTTP fetch, then standard event processing timeouts"
+    terminal_states:
+      success: "Remote AID's key state and service endpoints available locally — can now communicate"
+      failure: "OOBI unresolvable or KEL invalid — remote AID not trusted"

@@ -1,6 +1,10 @@
 # verification.yaml
 domain_ref: "keri"
 
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
 properties:
   # AID invariants
   - invariant: "Derived from >= 128 bits of pseudo-random cryptographic entropy"
@@ -100,7 +104,7 @@ properties:
     notes: "No 1:1 constraint between controllers and AIDs."
 
   # Key Event invariants
-  - invariant: "Signed by keys authorized in the current key state"
+  - invariant: "Every signature on a key event MUST verify against a key in the current key state's signing_keys list at the event's sn; a signature from a key not in the authorized set MUST cause the event to be rejected"
     term: "Key Event"
     technique: property-based
     formal:
@@ -111,9 +115,11 @@ properties:
             for event in kel.events:
                 key_state = compute_key_state_at(kel, event.sn)
                 for sig in event.signatures:
-                    assert sig.verfer in key_state.signing_keys
+                    assert sig.verfer in key_state.signing_keys, (
+                        f"Signature at sn={event.sn} by key not in authorized set"
+                    )
     strategy: "kel_with_events_strategy() generates KELs with signed events"
-    notes: ""
+    notes: "Every signature must come from a key in the current key state — unauthorized signers are rejected."
 
   - invariant: "Hash-chained to predecessor via prior event digest (p field)"
     term: "Key Event"
@@ -160,7 +166,7 @@ properties:
     notes: "Every event must have a valid SAID in the d field."
 
   # Establishment Event invariants
-  - invariant: "Must include signing keys (k field) and next key digests (n field)"
+  - invariant: "Establishment events MUST include signing keys (k field with len >= 1) and next key digests (n field, non-null); n MAY be an empty list for non-transferable AIDs but MUST NOT be null; an establishment event with zero signing keys MUST be rejected"
     term: "Establishment Event"
     technique: property-based
     formal:
@@ -168,10 +174,12 @@ properties:
       expression: |
         @given(event=establishment_event_strategy())
         def test_establishment_has_keys(event):
-            assert len(event.k) >= 1
-            assert event.n is not None  # may be empty list for non-transferable
+            assert len(event.k) >= 1, (
+                f"Establishment event must have >= 1 signing key, got {len(event.k)}"
+            )
+            assert event.n is not None, "Next key digests (n) must not be null"
     strategy: "establishment_event_strategy() generates icp/rot/dip/drt events"
-    notes: ""
+    notes: "k >= 1 is mandatory. n may be empty for non-transferable but must not be null."
 
   - invariant: "Must include witness set (b field) and threshold (bt field)"
     term: "Establishment Event"
@@ -397,9 +405,9 @@ properties:
             parsed = list(parser.parse(stream))
             assert len(parsed) == len(messages)
     strategy: "st.lists(serialized_message_strategy(), 1..5)"
-    notes: "Parser must correctly split concatenated messages."
+    notes: "Parser must split concatenated messages at version string boundaries with zero message loss."
 
-  - invariant: "Dispatches by message type (ilk) to the correct handler"
+  - invariant: "Parser MUST dispatch by message ilk to the correct handler: {icp,rot,ixn,dip,drt} -> event_processor; {rct,vrc} -> receipt_handler; {qry,rpy} -> query_handler; exn -> exchange_handler; unknown ilk MUST be rejected"
     term: "Message Parser"
     technique: property-based
     formal:
@@ -418,8 +426,10 @@ properties:
                 assert handler == 'query_handler'
             elif ilk == 'exn':
                 assert handler == 'exchange_handler'
-    strategy: "serialized_message_strategy() with various ilks"
-    notes: ""
+            else:
+                assert handler is None or handler == 'rejected'
+    strategy: "serialized_message_strategy() with various ilks including unknown"
+    notes: "Dispatch is deterministic by ilk. Unknown ilks are rejected at the parser level."
 
   # Escrow Architecture invariants
   - invariant: "Each escrow type has a configurable timeout (default: 3600s for most types, 1200s for out-of-order)"

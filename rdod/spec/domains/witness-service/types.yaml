@@ -1,0 +1,57 @@
+domain_ref: "witness-service"
+
+types:
+  - name: "WitnessConfiguration"
+    description: "Configuration for a witness node instance."
+    variants:
+      - name: "default"
+        fields:
+          - name: "witness_aid"
+            type: "string"
+            required: true
+            description: "This witness's non-transferable AID"
+          - name: "listen_port"
+            type: "integer"
+            required: true
+            description: "HTTP port for receiving events"
+            constraints:
+              min: 1
+              max: 65535
+          - name: "max_identifiers"
+            type: "integer"
+            required: false
+            description: "Maximum number of identifiers this witness will serve"
+          - name: "receipt_timeout_seconds"
+            type: "integer"
+            required: false
+            description: "How long to hold events before pruning unreceipted"
+            constraints:
+              min: 60
+        invariants:
+          - "witness_aid must be non-transferable — derived directly from the witness's public key"
+          - "The witness stores a KERL (KEL + receipts) for every identifier it serves"
+
+  - name: "FirstSeenRecord"
+    description: "Tracks the first event a witness observed at each (prefix, sn) — enforces the first-seen rule."
+    variants:
+      - name: "default"
+        fields:
+          - name: "prefix"
+            type: "string"
+            required: true
+            description: "The identifier AID"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number"
+          - name: "said"
+            type: "string"
+            required: true
+            description: "SAID of the first-seen event at this (prefix, sn)"
+          - name: "timestamp"
+            type: "string"
+            required: true
+            description: "ISO 8601 datetime when first seen"
+        invariants:
+          - "Immutable once written — a witness MUST NOT change the first-seen record for any (prefix, sn)"
+          - "Any subsequent event with different SAID at the same (prefix, sn) is rejected"

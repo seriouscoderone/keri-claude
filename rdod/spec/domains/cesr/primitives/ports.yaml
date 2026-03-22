@@ -1,0 +1,26 @@
+# ports.yaml
+domain_ref: "cesr/primitives"
+
+ports:
+  # Inbound — what the parent CESR domain calls
+  - id: "port://cesr/primitives/inbound/qualification"
+    type: inbound
+    name: "Primitive Qualification"
+    contract: "qualify(raw, code) -> Primitive{qb64, qb2}; dequalify(qb64 | qb2) -> (code, raw); verify(verfer, sig, ser) -> bool; digest(ser, code) -> Diger; sign(signer, ser, index?) -> Siger | Cigar"
+    protocol: "method-call"
+    refs: ["domain://cesr"]
+
+  - id: "port://cesr/primitives/inbound/code-resolution"
+    type: inbound
+    name: "Code Resolution"
+    contract: "resolve(code) -> CodeEntry{algorithm, raw_size, code_size, pad_size, lead_bytes, full_size}; resolve_indexed(code) -> IndexedCodeEntry{algorithm, index_size, ondex_size}"
+    protocol: "method-call"
+    refs: ["domain://cesr"]
+
+  # Outbound — what primitives depends on
+  - id: "port://cesr/primitives/outbound/crypto"
+    type: outbound
+    name: "Cryptographic Operations"
+    contract: "ed25519_sign(privkey, msg) -> sig; ed25519_verify(pubkey, sig, msg) -> bool; blake3_256(msg) -> digest; sha256(msg) -> digest; argon2(salt, path) -> derived_key; ecdsa_sign(privkey, msg) -> sig; ecdsa_verify(pubkey, sig, msg) -> bool"
+    protocol: "method-call"
+    refs: ["crypto-library"]

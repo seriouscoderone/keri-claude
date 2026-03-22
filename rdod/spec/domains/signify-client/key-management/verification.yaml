@@ -1,6 +1,10 @@
 # verification.yaml
 domain_ref: "signify-client/key-management"
 
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
 # Formalized invariants from ubiquitous_language terms
 properties:
   - invariant: "Minimum 21 characters (>=128 bits entropy after stretching)"
@@ -203,7 +207,7 @@ properties:
     term: "Encrypter"
     technique: property-based
     formal:
-      language: python
+      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
       expression: |
         @given(
             passcode=st.text(min_size=21, max_size=21, alphabet=st.characters(whitelist_categories=('L', 'N'))),

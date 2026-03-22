@@ -1,0 +1,17 @@
+# ports.yaml
+domain_ref: "discovery"
+
+ports:
+  - id: "port://discovery/inbound/discovery"
+    type: inbound
+    name: "OOBI Discovery"
+    contract: "resolve_oobi(url) -> Result<ResolvedEndpoint>; get_endpoints(aid, role?) -> [Endpoint]; introduce(aid, endpoint, role) -> OOBI"
+    protocol: "method-call"
+    refs: ["domain://keri"]
+
+  - id: "port://discovery/outbound/url-resolution"
+    type: outbound
+    name: "URL Resolution"
+    contract: "http_get(url) -> Response"
+    protocol: "REST"
+    refs: ["transport"]

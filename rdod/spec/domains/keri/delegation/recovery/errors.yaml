@@ -1,0 +1,31 @@
+domain_ref: "keri/delegation/recovery"
+
+errors:
+  - name: "DelegatorRevocationError"
+    description: "Delegator has not anchored subsequent establishment events, effectively revoking the delegation"
+    cause: "Delegate attempted a rotation (drt) but the delegator has not anchored a corresponding approval seal"
+    recovery: "escrow"
+    severity: "transient"
+    context:
+      - field: "delegate_prefix"
+        type: "string"
+        description: "The delegated identifier"
+      - field: "delegator_prefix"
+        type: "string"
+        description: "The delegator that has not approved"
+      - field: "awaiting_event_said"
+        type: "string"
+        description: "The delegated event awaiting approval"
+
+  - name: "DelegatorCompromisedError"
+    description: "Delegator's key state shows evidence of compromise (duplicity detected)"
+    cause: "Watcher reports duplicity on the delegator's KEL — all delegated identifiers under this delegator are at risk"
+    recovery: "escalate"
+    severity: "recoverable"
+    context:
+      - field: "delegator_prefix"
+        type: "string"
+        description: "The compromised delegator"
+      - field: "affected_delegates"
+        type: "array[string]"
+        description: "List of delegated AIDs under this delegator"

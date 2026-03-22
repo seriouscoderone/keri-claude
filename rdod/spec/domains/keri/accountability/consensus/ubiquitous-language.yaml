@@ -1,0 +1,86 @@
+# ubiquitous-language.yaml
+domain_ref: "keri/accountability/consensus"
+
+terms:
+  - term: "First-seen Rule"
+    synonyms: ["First Seen Policy", "First seen, always seen, never unseen"]
+    definition: "The fundamental witnessing policy that the first verified version of an event at a given sequence number wins. Once accepted as first-seen, an event cannot be unseen or replaced except by superseding recovery."
+    invariants:
+      - "First seen, always seen, never unseen"
+      - "All subsequent different versions of an event at the same location are discarded"
+      - "Consistent receipts (same version) from other witnesses are accepted and stored"
+      - "Inconsistent receipts (different version at same location) are discarded from the KERL but may be logged to a DEL"
+      - "Exception: superseding recovery rotation may replace a first-seen event"
+    examples:
+      - "Witness W1 accepts event E at sn=5. A later different event E' at sn=5 arrives — E' is discarded"
+      - "Receipt from W2 for the same version E at sn=5 — accepted and attached to the KERL entry"
+    related_terms: ["Immune Constraint", "Proper KERL", "BFT Quorum"]
+
+  - term: "Immune Constraint"
+    synonyms: ["Immunity"]
+    definition: "The mathematical constraint on M (accountability threshold), N (total witnesses), and F (potentially faulty witnesses) that guarantees at most one sufficient agreement exists despite faulty witnesses and a dishonest controller."
+    invariants:
+      - "Expressed as: M > (N + F + 1) / 2 where F < M and F* = N - M unavailable"
+      - "When satisfied, the service is immune — cannot produce multiple divergent proper KERLs"
+      - "A controller may choose to use KAWA to achieve immunity"
+      - "Any non-faulty witness with a proper agreement will keep and provide it on demand"
+    examples:
+      - "N=5, F=1: immune when M >= 4 (i.e., M > (5+1+1)/2 = 3.5)"
+      - "N=7, F=2: immune when M >= 6"
+    related_terms: ["Accountability Threshold", "BFT Quorum", "Proper KERL"]
+
+  - term: "Accountability Threshold"
+    synonyms: ["Tally", "bt field", "M"]
+    definition: "The minimum number M of the N designated witnesses that must receipt an event for the controller to accept accountability for that event. The controller designates this threshold."
+    invariants:
+      - "Set in the bt field of establishment events"
+      - "M must be no greater than N (the number of witnesses)"
+      - "The controller accepts accountability when any subset of M witnesses confirms an event"
+      - "A validator can require M receipts before accepting an event in indirect mode"
+      - "Can be changed at rotation along with the witness set"
+    examples:
+      - "bt='3' with 5 witnesses means 3-of-5 must receipt for accountability"
+      - "A validator requiring all 3-of-5 receipts before accepting an event"
+    related_terms: ["Immune Constraint", "BFT Quorum", "First-seen Rule"]
+
+  - term: "Proper KERL"
+    synonyms: ["Proper Agreement"]
+    definition: "A KERL that has been verified as consistent with all prior events by every non-faulty witness who is a party to the agreement. A proper KERL at a witness implies proper KERLs for all prior events."
+    invariants:
+      - "Verified as consistent by every non-faulty party to the agreement"
+      - "High availability: any non-faulty witness with a proper agreement provides it on demand"
+      - "Availability of a proper event at a witness is tantamount to availability of all prior proper events"
+      - "May be provided by any observer (validator, watcher, juror, judge) who has retained a copy"
+    examples:
+      - "A validator requesting a KERL from a witness and receiving a proper, consistent log"
+    related_terms: ["First-seen Rule", "Immune Constraint", "Accountability Threshold"]
+
+  - term: "BFT Quorum"
+    synonyms: ["ample()"]
+    definition: "Byzantine fault-tolerant majority calculation for witness thresholds. For n witnesses tolerating f faults: m = ceil((n+f+1)/2), subject to n >= 3f+1. Ensures that any two quorums overlap, preventing undetectable duplicity."
+    invariants:
+      - "Implemented as ample() function in keripy (kering module)"
+      - "For n witnesses: the minimum threshold m guarantees that any two sets of m witnesses share at least one honest member"
+      - "The overlap property ensures that a dishonest controller cannot get two different events fully witnessed without detection"
+      - "Used as the floor for TOAD — the controller may choose a higher threshold but not lower"
+    examples:
+      - "ample(5) = 4: with 5 witnesses, at least 4 must receipt to guarantee quorum overlap"
+      - "ample(7) = 5: with 7 witnesses tolerating 2 faults, 5 receipts needed"
+    related_terms: ["Accountability Threshold", "Immune Constraint", "First-seen Rule"]
+
+events:
+  - name: "AccountabilityThresholdMet"
+    payload: "aid: AID, sn: int, event_said: SAID, receipt_count: int, threshold: int"
+    triggers: "The number of witness receipts for an event meets or exceeds the accountability threshold M"
+
+  - name: "InconsistentReceiptDetected"
+    payload: "aid: AID, sn: int, witness_aid: WitnessAID, first_seen_said: SAID, inconsistent_said: SAID"
+    triggers: "A witness receives a receipt for a different version of an event at the same sequence number"
+
+rules:
+  - "The first verified version of an event at a given sequence number wins — first seen, always seen, never unseen"
+  - "The immune constraint (M > (N+F+1)/2) guarantees at most one sufficient agreement despite F faulty witnesses"
+  - "A controller accepts accountability for an event when M of N witnesses confirm it"
+  - "In indirect mode, validators may require M receipts before accepting an event"
+  - "The BFT quorum floor (ample) is the minimum acceptable threshold — controllers may choose higher"
+  - "A proper KERL at a witness implies proper KERLs for all prior events at that witness"

@@ -66,12 +66,12 @@ domain_clients:
     via_port: "port://cesr/inbound/encoding"
 
 subdomains:
-  - ref: "domain://cesr/cesr-primitives"
+  - ref: "domain://cesr/primitives"
     relationship: "CESR drives primitive qualification — encoding raw cryptographic material and data values with type codes"
-    via_port: "port://cesr/cesr-primitives/inbound/qualification"
-  - ref: "domain://cesr/cesr-stream"
+    via_port: "port://cesr/primitives/inbound/qualification"
+  - ref: "domain://cesr/composition"
     relationship: "CESR drives stream composition — grouping primitives with count codes for pipelining and cold-start parsing"
-    via_port: "port://cesr/cesr-stream/inbound/stream-composition"
+    via_port: "port://cesr/composition/inbound/stream-composition"
 
 kernels:
   - ref: "kernel://cryptographic-algorithms"

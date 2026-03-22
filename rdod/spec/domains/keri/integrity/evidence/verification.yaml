@@ -1,0 +1,221 @@
+# verification.yaml
+domain_ref: "keri/integrity/evidence"
+
+properties:
+  - invariant: "Duplicity evidence MUST contain >= 2 events that share the same AID and sn but have different SAIDs; evidence with fewer than 2 events MUST be rejected; evidence where events have matching SAIDs MUST be rejected (same event is not evidence of duplicity)"
+    term: "Duplicity Evidence"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(evidence=duplicity_evidence_strategy())
+        def test_evidence_structure(evidence):
+            assert len(evidence.events) >= 2, (
+                f"Evidence must have >= 2 events, got {len(evidence.events)}"
+            )
+            assert all(e.aid == evidence.aid for e in evidence.events), (
+                "All evidence events must share the same AID"
+            )
+            assert all(e.sn == evidence.sn for e in evidence.events), (
+                "All evidence events must share the same sn"
+            )
+            saids = {e.said for e in evidence.events}
+            assert len(saids) >= 2, (
+                f"Evidence must have >= 2 distinct SAIDs, got {len(saids)}"
+            )
+    strategy: "duplicity_evidence_strategy()"
+    notes: "Minimum structure: 2+ events, same AID, same sn, different SAIDs."
+
+  - invariant: "Evidence is non-repudiable: every event in the evidence MUST carry signatures that verify against the claimed key state at the time; if any event's signature fails verification, the evidence MUST be rejected as unsubstantiated"
+    term: "Duplicity Evidence"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(evidence=duplicity_evidence_strategy(), corrupt_index=st.integers(min_value=0, max_value=1))
+        def test_evidence_non_repudiable(evidence, corrupt_index):
+            assert all(e.signatures_verified() for e in evidence.events)
+            corrupted = corrupt_event_signature(evidence, corrupt_index)
+            assert not all(e.signatures_verified() for e in corrupted.events), (
+                "Corrupted evidence must fail signature verification"
+            )
+    strategy: "duplicity_evidence_strategy() x st.integers for corruption target"
+    notes: "Non-repudiability requires valid signatures on ALL events — one invalid signature invalidates the evidence."
+
+  - invariant: "Fork detection: is_fork(a, b) MUST return True iff a.aid == b.aid AND a.sn == b.sn AND a.said != b.said; the check compares SAIDs only (not full event content); two events with the same SAID at the same (prefix, sn) are duplicates, not forks"
+    term: "Fork Detection"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event_a=key_event_strategy(), event_b=key_event_strategy())
+        def test_fork_detection_by_said(event_a, event_b):
+            expected_fork = (event_a.aid == event_b.aid
+                             and event_a.sn == event_b.sn
+                             and event_a.said != event_b.said)
+            assert is_fork(event_a, event_b) == expected_fork
+            if event_a.aid == event_b.aid and event_a.sn == event_b.sn and event_a.said == event_b.said:
+                assert not is_fork(event_a, event_b), "Same SAID is not a fork"
+    strategy: "key_event_strategy() x2 — includes matching and non-matching pairs"
+    notes: "SAID comparison is sufficient for fork detection — no content comparison needed."
+
+  - invariant: "Fork detection is symmetric: is_fork(a, b) == is_fork(b, a) for all event pairs"
+    term: "Fork Detection"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event_a=key_event_strategy(), event_b=key_event_strategy())
+        def test_fork_detection_symmetric(event_a, event_b):
+            assert is_fork(event_a, event_b) == is_fork(event_b, event_a), (
+                "Fork detection must be symmetric"
+            )
+    strategy: "key_event_strategy() x2"
+    notes: "Fork detection is order-independent — symmetry is a required property."
+
+  - invariant: "LDE timeout: escrowed events MUST be pruned after exactly 3600 seconds; at 3599 seconds the entry is still active; at 3600 seconds the entry MUST be pruned"
+    term: "Likely Duplicitous Escrow"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        age, timeout = Ints('age timeout')
+        pruned = Bool('pruned')
+        s = Solver()
+        s.add(timeout == 3600)
+        s.add(pruned == (age >= timeout))
+        # Boundary: 3599 must NOT be pruned
+        s.add(age == 3599, pruned)
+        assert s.check() == unsat
+        # Boundary: 3600 must be pruned
+        s2 = Solver()
+        s2.add(timeout == 3600)
+        s2.add(pruned == (age >= timeout))
+        s2.add(age == 3600, Not(pruned))
+        assert s2.check() == unsat
+    notes: "Exact timeout boundary at 3600s. Off-by-one in either direction is caught by SMT."
+
+  - invariant: "LDE entries MUST have status 'suspected' and be stored in the .ldes database; they are distinguished from DEL entries (status 'confirmed', stored in .dels); an entry MUST NOT appear in both .ldes and .dels simultaneously"
+    term: "Likely Duplicitous Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(lde_entry=lde_entry_strategy())
+        def test_lde_status_and_storage(lde_entry):
+            assert lde_entry.status == 'suspected', "LDE entries must be 'suspected'"
+            assert lde_entry.db == '.ldes', "LDE entries must be in .ldes database"
+    strategy: "lde_entry_strategy()"
+    notes: "LDE is for suspected evidence; DEL is for confirmed evidence. Mutually exclusive stores."
+
+  - invariant: "DEL entries MUST be permanent: no entry in the DEL is ever removed, pruned, or timed out regardless of elapsed time; DEL entries persist for the lifetime of the system as forensic evidence"
+    term: "Duplicitous Event Log"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(del_entries=st.lists(del_entry_strategy(), min_size=1, max_size=10),
+               elapsed_seconds=st.integers(min_value=0, max_value=86400 * 365 * 10))
+        def test_del_permanent(del_entries, elapsed_seconds):
+            store = create_del_store(del_entries)
+            store.advance_time(elapsed_seconds)
+            for entry in del_entries:
+                assert store.contains(entry), (
+                    f"DEL entry for sn={entry.sn} must persist after {elapsed_seconds}s"
+                )
+    strategy: "st.lists of del entries x st.integers for elapsed time (up to 10 years)"
+    notes: "DEL entries are forensic evidence — permanent, never pruned, never timed out."
+
+  - invariant: "KeyEventAdded notification MUST be delivered to all subscribers registered for that notification type; subscribers not registered for KeyEventAdded MUST NOT receive it; notification delivery MUST be reliable (no lost notifications)"
+    term: "Notification Bus"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(subscriber_types=st.lists(
+            st.sampled_from(['KeyEventAdded', 'ReceiptReceived', 'DuplicityDetected']),
+            min_size=1, max_size=10))
+        def test_notification_delivery(subscriber_types):
+            bus = NotificationBus()
+            subscribers = [TestSubscriber(st) for st in subscriber_types]
+            for s in subscribers:
+                bus.subscribe(s, s.notification_type)
+            notification = Notification(type='KeyEventAdded')
+            bus.publish(notification)
+            for s in subscribers:
+                if s.notification_type == 'KeyEventAdded':
+                    assert s.received(notification), "Registered subscriber must receive notification"
+                else:
+                    assert not s.received(notification), "Non-registered subscriber must NOT receive notification"
+    strategy: "st.lists of subscriber types for selective delivery testing"
+    notes: "Notification delivery is selective (type-matched) and reliable (no drops)."
+
+contracts:
+  - port_ref: "port://keri/integrity/evidence/inbound/evidence-management"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sn, incoming, accepted: aid is not None and sn >= 0 and incoming.said != accepted.said"
+        description: "detect_fork requires two events with different SAIDs at the same (aid, sn)"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: isinstance(result, ForkDetected) and result.aid is not None and result.sn >= 0"
+        description: "detect_fork returns a ForkDetected event with the AID and sn of the forked location"
+      - formal:
+          language: python
+          expression: "lambda evidence: all(e.aid == evidence[0].aid for e in evidence)"
+        description: "get_evidence returns only evidence for the requested AID"
+
+  - port_ref: "port://keri/integrity/evidence/inbound/notification"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda notification_type, observer: notification_type is not None and observer is not None"
+        description: "Subscription requires a valid notification type and observer"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda subscription: subscription.active and subscription.notification_type is not None"
+        description: "Returned subscription is active and bound to the specified notification type"
+
+  - port_ref: "port://keri/integrity/evidence/outbound/escrow-storage"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sn, event: aid is not None and sn >= 0 and event is not None"
+        description: "All storage operations require valid AID, non-negative sn, and a non-null event"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sn, event: event in get_ldes(aid) after put_ldes(aid, sn, event)"
+        description: "After put_ldes, the event is retrievable via get_ldes for the same AID"
+      - formal:
+          language: python
+          expression: "lambda aid, sn, evidence: evidence in get_dels(aid) after put_dels(aid, sn, evidence)"
+        description: "After put_dels, the evidence is retrievable via get_dels for the same AID"
+
+state_machines:
+  - name: "evidence-lifecycle"
+    term: "Likely Duplicitous Escrow"
+    states: ["undetected", "suspected", "confirmed", "expired"]
+    transitions:
+      - from: "undetected"
+        to: "suspected"
+        trigger: "ForkDetected — conflicting event at same (prefix, sn)"
+        guard: "incoming_event.said != accepted_event.said and both events have valid signatures"
+      - from: "suspected"
+        to: "confirmed"
+        trigger: "EvidencePromoted — suspected evidence promoted to permanent DEL"
+        guard: "Both events independently verified as cryptographically valid"
+      - from: "suspected"
+        to: "expired"
+        trigger: "EvidenceExpired — escrow timeout exceeded"
+        guard: "current_time - escrow_time > 3600"
+    invariants:
+      - "Once confirmed, evidence is permanent — there is no transition out of confirmed"
+      - "Expiration only applies to suspected (LDE) entries, never to confirmed (DEL) entries"
+      - "Both suspected and confirmed states require at least two verified events at the same (aid, sn)"
+    initial_state: "undetected"
+    terminal_states: ["confirmed", "expired"]

@@ -1,0 +1,262 @@
+# ubiquitous-language.yaml
+domain_ref: "acdc/credential-lifecycle"
+
+terms:
+  - term: "TEL"
+    synonyms: ["Transaction Event Log"]
+    definition: "A hash-chained data structure of sealed transaction events used to track ACDC state (e.g., issuance/revocation). Events are sealed in the issuer's KEL, binding ACDC state to KERI key state without requiring TEL events themselves to be signed."
+    invariants:
+      - "Events are hash-chained via prior event SAID (p field)"
+      - "Each event must be sealed (anchored) in the controlling KEL"
+      - "Sequence numbers (n field) are monotonically increasing, hex-encoded, zero-based"
+      - "TEL events do not need direct signatures — the KEL seal is cryptographically equivalent"
+      - "Verifiability of TEL events persists despite changes in the issuer's key state"
+    examples:
+      - "A revocation registry TEL tracking whether a credential is issued or revoked"
+      - "TEL with events: rip (inception) -> upd (issued) -> upd (revoked)"
+    related_terms: ["Registry", "KEL", "Seal", "ACDC"]
+
+  - term: "Registry"
+    synonyms: ["VCR", "Verifiable Container/Credential Registry", "VDR", "Revocation Registry"]
+    definition: "A TEL serving as a Verifiable Container/Credential Registry that tracks the dynamic issuance and revocation state of ACDCs issued by the KEL controller."
+    invariants:
+      - "Initialized by a registry inception (rip) event"
+      - "SAID of the rip event is the registry's unique identifier (REGID)"
+      - "Registry SAID may appear as the rd field in associated ACDCs"
+      - "Each credential has its own state within the registry"
+      - "Registry is bound to the issuer AID via the i field in the rip event"
+    examples:
+      - "An issuer creates a registry, then issues an ACDC whose rd field references the registry"
+      - "A revocation registry tracking multiple ACDCs from the same issuer"
+    related_terms: ["TEL", "Registry Inception", "REGID", "Credential State"]
+
+  - term: "TEL Event Type Pattern"
+    synonyms: ["Transaction Event Structure"]
+    definition: "The common structure shared by all TEL event types. Every TEL event is defined by five elements: (1) an event ilk (t field: rip, upd, bup), (2) a normative field structure with required fields, (3) a state transition it produces (e.g., NotIssued -> Issued), (4) a mode variant (backed with EventSeal or backerless without), and (5) a KEL anchor requirement (every TEL event must be sealed in the issuer's KEL)."
+    invariants:
+      - "Every TEL event has a t field (ilk), d field (SAID), and rd field (registry SAID)"
+      - "Every TEL event must be sealed (anchored) in the issuer's KEL — the seal provides non-repudiable commitment"
+      - "Events are hash-chained via prior event SAID (p field) — except registry inception which has no predecessor"
+      - "Backed variants (bis, brv) include an EventSeal referencing the management TEL and require backer signatures"
+      - "Backerless variants (iss, rev) reference only the registry ID — simpler, no backer infrastructure"
+      - "Each event type produces exactly one state transition: rip creates registry, upd/bup changes credential state"
+    examples:
+      - "Registry Inception (rip): ilk=rip, fields=[v,t,d,u,i,n,dt], transition=creates registry, mode=N/A, anchor=required"
+      - "Update (upd): ilk=upd, fields=[v,t,d,rd,n,p,dt,ta,ts], transition=changes credential state, mode=backerless, anchor=required"
+      - "Blindable Update (bup): ilk=bup, fields=[v,t,d,rd,n,p,dt,b], transition=changes blinded state, mode=backerless, anchor=required"
+    related_terms: ["Registry Inception", "Update Event", "Blindable Update", "Backed vs Backerless", "Transaction Event Seal"]
+
+  - term: "Registry Inception"
+    synonyms: ["rip event"]
+    definition: "The initialization event for a TEL registry, establishing the registry's unique identifier (REGID) as its SAID and binding it to the issuer AID."
+    invariants:
+      - "Message type t field must be 'rip'"
+      - "Field order: [v, t, d, u, i, n, dt] — all required"
+      - "Sequence number n must be 0"
+      - "SAID of this event becomes the REGID referenced by the rd field in ACDCs"
+      - "Must be anchored (sealed) in the issuer's KEL"
+    examples:
+      - "Registry inception with issuer AID and UUID for unique identification"
+    related_terms: ["Registry", "REGID", "TEL"]
+
+  # Blindable Update — delegated to domain://acdc/privacy/blinding
+
+  - term: "Update Event"
+    synonyms: ["upd event"]
+    definition: "A non-blindable registry update event that publicly records the ACDC state, including the transaction ACDC SAID and transaction state."
+    invariants:
+      - "Message type t field must be 'upd'"
+      - "Field order: [v, t, d, rd, n, p, dt, ta, ts] — all required"
+      - "The ta field is the ACDC's top-level SAID"
+      - "The ts field is the state string (e.g., 'issued' or 'revoked')"
+      - "State is always publicly visible — cannot be used in blinded mode"
+    examples:
+      - "Issuance: ts field set to 'issued' with ta pointing to the ACDC SAID"
+      - "Revocation: ts field set to 'revoked', chain-linked to the prior update event"
+    related_terms: ["Blindable Update", "Credential State", "Transaction State"]
+
+  - term: "Credential State"
+    synonyms: ["Transaction State"]
+    definition: "The current state of an ACDC as tracked by its registry TEL, defined by a finite set of state strings (e.g., 'issued', 'revoked')."
+    invariants:
+      - "State values come from a small finite set defined by the registry type"
+      - "For issuance/revocation registries: states are 'issued' or 'revoked'"
+      - "State is determined by the latest transaction event in the TEL"
+      - "State change is bound to the issuer's key state at the time of anchoring"
+    examples:
+      - "ACDC state transitions: inception -> issued -> revoked"
+      - "State encoded in ts field as CESR string: '0Missued' or 'Yrevoked'"
+    related_terms: ["TEL", "Registry", "Update Event", "Blindable Update"]
+
+  - term: "Transaction Event Seal"
+    synonyms: ["Seal", "TEL Seal"]
+    definition: "A cryptographic digest (SAID) of a TEL transaction event embedded in a key event in the issuer's KEL, providing a non-repudiable commitment to the transaction event."
+    invariants:
+      - "Includes the event's sequence number (s) and SAID (d)"
+      - "Appearance in the KEL constitutes a verifiable, non-repudiable commitment"
+      - "The seal makes signing the TEL event itself unnecessary"
+      - "Validators verify the seal's presence in the KEL to validate the transaction event"
+    examples:
+      - "Seal: {\"s\": \"3\", \"d\": \"ELvaU6Z-i0d8JJR2nmwyYAZAoTNZH3UfSVPzhzS6b5CM\"}"
+    related_terms: ["KEL", "Anchor", "Key State"]
+
+  # BLID, Blinded Attribute Block, Bound Blinded Attribute Block, Shared Secret Salt — delegated to domain://acdc/privacy/blinding
+
+  - term: "TEL Registrar"
+    synonyms: ["Registrar"]
+    definition: "A computing component operating under the issuer's auspices that maintains and publishes the registry TEL, processing state updates."
+    invariants:
+      - "Operates under the issuer's control"
+      - "Publishes registry state updates"
+    examples:
+      - "A cloud agent (KERIA) maintaining a revocation registry for an enterprise issuer"
+    related_terms: ["TEL Observer", "Registry", "Issuer"]
+
+  - term: "TEL Observer"
+    synonyms: ["Observer"]
+    definition: "A computing component operating under validator(s) auspices that caches the registry state, allowing validators to check ACDC state without exposing a point of validation (PoV) to the issuer."
+    invariants:
+      - "Under the validator's control, not the issuer's"
+      - "Caches registry state from the registrar"
+      - "Masks usage patterns from the issuer — no forced phone-home validation"
+      - "Updates via periodic polling or pushed state updates from the registrar"
+    examples:
+      - "A watcher node caching revocation registry state and serving validator queries"
+    related_terms: ["TEL Registrar", "Validator", "Point of Validation"]
+
+  - term: "Registry Collection"
+    synonyms: ["Regery [keripy]"]
+    definition: "Central manager for credential registries. Owns the TEL database (Registry State Manager / Reger in keripy) and TEL Event Processor (Tevery in keripy). Creates, loads, and manages Registry instances. Each registry has a management TEL plus per-credential TELs."
+    invariants:
+      - "Owns the TEL database (Registry State Manager / Reger in keripy) and TEL Event Processor (Tevery in keripy)"
+      - "Creates and loads Registry instances by name or REGID"
+      - "Each managed registry has one management TEL and zero or more per-credential TELs"
+      - "Key methods: makeRegistry(), registryByName(), processEscrows()"
+    examples:
+      - "An agent's Regery creating a new registry via makeRegistry() and later retrieving it by name"
+      - "Regery.processEscrows() retrying TEL events that were missing anchors or registry state"
+    related_terms: ["Registry", "TEL Database", "TEL Event Processor", "TEL Event Verifier"]
+
+  - term: "TEL Event Processor"
+    synonyms: ["Tevery [keripy]", "TelEventProcessor [keriox]"]
+    definition: "Processes incoming TEL events against current registry state. Factory for TEL Event Verifier instances. Escrows out-of-order and missing-anchor events. In keriox: uses TelNotificationBus pub-sub for escrow reprocessing."
+    invariants:
+      - "Creates and manages TEL Event Verifier (Tever) instances as registries are encountered"
+      - "Validates TEL events against the current registry and credential state"
+      - "Escrows events that cannot be immediately validated (out-of-order, missing anchor, missing registry)"
+      - "In keriox: TelNotificationBus pub-sub pattern auto-retries escrowed events when blocking conditions resolve"
+    examples:
+      - "Tevery receiving a bis event, finding no registry for it yet, and escrowing it for later"
+      - "TelEventProcessor reprocessing escrowed events after a VCP event arrives via notification bus"
+    related_terms: ["TEL Event Verifier", "TEL Escrows", "Registry Collection", "TEL Database"]
+
+  - term: "Backed vs Backerless"
+    synonyms: []
+    definition: "Two modes for TEL events: Backed (Bis/Brv) events include an EventSeal anchoring the event to the registry's management TEL and require backer witness signatures. Backerless (Iss/Rev) events are simpler, referencing only the registry ID. Determined by the NoBackers config trait on registry inception (VCP)."
+    invariants:
+      - "Backed events (bis, brv) include an EventSeal referencing the management TEL and require backer witness signatures"
+      - "Backerless events (iss, rev) reference only the registry ID — no backer infrastructure needed"
+      - "Mode is determined at registry inception by the NoBackers config trait on the VCP event"
+      - "Cannot mix modes within a single registry — all credential events follow the registry's mode"
+    examples:
+      - "A backerless registry using iss/rev events with no backer witnesses"
+      - "A backed registry using bis/brv events with three backer witnesses and a threshold of two"
+    related_terms: ["Registry", "Registry Inception", "TEL Event Verifier", "Transaction Event Seal"]
+
+  - term: "REGID"
+    synonyms: ["Registry Identifier"]
+    definition: "The universally unique identifier for a TEL registry, equal to the SAID of the registry inception (rip) event."
+    invariants:
+      - "Computed as the SAID of the rip event"
+      - "Used as the value of the rd field in associated ACDCs and update events"
+      - "Cryptographically binds the registry to the issuer AID"
+    examples:
+      - "REGID: ECOWJI9kAjpCFYJ7RenpJx2w66-GsGlhyKLO-Or3qOIQ"
+    related_terms: ["Registry Inception", "Registry SAID", "rd field"]
+
+  - term: "TEL Event Type Dimensions"
+    definition: "Transaction Event Log events are characterized by two orthogonal dimensions: Registry Mode (Backerless vs Backed) and Event Purpose (Registry Management vs Credential State Change). These dimensions determine which event types are valid and what fields are required."
+    invariants:
+      - "Backerless registries use iss/rev events — no backer signatures required"
+      - "Backed registries use bis/brv events — require backer threshold signatures"
+      - "Registry mode is set at inception (vcp/rip) and enforced on all subsequent events"
+      - "Registry management events (vcp, vrt, rip) control backer configuration"
+      - "Credential state events (iss, rev, bis, brv) track individual credential status"
+    related_terms: ["Credential Status", "Credential Registry"]
+
+  - term: "Registry Mode"
+    synonyms: ["Backerless vs Backed Registry"]
+    definition: "Determines whether credential state changes require backer (witness) co-signatures. A Backerless registry uses simpler iss/rev events signed only by the issuer. A Backed registry uses bis/brv events requiring threshold backer signatures for additional accountability."
+    invariants:
+      - "Backerless: NoBackers trait in configuration — events are iss (issuance) and rev (revocation)"
+      - "Backed: no NoBackers trait — events are bis (backed issuance) and brv (backed revocation)"
+      - "Mode is immutable after registry inception"
+    related_terms: ["TEL Event Type Dimensions"]
+
+  - term: "TEL Storage Schema"
+    synonyms: ["Reger subdatabases [keripy]"]
+    definition: "The subdatabase organization for the core TEL event data. Separates event serializations, sequence indexes, backer signatures, backer lists, anchor seals, and timestamps into distinct subdatabases, each optimized for its access pattern."
+    invariants:
+      - "TEL event store [.tvts in keripy]: serialized TEL event bytes indexed by dgKey (registry_said + event_digest) -- the primary event store"
+      - "TEL sequence index [.tels in keripy]: mapping snKey (registry_said + sn) to event digest -- ordered access by sequence number"
+      - "Backer signature store [.tibs in keripy]: backer indexed signatures (Siger) per event, indexed by dgKey -- IoSet (insertion-ordered, append-only)"
+      - ".baks: backer AID lists per registry, indexed by registry SAID -- current set of designated backer witnesses"
+      - ".ancs: anchor seals per event, indexed by dgKey -- the KEL seal that anchors each TEL event"
+      - ".tets: event datetime timestamps per event, indexed by dgKey -- recorded at first acceptance"
+    examples:
+      - "Looking up event at sn=3 for registry R: TEL sequence index[snKey(R,3)] -> digest D, then TEL event store[dgKey(R,D)] -> event bytes"
+      - "Accumulating backer signatures: backer signature store[dgKey(R,D)].add(siger) -- appends to set, idempotent if already present"
+    related_terms: ["TEL Database", "Credential Storage", "TEL Key Patterns"]
+
+  - term: "Credential Storage"
+    synonyms: [".creds/.cancs/.saved/.issus/.subjs/.schms [keripy]"]
+    definition: "Subdatabases for credential data and multi-dimensional credential indexing. Stores serialized ACDCs and provides lookup by credential SAID, issuer AID, subject AID, and schema SAID."
+    invariants:
+      - "Credential store [.creds in keripy]: serialized ACDC bytes indexed by credential SAID -- the primary credential store"
+      - "Processed credential index [.saved in keripy]: marks credentials that have been fully validated and stored"
+      - "Issuer index [.issus in keripy]: credential index by issuer AID -- enables lookup of all credentials issued by a given AID"
+      - "Subject index [.subjs in keripy]: credential index by subject AID -- enables lookup of all credentials targeting a given issuee"
+      - "Schema index [.schms in keripy]: credential index by schema SAID -- enables lookup of all credentials conforming to a given schema"
+    examples:
+      - "Looking up credential by SAID: credential store[acdc_said] -> serialized ACDC bytes"
+      - "Finding all credentials issued by AID A: issuer index[A] -> [acdc_said_1, acdc_said_2, ...]"
+      - "Finding all credentials for subject S with schema Z: intersect subject index[S] and schema index[Z]"
+    related_terms: ["TEL Storage Schema", "TEL Database"]
+
+  - term: "TEL Escrow Storage"
+    synonyms: [".oots/.twes/.taes/.cmse/.mre/.mce/.mse [keripy]"]
+    definition: "Subdatabases for TEL events that cannot be immediately validated. Each escrow type corresponds to a specific missing dependency: out-of-order events, partial witness receipts, missing anchor seals, missing signatures, and missing registry/chain/schema state."
+    invariants:
+      - "Out-of-order escrow [.oots in keripy]: TEL events whose sequence number does not match the expected next sn"
+      - "Partial witness escrow [.twes in keripy]: TEL events with insufficient backer signatures to satisfy the threshold"
+      - "Anchorless escrow [.taes in keripy]: TEL events whose KEL anchor seal has not yet been verified"
+      - "Missing signature escrow [.cmse in keripy]: TEL events with insufficient controller signatures"
+      - "Missing registry escrow [.mre in keripy]: credential events received before the registry's inception"
+      - "Missing chain escrow [.mce in keripy]: credential events referencing an unresolved credential chain"
+      - "Missing schema escrow [.mse in keripy]: credential events referencing an unavailable schema"
+    examples:
+      - "An iss event escrowed in out-of-order escrow [.oots in keripy] because a prior event at sn=2 has not yet been processed"
+      - "A credential event escrowed in missing registry escrow [.mre in keripy] because the registry VCP has not yet been received"
+    related_terms: ["TEL Storage Schema", "TEL Database", "Credential Storage"]
+
+events:
+  - name: "RegistryCreated"
+    payload: "regid: REGID, issuer_aid: AID, dt: DateTime"
+    triggers: "Issuer creates a new registry via a registry inception (rip) event, sealed in the KEL"
+
+  - name: "CredentialStateUpdated"
+    payload: "regid: REGID, acdc_said: SAID, new_state: CredentialState, event_sn: int"
+    triggers: "Issuer publishes an update event (upd or bup) changing the ACDC's state in the registry"
+
+  - name: "BlindUpdated"
+    payload: "regid: REGID, event_sn: int, new_blid: BLID"
+    triggers: "Issuer publishes a new blindable update event with a fresh blinding factor, decorrelating state observation"
+
+rules:
+  - "Every TEL event must be sealed (anchored) in the controlling KEL — the seal provides non-repudiable commitment"
+  - "Registry inception rip event must have sequence number 0"
+  - "Update events must include the registry SAID rd field for verifiable association"
+  - "Events are hash-chained via the prior event SAID p field — backward chaining"
+  - "State verifiability persists despite key rotation — bound to key state at time of seal"
+  - "Blinded registries must use a fresh UUID per update event to prevent state-to-event correlation"
+  - "TEL observers must cache state to avoid forced validator-to-issuer correlation (no phone-home validation)"

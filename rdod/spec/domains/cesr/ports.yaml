@@ -18,14 +18,14 @@ ports:
     refs: ["domain://keri", "domain://acdc"]
 
   # Subdomain inbound ports
-  - id: "port://cesr/cesr-primitives/inbound/qualification"
+  - id: "port://cesr/primitives/inbound/qualification"
     type: inbound
     name: "Primitive Qualification"
     contract: "qualify(raw, code) -> Primitive; extract(qb64 | qb2) -> (code, raw); transform(primitive, target_domain) -> Primitive"
     protocol: "method-call"
     refs: ["domain://cesr"]
 
-  - id: "port://cesr/cesr-stream/inbound/stream-composition"
+  - id: "port://cesr/composition/inbound/stream-composition"
     type: inbound
     name: "Stream Composition"
     contract: "compose(groups) -> Stream; parse(stream) -> [Group]; sniff(stream_start) -> SerializationKind; pipeline(stream) -> [Frame]"

@@ -51,7 +51,10 @@ domain_clients:
     relationship: "Forwards events to witnesses and collects receipts on behalf of controllers"
     via_port: "port://witness-service/inbound/event-receipt"
 
-subdomains: []
+subdomains:
+  - ref: "domain://witness-service/api"
+    relationship: "Inbound message boundary — receives key events, verifies signatures, applies first-seen rule, returns receipts"
+    via_port: "port://witness-service/api/inbound/event-submission"
 
 kernels:
   - ref: "kernel://cryptographic-algorithms"
@@ -60,7 +63,7 @@ kernels:
 
 adjacents:
   - ref: "domain://keri"
-    relationship: "Conformist — implements witness-agreement protocol (first-seen rule, receipting, KERL dissemination)"
+    relationship: "Conformist — implements accountability protocol (first-seen rule, receipting, KERL dissemination)"
     via_port: "port://keri/inbound/identifier-lifecycle"
     is_cross_cutting: false
 

@@ -293,28 +293,28 @@ terms:
 
   - term: "Credential Verifier"
     synonyms: ["Verifier [keripy]"]
-    definition: "Validates TEL events and credentials end-to-end. Verifies: schema match, edge chain integrity (verifyChain), TEL state, signature validity. Escrows credentials missing: registry (.mre), chain (.mce), schema (.mse), signatures (.cmse). Timeout: 3600s per escrow type."
+    definition: "Validates TEL events and credentials end-to-end. Verifies: schema match, edge chain integrity (verifyChain), TEL state, signature validity. Escrows credentials missing: registry (missing registry escrow [.mre in keripy]), chain (missing chain escrow [.mce in keripy]), schema (missing schema escrow [.mse in keripy]), signatures (missing signature escrow [.cmse in keripy]). Timeout: 3600s per escrow type."
     invariants:
       - "Performs full end-to-end verification: signatures, schema, TEL state, and edge chains"
       - "Escrows credentials that cannot yet be verified due to missing dependencies"
-      - "Four escrow types: missing registry events (.mre), missing chain links (.mce), missing schema (.mse), missing signatures (.cmse)"
+      - "Four escrow types: missing registry events [.mre in keripy], missing chain links [.mce in keripy], missing schema [.mse in keripy], missing signatures [.cmse in keripy]"
       - "Each escrow type has a 3600-second timeout before the escrowed credential is discarded"
     examples:
-      - "Verifier receives a credential, finds registry TEL not yet available, escrows in .mre until TEL arrives"
+      - "Verifier receives a credential, finds registry TEL not yet available, escrows in missing registry escrow [.mre in keripy] until TEL arrives"
       - "verifyChain traverses edge section to confirm each linked ACDC satisfies its edge operator constraints"
     related_terms: ["Edge Section", "Edge Operator", "Registry SAID", "Schema Validator"]
 
   - term: "Credential Indexing"
     synonyms: ["Reger credential storage [keripy]"]
-    definition: "Database indexes for efficient credential lookup: by issuer (.issus), by subject (.subjs), by schema (.schms), by SAID (.saved). Enables filtered queries across the credential wallet."
+    definition: "Database indexes for efficient credential lookup: by issuer (issuer index [.issus in keripy]), by subject (subject index [.subjs in keripy]), by schema (schema index [.schms in keripy]), by SAID (processed credential index [.saved in keripy]). Enables filtered queries across the credential wallet."
     invariants:
-      - "Index by issuer AID (.issus) enables listing all credentials from a given issuer"
-      - "Index by subject/issuee AID (.subjs) enables listing all credentials held by a given entity"
-      - "Index by schema SAID (.schms) enables listing all credentials of a given type"
-      - "Index by credential SAID (.saved) enables direct lookup of a specific credential"
+      - "Issuer index [.issus in keripy] enables listing all credentials from a given issuer"
+      - "Subject index [.subjs in keripy] enables listing all credentials held by a given entity"
+      - "Schema index [.schms in keripy] enables listing all credentials of a given type"
+      - "Processed credential index [.saved in keripy] enables direct lookup of a specific credential"
     examples:
-      - "Querying .schms with a vLEI schema SAID to find all vLEI credentials in the wallet"
-      - "Querying .issus with a GLEIF AID to find all credentials issued by GLEIF"
+      - "Querying the schema index [.schms in keripy] with a vLEI schema SAID to find all vLEI credentials in the wallet"
+      - "Querying the issuer index [.issus in keripy] with a GLEIF AID to find all credentials issued by GLEIF"
     related_terms: ["ACDC", "Issuer", "Issuee", "Schema", "SAID"]
 
   - term: "Credential Artifacts"
@@ -345,6 +345,102 @@ terms:
       - "t='act': CESR native ACDC with fixed-field attribute section (compact binary)"
       - "t='acg': CESR native ACDC with fixed-field aggregate section (selectively disclosable)"
     related_terms: ["ACDC", "Credential Serializer", "Schema", "CESR"]
+
+  - term: "Credential Type Dimensions"
+    definition: "Every ACDC is characterized by six orthogonal dimensions that combine to form specific credential types. These dimensions are expressed in the specification through field presence/absence in the credential field map, but represent first-class domain concepts that implementations SHOULD expose through typed construction interfaces (e.g., Builder pattern) rather than raw field manipulation."
+    invariants:
+      - "The six dimensions are: Privacy, Targeting, Disclosure Model, Chaining, Governance, and Registry Binding"
+      - "Cannot use both Direct disclosure (a field) and Selective disclosure (A field) simultaneously"
+      - "Each dimension is independent — any valid combination of dimension values produces a valid credential type"
+    related_terms: ["Credential Privacy Model", "Credential Targeting Model", "Credential Disclosure Model", "Credential Chaining Model", "Credential Governance Model", "Credential Registry Binding"]
+
+  - term: "Credential Privacy Model"
+    synonyms: ["ACDC Privacy Level"]
+    definition: "Determines whether credential content is cryptographically blinded. A Public credential has no content blinding — its SAID is potentially discoverable via rainbow table if the schema is known. A Private credential includes a high-entropy UUID that blinds the content. A Metadata credential includes an empty UUID placeholder for making commitments to undisclosed credentials without correlation."
+    invariants:
+      - "Public: top-level u field ABSENT — content is unblinded"
+      - "Private: top-level u field PRESENT with >= 128 bits cryptographic entropy"
+      - "Metadata: top-level u field PRESENT but EMPTY — commitment without correlation"
+      - "Privacy applies recursively: any nested block (attribute section, edge, rule) can independently include a u field for block-level blinding"
+    examples:
+      - "Public credential: {v, d, i, s, a, ...} — no u field"
+      - "Private credential: {v, d, u: '<high-entropy-uuid>', i, s, a, ...}"
+      - "Metadata credential: {v, d, u: '', i, s, a, ...}"
+    related_terms: ["Credential Type Dimensions", "Credential Targeting Model"]
+
+  - term: "Credential Targeting Model"
+    synonyms: ["Targeted vs Untargeted ACDC"]
+    definition: "Determines whether a credential is bound to a specific holder (Issuee) or is a bearer credential. A Targeted credential includes the Issuee's AID in the attribute section, meaning only the entity controlling that AID can legitimately present it. An Untargeted credential has no Issuee binding and can be presented by anyone who possesses it."
+    invariants:
+      - "Targeted: Issuee AID field (i) PRESENT in the attribute section (a.i)"
+      - "Untargeted: Issuee AID field ABSENT from the attribute section"
+      - "Targeting is independent of privacy — a credential can be Private and Untargeted, or Public and Targeted"
+    examples:
+      - "Targeted: {a: {d: '...', i: '<issuee-aid>', ...}} — bound to holder"
+      - "Untargeted: {a: {d: '...', dt: '...', ...}} — no i field in attributes, bearer credential"
+    related_terms: ["Credential Type Dimensions", "Credential Privacy Model"]
+
+  - term: "Credential Disclosure Model"
+    synonyms: ["Direct vs Selective Disclosure"]
+    definition: "Determines how credential attributes can be shared. Direct disclosure uses the attribute section (a field) containing a field map of all attributes — the holder shares the entire attribute set or a compact SAID reference. Selective disclosure uses the attribute aggregate section (A field) containing cryptographic commitments that enable proving individual attribute membership without revealing other attributes."
+    invariants:
+      - "Direct: lowercase a field — attribute section as field map"
+      - "Selective: uppercase A field — attribute aggregate with cryptographic commitments"
+      - "MUST NOT have both a and A simultaneously — mutually exclusive"
+      - "Direct disclosure supports compact (SAID only) and expanded (full field map) forms"
+      - "Selective disclosure uses AGID (Aggregate Identifier) for inclusion proofs"
+    examples:
+      - "Direct: {a: {d: '...', i: '...', score: 95}} — full attribute map"
+      - "Selective: {A: '<agid>'} — aggregate commitment, individual proofs"
+    related_terms: ["Credential Type Dimensions", "Graduated Disclosure"]
+
+  - term: "Credential Chaining Model"
+    synonyms: ["Standalone vs Chained ACDC"]
+    definition: "Determines whether a credential links to other credentials forming a directed acyclic graph of verifiable trust. A Chained credential includes an edges section that references parent credentials by SAID, creating delegated authority chains. A Standalone credential has no edges and represents an independent assertion."
+    invariants:
+      - "Chained: e field PRESENT — edges section with references to other ACDCs"
+      - "Standalone: e field ABSENT — no credential dependencies"
+      - "Chains are directed and acyclic — no circular references"
+      - "Each edge reference includes the SAID of the linked credential"
+    examples:
+      - "Chained: {e: {d: '...', auth: {n: '<parent-acdc-said>', ...}}} — links to authority credential"
+      - "Standalone: no e field — independent credential"
+    related_terms: ["Credential Type Dimensions"]
+
+  - term: "Credential Governance Model"
+    synonyms: ["Governed vs Ungoverned ACDC"]
+    definition: "Determines whether a credential embeds legal or contractual terms as machine-readable Ricardian contracts. A Governed credential includes a rules section that specifies usage constraints, liability terms, or regulatory compliance requirements. An Ungoverned credential carries no embedded legal framework."
+    invariants:
+      - "Governed: r field PRESENT — rules section with Ricardian contract terms"
+      - "Ungoverned: r field ABSENT — no embedded legal framework"
+      - "Rules are themselves SAIDified — tamper-evident legal terms"
+    examples:
+      - "Governed: {r: {d: '...', usageDisclaimer: {...}, issuanceDisclaimer: {...}}}"
+      - "Ungoverned: no r field"
+    related_terms: ["Credential Type Dimensions"]
+
+  - term: "Credential Registry Binding"
+    synonyms: ["Registered vs Unregistered ACDC"]
+    definition: "Determines whether a credential's lifecycle (issuance/revocation state) is tracked in a Transaction Event Log (TEL) registry. A Registered credential includes a registry SAID linking it to a TEL where its status can be verified. An Unregistered credential has no revocation mechanism."
+    invariants:
+      - "Registered: rd field (v2) or ri field (v1) PRESENT — linked to a TEL registry"
+      - "Unregistered: registry field ABSENT — no lifecycle tracking"
+      - "Registered credentials can be revoked; Unregistered cannot"
+    examples:
+      - "Registered: {rd: '<registry-said>'} — status checkable via TEL"
+      - "Unregistered: no rd field — permanent, non-revocable"
+    related_terms: ["Credential Type Dimensions", "Credential Lifecycle"]
+
+  - term: "Credential Construction"
+    definition: "The domain-driven assembly of an ACDC through its type dimensions. Implementations SHOULD provide typed construction interfaces (Builder pattern, fluent API, factory methods) that make each dimension explicit rather than exposing raw field map manipulation. The builder enforces dimension constraints (e.g., mutual exclusivity of a/A), handles SAID computation, and ensures canonical field ordering."
+    invariants:
+      - "Construction MUST set all required fields: v (version), d (SAID), i (issuer), s (schema)"
+      - "Construction MUST enforce mutual exclusivity of a and A fields"
+      - "SAID computation happens at build time — d field is a placeholder until finalized"
+      - "Field ordering follows canonical spec order: [v, t, d, u, i, rd, s, a|A, e, r]"
+    examples:
+      - "Builder pattern: Credential.builder().private().targeted(issuee).governed(rules).build()"
+      - "Factory method: Credential.publicUntargeted(issuer, schema, attributes)"
 
 events:
   - name: "CredentialIssued"

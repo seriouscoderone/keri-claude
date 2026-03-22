@@ -1,0 +1,43 @@
+# domain.yaml
+template_version: "1.0"
+id: "watcher-service/api"
+name: "Watcher Service API"
+description: >
+  Inbound message boundary for watcher nodes — collects KEL copies from multiple
+  witnesses, cross-checks for duplicity, and reports evidence. Consumes the KERI
+  integrity protocol as an adjacent context. Handles CESR deserialization and
+  message dispatch for all inbound watcher traffic.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keriox components/watcher — Rust watcher implementation (axum HTTP handler)"
+
+domain_clients:
+  - ref: "domain://watcher-service"
+    relationship: "Parent domain"
+
+subdomains: []
+
+adjacents:
+  - ref: "domain://keri/integrity/detection"
+    relationship: "Conformist — implements integrity detection protocol"
+    pattern: "Conformist"
+  - ref: "domain://cesr"
+    relationship: "Published Language — CESR encoding for all inbound/outbound messages"
+    pattern: "Published Language"
+
+externals: []
+kernels: []
+
+invariants:
+  - "Must collect KEL copies from multiple independent witnesses"
+  - "Must cross-check collected KELs for fork detection"
+  - "Must report duplicity evidence when detected"
+
+implementation_guidance:
+  suggested_type: "service"
+  language_affinity: "any"
+  notes: "The watcher API accepts KEL copies and delegates to the integrity domain for cross-checking and evidence collection."
+
+tags: ["watcher", "api", "integrity", "detection", "service"]

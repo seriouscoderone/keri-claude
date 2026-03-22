@@ -1,0 +1,51 @@
+# domain.yaml
+template_version: "1.0"
+id: "local-agent/api"
+name: "Local Agent API"
+description: >
+  CLI and direct function interface for the fat wallet — the boundary through which
+  controllers interact with their local KERI stack. Encompasses the kli command-line
+  interface in keripy and the Hab/Habery programmatic API. Handles all identity,
+  credential, and discovery operations locally without cloud agent dependency.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keripy cli/ — Python CLI (kli) implementation"
+  - type: document
+    reference: "keripy app/habbing.py — Habery/Hab programmatic API"
+
+domain_clients:
+  - ref: "domain://local-agent"
+    relationship: "Parent domain"
+
+subdomains: []
+
+adjacents:
+  - ref: "domain://keri/identity"
+    relationship: "Conformist — full KERI identity management"
+    pattern: "Conformist"
+  - ref: "domain://acdc"
+    relationship: "Conformist — full ACDC credential management"
+    pattern: "Conformist"
+  - ref: "domain://cesr"
+    relationship: "Published Language — CESR encoding for all messages"
+    pattern: "Published Language"
+  - ref: "domain://discovery"
+    relationship: "Conformist — OOBI resolution and endpoint management"
+    pattern: "Conformist"
+
+externals: []
+kernels: []
+
+invariants:
+  - "Private keys never leave the local device"
+  - "All operations execute locally — no cloud agent dependency"
+  - "CLI commands map to domain operations (each kli command serves a specific domain)"
+
+implementation_guidance:
+  suggested_type: "app"
+  language_affinity: "any"
+  notes: "The local agent API spans all protocol domains since the fat wallet runs the complete KERI stack locally. Each CLI command or API method delegates to the appropriate domain."
+
+tags: ["local-agent", "api", "cli", "fat-wallet"]

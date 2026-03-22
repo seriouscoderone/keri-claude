@@ -1,0 +1,220 @@
+# verification.yaml
+domain_ref: "keri/integrity/recovery"
+
+properties:
+  - invariant: "Rule A0: A rotation event (rot) MUST supersede an interaction event (ixn) at the same sn when both share the same (prefix, sn); the rotation's key commitment authority takes precedence over the interaction's non-establishment status"
+    term: "Superseding Recovery"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(prefix=keri_prefix_strategy(), sn=st.integers(min_value=1, max_value=100))
+        def test_rule_a0_rot_supersedes_ixn(prefix, sn):
+            rot = build_rotation_event(prefix, sn)
+            ixn = build_interaction_event(prefix, sn)
+            assert can_supersede(rot, ixn), (
+                f"Rule A0: rot at sn={sn} must supersede ixn at sn={sn}"
+            )
+            # And the reverse must NOT hold
+            assert not can_supersede(ixn, rot), (
+                f"Rule A0 inverse: ixn at sn={sn} must NOT supersede rot at sn={sn}"
+            )
+    strategy: "keri_prefix_strategy() x st.integers for sn"
+    notes: "Rule A0 is the primary recovery mechanism — rotation always supersedes interaction at the same sn."
+
+  - invariant: "Rule A1: A non-delegated rotation MUST NOT supersede another non-delegated rotation at the same sn; if both candidate and incumbent are non-delegated rotations, the result MUST be NotSuperseding (the fork is irreconcilable)"
+    term: "Superseding Rules"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(prefix=keri_prefix_strategy(), sn=st.integers(min_value=1, max_value=100))
+        def test_rule_a1_rot_vs_rot_irreconcilable(prefix, sn):
+            rot_a = build_rotation_event(prefix, sn, is_delegated=False)
+            rot_b = build_rotation_event(prefix, sn, is_delegated=False)
+            assume(rot_a.said != rot_b.said)
+            assert not can_supersede(rot_a, rot_b), (
+                "Rule A1: non-delegated rot must NOT supersede another non-delegated rot"
+            )
+            assert not can_supersede(rot_b, rot_a), (
+                "Rule A1 is symmetric for non-delegated rotations"
+            )
+    strategy: "keri_prefix_strategy() x st.integers for sn"
+    notes: "Non-delegated rotation vs rotation fork is irreconcilable — no superseding possible."
+
+  - invariant: "Rule A2: An interaction event (ixn) MUST NOT supersede any event type; apply_superseding_rules(ixn, any_event) MUST always return NotSuperseding regardless of the incumbent's type"
+    term: "Superseding Rules"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(incumbent_type=st.sampled_from(['icp', 'rot', 'ixn', 'dip', 'drt']),
+               sn=st.integers(min_value=0, max_value=100))
+        def test_rule_a2_ixn_never_supersedes(incumbent_type, sn):
+            prefix = generate_prefix()
+            ixn = build_interaction_event(prefix, sn)
+            incumbent = build_event(prefix, sn, event_type=incumbent_type)
+            assert not can_supersede(ixn, incumbent), (
+                f"Rule A2: ixn must NOT supersede {incumbent_type} at any sn"
+            )
+    strategy: "st.sampled_from for all event types x st.integers for sn"
+    notes: "Interaction events have no key commitment — they can never supersede any event type."
+
+  - invariant: "B1: Superseding delegation has a higher sn delegating event than the superseded delegation"
+    term: "Superseding Rules"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(And(is_delegated(candidate), is_delegated(incumbent), delegating_sn(candidate) > delegating_sn(incumbent)), supersedes(candidate, incumbent))"
+    notes: "Rule B1 uses delegating event sn ordering — higher sn in delegator's KEL means later approval"
+
+  - invariant: "B2: Same delegating event, but superseding seal appears later in the seal list"
+    term: "Superseding Rules"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(And(is_delegated(candidate), is_delegated(incumbent), delegating_sn(candidate) == delegating_sn(incumbent), seal_index(candidate) > seal_index(incumbent)), supersedes(candidate, incumbent))"
+    notes: "Rule B2 uses seal ordering within the same delegating event — position in the seal list breaks ties"
+
+  - invariant: "B3: Same sn delegating events, but superseding event's delegating event is a rotation superseding the superseded event's delegating interaction"
+    term: "Superseding Rules"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(And(is_delegated(candidate), is_delegated(incumbent), delegating_sn(candidate) == delegating_sn(incumbent), delegating_type(candidate) == ROT, delegating_type(incumbent) == IXN), supersedes(candidate, incumbent))"
+    notes: "Rule B3 applies rule A0 recursively — a rot in the delegator's KEL supersedes an ixn at the same sn"
+
+  - invariant: "Reconciliation MUST produce exactly one trunk (the undisputed path); zero trunks means the KEL has no valid path from inception; multiple trunks means the reconciliation algorithm is non-deterministic (a bug)"
+    term: "Trunk"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel_dag=kel_dag_strategy())
+        def test_exactly_one_trunk(kel_dag):
+            trunks = find_trunks(kel_dag)
+            assert len(trunks) == 1, (
+                f"Reconciliation must produce exactly 1 trunk, got {len(trunks)}"
+            )
+            # Trunk must start from inception (sn=0)
+            assert trunks[0].events[0].sn == 0, "Trunk must start from inception"
+            # Trunk events must be in strictly ascending sn order
+            for i in range(len(trunks[0].events) - 1):
+                assert trunks[0].events[i].sn < trunks[0].events[i + 1].sn
+    strategy: "kel_dag_strategy()"
+    notes: "Reconciliation must produce exactly one trunk starting from inception with ascending sn order."
+
+  - invariant: "Events on disputed branches MUST NOT be deleted; they MUST remain in storage and be viewable via first-seen number ordering; disputed branch events serve as forensic evidence of the duplicity or compromise"
+    term: "Disputed Branch"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel_dag=kel_dag_with_branches_strategy())
+        def test_disputed_branch_events_preserved(kel_dag):
+            branches = find_disputed_branches(kel_dag)
+            for branch in branches:
+                for event in branch.events:
+                    assert event_exists(kel_dag, event), (
+                        f"Disputed event {event.said} at sn={event.sn} must still exist in storage"
+                    )
+                    assert event not in get_trunk(kel_dag).events, (
+                        f"Disputed event {event.said} must not be on the trunk"
+                    )
+    strategy: "kel_dag_with_branches_strategy() containing at least one disputed branch"
+    notes: "Disputed events are preserved for forensics — they are off the trunk but never deleted."
+
+  - invariant: "After superseding recovery, the superseded event MUST be moved off the trunk to a disputed branch; the superseding event MUST take its place on the trunk; the superseded event MUST still exist in storage (not deleted)"
+    term: "Superseding Recovery"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(recovery=superseding_recovery_strategy())
+        def test_superseding_moves_event_to_branch(recovery):
+            kel_dag = apply_superseding(recovery)
+            trunk = get_trunk(kel_dag)
+            all_events = get_all_events(kel_dag)
+            # Superseded event is off trunk but still exists
+            assert recovery.superseded_event not in trunk.events, (
+                "Superseded event must be removed from trunk"
+            )
+            assert recovery.superseded_event in all_events, (
+                "Superseded event must still exist in storage"
+            )
+            # Superseding event is on trunk
+            assert recovery.superseding_event in trunk.events, (
+                "Superseding event must be on the trunk"
+            )
+    strategy: "superseding_recovery_strategy()"
+    notes: "Superseding moves the displaced event to a disputed branch — it is never deleted."
+
+contracts:
+  - port_ref: "port://keri/integrity/recovery/inbound/superseding-rules"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda candidate, incumbent: candidate.sn == incumbent.sn and candidate.aid == incumbent.aid and candidate.said != incumbent.said"
+        description: "Candidate and incumbent must be at the same (aid, sn) with different SAIDs"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda candidate, incumbent, result: result.is_superseding() implies (candidate.type == 'rot' or candidate.type == 'drt')"
+        description: "Only rotation events (rot, drt) can supersede — interaction events never produce a Supersedes result"
+      - formal:
+          language: python
+          expression: "lambda candidate, incumbent, result: (candidate.type == 'ixn') implies result == NotSuperseding"
+        description: "Rule A2: interaction events always return NotSuperseding"
+      - formal:
+          language: python
+          expression: "lambda candidate, incumbent, result: (candidate.type == 'rot' and incumbent.type == 'rot' and not candidate.is_delegated) implies result == NotSuperseding"
+        description: "Rule A1: non-delegated rotation vs rotation always returns NotSuperseding"
+
+  - port_ref: "port://keri/integrity/recovery/inbound/reconciliation"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, kel_dag: aid is not None and kel_dag.has_events_for(aid)"
+        description: "AID must be valid and the KEL DAG must contain events for it"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: result.is_trunk() implies (len(result.events) >= 1 and result.events[0].sn == 0)"
+        description: "A valid trunk starts from the inception event (sn=0)"
+      - formal:
+          language: python
+          expression: "lambda result: result.is_trunk() implies all(result.events[i].sn < result.events[i+1].sn for i in range(len(result.events)-1))"
+        description: "Trunk events are in strictly ascending sequence number order"
+
+state_machines:
+  - name: "superseding-recovery"
+    term: "Superseding Recovery"
+    states: ["intact", "compromised", "fork-detected", "recovery-applied", "reconciled", "irreconcilable"]
+    transitions:
+      - from: "intact"
+        to: "compromised"
+        trigger: "Key compromise detected — attacker signs conflicting event"
+        guard: "Attacker has access to signing keys or pre-rotated keys"
+      - from: "compromised"
+        to: "fork-detected"
+        trigger: "ForkDetected — conflicting events at same (aid, sn) discovered"
+        guard: "Two verified events with different SAIDs at the same (aid, sn)"
+      - from: "fork-detected"
+        to: "recovery-applied"
+        trigger: "SupersedingRecoveryApplied — rotation supersedes compromised event"
+        guard: "Superseding rules (A0, B1-B3, C) are satisfied for the candidate rotation"
+      - from: "recovery-applied"
+        to: "reconciled"
+        trigger: "TrunkReconciled — validators determine the new trunk"
+        guard: "All validators find the same trunk via superseding rules"
+      - from: "fork-detected"
+        to: "irreconcilable"
+        trigger: "Reconciliation fails — no universal trunk can be determined"
+        guard: "Superseding rules cannot determine a unique winner between the forked events"
+    invariants:
+      - "A non-delegated rotation vs rotation fork is always irreconcilable (rule A1)"
+      - "Recovery is only possible if the controller has access to uncommitted pre-rotated keys"
+      - "The controller remains accountable for harm caused by events on disputed branches even after recovery"
+      - "Once reconciled, the trunk is the single authoritative path forward"
+    initial_state: "intact"
+    terminal_states: ["reconciled", "irreconcilable"]

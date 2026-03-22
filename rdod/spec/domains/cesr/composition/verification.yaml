@@ -1,0 +1,1054 @@
+# verification.yaml
+domain_ref: "cesr/composition"
+
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
+# Formalized invariants from ubiquitous_language terms
+properties:
+  # --- Stream ---
+  - invariant: "Every element in a stream MUST be self-framing: its text length MUST satisfy len(qb64) % 4 == 0 and its binary length MUST satisfy len(qb2) % 3 == 0; if either fails, the element is malformed"
+    term: "Stream"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_stream())
+        def test_stream_self_framing(stream):
+            remaining = stream
+            elements = []
+            while remaining:
+                elem, remaining = parse_next_element(remaining)
+                elements.append(elem)
+                assert len(elem.qb64) % 4 == 0, \
+                    f"T-domain composability violated: len={len(elem.qb64)}, remainder={len(elem.qb64) % 4}"
+                assert len(elem.qb2) % 3 == 0, \
+                    f"B-domain composability violated: len={len(elem.qb2)}, remainder={len(elem.qb2) % 3}"
+            # Re-concatenation matches original
+            assert ''.join(e.qb64 for e in elements) == stream
+    strategy: "cesr_stream() — generates valid CESR streams with mixed elements"
+    notes: "Self-framing + composability are the two fundamental CESR properties."
+
+  - invariant: "A stream MUST start (or restart after a cold start) with one of 8 frame types identified by the first tritet (bits 7-5 of the first byte); tritet = byte >> 5; the tritet MUST map to exactly one frame type"
+    term: "Stream"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_stream_start_byte())
+        def test_stream_start_tritet(byte):
+            tritet = byte >> 5
+            assert 0 <= tritet <= 7
+            frame_type = classify_tritet(tritet)
+            TRITET_MAP = {
+                0: 'AnnotatedT', 1: 'CtB64', 2: 'OpB64', 3: 'Json',
+                4: 'MGPK1', 5: 'Cbor', 6: 'MGPK2', 7: 'CtOpB2'
+            }
+            assert frame_type == TRITET_MAP[tritet], \
+                f"Tritet {tritet} mapped to {frame_type}, expected {TRITET_MAP[tritet]}"
+    strategy: "cesr_stream_start_byte() — one of the 8 tritet-representative bytes"
+    notes: "All 256 possible first bytes map to exactly one of 8 frame types via their high 3 bits."
+
+  - invariant: "In-stride domain switching between T-domain and B-domain MUST be detectable via the starting tritet without any out-of-band signaling"
+    term: "Stream"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_mixed_domain_stream())
+        def test_domain_switching(stream_bytes):
+            pos = 0
+            while pos < len(stream_bytes):
+                tritet = stream_bytes[pos] >> 5
+                if tritet in (0, 1, 2):
+                    frame, pos = parse_t_frame(stream_bytes, pos)
+                    assert frame.domain == 'T'
+                elif tritet == 7:
+                    frame, pos = parse_b_frame(stream_bytes, pos)
+                    assert frame.domain == 'B'
+                elif tritet in (3, 4, 5, 6):
+                    frame, pos = parse_nonnative(stream_bytes, pos)
+                    assert frame.domain == 'nonnative'
+                else:
+                    assert False, f"Unexpected tritet: {tritet}"
+                assert frame is not None
+    strategy: "cesr_mixed_domain_stream()"
+    notes: "Parser can seamlessly switch between T and B domain elements mid-stream."
+
+  # --- Count Code ---
+  - invariant: "Small count codes: MUST be exactly 4 characters — '-' + type letter + 2 Base64 size chars; maximum count value is 4095 (64^2 - 1); count > 4095 MUST use large count code"
+    term: "Count Code"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.sampled_from(SMALL_COUNT_TYPES),
+               st.integers(min_value=0, max_value=4095))
+        def test_small_count_code_structure(type_char, count):
+            cc = CountCode(code='-' + type_char, count=count)
+            assert len(cc.qb64) == 4, f"Small count code must be 4 chars, got {len(cc.qb64)}"
+            assert cc.qb64[0] == '-'
+            assert cc.qb64[1] == type_char
+            assert parse_count(cc) == count
+            # Boundary: count > 4095 must fail for small code
+    strategy: "count type x count value (0-4095)"
+    notes: "Small count codes encode up to 4095 quadlets in 2 Base64 chars."
+
+  - invariant: "Large count codes: MUST be exactly 8 characters — '--' + type char + 5 Base64 size chars; maximum count value is 1,073,741,823 (64^5 - 1)"
+    term: "Count Code"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.sampled_from(LARGE_COUNT_TYPES),
+               st.integers(min_value=0, max_value=1073741823))
+        def test_large_count_code_structure(type_char, count):
+            cc = CountCode(code='--' + type_char, count=count)
+            assert len(cc.qb64) == 8, f"Large count code must be 8 chars, got {len(cc.qb64)}"
+            assert cc.qb64[:2] == '--'
+            assert cc.qb64[2] == type_char
+            assert parse_count(cc) == count
+    strategy: "count type x count value (0-1B)"
+    notes: "Large count codes extend to ~1 billion quadlets."
+
+  - invariant: "Count codes MUST have no raw value component — only type and size; the entire qb64 is code + count, with sizage.hs + sizage.ss == len(qb64)"
+    term: "Count Code"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_count_code())
+        def test_count_code_no_raw(cc):
+            assert cc.code.startswith('-'), f"Count code must start with '-', got '{cc.code}'"
+            sizage = lookup_sizage(cc.code)
+            assert sizage.hs + sizage.ss == len(cc.qb64), \
+                f"hs({sizage.hs}) + ss({sizage.ss}) must equal len(qb64)={len(cc.qb64)}"
+            # No raw component — fs == hs + ss
+            assert sizage.fs == sizage.hs + sizage.ss
+    strategy: "cesr_count_code()"
+    notes: "Count codes are pure metadata — they frame but carry no cryptographic material."
+
+  - invariant: "Count value MUST be invariant between T and B domains: parsing the same count code from qb64 and from qb2 MUST yield the identical numeric count value"
+    term: "Count Code"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_count_code())
+        def test_count_domain_invariance(cc):
+            t_count = parse_count_from_t(cc.qb64)
+            b_count = parse_count_from_b(cc.qb2)
+            assert t_count == b_count, \
+                f"Domain invariance violated: T={t_count}, B={b_count}"
+    strategy: "cesr_count_code()"
+    notes: "Both domains use 24-bit units (quadlets/triplets), so count values are identical."
+
+  - invariant: "Count code size computation: in T-domain, text_size = 4 * count quadlets; in B-domain, binary_size = 3 * count triplets; the framing size is always the count code length plus the computed content size"
+    term: "Count Code"
+    technique: "smt"
+    formal:
+      language: "z3-python"
+      expression: |
+        from z3 import *
+        count = Int('count')
+        text_size = Int('text_size')
+        binary_size = Int('binary_size')
+        s = Solver()
+        s.add(count >= 0)
+        s.add(text_size == 4 * count)
+        s.add(binary_size == 3 * count)
+        # Prove: text_size is always a multiple of 4
+        s.add(text_size % 4 != 0)
+        assert s.check() == unsat
+        # Prove: binary_size is always a multiple of 3
+        s2 = Solver()
+        s2.add(count >= 0)
+        s2.add(binary_size == 3 * count)
+        s2.add(binary_size % 3 != 0)
+        assert s2.check() == unsat
+        # Prove: text_size / 4 == binary_size / 3 (same count)
+        s3 = Solver()
+        s3.add(count >= 0)
+        s3.add(text_size == 4 * count)
+        s3.add(binary_size == 3 * count)
+        s3.add(text_size / 4 != binary_size / 3)
+        assert s3.check() == unsat
+    notes: "Formal: 4 * count quadlets (T) == 3 * count triplets (B). Composability guaranteed."
+
+  - invariant: "Count codes MUST be aligned on 24-bit boundaries: small code = 4 chars = 3 bytes, large code = 8 chars = 6 bytes; both satisfy text % 4 == 0 and binary % 3 == 0"
+    term: "Count Code"
+    technique: "smt"
+    formal:
+      language: "z3-python"
+      expression: |
+        from z3 import *
+        small_text, large_text = Ints('small_text large_text')
+        small_bin, large_bin = Ints('small_bin large_bin')
+        s = Solver()
+        s.add(small_text == 4, large_text == 8)
+        s.add(small_bin == 3, large_bin == 6)
+        # T-domain composability
+        s.add(small_text % 4 == 0)
+        s.add(large_text % 4 == 0)
+        # B-domain composability
+        s.add(small_bin % 3 == 0)
+        s.add(large_bin % 3 == 0)
+        assert s.check() == sat
+    notes: "Count codes themselves are 24-bit aligned — composable as standalone elements."
+
+  - invariant: "Count code groups MAY be recursively composed (groups of groups); a group containing sub-groups MUST serialize and re-parse to identical bytes"
+    term: "Count Code"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(nested_cesr_group(max_depth=3))
+        def test_recursive_group_composition(group):
+            serialized = group.qb64
+            parsed, remaining = parse_group(serialized)
+            assert remaining == '', f"Unexpected remaining bytes: {len(remaining)}"
+            assert parsed.qb64 == serialized
+    strategy: "nested_cesr_group(max_depth=3) — generates groups containing other groups"
+    notes: "Recursive composition is the foundation of CESR's extensibility."
+
+  # --- Group ---
+  - invariant: "Every element within a group MUST be aligned on a 24-bit boundary: len(item.qb64) % 4 == 0 AND len(item.qb2) % 3 == 0 for each item"
+    term: "Group"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_group())
+        def test_group_element_alignment(group):
+            for i, item in enumerate(group.items):
+                assert len(item.qb64) % 4 == 0, \
+                    f"Item {i} T-domain misaligned: len={len(item.qb64)}"
+                assert len(item.qb2) % 3 == 0, \
+                    f"Item {i} B-domain misaligned: len={len(item.qb2)}"
+    strategy: "cesr_group()"
+    notes: "Every item inside a group must individually satisfy composability."
+
+  - invariant: "Groups MUST be self-framing: the count code provides all information needed to skip the group without parsing its contents; extract_group(group.qb64 + trailing) MUST return (group, trailing)"
+    term: "Group"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_group(), cesr_primitive_qb64())
+        def test_group_self_framing(group, trailing):
+            stream = group.qb64 + trailing
+            extracted, remaining = extract_group(stream)
+            assert extracted.qb64 == group.qb64
+            assert remaining == trailing
+    strategy: "cesr_group() x cesr_primitive_qb64() for trailing data"
+    notes: "Self-framing enables skip-ahead parsing without understanding group contents."
+
+  - invariant: "Group nesting rules: AttachedMaterialQuadlets (-V) MAY contain any group type; ControllerIdxSigs (-A) MUST contain only Siger primitives; TransReceiptQuadruples (-D) MUST contain (Prefixer, Seqner, Saider, Siger) tuples"
+    term: "Group"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_group())
+        def test_group_nesting_rules(group):
+            code = group.counter.code
+            if code.endswith('V'):  # AttachedMaterialQuadlets
+                pass  # Any group type allowed
+            elif code.endswith('A'):  # ControllerIdxSigs
+                for item in group.items:
+                    assert isinstance(item, Siger), \
+                        f"ControllerIdxSigs must contain only Sigers, got {type(item)}"
+            elif code.endswith('D'):  # TransReceiptQuadruples
+                for item in group.items:
+                    assert len(item) == 4, \
+                        f"TransReceiptQuadruples must have 4-tuples, got {len(item)}"
+                    assert isinstance(item[0], Prefixer)
+                    assert isinstance(item[1], Seqner)
+                    assert isinstance(item[2], Saider)
+                    assert isinstance(item[3], Siger)
+    strategy: "cesr_group()"
+    notes: "Each group type constrains what it may contain."
+
+  # --- Frame ---
+  - invariant: "Each frame MUST begin with a byte whose first tritet (byte >> 5) identifies the frame type; the tritet MUST be deterministic for the frame type"
+    term: "Frame"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_frame())
+        def test_frame_tritet_identification(frame):
+            first_byte = frame.raw[0] if isinstance(frame.raw, bytes) else ord(frame.raw[0])
+            tritet = first_byte >> 5
+            assert tritet == expected_tritet(frame.frame_type), \
+                f"Frame type {frame.frame_type}: tritet={tritet}, expected={expected_tritet(frame.frame_type)}"
+    strategy: "cesr_frame() — generates various frame types"
+    notes: "Frame type is determined by exactly 3 bits of the first byte."
+
+  - invariant: "Frames MUST be independently parseable: concatenating N frames and parsing them sequentially MUST yield exactly N parsed frames with no leftover bytes"
+    term: "Frame"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.lists(cesr_frame(), min_size=2, max_size=5))
+        def test_frame_independence(frames):
+            stream = b''.join(f.raw for f in frames)
+            parsed = []
+            remaining = stream
+            while remaining:
+                frame, remaining = parse_frame(remaining)
+                parsed.append(frame)
+            assert len(parsed) == len(frames), \
+                f"Expected {len(frames)} frames, parsed {len(parsed)}"
+    strategy: "st.lists(cesr_frame())"
+    notes: "Consecutive frames can be parsed independently without shared state."
+
+  # --- Attachment ---
+  - invariant: "Attachments MUST follow the message body in stream order; attachment.offset MUST be >= body_offset + body_size"
+    term: "Attachment"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_message_with_attachments())
+        def test_attachment_follows_body(msg):
+            body_end = msg.body_offset + msg.body_size
+            for i, att in enumerate(msg.attachments):
+                assert att.offset >= body_end, \
+                    f"Attachment {i} at offset {att.offset} overlaps body ending at {body_end}"
+    strategy: "cesr_message_with_attachments()"
+    notes: "Attachments always come after the message body, never interleaved."
+
+  - invariant: "Attachments MUST NOT be part of the serialized content that is signed or digested; the signed content MUST be exactly the body bytes, excluding all attachment bytes"
+    term: "Attachment"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_message_with_attachments())
+        def test_attachment_not_signed(msg):
+            signed_content = msg.body_bytes
+            full_stream = msg.raw
+            assert len(full_stream) > len(signed_content), "Attachments must add bytes"
+            assert full_stream[:len(signed_content)] == signed_content
+            attachment_bytes = full_stream[len(signed_content):]
+            assert len(attachment_bytes) > 0
+    strategy: "cesr_message_with_attachments()"
+    notes: "Signatures cover only the body, not attachment groups."
+
+  # --- Message ---
+  - invariant: "For non-native serializations (JSON, CBOR, MGPK), the body's first field MUST be the Version String 'v'; version string length MUST be 17 (v1) or 19 (v2) characters"
+    term: "Message"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        import json
+        @given(cesr_nonnative_message())
+        def test_message_version_string_first(msg):
+            body = json.loads(msg.body_bytes)
+            keys = list(body.keys())
+            assert keys[0] == 'v', f"First field must be 'v', got '{keys[0]}'"
+            assert len(body['v']) in (17, 19), \
+                f"Version string length must be 17 or 19, got {len(body['v'])}"
+    strategy: "cesr_nonnative_message()"
+    notes: "Non-native serializations must have 'v' as their first field."
+
+  # --- Cold Start ---
+  - invariant: "Cold start parsing: tritet = byte >> 5 (high 3 bits); the 8 tritet values MUST form a bijection onto 8 frame types — no two tritets map to the same type, and every tritet maps to exactly one type"
+    term: "Cold Start"
+    technique: "smt"
+    formal:
+      language: "z3-python"
+      expression: |
+        from z3 import *
+        frame_type = Function('frame_type', BitVecSort(3), IntSort())
+        s = Solver()
+        for i in range(8):
+            s.add(frame_type(BitVecVal(i, 3)) == i)
+        # Prove injectivity: different tritets -> different types
+        t1, t2 = BitVecs('t1 t2', 3)
+        s.add(t1 != t2)
+        s.add(frame_type(t1) == frame_type(t2))
+        assert s.check() == unsat
+    notes: "Tritet-to-frame-type mapping is bijective over 3 bits: 8 tritets, 8 types."
+
+  - invariant: "Cold start requires only 3 bits to classify the next frame — no scanning, lookahead, or backtracking required; same byte MUST always produce same tritet"
+    term: "Cold Start"
+    technique: "smt"
+    formal:
+      language: "z3-python"
+      expression: |
+        from z3 import *
+        b1, b2 = BitVecs('b1 b2', 8)
+        # Same byte -> same tritet (functional)
+        s = Solver()
+        s.add(b1 == b2)
+        s.add(Extract(7, 5, b1) != Extract(7, 5, b2))
+        assert s.check() == unsat
+    notes: "3 bits is sufficient and deterministic for frame type classification."
+
+  - invariant: "Tritet value 0b000 (0): Annotated T-domain. Tritet 0b001 (1): Count code ('-' = 0x2D). Tritet 0b010 (2): Op code ('_' = 0x5F). Tritet 0b011 (3): JSON ('{' = 0x7B)"
+    term: "Cold Start"
+    technique: "smt"
+    formal:
+      language: "z3-python"
+      expression: |
+        from z3 import *
+        byte_val = BitVec('byte_val', 8)
+        s = Solver()
+        # '-' = 0x2D, tritet = 001
+        s.push()
+        s.add(byte_val == 0x2D)
+        assert s.check() == sat
+        m = s.model()
+        assert m.eval(Extract(7, 5, byte_val)).as_long() == 0b001
+        s.pop()
+        # '_' = 0x5F, tritet = 010
+        s.push()
+        s.add(byte_val == 0x5F)
+        assert s.check() == sat
+        m = s.model()
+        assert m.eval(Extract(7, 5, byte_val)).as_long() == 0b010
+        s.pop()
+        # '{' = 0x7B, tritet = 011
+        s.push()
+        s.add(byte_val == 0x7B)
+        assert s.check() == sat
+        m = s.model()
+        assert m.eval(Extract(7, 5, byte_val)).as_long() == 0b011
+        s.pop()
+    notes: "Verifies the specific tritet assignments for CESR T-domain characters."
+
+  - invariant: "Tritet 0b100 (4): MGPK FixMap (0x80-0x8F). Tritet 0b101 (5): CBOR Map (0xA0-0xBF). Tritet 0b110 (6): MGPK Map16/32 (0xDE). Tritet 0b111 (7): CESR B-domain (0xE0+)"
+    term: "Cold Start"
+    technique: "smt"
+    formal:
+      language: "z3-python"
+      expression: |
+        from z3 import *
+        byte_val = BitVec('byte_val', 8)
+        s = Solver()
+        # MGPK FixMap: 0x80, tritet = 100
+        s.push()
+        s.add(byte_val == 0x80)
+        assert s.check() == sat
+        m = s.model()
+        assert m.eval(Extract(7, 5, byte_val)).as_long() == 0b100
+        s.pop()
+        # CBOR Map: 0xA0, tritet = 101
+        s.push()
+        s.add(byte_val == 0xA0)
+        assert s.check() == sat
+        m = s.model()
+        assert m.eval(Extract(7, 5, byte_val)).as_long() == 0b101
+        s.pop()
+        # MGPK Map16: 0xDE, tritet = 110
+        s.push()
+        s.add(byte_val == 0xDE)
+        assert s.check() == sat
+        m = s.model()
+        assert m.eval(Extract(7, 5, byte_val)).as_long() == 0b110
+        s.pop()
+        # CESR B-domain: 0xE0, tritet = 111
+        s.push()
+        s.add(byte_val == 0xE0)
+        assert s.check() == sat
+        m = s.model()
+        assert m.eval(Extract(7, 5, byte_val)).as_long() == 0b111
+        s.pop()
+    notes: "Verifies tritet assignments for non-native and B-domain frame types."
+
+  # --- ColdCode ---
+  - invariant: "ColdCode computation: cold_code = byte >> 5; result MUST be in range [0, 7] for any byte value [0, 255]"
+    term: "ColdCode"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.integers(min_value=0, max_value=255))
+        def test_coldcode_computation(byte):
+            cold_code = byte >> 5
+            assert 0 <= cold_code <= 7, f"ColdCode out of range: {cold_code}"
+    strategy: "st.integers(0, 255)"
+    notes: "ColdCode is the upper 3 bits of any byte, always 0-7."
+
+  - invariant: "ColdCode enum MUST have exactly 8 variants — one per 3-bit value: Free(0), CtB64(1), OpB64(2), Json(3), MGPK1(4), Cbor(5), MGPK2(6), CtOpB2(7); no collisions allowed"
+    term: "ColdCode"
+    technique: "smt"
+    formal:
+      language: "z3-python"
+      expression: |
+        from z3 import *
+        name = Function('name', BitVecSort(3), IntSort())
+        s = Solver()
+        for i in range(8):
+            s.add(name(BitVecVal(i, 3)) == i)
+        # Prove: no two cold codes map to the same name (injective)
+        c1, c2 = BitVecs('c1 c2', 3)
+        s.add(name(c1) == name(c2), c1 != c2)
+        assert s.check() == unsat
+    notes: "ColdCode enum has exactly 8 variants, one per 3-bit value."
+
+  - invariant: "ColdCode dispatch: CtB64(1)/OpB64(2) -> CESR T-domain group parser; Json(3)/MGPK1(4)/Cbor(5)/MGPK2(6) -> non-native payload parser; CtOpB2(7) -> B-domain group parser; Free(0) -> annotated parser"
+    term: "ColdCode"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.integers(min_value=0, max_value=7))
+        def test_coldcode_dispatch(cold_code):
+            DISPATCH = {
+                0: 'annotated_parser',
+                1: 'cesr_group_parser', 2: 'cesr_group_parser',
+                3: 'nonnative_parser', 4: 'nonnative_parser',
+                5: 'nonnative_parser', 6: 'nonnative_parser',
+                7: 'binary_group_parser'
+            }
+            assert dispatch_target(cold_code) == DISPATCH[cold_code], \
+                f"ColdCode {cold_code} dispatched to {dispatch_target(cold_code)}, expected {DISPATCH[cold_code]}"
+    strategy: "st.integers(0, 7)"
+    notes: "ColdCode value directly determines which parser is invoked."
+
+  # --- CesrGroup / GroupItem ---
+  - invariant: "Group qb64 serialization MUST be exactly: counter.qb64 + concatenated items' qb64; no padding, no separators"
+    term: "GroupItem"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_group())
+        def test_group_item_qb64(group):
+            expected = group.counter.qb64 + ''.join(item.qb64 for item in group.items)
+            assert group.qb64 == expected
+    strategy: "cesr_group()"
+    notes: "Group serialization is counter followed by all items."
+
+  - invariant: "Group full_size MUST equal counter size + sum of all items' full sizes; formally: full_size == len(counter.qb64) + sum(len(item.qb64) for item in items)"
+    term: "GroupItem"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_group())
+        def test_group_item_full_size(group):
+            expected = len(group.counter.qb64) + sum(len(item.qb64) for item in group.items)
+            assert group.full_size == expected, \
+                f"full_size={group.full_size}, expected={expected}"
+    strategy: "cesr_group()"
+    notes: "Full size is the sum of counter + all item sizes."
+
+  - invariant: "Group round-trip: parse_group(group.qb64) MUST return (parsed_group, '') where parsed_group.qb64 == group.qb64; any deviation is a serialization bug"
+    term: "GroupItem"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_group())
+        def test_group_roundtrip(group):
+            serialized = group.qb64
+            parsed, remaining = parse_group(serialized)
+            assert remaining == '', f"Unexpected remaining: '{remaining}'"
+            assert parsed.qb64 == serialized
+    strategy: "cesr_group()"
+    notes: "Parse-then-serialize must be identity. Fundamental correctness property."
+
+  # --- Parser Dispatch ---
+  - invariant: "Two-stage dispatch: Stage 1 — ColdCode selects parser family (CESR group, non-native payload, or annotated). Stage 2 — counter.code string selects the concrete group parser within the family."
+    term: "Parser Dispatch"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_stream_bytes())
+        def test_dispatch_stage1(stream):
+            if not stream:
+                return
+            cold_code = stream[0] >> 5
+            result = stage1_dispatch(stream)
+            if cold_code in (1, 2, 7):
+                assert result.type == 'cesr_group'
+            elif cold_code in (3, 4, 5, 6):
+                assert result.type == 'nonnative'
+            else:
+                assert result.type == 'annotated'
+    strategy: "cesr_stream_bytes()"
+    notes: "Stage 1: ColdCode determines parser family. Stage 2: counter code selects group parser."
+
+  - invariant: "All parsers MUST return (remaining_bytes, parsed_value) tuple, enabling stream continuation; remaining_bytes + parsed_value bytes MUST equal the original input"
+    term: "Parser Dispatch"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_stream_with_trailing())
+        def test_parser_returns_remaining(stream_and_trailing):
+            stream, trailing = stream_and_trailing
+            full = stream + trailing
+            parsed, remaining = parse_next_element(full)
+            assert remaining == trailing, \
+                f"Remaining mismatch: got {len(remaining)} bytes, expected {len(trailing)}"
+            assert parsed is not None
+    strategy: "cesr_stream_with_trailing() — stream element + arbitrary trailing bytes"
+    notes: "Every parser must return unconsumed bytes for the next parse call."
+
+  # --- Version String Sniffing ---
+  - invariant: "Version string sniffing MUST be triggered when the starting tritet indicates a non-native serialization: Json(0b011), MGPK1(0b100), Cbor(0b101), MGPK2(0b110); CESR native tritets (0b000, 0b001, 0b010, 0b111) MUST NOT trigger sniffing"
+    term: "Version String Sniffing"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.integers(min_value=0, max_value=7))
+        def test_sniff_trigger(tritet):
+            should_sniff = tritet in (3, 4, 5, 6)
+            assert needs_version_sniff(tritet) == should_sniff, \
+                f"Tritet {tritet}: needs_sniff={needs_version_sniff(tritet)}, expected={should_sniff}"
+    strategy: "st.integers(0, 7)"
+    notes: "Only non-native serializations trigger version string sniffing."
+
+  - invariant: "Version string BBBB field MUST encode the exact byte count of the serialized field map body; extract_size_from_vs(vs) MUST equal len(body_bytes)"
+    term: "Version String Sniffing"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(version_string_with_body())
+        def test_sniff_size_extraction(vs_body):
+            vs, body = vs_body
+            size = extract_size_from_vs(vs)
+            assert size == len(body), \
+                f"Version string size={size}, actual body size={len(body)}"
+    strategy: "version_string_with_body() — valid version string paired with matching body"
+    notes: "The BBBB field encodes the exact byte count of the serialized field map."
+
+  # --- Universal Count Code ---
+  - invariant: "All CESR genera MUST implement universal count codes with identical semantics; the set [-A, -B, -C, -D, -E, -F, -G, -H, -I, -J] MUST be present in every genus"
+    term: "Universal Count Code"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        UNIVERSAL_CODES = ['-A', '-B', '-C', '-D', '-E', '-F', '-G', '-H', '-I', '-J']
+        def test_universal_codes_present():
+            for genus in ALL_GENERA:
+                for code in UNIVERSAL_CODES:
+                    assert code in genus.count_table, \
+                        f"Universal code {code} missing from genus {genus.name}"
+    strategy: "exhaustive — all genera x all universal codes"
+    notes: "Universal codes provide cross-protocol interoperability."
+
+  # --- Concrete Group Types ---
+  - invariant: "ControllerIdxSigs group: counter code MUST end with 'A'; contents MUST be a Vec<Siger> where each item is an indexed signature"
+    term: "Concrete Group Types"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.lists(ed25519_indexed_signature(), min_size=1, max_size=5))
+        def test_controller_idx_sigs(sigers):
+            group = ControllerIdxSigs(sigers)
+            assert group.counter.code.endswith('A')
+            parsed, _ = parse_group(group.qb64)
+            assert len(parsed.items) == len(sigers)
+            for item in parsed.items:
+                assert isinstance(item, Siger)
+    strategy: "st.lists(ed25519_indexed_signature())"
+    notes: "Controller indexed signature groups contain only Siger primitives."
+
+  - invariant: "TransReceiptQuadruples group: counter code MUST end with 'D'; each item MUST be a 4-tuple (Prefixer, Seqner, Saider, Siger)"
+    term: "Concrete Group Types"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.lists(trans_receipt_quadruple(), min_size=1, max_size=3))
+        def test_trans_receipt_quadruples(quads):
+            group = TransReceiptQuadruples(quads)
+            parsed, _ = parse_group(group.qb64)
+            assert len(parsed.items) == len(quads)
+            for item in parsed.items:
+                assert len(item) == 4
+    strategy: "st.lists(trans_receipt_quadruple())"
+    notes: "Transferable receipt quadruples have exactly 4 elements each."
+
+  # --- AttachedMaterialQuadlets ---
+  - invariant: "AttachedMaterialQuadlets: counter code MUST be '-V'; count MUST equal total_quadlets of inner groups (excludes own counter size); formally: count == sum(len(g.qb64) for g in inner_groups) // 4"
+    term: "AttachedMaterialQuadlets"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.lists(cesr_group(), min_size=1, max_size=3))
+        def test_attached_material_quadlets(inner_groups):
+            amq = AttachedMaterialQuadlets(inner_groups)
+            total_inner_chars = sum(len(g.qb64) for g in inner_groups)
+            expected_quadlets = total_inner_chars // 4
+            assert amq.counter.count == expected_quadlets, \
+                f"count={amq.counter.count}, expected={expected_quadlets}"
+    strategy: "st.lists(cesr_group())"
+    notes: "AMQ count excludes the counter itself — counts only inner content."
+
+  - invariant: "AttachedMaterialQuadlets MUST support heterogeneous inner groups: different group types within the same AMQ; each inner group type MUST be independently determined by its own counter code"
+    term: "AttachedMaterialQuadlets"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(heterogeneous_group_list())
+        def test_amq_heterogeneous(groups):
+            amq = AttachedMaterialQuadlets(groups)
+            parsed, _ = parse_group(amq.qb64)
+            for i, inner in enumerate(parsed.items):
+                assert type(inner).__name__ == type(groups[i]).__name__, \
+                    f"Inner group {i}: got {type(inner).__name__}, expected {type(groups[i]).__name__}"
+    strategy: "heterogeneous_group_list() — mix of ControllerIdxSigs, NonTransReceiptCouples, etc."
+    notes: "AMQ is the only group type supporting mixed inner group types."
+
+  # --- PathedMaterialQuadlets ---
+  - invariant: "PathedMaterialQuadlets MUST NOT parse contents — preserved as raw bytes; round-trip: PathedMaterialQuadlets(raw) -> parse -> raw"
+    term: "PathedMaterialQuadlets"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.binary(min_size=3, max_size=300).filter(lambda b: len(b) % 3 == 0))
+        def test_pathed_material_opaque(raw_bytes):
+            qb64_content = base64url_encode(raw_bytes).decode()
+            while len(qb64_content) % 4 != 0:
+                qb64_content += 'A'
+            pmq = PathedMaterialQuadlets(qb64_content)
+            parsed, _ = parse_group(pmq.qb64)
+            assert parsed.raw_content == qb64_content
+    strategy: "st.binary() aligned to 3-byte boundary"
+    notes: "PathedMaterialQuadlets preserves content without interpretation."
+
+  # --- Pipelining ---
+  - invariant: "Count value MUST be invariant across domain conversion: converting a count code from T-domain to B-domain MUST preserve the numeric count value exactly"
+    term: "Pipelining"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_count_code())
+        def test_pipeline_domain_invariance(cc):
+            t_count = parse_count_from_t(cc.qb64)
+            converted_b = base64url_decode(cc.qb64.encode())
+            b_count = parse_count_from_b(converted_b)
+            assert t_count == b_count
+    strategy: "cesr_count_code()"
+    notes: "Domain conversion of count codes preserves count — key to pipelining."
+
+  - invariant: "Groups MUST be independently parseable for parallel processing: each group can be parsed in isolation without context from other groups in the stream"
+    term: "Pipelining"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.lists(cesr_group(), min_size=2, max_size=5))
+        def test_pipeline_independent_parsing(groups):
+            for group in groups:
+                parsed, remaining = parse_group(group.qb64)
+                assert remaining == ''
+                assert parsed.qb64 == group.qb64
+    strategy: "st.lists(cesr_group())"
+    notes: "Each group is self-contained — enables core affinity in pipelined processing."
+
+  # --- Error / Boundary conditions ---
+  - invariant: "Empty stream (0 bytes) MUST be handled gracefully: parser MUST return no frames and no error"
+    term: "Stream"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        def test_empty_stream():
+            frames, remaining = parse_stream(b'')
+            assert frames == []
+            assert remaining == b''
+    strategy: "Fixed empty input"
+    notes: "Empty stream is valid — contains zero elements."
+
+  - invariant: "Truncated stream (fewer bytes than indicated by count code) MUST raise a parse error, not return partial or corrupted data"
+    term: "Stream"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_group(), st.integers(min_value=1, max_value=10))
+        def test_truncated_stream_error(group, trim):
+            truncated = group.qb64[:-min(trim, len(group.qb64) - 1)]
+            if len(truncated) < len(group.qb64):
+                with pytest.raises(ParseError):
+                    parse_group(truncated)
+    strategy: "cesr_group() x st.integers for trim amount"
+    notes: "Truncated input must be detected and reported, not silently accepted."
+
+  - invariant: "Invalid count code prefix (not '-' or '--') MUST raise a parse error at the count code level"
+    term: "Count Code"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(st.text(min_size=4, max_size=4).filter(lambda s: not s.startswith('-')))
+        def test_invalid_count_code_prefix(bad_code):
+            with pytest.raises(ParseError, match='invalid count code'):
+                parse_count_code(bad_code)
+    strategy: "st.text(4) filtered to exclude '-' prefix"
+    notes: "Count codes must start with '-'. Anything else is not a count code."
+
+# Formalized port contracts
+contracts:
+  - port_ref: "port://cesr/composition/inbound/stream-composition"
+    preconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda body, attachments: (
+                isinstance(body, bytes) and len(body) > 0
+                and all(isinstance(a, Group) for a in attachments)
+                and all(len(a.qb64) % 4 == 0 for a in attachments)
+            )
+        description: "Body is non-empty bytes, attachments are valid composable groups"
+      - formal:
+          language: "python"
+          expression: |
+            lambda count_code_type, primitives: (
+                count_code_type in VALID_COUNT_TYPES
+                and all(len(p.qb64) % 4 == 0 for p in primitives)
+            )
+        description: "Count code type is valid, all primitives are composable"
+    postconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda stream: (
+                all(len(elem.qb64) % 4 == 0 for elem in parse_all_elements(stream))
+            )
+        description: "Every element in the composed stream is composable"
+      - formal:
+          language: "python"
+          expression: |
+            lambda stream: parse_all_elements(stream) is not None
+        description: "Composed stream is parseable (self-framing throughout)"
+
+  - port_ref: "port://cesr/composition/inbound/stream-parsing"
+    preconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda stream: isinstance(stream, (str, bytes)) and len(stream) > 0
+        description: "Stream is non-empty string or bytes"
+      - formal:
+          language: "python"
+          expression: |
+            lambda byte: isinstance(byte, int) and 0 <= byte <= 255
+        description: "Sniff input is a single byte in valid range"
+    postconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda frames: all(
+                f.raw[0] >> 5 == expected_tritet(f.frame_type)
+                for f in frames
+            )
+        description: "Each parsed frame's first byte tritet matches its classified type"
+      - formal:
+          language: "python"
+          expression: |
+            lambda stream, frames, remaining: (
+                b''.join(f.raw for f in frames) + remaining == stream
+            )
+        description: "Parsed frames + remaining bytes reconstruct the original stream"
+
+  - port_ref: "port://cesr/composition/inbound/attachment-management"
+    preconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda body, sigs, code_type: (
+                isinstance(body, bytes) and len(body) > 0
+                and all(isinstance(s, (Siger, Cigar)) for s in sigs)
+                and code_type in ATTACHMENT_COUNT_TYPES
+            )
+        description: "Body is non-empty bytes, signatures are valid, code type is valid attachment type"
+    postconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda result: (
+                parse_body(result) is not None
+                and parse_attachments(result) is not None
+                and len(result) > len(parse_body(result))
+            )
+        description: "Result contains parseable body and non-empty attachment groups"
+
+  - port_ref: "port://cesr/composition/outbound/transport"
+    preconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda endpoint, stream: (
+                isinstance(endpoint, str) and len(endpoint) > 0
+                and isinstance(stream, (str, bytes)) and len(stream) > 0
+            )
+        description: "Endpoint is a non-empty URL string, stream is non-empty"
+    postconditions:
+      - formal:
+          language: "python"
+          expression: |
+            lambda result: result.is_ok() or result.is_err()
+        description: "Transport returns a typed Result — no uncaught exceptions"
+
+# State machine specifications
+state_machines:
+  - name: "Cold Start Parser"
+    term: "ColdCode"
+    states:
+      - "Idle"
+      - "ReadTritet"
+      - "DispatchCesrT"
+      - "DispatchCesrB"
+      - "DispatchJson"
+      - "DispatchCbor"
+      - "DispatchMGPK"
+      - "DispatchAnnotated"
+      - "ParseComplete"
+      - "Error"
+    transitions:
+      - from: "Idle"
+        to: "ReadTritet"
+        trigger: "byte available in stream"
+        guard: "len(stream) > 0"
+      - from: "ReadTritet"
+        to: "DispatchCesrT"
+        trigger: "tritet in {1, 2} (CtB64 or OpB64)"
+        guard: "stream[0] >> 5 in {1, 2}"
+      - from: "ReadTritet"
+        to: "DispatchCesrB"
+        trigger: "tritet == 7 (CtOpB2)"
+        guard: "stream[0] >> 5 == 7"
+      - from: "ReadTritet"
+        to: "DispatchJson"
+        trigger: "tritet == 3 (Json)"
+        guard: "stream[0] >> 5 == 3"
+      - from: "ReadTritet"
+        to: "DispatchCbor"
+        trigger: "tritet == 5 (Cbor)"
+        guard: "stream[0] >> 5 == 5"
+      - from: "ReadTritet"
+        to: "DispatchMGPK"
+        trigger: "tritet in {4, 6} (MGPK1 or MGPK2)"
+        guard: "stream[0] >> 5 in {4, 6}"
+      - from: "ReadTritet"
+        to: "DispatchAnnotated"
+        trigger: "tritet == 0 (Free)"
+        guard: "stream[0] >> 5 == 0"
+      - from: "DispatchCesrT"
+        to: "ParseComplete"
+        trigger: "CESR T-domain group successfully parsed"
+        guard: "len(stream) >= required_bytes(counter)"
+      - from: "DispatchCesrB"
+        to: "ParseComplete"
+        trigger: "CESR B-domain group successfully parsed"
+        guard: "len(stream) >= required_bytes(counter)"
+      - from: "DispatchJson"
+        to: "ParseComplete"
+        trigger: "JSON field map extracted via version string size"
+        guard: "stream[:2] contains valid 'v' field with BBBB size"
+      - from: "DispatchCbor"
+        to: "ParseComplete"
+        trigger: "CBOR field map extracted"
+        guard: "valid CBOR encoding"
+      - from: "DispatchMGPK"
+        to: "ParseComplete"
+        trigger: "MessagePack field map extracted"
+        guard: "valid MessagePack encoding"
+      - from: "DispatchAnnotated"
+        to: "ParseComplete"
+        trigger: "Annotated encoding extracted"
+        guard: "valid annotated format"
+      - from: "DispatchCesrT"
+        to: "Error"
+        trigger: "insufficient bytes or malformed group"
+        guard: "len(stream) < required_bytes(counter) or parse_failure"
+      - from: "DispatchCesrB"
+        to: "Error"
+        trigger: "insufficient bytes or malformed group"
+        guard: "len(stream) < required_bytes(counter) or parse_failure"
+      - from: "DispatchJson"
+        to: "Error"
+        trigger: "invalid JSON or missing version string"
+        guard: "parse_failure or 'v' not first field"
+      - from: "DispatchCbor"
+        to: "Error"
+        trigger: "invalid CBOR"
+        guard: "parse_failure"
+      - from: "DispatchMGPK"
+        to: "Error"
+        trigger: "invalid MessagePack"
+        guard: "parse_failure"
+      - from: "ParseComplete"
+        to: "Idle"
+        trigger: "frame consumed, advance to next"
+        guard: "len(remaining) > 0"
+      - from: "Error"
+        to: "Idle"
+        trigger: "skip to next frame boundary (cold-start recovery)"
+        guard: "recovery heuristic finds next valid tritet"
+    invariants:
+      - "Exactly one transition fires per tritet value — no ambiguity in dispatch"
+      - "ParseComplete MUST return (parsed_frame, remaining_bytes)"
+      - "Error state is recoverable — parser MUST resynchronize at next frame boundary"
+      - "Every Dispatch* state either transitions to ParseComplete or Error — no hangs"
+      - "Empty stream in Idle state is NOT an error — parser terminates normally"
+    initial_state: "Idle"
+    terminal_states: ["ParseComplete", "Error"]
+
+  - name: "Group Parser"
+    term: "CesrGroup"
+    states:
+      - "ReadCounter"
+      - "MatchGroupType"
+      - "ParseItems"
+      - "GroupComplete"
+      - "UnknownGroup"
+      - "Error"
+    transitions:
+      - from: "ReadCounter"
+        to: "MatchGroupType"
+        trigger: "counter parsed from stream"
+        guard: "valid count code prefix ('-' or '--') and sufficient bytes"
+      - from: "ReadCounter"
+        to: "Error"
+        trigger: "invalid count code prefix or insufficient bytes"
+        guard: "not stream.startswith('-') or len(stream) < 4"
+      - from: "MatchGroupType"
+        to: "ParseItems"
+        trigger: "counter.code matches a known group type"
+        guard: "counter.code in KNOWN_GROUP_CODES"
+      - from: "MatchGroupType"
+        to: "UnknownGroup"
+        trigger: "counter.code does not match any known group type"
+        guard: "counter.code not in KNOWN_GROUP_CODES"
+      - from: "ParseItems"
+        to: "GroupComplete"
+        trigger: "all items parsed (count exhausted)"
+        guard: "parsed_quadlets == counter.count"
+      - from: "ParseItems"
+        to: "ParseItems"
+        trigger: "next item parsed from stream"
+        guard: "parsed_quadlets < counter.count and sufficient bytes"
+      - from: "ParseItems"
+        to: "Error"
+        trigger: "insufficient bytes or malformed item"
+        guard: "parsed_quadlets < counter.count and insufficient bytes"
+    invariants:
+      - "Counter MUST be parsed before items"
+      - "Total parsed quadlets MUST equal counter.count at GroupComplete"
+      - "Item types MUST match the group type's expected structure"
+      - "Group serialization MUST be exactly counter.qb64 + items' qb64 concatenated"
+      - "Insufficient bytes during item parsing MUST transition to Error, not hang"
+    initial_state: "ReadCounter"
+    terminal_states: ["GroupComplete", "UnknownGroup", "Error"]

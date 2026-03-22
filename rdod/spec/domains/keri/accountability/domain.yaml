@@ -1,0 +1,90 @@
+# domain.yaml
+template_version: "1.0"
+id: "keri/accountability"
+name: "KERI Accountability"
+description: >
+  Others can verify your identity claims through witness receipting, consensus, and dissemination.
+  KERI's Algorithm for Witness Agreement (KAWA) — a Byzantine Fault Tolerant agreement
+  algorithm that uses a designated set of N witnesses to provide highly available, consistent
+  promulgation of an AID's key event history. Unlike multi-phase BFT consensus, KAWA uses
+  single-phase agreement because the controller is the sole source of truth for event creation.
+  Witnesses verify, receipt (sign), store, and disseminate events under the first-seen rule.
+  The controller designates a threshold M of N witnesses for accountability, ensuring that
+  at most one sufficient agreement exists despite faulty witnesses. The resulting Key Event
+  Receipt Log (KERL) is the receipted form of the KEL used in indirect mode.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: KERI's Algorithm for Witness Agreement (KAWA), Witness Designation, Witnessing Policy, Immunity and Availability, Security Properties"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: KAWA, Witnesses, Indirect Mode, KERL"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — sections: KERI Ecosystem Components, Witnesses and Watchers, Ambient Verifiability"
+  - type: implementation
+    reference: "keripy — src/keri/core/coring.py (Toader), src/keri/core/eventing.py (ample())"
+  - type: implementation
+    reference: "keriox — keriox_core/src/event/sections/threshold.rs (tally), components/witness/src/"
+
+ubiquitous_language:
+  - term: "KAWA"
+    definition: "KERI's Algorithm for Witness Agreement — single-phase BFT agreement by designated witnesses"
+    invariants:
+      - "Single-phase agreement — no multi-phase commit required"
+      - "The controller is the sole source of truth for event creation"
+      - "Witnesses are designated by the controller, not self-selected"
+
+  - term: "Witness"
+    definition: "An entity designated by a controller to verify, receipt, store, and disseminate key events"
+    invariants:
+      - "Designated by the controller in establishment events — not self-selected"
+      - "A witness's receipt constitutes a first-seen guarantee"
+      - "Accountable — duplicitous witnessing is detectable"
+
+  - term: "TOAD"
+    definition: "Threshold of Accountable Duplicity — the numeric threshold of witness receipts required before an event is fully witnessed"
+    invariants:
+      - "Set in the bt field of establishment events"
+      - "Must be at least ample(witness_count), the BFT minimum"
+
+domain_clients:
+  - ref: "domain://keri"
+    relationship: "Parent domain drives witness receipting and consensus for indirect mode"
+    via_port: "port://keri/accountability/inbound/receipting"
+
+subdomains:
+  - ref: "domain://keri/accountability/consensus"
+    relationship: "Mathematical and algorithmic foundations — first-seen rule, immune constraint, accountability thresholds, proper KERL properties, BFT quorum calculations"
+  - ref: "domain://keri/accountability/receipting"
+    relationship: "Receipt lifecycle — receipt creation, receipt types, receipt escrows, witness receipt generator, KERL as receipted KEL"
+  - ref: "domain://keri/accountability/dissemination"
+    relationship: "Event and receipt propagation — round-robin and gossip protocols, witness designation, witnessing policy, direct/indirect operational modes"
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519 (witness receipt signatures), Blake3-256/SHA-256 (event verification)"
+    relationship: "Witness receipt signatures and event digest verification use kernel cryptographic types directly"
+
+adjacents: []
+
+externals:
+  - name: "Network Transport"
+    abstraction: "Adapter"
+    ref: "port://keri/accountability/outbound/transport"
+    implementation_notes: "Message delivery for events, receipts, and gossip between controller, witnesses, and validators. Implementations: HTTP, TCP, WebSocket, round-robin, gossip protocol"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    This domain orchestrates three subdomains: consensus (rules and quorum math),
+    receipting (receipt creation/storage/escrow), and dissemination (network propagation).
+    KAWA is implemented by the witness component. In keripy, witnessing is handled by the
+    Witness class and the receipting logic in Kevery. In keriox, the witness component lives
+    under components/witness/. The TOAD (Toader in keripy, tally in keriox) bridges all
+    three subdomains — it is the accountability threshold that consensus validates,
+    receipting counts against, and dissemination targets.
+
+issues: []
+
+tags: ["witness", "consensus", "bft", "receipt", "availability", "indirect-mode"]

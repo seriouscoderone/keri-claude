@@ -1,0 +1,1974 @@
+# keripy → DDD domain mapping
+# Extracted: 162 files, 415 classes, 339 functions, 1151 public methods
+# Auto-mapped by module/symbol heuristics — review UNMAPPED items
+
+UNMAPPED:  # 1 items
+  - help.__init__.trace  # fn @ keri/help/__init__.py:22
+
+_cross-cutting/exceptions:  # 88 items
+  - kering.AlternateFieldError  # class @ keri/kering.py:633
+  - kering.AuthError  # class @ keri/kering.py:431
+  - kering.AuthNError  # class @ keri/kering.py:440
+  - kering.AuthZError  # class @ keri/kering.py:449
+  - kering.ClosedError  # class @ keri/kering.py:413
+  - kering.ColdCodex  # class @ keri/kering.py:237
+  - kering.ColdStartError  # class @ keri/kering.py:827
+  - kering.ConfigurationError  # class @ keri/kering.py:422
+  - kering.ConversionError  # class @ keri/kering.py:891
+  - kering.DatabaseError  # class @ keri/kering.py:468
+  - kering.DecryptError  # class @ keri/kering.py:458
+  - kering.DerivationCodeError  # class @ keri/kering.py:926
+  - kering.DerivationError  # class @ keri/kering.py:714
+  - kering.DeserializeError  # class @ keri/kering.py:901
+  - kering.ElementError  # class @ keri/kering.py:918
+  - kering.EmptyListError  # class @ keri/kering.py:730
+  - kering.EmptyMaterialError  # class @ keri/kering.py:509
+  - kering.ExchangeError  # class @ keri/kering.py:959
+  - kering.ExtraFieldError  # class @ keri/kering.py:625
+  - kering.ExtractionError  # class @ keri/kering.py:811
+  - kering.FailedSchemaValidationError  # class @ keri/kering.py:1026
+  - kering.FieldError  # class @ keri/kering.py:909
+  - kering.GroupFormationError  # class @ keri/kering.py:991
+  - kering.IlkError  # class @ keri/kering.py:882
+  - kering.InvalidCodeError  # class @ keri/kering.py:526
+  - kering.InvalidCodeSizeError  # class @ keri/kering.py:566
+  - kering.InvalidCredentialStateError  # class @ keri/kering.py:762
+  - kering.InvalidEventTypeError  # class @ keri/kering.py:967
+  - kering.InvalidGroupError  # class @ keri/kering.py:983
+  - kering.InvalidSizeError  # class @ keri/kering.py:558
+  - kering.InvalidSoftError  # class @ keri/kering.py:534
+  - kering.InvalidTypeError  # class @ keri/kering.py:542
+  - kering.InvalidValueError  # class @ keri/kering.py:550
+  - kering.InvalidVarIndexError  # class @ keri/kering.py:574
+  - kering.InvalidVarRawSizeError  # class @ keri/kering.py:590
+  - kering.InvalidVarSizeError  # class @ keri/kering.py:582
+  - kering.InvalidVersionError  # class @ keri/kering.py:517
+  - kering.KeriError  # class @ keri/kering.py:405
+  - kering.KindError  # class @ keri/kering.py:873
+  - kering.KramConfigurationError  # class @ keri/kering.py:1059
+  - kering.KramError  # class @ keri/kering.py:1051
+  - kering.LikelyDuplicitousError  # class @ keri/kering.py:682
+  - kering.MaterialError  # class @ keri/kering.py:487
+  - kering.MisfitEventSourceError  # class @ keri/kering.py:794
+  - kering.MissingAidError  # class @ keri/kering.py:975
+  - kering.MissingAnchorError  # class @ keri/kering.py:738
+  - kering.MissingAuthAttachmentError  # class @ keri/kering.py:1066
+  - kering.MissingChainError  # class @ keri/kering.py:999
+  - kering.MissingDelegableApprovalError  # class @ keri/kering.py:802
+  - kering.MissingDelegationError  # class @ keri/kering.py:666
+  - kering.MissingDestinationError  # class @ keri/kering.py:650
+  - kering.MissingEntryError  # class @ keri/kering.py:477
+  - kering.MissingFieldError  # class @ keri/kering.py:617
+  - kering.MissingIssuerError  # class @ keri/kering.py:754
+  - kering.MissingRegistryError  # class @ keri/kering.py:746
+  - kering.MissingSchemaError  # class @ keri/kering.py:1017
+  - kering.MissingSenderKeyStateError  # class @ keri/kering.py:1077
+  - kering.MissingSignatureError  # class @ keri/kering.py:642
+  - kering.MissingWitnessSignatureError  # class @ keri/kering.py:658
+  - kering.OutOfOrderError  # class @ keri/kering.py:674
+  - kering.OutOfOrderKeyStateError  # class @ keri/kering.py:778
+  - kering.OutOfOrderTxnStateError  # class @ keri/kering.py:786
+  - kering.ProtocolError  # class @ keri/kering.py:864
+  - kering.QueryNotFoundError  # class @ keri/kering.py:1043
+  - kering.RawMaterialError  # class @ keri/kering.py:493
+  - kering.RevokedChainError  # class @ keri/kering.py:1008
+  - kering.SerializeError  # class @ keri/kering.py:599
+  - kering.ShortageError  # class @ keri/kering.py:819
+  - kering.SizedGroupError  # class @ keri/kering.py:836
+  - kering.SoftMaterialError  # class @ keri/kering.py:501
+  - kering.TopLevelStreamError  # class @ keri/kering.py:846
+  - kering.TraitCodex  # class @ keri/kering.py:382
+  - kering.UnexpectedCodeError  # class @ keri/kering.py:934
+  - kering.UnexpectedCountCodeError  # class @ keri/kering.py:942
+  - kering.UnexpectedOpCodeError  # class @ keri/kering.py:950
+  - kering.UntrustedKeyStateSource  # class @ keri/kering.py:1035
+  - kering.UnverifiedProofError  # class @ keri/kering.py:770
+  - kering.UnverifiedReceiptError  # class @ keri/kering.py:698
+  - kering.UnverifiedReplyError  # class @ keri/kering.py:722
+  - kering.UnverifiedTransferableReceiptError  # class @ keri/kering.py:706
+  - kering.UnverifiedWitnessReceiptError  # class @ keri/kering.py:690
+  - kering.ValidationError  # class @ keri/kering.py:609
+  - kering.VersionError  # class @ keri/kering.py:855
+  - kering.deversify  # fn @ keri/kering.py:179
+  - kering.rematch  # fn @ keri/kering.py:79
+  - kering.smell  # fn @ keri/kering.py:211
+  - kering.sniff  # fn @ keri/kering.py:285
+  - kering.versify  # fn @ keri/kering.py:140
+
+_cross-cutting/records:  # 16 items
+  - recording.CacheTypeRecord  # class @ keri/recording.py:430
+  - recording.EndAuthRecord  # class @ keri/recording.py:302
+  - recording.EndpointRecord  # class @ keri/recording.py:229
+  - recording.EventSourceRecord  # class @ keri/recording.py:133
+  - recording.HabitatRecord  # class @ keri/recording.py:147
+  - recording.KeyStateRecord  # class @ keri/recording.py:77
+  - recording.LocationRecord  # class @ keri/recording.py:325
+  - recording.MsgCacheRecord  # class @ keri/recording.py:470
+  - recording.ObservedRecord  # class @ keri/recording.py:380
+  - recording.OobiQueryRecord  # class @ keri/recording.py:181
+  - recording.OobiRecord  # class @ keri/recording.py:214
+  - recording.RawRecord  # class @ keri/recording.py:18
+  - recording.StateEERecord  # class @ keri/recording.py:59
+  - recording.TopicsRecord  # class @ keri/recording.py:171
+  - recording.TxnMsgCacheRecord  # class @ keri/recording.py:496
+  - recording.WellKnownAuthN  # class @ keri/recording.py:524
+
+_cross-cutting/utilities:  # 26 items
+  - help.helping.NonStringIterable  # class @ keri/help/helping.py:107
+  - help.helping.NonStringSequence  # class @ keri/help/helping.py:120
+  - help.helping.b64ToInt  # fn @ keri/help/helping.py:322
+  - help.helping.codeB2ToB64  # fn @ keri/help/helping.py:362
+  - help.helping.codeB64ToB2  # fn @ keri/help/helping.py:337
+  - help.helping.datify  # fn @ keri/help/helping.py:66
+  - help.helping.dictify  # fn @ keri/help/helping.py:51
+  - help.helping.extractElementValues  # fn @ keri/help/helping.py:158
+  - help.helping.extractValues  # fn @ keri/help/helping.py:195
+  - help.helping.fromIso8601  # fn @ keri/help/helping.py:257
+  - help.helping.intToB64  # fn @ keri/help/helping.py:297
+  - help.helping.intToB64b  # fn @ keri/help/helping.py:314
+  - help.helping.isNonStringIterable  # fn @ keri/help/helping.py:133
+  - help.helping.isNonStringSequence  # fn @ keri/help/helping.py:147
+  - help.helping.isign  # fn @ keri/help/helping.py:26
+  - help.helping.key64uToKey  # fn @ keri/help/helping.py:424
+  - help.helping.keyToKey64u  # fn @ keri/help/helping.py:416
+  - help.helping.klasify  # fn @ keri/help/helping.py:87
+  - help.helping.nabSextets  # fn @ keri/help/helping.py:391
+  - help.helping.nowIso8601  # fn @ keri/help/helping.py:225
+  - help.helping.nowUTC  # fn @ keri/help/helping.py:217
+  - help.helping.sceil  # fn @ keri/help/helping.py:36
+  - help.helping.toIso8601  # fn @ keri/help/helping.py:239
+  - help.helping.verify64uEd25519  # fn @ keri/help/helping.py:445
+  - help.helping.verifyEd25519  # fn @ keri/help/helping.py:432
+  - spac.payloading.PayloadTyper  # class @ keri/spac/payloading.py:18
+    # .type (L109)
+
+_infrastructure/database:  # 73 items
+  - cli.commands.clean.CleanDoer  # class @ keri/cli/commands/clean.py:35
+    # .recur (L41)
+  - cli.commands.clean.handler  # fn @ keri/cli/commands/clean.py:19
+  - cli.commands.escrow.clear.clear  # fn @ keri/cli/commands/escrow/clear.py:40
+  - cli.commands.escrow.clear.handler  # fn @ keri/cli/commands/escrow/clear.py:25
+  - cli.commands.escrow.list.escrows  # fn @ keri/cli/commands/escrow/list.py:39
+  - cli.commands.escrow.list.handler  # fn @ keri/cli/commands/escrow/list.py:33
+  - cli.commands.migrate.list.ListDoer  # class @ keri/cli/commands/migrate/list.py:35
+    # .recur (L41)
+  - cli.commands.migrate.list.handler  # fn @ keri/cli/commands/migrate/list.py:18
+  - cli.commands.migrate.run.MigrateDoer  # class @ keri/cli/commands/migrate/run.py:36
+    # .recur (L42)
+  - cli.commands.migrate.run.handler  # fn @ keri/cli/commands/migrate/run.py:19
+  - cli.commands.migrate.show.CleanDoer  # class @ keri/cli/commands/migrate/show.py:34
+    # .recur (L40)
+  - cli.commands.migrate.show.handler  # fn @ keri/cli/commands/migrate/show.py:17
+  - db.basing.Baser  # class @ keri/db/basing.py:162
+    # .kevers (L558)
+    # .reopen (L564)
+    # .reload (L935)
+    # .migrate (L966)
+    # .clearEscrows (L1011)
+    # .current (L1041)
+    # .complete (L1069)
+    # .clean (L1095)
+    # .clonePreIter (L1221)
+    # .cloneAllPreIter (L1245)
+    # .cloneEvtMsg (L1266)
+    # .cloneDelegation (L1348)
+    # .fetchAllSealingEventByEventSeal (L1363)
+    # .fetchLastSealingEventByEventSeal (L1398)
+    # .fetchLastSealingEventBySeal (L1436)
+    # .signingMembers (L1463)
+    # .rotationMembers (L1480)
+    # .fullyWitnessed (L1496)
+    # .resolveVerifiers (L1514)
+    # .getEvtPreIter (L1554)
+    # .getEvtLastPreIter (L1579)
+  - db.basing.BaserDoer  # class @ keri/db/basing.py:1604
+    # .enter (L1656)
+    # .exit (L1661)
+  - db.basing.dbdict  # class @ keri/db/basing.py:68
+    # .get (L106)
+  - db.basing.openDB  # fn @ keri/db/basing.py:126
+  - db.basing.reopenDB  # fn @ keri/db/basing.py:136
+  - db.dbing.LMDBer  # class @ keri/db/dbing.py:336
+    # .reopen (L430)
+    # .version (L473)
+    # .version (L488)
+    # .close (L501)
+    # .getVer (L517)
+    # .setVer (L529)
+    # .delTop (L545)
+    # .cntTop (L579)
+    # .cntAll (L609)
+    # .getTopItemIter (L623)
+    # .putVal (L661)
+    # .setVal (L681)
+    # .getVal (L702)
+    # .delVal (L720)
+    # .putOnVal (L742)
+    # .pinOnVal (L770)
+    # .appendOnVal (L800)
+    # .getOnItem (L861)
+    # .getOnVal (L892)
+    # .remOn (L920)
+    # .remOnAll (L945)
+    # .cntOnAll (L988)
+    # .getOnTopItemIter (L1032)
+    # .getOnAllItemIter (L1054)
+    # .putIoSetVals (L1112)
+    # .pinIoSetVals (L1159)
+    # .addIoSetVal (L1192)
+    # .getIoSetItemIter (L1235)
+    # .getIoSetLastItem (L1270)
+    # .remIoSet (L1304)
+    # .remIoSetVal (L1338)
+    # .cntIoSet (L1392)
+    # .getTopIoSetItemIter (L1424)
+    # .getIoSetLastItemIterAll (L1453)
+    # .getIoSetLastIterAll (L1498)
+    # .putOnIoSetVals (L1529)
+    # .pinOnIoSetVals (L1571)
+    # .appendOnIoSetVals (L1611)
+    # .addOnIoSetVal (L1686)
+    # .getOnIoSetItemIter (L1715)
+    # .getOnIoSetLastItem (L1749)
+    # .remOnIoSetVal (L1778)
+    # .remOnAllIoSet (L1821)
+    # .cntOnIoSet (L1865)
+    # .cntOnAllIoSet (L1887)
+    # .getOnTopIoSetItemIter (L1927)
+    # .getOnAllIoSetItemIter (L1962)
+    # .getOnAllIoSetLastItemIter (L2013)
+    # .getOnAllIoSetItemBackIter (L2085)
+    # .getOnAllIoSetLastItemBackIter (L2150)
+    # .putVals (L2242)
+    # .addVal (L2269)
+    # .getVals (L2300)
+    # .getValLast (L2324)
+    # .getValsIter (L2348)
+    # .cntVals (L2371)
+    # .delVals (L2392)
+    # .putIoDupVals (L2415)
+    # .addIoDupVal (L2463)
+    # .getIoDupVals (L2491)
+    # .getIoDupValsIter (L2529)
+    # .getIoDupValLast (L2567)
+    # .delIoDupVals (L2607)
+    # .delIoDupVal (L2641)
+    # .cntIoDups (L2685)
+    # .getTopIoDupItemIter (L2723)
+    # .putOnIoDupVals (L2777)
+    # .addOnIoDupVal (L2829)
+    # .appendOnIoDupVal (L2859)
+    # .getOnIoDupVals (L2887)
+    # .getOnIoDupValsIter (L2942)
+    # .getOnIoDupLast (L2990)
+    # .getOnIoDupLastValIter (L3022)
+    # .getOnIoDupLastItemIter (L3049)
+    # .delOnIoDups (L3096)
+    # .delOnIoDupVal (L3123)
+    # .cntOnIoDups (L3151)
+    # .getOnIoDupValBackIter (L3182)
+    # .getOnIoDupItemBackIter (L3214)
+    # .getOnIoDupIterAll (L3267)
+    # .getOnIoDupItemIterAll (L3297)
+  - db.dbing.clearDatabaserDir  # fn @ keri/db/dbing.py:292
+  - db.dbing.dgKey  # fn @ keri/db/dbing.py:156
+  - db.dbing.dtKey  # fn @ keri/db/dbing.py:169
+  - db.dbing.fetchTsgs  # fn @ keri/db/dbing.py:72
+  - db.dbing.fnKey  # fn @ keri/db/dbing.py:142
+  - db.dbing.onKey  # fn @ keri/db/dbing.py:111
+  - db.dbing.openLMDB  # fn @ keri/db/dbing.py:301
+  - db.dbing.snKey  # fn @ keri/db/dbing.py:128
+  - db.dbing.splitKey  # fn @ keri/db/dbing.py:186
+  - db.dbing.splitKeyDT  # fn @ keri/db/dbing.py:232
+  - db.dbing.splitOnKey  # fn @ keri/db/dbing.py:211
+  - db.dbing.suffix  # fn @ keri/db/dbing.py:248
+  - db.dbing.unsuffix  # fn @ keri/db/dbing.py:269
+  - db.escrowing.Broker  # class @ keri/db/escrowing.py:21
+    # .current (L87)
+    # .processEscrowState (L99)
+    # .escrowStateNotice (L173)
+    # .updateReply (L208)
+    # .removeState (L228)
+  - db.koming.DupKomer  # class @ keri/db/koming.py:638
+    # .put (L664)
+    # .add (L688)
+    # .pin (L710)
+    # .get (L731)
+    # .getLast (L747)
+    # .getIter (L765)
+    # .cnt (L782)
+    # .rem (L792)
+  - db.koming.IoSetKomer  # class @ keri/db/koming.py:402
+    # .put (L446)
+    # .add (L469)
+    # .pin (L489)
+    # .get (L509)
+    # .getLast (L527)
+    # .getIter (L549)
+    # .cnt (L569)
+    # .rem (L585)
+    # .getItemIter (L604)
+  - db.koming.Komer  # class @ keri/db/koming.py:266
+    # .put (L286)
+    # .pin (L302)
+    # .get (L317)
+    # .getDict (L337)
+    # .rem (L358)
+    # .trim (L371)
+    # .cnt (L387)
+  - db.koming.KomerBase  # class @ keri/db/koming.py:26
+    # .getItemIter (L134)
+    # .getFullItemIter (L159)
+  - db.migrations.add_key_and_reg_state_schemas.migrate  # fn @ keri/db/migrations/add_key_and_reg_state_schemas.py:22
+  - db.migrations.add_key_and_reg_state_schemas.migrateKeys  # fn @ keri/db/migrations/add_key_and_reg_state_schemas.py:125
+  - db.migrations.hab_data_rename.HabitatRecordV0_6_7  # class @ keri/db/migrations/hab_data_rename.py:11
+  - db.migrations.hab_data_rename.HabitatRecordV0_6_8  # class @ keri/db/migrations/hab_data_rename.py:28
+  - db.migrations.hab_data_rename.migrate  # fn @ keri/db/migrations/hab_data_rename.py:65
+  - db.migrations.rekey_habs.HabitatRecordV0_6_8  # class @ keri/db/migrations/rekey_habs.py:8
+  - db.migrations.rekey_habs.migrate  # fn @ keri/db/migrations/rekey_habs.py:40
+  - db.subing.B64IoDupSuber  # class @ keri/db/subing.py:2622
+  - db.subing.B64IoSetSuber  # class @ keri/db/subing.py:1609
+  - db.subing.B64OnIoDupSuber  # class @ keri/db/subing.py:3019
+  - db.subing.B64OnIoSetSuber  # class @ keri/db/subing.py:3701
+  - db.subing.B64Suber  # class @ keri/db/subing.py:918
+  - db.subing.B64SuberBase  # class @ keri/db/subing.py:792
+  - db.subing.CatCesrDupSuber  # class @ keri/db/subing.py:2349
+  - db.subing.CatCesrIoSetSuber  # class @ keri/db/subing.py:1688
+  - db.subing.CatCesrSuber  # class @ keri/db/subing.py:1174
+  - db.subing.CatCesrSuberBase  # class @ keri/db/subing.py:1075
+  - db.subing.CesrDupSuber  # class @ keri/db/subing.py:2329
+  - db.subing.CesrIoSetSuber  # class @ keri/db/subing.py:1637
+  - db.subing.CesrOnSuber  # class @ keri/db/subing.py:1048
+  - db.subing.CesrSuber  # class @ keri/db/subing.py:1019
+  - db.subing.CesrSuberBase  # class @ keri/db/subing.py:948
+  - db.subing.CryptSignerSuber  # class @ keri/db/subing.py:1836
+    # .put (L1849)
+    # .pin (L1871)
+    # .get (L1893)
+    # .getItemIter (L1931)
+  - db.subing.DupSuber  # class @ keri/db/subing.py:2145
+    # .put (L2168)
+    # .pin (L2196)
+    # .add (L2220)
+    # .get (L2243)
+    # .getLast (L2260)
+    # .getIter (L2275)
+    # .cnt (L2293)
+    # .rem (L2307)
+  - db.subing.IoDupSuber  # class @ keri/db/subing.py:2383
+    # .put (L2420)
+    # .pin (L2441)
+    # .add (L2464)
+    # .get (L2485)
+    # .getIter (L2502)
+    # .getLast (L2520)
+    # .rem (L2536)
+    # .cnt (L2563)
+    # .getItemIter (L2578)
+  - db.subing.IoSetSuber  # class @ keri/db/subing.py:1212
+    # .put (L1255)
+    # .pin (L1279)
+    # .add (L1304)
+    # .getItem (L1329)
+    # .get (L1354)
+    # .XgetItemIter (L1380)
+    # .getIter (L1404)
+    # .getLastItem (L1428)
+    # .getLast (L1451)
+    # .rem (L1472)
+    # .cnt (L1496)
+    # .getTopItemIter (L1519)
+    # .getLastIter (L1563)
+    # .getLastItemIter (L1586)
+  - db.subing.OnIoDupSuber  # class @ keri/db/subing.py:2652
+    # .putOn (L2700)
+    # .pinOn (L2724)
+    # .addOn (L2755)
+    # .appendOn (L2780)
+    # .getOn (L2797)
+    # .getOnIter (L2816)
+    # .getOnLast (L2833)
+    # .remOn (L2852)
+    # .cntOn (L2886)
+    # .getOnItemIterAll (L2909)
+    # .getOnIterAll (L2927)
+    # .getOnLastIter (L2945)
+    # .getOnLastItemIter (L2964)
+    # .getOnItemBackIter (L2983)
+    # .getOnBackIter (L3001)
+  - db.subing.OnIoSetSuber  # class @ keri/db/subing.py:3055
+    # .putOn (L3125)
+    # .pinOn (L3154)
+    # .appendOn (L3182)
+    # .addOn (L3204)
+    # .getOnItem (L3229)
+    # .getOn (L3252)
+    # .getOnItemIter (L3275)
+    # .getOnIter (L3297)
+    # .getOnLastItem (L3318)
+    # .getOnLast (L3341)
+    # .remOn (L3362)
+    # .remOnAll (L3392)
+    # .cntOn (L3412)
+    # .cntOnAll (L3431)
+    # .getOnTopItemIter (L3451)
+    # .getOnAllItemIter (L3480)
+    # .getOnAllIter (L3508)
+    # .getOnAllLastItemIter (L3533)
+    # .getOnAllLastIter (L3558)
+    # .getOnAllItemBackIter (L3582)
+    # .getOnAllBackIter (L3615)
+    # .getOnAllLastItemBackIter (L3642)
+    # .getOnAllLastBackIter (L3674)
+  - db.subing.OnSuber  # class @ keri/db/subing.py:766
+  - db.subing.OnSuberBase  # class @ keri/db/subing.py:455
+    # .putOn (L483)
+    # .pinOn (L507)
+    # .appendOn (L530)
+    # .getOnItem (L551)
+    # .getOn (L575)
+    # .remOn (L595)
+    # .remOnAll (L615)
+    # .cntOn (L635)
+    # .cntOnAll (L662)
+    # .getOnTopItemIter (L686)
+    # .getOnAllItemIter (L715)
+    # .getOnAllIter (L742)
+  - db.subing.SchemerSuber  # class @ keri/db/subing.py:2107
+  - db.subing.SerderIoSetSuber  # class @ keri/db/subing.py:2052
+  - db.subing.SerderSuber  # class @ keri/db/subing.py:2028
+  - db.subing.SerderSuberBase  # class @ keri/db/subing.py:1973
+  - db.subing.SignerSuber  # class @ keri/db/subing.py:1743
+    # .get (L1771)
+    # .getItemIter (L1800)
+  - db.subing.Suber  # class @ keri/db/subing.py:361
+    # .put (L388)
+    # .pin (L405)
+    # .get (L421)
+    # .rem (L443)
+  - db.subing.SuberBase  # class @ keri/db/subing.py:112
+    # .trim (L232)
+    # .getFullItemIter (L261)
+    # .getItemIter (L300)
+    # .cnt (L347)
+
+acdc/credential-exchange:  # 3 items
+  - cli.commands.ipex.list.ListDoer  # class @ keri/cli/commands/ipex/list.py:60
+    # .listDo (L88)
+    # .grant (L167)
+    # .apply (L204)
+    # .offer (L207)
+    # .agree (L210)
+    # .spurn (L213)
+    # .admit (L236)
+    # .deleteNote (L256)
+  - cli.commands.ipex.list.humanResponse  # fn @ keri/cli/commands/ipex/list.py:262
+  - cli.commands.ipex.list.listNotes  # fn @ keri/cli/commands/ipex/list.py:44
+
+acdc/credential-exchange/negotiation:  # 48 items
+  - acdc.messaging.acdcagg  # fn @ keri/acdc/messaging.py:282
+  - acdc.messaging.acdcatt  # fn @ keri/acdc/messaging.py:208
+  - acdc.messaging.acdcmap  # fn @ keri/acdc/messaging.py:109
+  - acdc.messaging.acgSchemaDefault  # fn @ keri/acdc/messaging.py:880
+  - acdc.messaging.acmSchemaDefault  # fn @ keri/acdc/messaging.py:595
+  - acdc.messaging.actSchemaDefault  # fn @ keri/acdc/messaging.py:743
+  - acdc.messaging.blindate  # fn @ keri/acdc/messaging.py:45
+  - acdc.messaging.regcept  # fn @ keri/acdc/messaging.py:14
+  - acdc.messaging.sectaggr  # fn @ keri/acdc/messaging.py:399
+  - acdc.messaging.sectattr  # fn @ keri/acdc/messaging.py:375
+  - acdc.messaging.sectedge  # fn @ keri/acdc/messaging.py:423
+  - acdc.messaging.sectionate  # fn @ keri/acdc/messaging.py:471
+  - acdc.messaging.sectrule  # fn @ keri/acdc/messaging.py:447
+  - acdc.messaging.sectschema  # fn @ keri/acdc/messaging.py:351
+  - acdc.messaging.update  # fn @ keri/acdc/messaging.py:76
+  - cli.commands.exn.send.SendDoer  # class @ keri/cli/commands/exn/send.py:85
+    # .sendDo (L115)
+  - cli.commands.exn.send.resolveRecipient  # fn @ keri/cli/commands/exn/send.py:70
+  - cli.commands.exn.send.send  # fn @ keri/cli/commands/exn/send.py:52
+  - cli.commands.ipex.admit.AdmitDoer  # class @ keri/cli/commands/ipex/admit.py:44
+    # .admitDo (L76)
+  - cli.commands.ipex.admit.handler  # fn @ keri/cli/commands/ipex/admit.py:33
+  - cli.commands.ipex.agree.handler  # fn @ keri/cli/commands/ipex/agree.py:17
+  - cli.commands.ipex.agree.nonce  # fn @ keri/cli/commands/ipex/agree.py:21
+  - cli.commands.ipex.apply.handler  # fn @ keri/cli/commands/ipex/apply.py:16
+  - cli.commands.ipex.apply.nonce  # fn @ keri/cli/commands/ipex/apply.py:20
+  - cli.commands.ipex.grant.GrantDoer  # class @ keri/cli/commands/ipex/grant.py:47
+    # .grantDo (L72)
+  - cli.commands.ipex.grant.handler  # fn @ keri/cli/commands/ipex/grant.py:35
+  - cli.commands.ipex.join.JoinDoer  # class @ keri/cli/commands/ipex/join.py:46
+    # .joinDo (L92)
+    # .ipex (L138)
+    # .getAdmitRecp (L242)
+    # .getAgreeRecp (L261)
+    # .getApplyRecp (L264)
+    # .getGrantRecp (L267)
+    # .getOfferRecp (L270)
+    # .getSpurnRecp (L273)
+  - cli.commands.ipex.join.join  # fn @ keri/cli/commands/ipex/join.py:28
+  - cli.commands.ipex.offer.handler  # fn @ keri/cli/commands/ipex/offer.py:18
+  - cli.commands.ipex.offer.nonce  # fn @ keri/cli/commands/ipex/offer.py:22
+  - cli.commands.ipex.spurn.SpurnDoer  # class @ keri/cli/commands/ipex/spurn.py:42
+    # .spurnDo (L72)
+  - cli.commands.ipex.spurn.handler  # fn @ keri/cli/commands/ipex/spurn.py:32
+  - core.eventing.exchange  # fn @ keri/core/eventing.py:1454
+  - peer.exchanging.Exchanger  # class @ keri/peer/exchanging.py:24
+    # .addHandler (L54)
+    # .processEvent (L61)
+    # .processEscrow (L185)
+    # .escrowPSEvent (L191)
+    # .processEscrowPartialSigned (L210)
+    # .logEvent (L269)
+    # .lead (L293)
+    # .complete (L320)
+  - peer.exchanging.cloneMessage  # fn @ keri/peer/exchanging.py:536
+  - peer.exchanging.exchange  # fn @ keri/peer/exchanging.py:416
+  - peer.exchanging.exincept  # fn @ keri/peer/exchanging.py:339
+  - peer.exchanging.nesting  # fn @ keri/peer/exchanging.py:618
+  - peer.exchanging.serializeMessage  # fn @ keri/peer/exchanging.py:565
+  - peer.exchanging.verify  # fn @ keri/peer/exchanging.py:633
+  - vc.protocoling.IpexHandler  # class @ keri/vc/protocoling.py:25
+    # .verify (L43)
+    # .response (L98)
+    # .handle (L114)
+  - vc.protocoling.ipexAdmitExn  # fn @ keri/vc/protocoling.py:267
+  - vc.protocoling.ipexAgreeExn  # fn @ keri/vc/protocoling.py:197
+  - vc.protocoling.ipexApplyExn  # fn @ keri/vc/protocoling.py:133
+  - vc.protocoling.ipexGrantExn  # fn @ keri/vc/protocoling.py:222
+  - vc.protocoling.ipexOfferExn  # fn @ keri/vc/protocoling.py:163
+  - vc.protocoling.ipexSpurnExn  # fn @ keri/vc/protocoling.py:293
+  - vc.protocoling.loadHandlers  # fn @ keri/vc/protocoling.py:318
+
+acdc/credential-lifecycle:  # 18 items
+  - cli.commands.vc.export.ExportDoer  # class @ keri/cli/commands/vc/export.py:61
+    # .exportDo (L78)
+    # .outputCred (L101)
+    # .outputTEL (L137)
+    # .outputKEL (L154)
+  - cli.commands.vc.export.export_credentials  # fn @ keri/cli/commands/vc/export.py:38
+  - cli.commands.vc.import_.ImportDoer  # class @ keri/cli/commands/vc/import_.py:46
+    # .importDo (L61)
+  - cli.commands.vc.import_.imprt  # fn @ keri/cli/commands/vc/import_.py:33
+  - cli.commands.vc.list.ListDoer  # class @ keri/cli/commands/vc/list.py:57
+    # .listDo (L83)
+  - cli.commands.vc.list.list_credentials  # fn @ keri/cli/commands/vc/list.py:41
+  - cli.commands.vc.schema.import_.ImportDoer  # class @ keri/cli/commands/vc/schema/import_.py:39
+    # .importDo (L49)
+  - cli.commands.vc.schema.import_.import_schema  # fn @ keri/cli/commands/vc/schema/import_.py:28
+  - vc.walleting.Wallet  # class @ keri/vc/walleting.py:15
+    # .getCredentials (L35)
+  - vc.walleting.WalletDoer  # class @ keri/vc/walleting.py:54
+    # .escrowDo (L75)
+    # .verifierDo (L99)
+  - vdr.viring.RegStateRecord  # class @ keri/vdr/viring.py:100
+  - vdr.viring.Reger  # class @ keri/vdr/viring.py:174
+    # .tevers (L278)
+    # .reopen (L284)
+    # .cloneCreds (L381)
+    # .logCred (L475)
+    # .cloneCred (L489)
+    # .clonePreIter (L508)
+    # .cloneTvtAt (L530)
+    # .cloneTvt (L535)
+    # .sources (L571)
+  - vdr.viring.RegistryRecord  # class @ keri/vdr/viring.py:92
+  - vdr.viring.VcStateRecord  # class @ keri/vdr/viring.py:151
+  - vdr.viring.buildProof  # fn @ keri/vdr/viring.py:609
+  - vdr.viring.messagize  # fn @ keri/vdr/viring.py:636
+  - vdr.viring.openReger  # fn @ keri/vdr/viring.py:163
+  - vdr.viring.rbdict  # class @ keri/vdr/viring.py:26
+    # .get (L74)
+
+acdc/credential-lifecycle/registry:  # 9 items
+  - cli.commands.vc.registry.incept.RegistryInceptor  # class @ keri/cli/commands/vc/registry/incept.py:65
+    # .inceptDo (L119)
+  - cli.commands.vc.registry.incept.registryIncept  # fn @ keri/cli/commands/vc/registry/incept.py:42
+  - cli.commands.vc.registry.list.list_registries  # fn @ keri/cli/commands/vc/registry/list.py:26
+  - cli.commands.vc.registry.list.registries  # fn @ keri/cli/commands/vc/registry/list.py:34
+  - cli.commands.vc.registry.status.RegistryStatusor  # class @ keri/cli/commands/vc/registry/status.py:37
+    # .statusDo (L62)
+  - cli.commands.vc.registry.status.registryStatus  # fn @ keri/cli/commands/vc/registry/status.py:24
+  - vdr.credentialing.Regery  # class @ keri/vdr/credentialing.py:33
+    # .setup (L69)
+    # .loadRegistries (L76)
+    # .makeRegistry (L97)
+    # .makeSignifyRegistry (L109)
+    # .registryByName (L122)
+    # .tevers (L128)
+    # .processEscrows (L136)
+    # .close (L140)
+  - vdr.credentialing.Registry  # class @ keri/vdr/credentialing.py:277
+    # .make (L283)
+    # .rotate (L324)
+    # .issue (L349)
+    # .revoke (L371)
+  - vdr.credentialing.SignifyRegistry  # class @ keri/vdr/credentialing.py:404
+    # .make (L410)
+    # .rotate (L433)
+    # .issue (L451)
+    # .revoke (L470)
+
+acdc/credential-lifecycle/status:  # 21 items
+  - cli.commands.vc.create.CredentialIssuer  # class @ keri/cli/commands/vc/create.py:113
+    # .createDo (L204)
+  - cli.commands.vc.create.issueCredential  # fn @ keri/cli/commands/vc/create.py:46
+  - cli.commands.vc.revoke.RevokeDoer  # class @ keri/cli/commands/vc/revoke.py:43
+    # .revokeDo (L72)
+  - cli.commands.vc.revoke.revokeCredential  # fn @ keri/cli/commands/vc/revoke.py:33
+  - vdr.credentialing.BaseRegistry  # class @ keri/vdr/credentialing.py:173
+    # .tevers (L212)
+    # .tever (L221)
+    # .estOnly (L225)
+    # .noBackers (L229)
+    # .baks (L233)
+    # .regi (L237)
+    # .regser (L241)
+    # .registries (L245)
+    # .processEvent (L248)
+    # .anchorMsg (L262)
+  - vdr.credentialing.Credentialer  # class @ keri/vdr/credentialing.py:807
+    # .create (L835)
+    # .validate (L876)
+    # .issue (L901)
+    # .processCredentialMissingSigEscrow (L921)
+    # .complete (L941)
+    # .escrowDo (L947)
+    # .processEscrows (L973)
+  - vdr.credentialing.RegeryDoer  # class @ keri/vdr/credentialing.py:145
+    # .do (L152)
+  - vdr.credentialing.Registrar  # class @ keri/vdr/credentialing.py:500
+    # .incept (L532)
+    # .issue (L570)
+    # .revoke (L610)
+    # .multisigIxn (L655)
+    # .complete (L678)
+    # .escrowDo (L695)
+    # .processEscrows (L721)
+    # .processWitnessEscrow (L729)
+    # .processMultisigEscrow (L758)
+    # .processDisseminationEscrow (L782)
+  - vdr.credentialing.sendArtifacts  # fn @ keri/vdr/credentialing.py:1012
+  - vdr.credentialing.sendCredential  # fn @ keri/vdr/credentialing.py:980
+  - vdr.credentialing.sendRegistry  # fn @ keri/vdr/credentialing.py:1061
+  - vdr.eventing.Tever  # class @ keri/vdr/eventing.py:628
+    # .reload (L730)
+    # .state (L759)
+    # .incept (L793)
+    # .config (L834)
+    # .update (L862)
+    # .rotate (L928)
+    # .issue (L1015)
+    # .revoke (L1082)
+    # .vcState (L1157)
+    # .vcSn (L1207)
+    # .logEvent (L1223)
+    # .valAnchorBigs (L1257)
+    # .verifyAnchor (L1314)
+    # .escrowPWEvent (L1362)
+    # .escrowALEvent (L1383)
+    # .getBackerState (L1413)
+  - vdr.eventing.backerIssue  # fn @ keri/vdr/eventing.py:296
+  - vdr.eventing.backerRevoke  # fn @ keri/vdr/eventing.py:348
+  - vdr.eventing.incept  # fn @ keri/vdr/eventing.py:31
+  - vdr.eventing.issue  # fn @ keri/vdr/eventing.py:207
+  - vdr.eventing.query  # fn @ keri/vdr/eventing.py:575
+  - vdr.eventing.revoke  # fn @ keri/vdr/eventing.py:247
+  - vdr.eventing.rotate  # fn @ keri/vdr/eventing.py:107
+  - vdr.eventing.state  # fn @ keri/vdr/eventing.py:402
+  - vdr.eventing.vcstate  # fn @ keri/vdr/eventing.py:505
+
+acdc/credential-lifecycle/verification:  # 2 items
+  - vdr.eventing.Tevery  # class @ keri/vdr/eventing.py:1448
+    # .tevers (L1488)
+    # .kevers (L1494)
+    # .registries (L1500)
+    # .processEvent (L1505)
+    # .processQuery (L1608)
+    # .registerReplyRoutes (L1667)
+    # .processReplyRegistryTxnState (L1677)
+    # .processReplyCredentialTxnState (L1817)
+    # .registryKey (L1962)
+    # .escrowOOEvent (L1983)
+    # .processEscrows (L2009)
+    # .processEscrowOutOfOrders (L2032)
+    # .processEscrowAnchorless (L2091)
+  - vdr.verifying.Verifier  # class @ keri/vdr/verifying.py:26
+    # .setup (L61)
+    # .tevers (L75)
+    # .processMessages (L80)
+    # .processCredential (L94)
+    # .processACDC (L188)
+    # .escrowMRE (L204)
+    # .escrowMCE (L219)
+    # .escrowMSE (L234)
+    # .processEscrows (L251)
+    # .saveCredential (L302)
+    # .query (L327)
+    # .verifyChain (L336)
+
+acdc/privacy/disclosure:  # 1 items
+  - vc.proving.credential  # fn @ keri/vc/proving.py:18
+
+cesr/composition:  # 45 items
+  - cli.commands.export.ExportDoer  # class @ keri/cli/commands/export.py:45
+    # .exportDo (L58)
+    # .output (L76)
+    # .outputKEL (L84)
+    # .outputEnds (L101)
+  - cli.commands.export.export  # fn @ keri/cli/commands/export.py:31
+  - cli.commands.import_.ImportDoer  # class @ keri/cli/commands/import_.py:40
+    # .exportDo (L51)
+  - cli.commands.import_.export  # fn @ keri/cli/commands/import_.py:28
+  - cli.commands.saidify.handler  # fn @ keri/cli/commands/saidify.py:24
+  - cli.commands.saidify.saidify  # fn @ keri/cli/commands/saidify.py:35
+  - core.annotating.annot  # fn @ keri/core/annotating.py:16
+  - core.annotating.denot  # fn @ keri/core/annotating.py:284
+  - core.coring.Sadder  # class @ keri/core/coring.py:4076
+    # .compare (L4205)
+    # .raw (L4229)
+    # .raw (L4234)
+    # .ked (L4246)
+    # .ked (L4251)
+    # .kind (L4264)
+    # .kind (L4269)
+    # .size (L4283)
+    # .version (L4289)
+    # .proto (L4300)
+    # .saider (L4311)
+    # .said (L4319)
+    # .saidb (L4327)
+    # .pretty (L4334)
+  - core.counting.Counter  # class @ keri/core/counting.py:394
+    # .enclose (L774)
+    # .version (L834)
+    # .codes (L842)
+    # .sizes (L850)
+    # .code (L858)
+    # .name (L870)
+    # .hard (L880)
+    # .count (L889)
+    # .soft (L900)
+    # .both (L912)
+    # .fullSize (L921)
+    # .qb64b (L933)
+    # .qb64 (L943)
+    # .qb2 (L953)
+    # .countToB64 (L960)
+    # .byteCount (L973)
+    # .byteSize (L993)
+    # .verToB64 (L1017)
+    # .b64ToVer (L1059)
+  - core.counting.CounterCodex_1_0  # class @ keri/core/counting.py:50
+  - core.counting.CounterCodex_2_0  # class @ keri/core/counting.py:185
+  - core.counting.GenusCodex  # class @ keri/core/counting.py:24
+  - core.counting.MessageUniversalCodex_1_0  # class @ keri/core/counting.py:165
+  - core.counting.MessageUniversalCodex_2_0  # class @ keri/core/counting.py:319
+  - core.counting.QuadTripCodex_1_0  # class @ keri/core/counting.py:88
+  - core.counting.SealCodex_2_0  # class @ keri/core/counting.py:357
+  - core.counting.SpecialUniversalCodex_1_0  # class @ keri/core/counting.py:141
+  - core.counting.SpecialUniversalCodex_2_0  # class @ keri/core/counting.py:295
+  - core.counting.UniversalCodex_1_0  # class @ keri/core/counting.py:117
+  - core.counting.UniversalCodex_2_0  # class @ keri/core/counting.py:259
+  - core.eventing.messagize  # fn @ keri/core/eventing.py:1504
+  - core.mapping.Aggor  # class @ keri/core/mapping.py:1157
+    # .verifyDisclosure (L1229)
+    # .agid (L1452)
+    # .ael (L1462)
+    # .raw (L1472)
+    # .qb64b (L1481)
+    # .qb64 (L1490)
+    # .qb2 (L1500)
+    # .count (L1514)
+    # .size (L1526)
+    # .code (L1541)
+    # .strict (L1551)
+    # .saids (L1565)
+    # .kind (L1578)
+    # .byteCount (L1587)
+    # .disclose (L1764)
+  - core.mapping.Compactor  # class @ keri/core/mapping.py:711
+    # .said (L868)
+    # .leaves (L882)
+    # .partials (L893)
+    # .iscompact (L905)
+    # .trace (L927)
+    # .getTail (L1033)
+    # .getMad (L1055)
+    # .compact (L1089)
+    # .expand (L1111)
+  - core.mapping.EscapeCodex  # class @ keri/core/mapping.py:31
+  - core.mapping.Mapper  # class @ keri/core/mapping.py:104
+    # .mad (L277)
+    # .raw (L287)
+    # .qb64b (L295)
+    # .qb64 (L304)
+    # .qb2 (L314)
+    # .count (L328)
+    # .size (L340)
+    # .strict (L354)
+    # .said (L368)
+    # .saids (L382)
+    # .saidive (L396)
+    # .kind (L407)
+    # .byteCount (L416)
+  - core.serdering.FieldDom  # class @ keri/core/serdering.py:39
+  - core.serdering.Serder  # class @ keri/core/serdering.py:230
+    # .verify (L666)
+    # .makify (L831)
+    # .loads (L1241)
+    # .dumps (L1615)
+    # .compare (L1928)
+    # .pretty (L1951)
+    # .raw (L1972)
+    # .sad (L1981)
+    # .verstr (L1990)
+    # .genus (L2000)
+    # .gvrsn (L2010)
+    # .proto (L2020)
+    # .protocol (L2031)
+    # .pvrsn (L2042)
+    # .mucodes (L2052)
+    # .kind (L2063)
+    # .size (L2071)
+    # .said (L2080)
+    # .saidb (L2091)
+    # .ilk (L2100)
+    # .stamp (L2109)
+  - core.serdering.SerderACDC  # class @ keri/core/serdering.py:2508
+    # .uuid (L2553)
+    # .uuidb (L2563)
+    # .issuer (L2573)
+    # .issuerb (L2583)
+    # .regid (L2593)
+    # .regidb (L2608)
+    # .schema (L2618)
+    # .attrib (L2628)
+    # .issuee (L2638)
+    # .issueeb (L2651)
+    # .aggreg (L2661)
+    # .edge (L2671)
+    # .rule (L2681)
+    # .makify (L2752)
+  - core.serdering.SerderKERI  # class @ keri/core/serdering.py:2118
+    # .estive (L2214)
+    # .ked (L2221)
+    # .pre (L2230)
+    # .preb (L2239)
+    # .sner (L2248)
+    # .sn (L2259)
+    # .snh (L2268)
+    # .seals (L2277)
+    # .traits (L2288)
+    # .tholder (L2299)
+    # .keys (L2311)
+    # .verfers (L2320)
+    # .ntholder (L2330)
+    # .ndigs (L2338)
+    # .ndigers (L2349)
+    # .bner (L2364)
+    # .bn (L2375)
+    # .backs (L2386)
+    # .berfers (L2398)
+    # .prior (L2411)
+    # .priorb (L2421)
+    # .cuts (L2433)
+    # .adds (L2443)
+    # .delpre (L2455)
+    # .delpreb (L2464)
+    # .route (L2475)
+    # .uuid (L2485)
+    # .nonce (L2494)
+  - core.serdering.Serdery  # class @ keri/core/serdering.py:124
+    # .reap (L142)
+  - core.structing.AllCastDom  # class @ keri/core/structing.py:351
+  - core.structing.AllClanDom  # class @ keri/core/structing.py:321
+  - core.structing.BlindStateCastDom  # class @ keri/core/structing.py:243
+  - core.structing.BlindStateClanDom  # class @ keri/core/structing.py:225
+  - core.structing.Blinder  # class @ keri/core/structing.py:1249
+    # .makeUUID (L1390)
+    # .blind (L1410)
+    # .unblind (L1455)
+    # .blid (L1576)
+    # .blidb (L1585)
+    # .uuid (L1594)
+    # .uuidb (L1603)
+    # .acdc (L1612)
+    # .acdcb (L1622)
+    # .state (L1632)
+    # .stateb (L1642)
+    # .bsn (L1652)
+    # .bnh (L1663)
+    # .bnhb (L1673)
+    # .bd (L1684)
+    # .bdb (L1694)
+  - core.structing.EmptyCastDom  # class @ keri/core/structing.py:147
+  - core.structing.EmptyClanDom  # class @ keri/core/structing.py:130
+  - core.structing.Mediar  # class @ keri/core/structing.py:1703
+    # .uuid (L1848)
+    # .uuidb (L1857)
+    # .mt (L1866)
+    # .mtb (L1875)
+    # .mv (L1884)
+    # .mvb (L1893)
+  - core.structing.SealCastDom  # class @ keri/core/structing.py:194
+  - core.structing.SealClanDom  # class @ keri/core/structing.py:167
+  - core.structing.Sealer  # class @ keri/core/structing.py:1109
+  - core.structing.Structor  # class @ keri/core/structing.py:417
+    # .enclose (L550)
+    # .extract (L602)
+    # .data (L938)
+    # .clan (L949)
+    # .name (L959)
+    # .cast (L969)
+    # .crew (L980)
+    # .asdict (L1015)
+    # .qb64 (L1031)
+    # .qb64b (L1040)
+    # .qb2 (L1049)
+    # .said (L1057)
+    # .saidb (L1073)
+    # .saids (L1085)
+    # .saidive (L1099)
+  - core.structing.TypeMediaCastDom  # class @ keri/core/structing.py:294
+  - core.structing.TypeMediaClanDom  # class @ keri/core/structing.py:276
+
+cesr/primitives:  # 76 items
+  - app.signing.serialize  # fn @ keri/app/signing.py:12
+  - app.signing.signPaths  # fn @ keri/app/signing.py:72
+  - app.signing.transSeal  # fn @ keri/app/signing.py:113
+  - cli.commands.decrypt.decrypt  # fn @ keri/cli/commands/decrypt.py:35
+  - cli.commands.decrypt.handler  # fn @ keri/cli/commands/decrypt.py:24
+  - cli.commands.nonce.handler  # fn @ keri/cli/commands/nonce.py:17
+  - cli.commands.nonce.nonce  # fn @ keri/cli/commands/nonce.py:21
+  - cli.commands.salt.handler  # fn @ keri/cli/commands/salt.py:18
+  - cli.commands.salt.passcode  # fn @ keri/cli/commands/salt.py:22
+  - cli.commands.sign.handler  # fn @ keri/cli/commands/sign.py:22
+  - cli.commands.sign.sign  # fn @ keri/cli/commands/sign.py:33
+  - cli.commands.ssh.export.export  # fn @ keri/cli/commands/ssh/export.py:37
+  - cli.commands.ssh.export.handler  # fn @ keri/cli/commands/ssh/export.py:32
+  - cli.commands.verify.handler  # fn @ keri/cli/commands/verify.py:25
+  - cli.commands.verify.verify  # fn @ keri/cli/commands/verify.py:36
+  - core.coring.BextCodex  # class @ keri/core/coring.py:401
+  - core.coring.Bexter  # class @ keri/core/coring.py:2801
+    # .bext (L2931)
+  - core.coring.Cigar  # class @ keri/core/coring.py:3515
+    # .verfer (L3568)
+    # .verfer (L3577)
+  - core.coring.Dater  # class @ keri/core/coring.py:2080
+    # .dts (L2184)
+    # .dtsb (L2192)
+    # .datetime (L2200)
+  - core.coring.DecimalCodex  # class @ keri/core/coring.py:441
+  - core.coring.Decimer  # class @ keri/core/coring.py:1945
+    # .dns (L2048)
+    # .decimal (L2067)
+  - core.coring.Dicter  # class @ keri/core/coring.py:4852
+    # .raw (L4888)
+    # .raw (L4893)
+    # .pad (L4903)
+    # .pad (L4908)
+    # .rid (L4918)
+    # .pretty (L4922)
+  - core.coring.DigCodex  # class @ keri/core/coring.py:462
+  - core.coring.Diger  # class @ keri/core/coring.py:3582
+    # .verify (L3662)
+    # .compare (L3675)
+  - core.coring.IceMapDom  # class @ keri/core/coring.py:205
+  - core.coring.Ilker  # class @ keri/core/coring.py:2333
+    # .ilk (L2428)
+  - core.coring.LabelCodex  # class @ keri/core/coring.py:565
+  - core.coring.Labeler  # class @ keri/core/coring.py:3255
+    # .label (L3363)
+    # .text (L3388)
+  - core.coring.LargeVarRawSizeCodex  # class @ keri/core/coring.py:381
+  - core.coring.MapDom  # class @ keri/core/coring.py:174
+  - core.coring.Matter  # class @ keri/core/coring.py:687
+    # .code (L1115)
+    # .name (L1129)
+    # .hard (L1140)
+    # .soft (L1150)
+    # .size (L1161)
+    # .both (L1178)
+    # .fullSize (L1196)
+    # .raw (L1213)
+    # .qb64b (L1222)
+    # .qb64 (L1232)
+    # .qb2 (L1242)
+    # .transferable (L1251)
+    # .digestive (L1261)
+    # .prefixive (L1271)
+    # .special (L1281)
+    # .composable (L1291)
+  - core.coring.MatterCodex  # class @ keri/core/coring.py:236
+  - core.coring.NonTransCodex  # class @ keri/core/coring.py:639
+  - core.coring.NonceCodex  # class @ keri/core/coring.py:487
+  - core.coring.Noncer  # class @ keri/core/coring.py:3748
+    # .nonce (L3811)
+    # .nonceb (L3824)
+  - core.coring.NumCodex  # class @ keri/core/coring.py:514
+  - core.coring.Number  # class @ keri/core/coring.py:1683
+    # .validate (L1838)
+    # .num (L1877)
+    # .numh (L1885)
+    # .sn (L1894)
+    # .snh (L1903)
+    # .huge (L1912)
+    # .positive (L1927)
+    # .inceptive (L1937)
+  - core.coring.Pather  # class @ keri/core/coring.py:2939
+    # .path (L3054)
+    # .parts (L3074)
+    # .rparts (L3096)
+    # .root (L3120)
+    # .strip (L3138)
+    # .startswith (L3162)
+    # .tail (L3176)
+    # .resolve (L3200)
+  - core.coring.PreCodex  # class @ keri/core/coring.py:606
+  - core.coring.PreNonDigCodex  # class @ keri/core/coring.py:657
+  - core.coring.Prefixer  # class @ keri/core/coring.py:3721
+  - core.coring.Saider  # class @ keri/core/coring.py:3836
+    # .saidify (L3937)
+    # .derive (L4012)
+    # .verify (L4030)
+  - core.coring.Seqner  # class @ keri/core/coring.py:1575
+    # .sn (L1667)
+    # .snh (L1675)
+  - core.coring.SmallVarRawSizeCodex  # class @ keri/core/coring.py:361
+  - core.coring.TagCodex  # class @ keri/core/coring.py:538
+  - core.coring.Tagger  # class @ keri/core/coring.py:2208
+    # .tag (L2325)
+  - core.coring.TextCodex  # class @ keri/core/coring.py:421
+  - core.coring.Texter  # class @ keri/core/coring.py:2729
+    # .text (L2794)
+  - core.coring.Traitor  # class @ keri/core/coring.py:2438
+    # .trait (L2531)
+  - core.coring.Verfer  # class @ keri/core/coring.py:3407
+    # .verify (L3439)
+  - core.coring.Verser  # class @ keri/core/coring.py:2548
+    # .versage (L2650)
+    # .verToB64 (L2663)
+    # .b64ToVer (L2702)
+  - core.coring.dumps  # fn @ keri/core/coring.py:107
+  - core.coring.loads  # fn @ keri/core/coring.py:132
+  - core.coring.sizeify  # fn @ keri/core/coring.py:52
+  - core.indexing.IndexedBothSigCodex  # class @ keri/core/indexing.py:124
+  - core.indexing.IndexedCurrentSigCodex  # class @ keri/core/indexing.py:101
+  - core.indexing.IndexedSigCodex  # class @ keri/core/indexing.py:71
+  - core.indexing.Indexer  # class @ keri/core/indexing.py:153
+    # .code (L331)
+    # .name (L340)
+    # .raw (L350)
+    # .index (L358)
+    # .ondex (L366)
+    # .qb64b (L374)
+    # .qb64 (L383)
+    # .qb2 (L392)
+  - core.indexing.IndexerCodex  # class @ keri/core/indexing.py:22
+  - core.indexing.Siger  # class @ keri/core/indexing.py:741
+    # .verfer (L777)
+    # .verfer (L786)
+  - core.scheming.CacheResolver  # class @ keri/core/scheming.py:20
+    # .add (L34)
+    # .resolve (L47)
+    # .handler (L53)
+    # .resolver (L71)
+  - core.scheming.JSONSchema  # class @ keri/core/scheming.py:84
+    # .resolve (L98)
+    # .load (L110)
+    # .dump (L159)
+    # .detect (L174)
+    # .verify_schema (L194)
+    # .verify_json (L210)
+  - core.scheming.Schemer  # class @ keri/core/scheming.py:241
+    # .raw (L353)
+    # .raw (L358)
+    # .sed (L367)
+    # .sed (L372)
+    # .kind (L381)
+    # .kind (L386)
+    # .saider (L395)
+    # .said (L400)
+    # .verify (L404)
+    # .pretty (L416)
+  - core.signing.Cipher  # class @ keri/core/signing.py:655
+    # .decrypt (L706)
+  - core.signing.CipherX25519AllCodex  # class @ keri/core/signing.py:621
+  - core.signing.CipherX25519AllQB64Codex  # class @ keri/core/signing.py:544
+  - core.signing.CipherX25519AllVarCodex  # class @ keri/core/signing.py:588
+  - core.signing.CipherX25519FixQB64Codex  # class @ keri/core/signing.py:527
+  - core.signing.CipherX25519QB2VarCodex  # class @ keri/core/signing.py:567
+  - core.signing.CipherX25519VarQB64Codex  # class @ keri/core/signing.py:506
+  - core.signing.CipherX25519VarStrmCodex  # class @ keri/core/signing.py:485
+  - core.signing.Decrypter  # class @ keri/core/signing.py:885
+    # .decrypt (L949)
+  - core.signing.Encrypter  # class @ keri/core/signing.py:750
+    # .verifySeed (L801)
+    # .encrypt (L817)
+  - core.signing.Salter  # class @ keri/core/signing.py:329
+    # .stretch (L411)
+    # .signer (L450)
+    # .signers (L471)
+  - core.signing.Signer  # class @ keri/core/signing.py:33
+    # .verfer (L136)
+    # .sign (L144)
+  - core.signing.Streamer  # class @ keri/core/signing.py:1050
+    # .stream (L1105)
+    # .text (L1112)
+    # .binary (L1126)
+    # .texter (L1140)
+    # .bexter (L1150)
+
+cloud-agent-service/api:  # 48 items
+  - app.httping.CesrRequest  # class @ keri/app/httping.py:74
+  - app.httping.Clienter  # class @ keri/app/httping.py:213
+    # .request (L239)
+    # .remove (L280)
+    # .clientDo (L296)
+  - app.httping.SignatureValidationComponent  # class @ keri/app/httping.py:29
+    # .process_request (L36)
+    # .validate (L52)
+  - app.httping.createCESRRequest  # fn @ keri/app/httping.py:114
+  - app.httping.parseCesrHttpRequest  # fn @ keri/app/httping.py:79
+  - app.httping.streamCESRRequests  # fn @ keri/app/httping.py:153
+  - app.notifying.DicterSuber  # class @ keri/app/notifying.py:99
+    # .put (L117)
+    # .pin (L132)
+    # .get (L146)
+    # .rem (L166)
+    # .getItemIter (L177)
+    # .cntAll (L192)
+  - app.notifying.Noter  # class @ keri/app/notifying.py:202
+    # .reopen (L227)
+    # .add (L241)
+    # .update (L259)
+    # .get (L277)
+    # .rem (L297)
+    # .getNoteCnt (L318)
+    # .getNotes (L328)
+  - app.notifying.Notice  # class @ keri/app/notifying.py:43
+    # .datetime (L77)
+    # .attrs (L82)
+    # .read (L87)
+    # .read (L92)
+  - app.notifying.Notifier  # class @ keri/app/notifying.py:359
+    # .add (L379)
+    # .rem (L403)
+    # .mar (L432)
+    # .getNoteCnt (L473)
+    # .getNotes (L483)
+  - app.notifying.notice  # fn @ keri/app/notifying.py:17
+  - app.signaling.Signal  # class @ keri/app/signaling.py:44
+    # .topic (L62)
+    # .ckey (L69)
+    # .dt (L73)
+    # .dt (L77)
+    # .attrs (L84)
+  - app.signaling.SignalIterable  # class @ keri/app/signaling.py:258
+  - app.signaling.Signaler  # class @ keri/app/signaling.py:90
+    # .push (L108)
+    # .expireDo (L131)
+  - app.signaling.SignalsEnd  # class @ keri/app/signaling.py:177
+    # .on_post (L199)
+    # .on_get (L230)
+  - app.signaling.loadEnds  # fn @ keri/app/signaling.py:162
+  - app.signaling.signal  # fn @ keri/app/signaling.py:17
+  - app.specing.SpecResource  # class @ keri/app/specing.py:8
+    # .on_get (L44)
+  - cli.commands.mailbox.add.AddDoer  # class @ keri/cli/commands/mailbox/add.py:45
+    # .addDo (L70)
+  - cli.commands.mailbox.add.add  # fn @ keri/cli/commands/mailbox/add.py:29
+  - cli.commands.mailbox.debug.ReadDoer  # class @ keri/cli/commands/mailbox/debug.py:50
+    # .readDo (L67)
+  - cli.commands.mailbox.debug.handler  # fn @ keri/cli/commands/mailbox/debug.py:29
+  - cli.commands.mailbox.list.handle  # fn @ keri/cli/commands/mailbox/list.py:26
+  - cli.commands.mailbox.list.listMailboxes  # fn @ keri/cli/commands/mailbox/list.py:38
+  - cli.commands.mailbox.update.handler  # fn @ keri/cli/commands/mailbox/update.py:31
+  - cli.commands.mailbox.update.update  # fn @ keri/cli/commands/mailbox/update.py:36
+  - cli.commands.notifications.list.NotesDoer  # class @ keri/cli/commands/notifications/list.py:48
+    # .readDo (L62)
+  - cli.commands.notifications.list.handler  # fn @ keri/cli/commands/notifications/list.py:28
+  - cli.commands.notifications.mark.MarkDoer  # class @ keri/cli/commands/notifications/mark.py:49
+    # .markDo (L64)
+  - cli.commands.notifications.mark.handler  # fn @ keri/cli/commands/notifications/mark.py:28
+  - cli.commands.notifications.rem.RemoveDoer  # class @ keri/cli/commands/notifications/rem.py:49
+    # .remDoer (L64)
+  - cli.commands.notifications.rem.handler  # fn @ keri/cli/commands/notifications/rem.py:28
+  - core.kraming.AuthTypeCodex  # class @ keri/core/kraming.py:28
+  - core.kraming.Kramer  # class @ keri/core/kraming.py:57
+    # .enabled (L122)
+    # .fullDenials (L126)
+    # .denials (L133)
+    # .denial (L138)
+    # .intake (L443)
+    # .kramit (L458)
+  - end.ending.AdminEnd  # class @ keri/end/ending.py:508
+    # .on_get (L522)
+  - end.ending.LocationEnd  # class @ keri/end/ending.py:475
+    # .on_get (L489)
+    # .on_put (L498)
+  - end.ending.OOBIEnd  # class @ keri/end/ending.py:532
+    # .on_get (L551)
+  - end.ending.PointEnd  # class @ keri/end/ending.py:396
+    # .on_post (L410)
+    # .on_get (L456)
+    # .on_put (L465)
+  - end.ending.desiginput  # fn @ keri/end/ending.py:350
+  - end.ending.designature  # fn @ keri/end/ending.py:171
+  - end.ending.loadEnds  # fn @ keri/end/ending.py:618
+  - end.ending.normalize  # fn @ keri/end/ending.py:262
+  - end.ending.setup  # fn @ keri/end/ending.py:653
+  - end.ending.siginput  # fn @ keri/end/ending.py:266
+  - end.ending.signature  # fn @ keri/end/ending.py:62
+  - end.priming.main  # fn @ keri/end/priming.py:43
+  - end.priming.parseArgs  # fn @ keri/end/priming.py:24
+  - end.priming.prime  # fn @ keri/end/priming.py:18
+
+cloud-agent-service/processing:  # 4 items
+  - app.forwarding.ForwardHandler  # class @ keri/app/forwarding.py:437
+    # .handle (L484)
+  - app.forwarding.Poster  # class @ keri/app/forwarding.py:25
+    # .deliverDo (L42)
+    # .send (L101)
+    # .sent (L125)
+    # .sendEventToDelegator (L138)
+    # .sendDirect (L155)
+    # .forward (L171)
+    # .forwardToWitness (L204)
+  - app.forwarding.StreamPoster  # class @ keri/app/forwarding.py:238
+    # .deliver (L263)
+    # .send (L327)
+    # .sendDirect (L364)
+    # .createForward (L393)
+    # .forward (L411)
+  - app.forwarding.introduce  # fn @ keri/app/forwarding.py:514
+
+discovery:  # 23 items
+  - app.oobiing.Authenticator  # class @ keri/app/oobiing.py:638
+    # .request (L652)
+    # .addAuthToAid (L659)
+    # .authzDo (L664)
+    # .processFlows (L683)
+    # .processWoobis (L689)
+    # .processMultiFactorAuth (L708)
+  - app.oobiing.OobiRequestHandler  # class @ keri/app/oobiing.py:206
+    # .handle (L224)
+  - app.oobiing.OobiResource  # class @ keri/app/oobiing.py:55
+    # .on_get_alias (L70)
+    # .on_post (L147)
+  - app.oobiing.Oobiery  # class @ keri/app/oobiing.py:271
+    # .registerReplyRoutes (L306)
+    # .processReply (L317)
+    # .scoobiDo (L389)
+    # .processFlows (L408)
+    # .processOobis (L418)
+    # .processClients (L473)
+    # .processMOOBIs (L575)
+    # .processRetries (L595)
+    # .request (L607)
+    # .processMultiOobiRpy (L618)
+  - app.oobiing.loadEnds  # fn @ keri/app/oobiing.py:36
+  - app.oobiing.loadHandlers  # fn @ keri/app/oobiing.py:42
+  - app.oobiing.oobiRequestExn  # fn @ keri/app/oobiing.py:256
+  - cli.commands.ends.add.RoleDoer  # class @ keri/cli/commands/ends/add.py:50
+    # .roleDo (L75)
+  - cli.commands.ends.add.add_end  # fn @ keri/cli/commands/ends/add.py:36
+  - cli.commands.ends.export.ExportDoer  # class @ keri/cli/commands/ends/export.py:38
+    # .exportDo (L49)
+  - cli.commands.ends.export.export_ends  # fn @ keri/cli/commands/ends/export.py:27
+  - cli.commands.ends.list.RoleDoer  # class @ keri/cli/commands/ends/list.py:40
+    # .roleDo (L53)
+  - cli.commands.ends.list.add_end  # fn @ keri/cli/commands/ends/list.py:28
+  - cli.commands.introduce.IntroduceDoer  # class @ keri/cli/commands/introduce.py:47
+    # .introduceDo (L75)
+  - cli.commands.introduce.introduce  # fn @ keri/cli/commands/introduce.py:26
+  - cli.commands.location.add.LocationDoer  # class @ keri/cli/commands/location/add.py:52
+    # .roleDo (L77)
+  - cli.commands.location.add.add_loc  # fn @ keri/cli/commands/location/add.py:38
+  - cli.commands.oobi.clean.list_oobis  # fn @ keri/cli/commands/oobi/clean.py:23
+  - cli.commands.oobi.clean.oobis  # fn @ keri/cli/commands/oobi/clean.py:31
+  - cli.commands.oobi.generate.generate  # fn @ keri/cli/commands/oobi/generate.py:38
+  - cli.commands.oobi.generate.handler  # fn @ keri/cli/commands/oobi/generate.py:27
+  - cli.commands.oobi.resolve.OobiDoer  # class @ keri/cli/commands/oobi/resolve.py:50
+    # .waitDo (L73)
+  - cli.commands.oobi.resolve.resolve  # fn @ keri/cli/commands/oobi/resolve.py:30
+
+keri/accountability:  # 6 items
+  - cli.commands.witness.authenticate.AuthDoer  # class @ keri/cli/commands/witness/authenticate.py:55
+    # .authDo (L80)
+  - cli.commands.witness.authenticate.auth  # fn @ keri/cli/commands/witness/authenticate.py:38
+  - cli.commands.witness.demo.InitDoer  # class @ keri/cli/commands/witness/demo.py:61
+    # .initialize (L73)
+  - cli.commands.witness.demo.demo  # fn @ keri/cli/commands/witness/demo.py:29
+  - cli.commands.witness.list.handler  # fn @ keri/cli/commands/witness/list.py:24
+  - cli.commands.witness.list.listWitnesses  # fn @ keri/cli/commands/witness/list.py:29
+
+keri/accountability/dissemination:  # 13 items
+  - app.indirecting.HttpEnd  # class @ keri/app/indirecting.py:839
+    # .on_post (L867)
+    # .on_put (L927)
+  - app.indirecting.Indirector  # class @ keri/app/indirecting.py:265
+    # .wind (L361)
+    # .msgDo (L369)
+    # .cueDo (L396)
+    # .escrowDo (L424)
+    # .sendMessage (L450)
+  - app.indirecting.MailboxDirector  # class @ keri/app/indirecting.py:458
+    # .wind (L578)
+    # .pollDo (L585)
+    # .addPollers (L618)
+    # .addPoller (L640)
+    # .processPollIter (L645)
+    # .msgDo (L663)
+    # .escrowDo (L688)
+    # .times (L723)
+  - app.indirecting.MailboxIterable  # class @ keri/app/indirecting.py:996
+  - app.indirecting.Poller  # class @ keri/app/indirecting.py:731
+    # .eventDo (L761)
+  - app.indirecting.QryRpyMailboxIterable  # class @ keri/app/indirecting.py:966
+  - app.indirecting.QueryEnd  # class @ keri/app/indirecting.py:1187
+    # .on_get (L1196)
+  - app.indirecting.ReceiptEnd  # class @ keri/app/indirecting.py:1033
+    # .on_post (L1055)
+    # .on_get (L1105)
+    # .interceptDo (L1154)
+  - app.indirecting.WitnessStart  # class @ keri/app/indirecting.py:146
+    # .start (L166)
+    # .msgDo (L184)
+    # .escrowDo (L206)
+    # .cueDo (L232)
+  - app.indirecting.createHttpServer  # fn @ keri/app/indirecting.py:121
+  - app.indirecting.setupWitness  # fn @ keri/app/indirecting.py:37
+  - cli.commands.witness.submit.SubmitDoer  # class @ keri/cli/commands/witness/submit.py:59
+    # .submitDo (L78)
+  - cli.commands.witness.submit.handler  # fn @ keri/cli/commands/witness/submit.py:38
+
+keri/accountability/receipting:  # 17 items
+  - app.agenting.HTTPMessenger  # class @ keri/app/agenting.py:834
+    # .msgDo (L869)
+    # .responseDo (L890)
+    # .idle (L904)
+  - app.agenting.HTTPStreamMessenger  # class @ keri/app/agenting.py:908
+    # .recur (L950)
+  - app.agenting.Receiptor  # class @ keri/app/agenting.py:27
+    # .receipt (L55)
+    # .get (L156)
+    # .catchup (L197)
+    # .witDo (L224)
+    # .gitDo (L256)
+  - app.agenting.TCPMessenger  # class @ keri/app/agenting.py:689
+    # .receiptDo (L717)
+    # .msgDo (L751)
+    # .idle (L756)
+  - app.agenting.TCPStreamMessenger  # class @ keri/app/agenting.py:760
+    # .receiptDo (L788)
+    # .msgDo (L825)
+    # .idle (L830)
+  - app.agenting.WitnessInquisitor  # class @ keri/app/agenting.py:443
+    # .msgDo (L475)
+    # .query (L554)
+    # .telquery (L580)
+  - app.agenting.WitnessPublisher  # class @ keri/app/agenting.py:603
+    # .sendDo (L628)
+    # .sent (L671)
+    # .idle (L685)
+  - app.agenting.WitnessReceiptor  # class @ keri/app/agenting.py:285
+    # .receiptDo (L318)
+  - app.agenting.httpClient  # fn @ keri/app/agenting.py:1050
+  - app.agenting.mailbox  # fn @ keri/app/agenting.py:960
+  - app.agenting.messenger  # fn @ keri/app/agenting.py:986
+  - app.agenting.messengerFrom  # fn @ keri/app/agenting.py:1001
+  - app.agenting.schemes  # fn @ keri/app/agenting.py:1074
+  - app.agenting.streamMessengerFrom  # fn @ keri/app/agenting.py:1025
+  - cli.commands.witness.start.launch  # fn @ keri/cli/commands/witness/start.py:54
+  - cli.commands.witness.start.runWitness  # fn @ keri/cli/commands/witness/start.py:80
+  - core.eventing.receipt  # fn @ keri/core/eventing.py:953
+
+keri/delegation/authorization:  # 4 items
+  - cli.commands.delegate.confirm.ConfirmDoer  # class @ keri/cli/commands/delegate/confirm.py:66
+    # .confirmDo (L96)
+    # .escrowed (L239)
+  - cli.commands.delegate.confirm.confirm  # fn @ keri/cli/commands/delegate/confirm.py:42
+  - core.eventing.delcept  # fn @ keri/core/eventing.py:681
+  - core.eventing.deltate  # fn @ keri/core/eventing.py:866
+
+keri/delegation/lifecycle:  # 6 items
+  - app.delegating.Anchorer  # class @ keri/app/delegating.py:20
+    # .delegation (L48)
+    # .complete (L83)
+    # .escrowDo (L103)
+    # .processEscrows (L128)
+    # .processUnanchoredEscrow (L134)
+    # .processPartialWitnessEscrow (L156)
+    # .processWitnessPublication (L214)
+    # .publishDelegator (L234)
+  - app.delegating.DelegateRequestHandler  # class @ keri/app/delegating.py:259
+    # .handle (L277)
+  - app.delegating.delegateRequestExn  # fn @ keri/app/delegating.py:307
+  - app.delegating.loadHandlers  # fn @ keri/app/delegating.py:246
+  - cli.commands.delegate.request.RequestDoer  # class @ keri/cli/commands/delegate/request.py:47
+    # .requestDo (L63)
+  - cli.commands.delegate.request.request  # fn @ keri/cli/commands/delegate/request.py:29
+
+keri/identity:  # 17 items
+  - core.eventing.ample  # fn @ keri/core/eventing.py:68
+  - core.eventing.bare  # fn @ keri/core/eventing.py:1269
+  - core.eventing.deReceiptCouple  # fn @ keri/core/eventing.py:149
+  - core.eventing.deReceiptTriple  # fn @ keri/core/eventing.py:201
+  - core.eventing.deSourceCouple  # fn @ keri/core/eventing.py:175
+  - core.eventing.deTransReceiptQuadruple  # fn @ keri/core/eventing.py:232
+  - core.eventing.deTransReceiptQuintuple  # fn @ keri/core/eventing.py:264
+  - core.eventing.deWitnessCouple  # fn @ keri/core/eventing.py:112
+  - core.eventing.exchept  # fn @ keri/core/eventing.py:1377
+  - core.eventing.loadEvent  # fn @ keri/core/eventing.py:7074
+  - core.eventing.prod  # fn @ keri/core/eventing.py:1179
+  - core.eventing.simple  # fn @ keri/core/eventing.py:58
+  - core.eventing.state  # fn @ keri/core/eventing.py:395
+  - core.routing.Revery  # class @ keri/core/routing.py:131
+    # .prefixes (L152)
+    # .processReply (L158)
+    # .acceptReply (L198)
+    # .updateReply (L451)
+    # .removeReply (L490)
+    # .escrowReply (L505)
+    # .processEscrowReply (L530)
+  - core.routing.Route  # class @ keri/core/routing.py:598
+  - core.routing.Router  # class @ keri/core/routing.py:22
+    # .addRoute (L41)
+    # .dispatch (L59)
+    # .processRouteNotFound (L110)
+  - core.routing.compile_uri_template  # fn @ keri/core/routing.py:628
+
+keri/identity/anchoring:  # 3 items
+  - cli.commands.interact.InteractDoer  # class @ keri/cli/commands/interact.py:66
+    # .interactDo (L97)
+  - cli.commands.interact.interact  # fn @ keri/cli/commands/interact.py:32
+  - core.eventing.interact  # fn @ keri/core/eventing.py:904
+
+keri/identity/establishment:  # 16 items
+  - cli.commands.incept.InceptDoer  # class @ keri/cli/commands/incept.py:143
+    # .inceptDo (L170)
+  - cli.commands.incept.InceptOptions  # class @ keri/cli/commands/incept.py:57
+  - cli.commands.incept.emptyOptions  # fn @ keri/cli/commands/incept.py:98
+  - cli.commands.incept.handler  # fn @ keri/cli/commands/incept.py:73
+  - cli.commands.incept.mergeArgsWithFile  # fn @ keri/cli/commands/incept.py:107
+  - cli.commands.init.InitDoer  # class @ keri/cli/commands/init.py:56
+    # .initialize (L62)
+  - cli.commands.init.handler  # fn @ keri/cli/commands/init.py:24
+  - cli.commands.rotate.RotateDoer  # class @ keri/cli/commands/rotate.py:118
+    # .rotateDo (L169)
+  - cli.commands.rotate.RotateOptions  # class @ keri/cli/commands/rotate.py:41
+  - cli.commands.rotate.emptyOptions  # fn @ keri/cli/commands/rotate.py:77
+  - cli.commands.rotate.mergeArgsWithFile  # fn @ keri/cli/commands/rotate.py:86
+  - cli.commands.rotate.rotate  # fn @ keri/cli/commands/rotate.py:56
+  - core.eventing.Kevery  # class @ keri/core/eventing.py:3773
+    # .kevers (L3867)
+    # .prefixes (L3874)
+    # .fetchWitnessState (L3880)
+    # .processEvent (L3907)
+    # .processReceipt (L4124)
+    # .processMsg (L4294)
+    # .processAttachedReceiptCouples (L4392)
+    # .processAttachedReceiptQuadruples (L4474)
+    # .removeStaleReplyEndRole (L4587)
+    # .removeStaleReplyLocScheme (L4594)
+    # .registerReplyRoutes (L4601)
+    # .processReplyEndRole (L4614)
+    # .processReplyLocScheme (L4710)
+    # .processReplyKeyStateNotice (L4811)
+    # .updateEnd (L4939)
+    # .updateLoc (L4958)
+    # .updateKeyState (L4976)
+    # .removeKeyState (L4997)
+    # .processReplyAddWatched (L5005)
+    # .updateWatched (L5082)
+    # .processQuery (L5100)
+    # .fetchEstEvent (L5221)
+    # .escrowMFEvent (L5251)
+    # .escrowOOEvent (L5290)
+    # .escrowQueryNotFoundEvent (L5327)
+    # .escrowLDEvent (L5351)
+    # .escrowUWReceipt (L5381)
+    # .escrowUReceipt (L5417)
+    # .escrowTRGroups (L5452)
+    # .escrowTReceipts (L5501)
+    # .escrowTRQuadruple (L5548)
+    # .processEscrows (L5586)
+    # .processEscrowOutOfOrders (L5609)
+    # .processEscrowPartialSigs (L5737)
+    # .processEscrowPartialWigs (L5892)
+    # .processEscrowPartialDels (L6043)
+    # .processEscrowUnverWitness (L6200)
+    # .processEscrowUnverNonTrans (L6306)
+    # .processEscrowDelegables (L6460)
+    # .processQueryNotFound (L6564)
+    # .processEscrowUnverTrans (L6775)
+    # .processEscrowDuplicitous (L6935)
+    # .duplicity (L7061)
+  - core.eventing.incept  # fn @ keri/core/eventing.py:554
+  - core.eventing.rotate  # fn @ keri/core/eventing.py:709
+  - core.parsing.Parser  # class @ keri/core/parsing.py:29
+    # .genus (L181)
+    # .version (L189)
+    # .version (L196)
+    # .methods (L221)
+    # .codes (L229)
+    # .sucodes (L237)
+    # .mucodes (L245)
+    # .extract (L253)
+    # .parse (L306)
+    # .parseOne (L358)
+    # .allParsator (L407)
+    # .onceParsator (L494)
+    # .parsator (L580)
+    # .groupParsator (L679)
+    # .msgParsator (L810)
+
+keri/identity/key-commitment:  # 9 items
+  - app.challenging.ChallengeHandler  # class @ keri/app/challenging.py:23
+    # .handle (L35)
+  - app.challenging.loadHandlers  # fn @ keri/app/challenging.py:10
+  - cli.commands.challenge.generate.generate  # fn @ keri/cli/commands/challenge/generate.py:37
+  - cli.commands.challenge.generate.generateWords  # fn @ keri/cli/commands/challenge/generate.py:45
+  - cli.commands.challenge.generate.handler  # fn @ keri/cli/commands/challenge/generate.py:26
+  - cli.commands.challenge.respond.RespondDoer  # class @ keri/cli/commands/challenge/respond.py:56
+    # .respondDo (L84)
+  - cli.commands.challenge.respond.respond  # fn @ keri/cli/commands/challenge/respond.py:28
+  - cli.commands.challenge.verify.VerifyDoer  # class @ keri/cli/commands/challenge/verify.py:58
+    # .verifyDo (L81)
+  - cli.commands.challenge.verify.verify  # fn @ keri/cli/commands/challenge/verify.py:43
+
+keri/identity/state:  # 28 items
+  - app.querying.AnchorQuerier  # class @ keri/app/querying.py:123
+    # .recur (L134)
+  - app.querying.KeyStateNoticer  # class @ keri/app/querying.py:24
+    # .recur (L36)
+  - app.querying.LogQuerier  # class @ keri/app/querying.py:67
+    # .recur (L77)
+  - app.querying.QueryDoer  # class @ keri/app/querying.py:12
+  - app.querying.SeqNoQuerier  # class @ keri/app/querying.py:91
+    # .recur (L106)
+  - cli.commands.aid.handler  # fn @ keri/cli/commands/aid.py:26
+  - cli.commands.aid.status  # fn @ keri/cli/commands/aid.py:31
+  - cli.commands.did.generate.generate  # fn @ keri/cli/commands/did/generate.py:39
+  - cli.commands.did.generate.handler  # fn @ keri/cli/commands/did/generate.py:28
+  - cli.commands.event.event  # fn @ keri/cli/commands/event.py:40
+  - cli.commands.event.handler  # fn @ keri/cli/commands/event.py:35
+  - cli.commands.kevers.KeverDoer  # class @ keri/cli/commands/kevers.py:40
+    # .kevers (L53)
+  - cli.commands.kevers.handler  # fn @ keri/cli/commands/kevers.py:33
+  - cli.commands.list.ids  # fn @ keri/cli/commands/list.py:33
+  - cli.commands.list.list_identifiers  # fn @ keri/cli/commands/list.py:25
+  - cli.commands.query.LaunchDoer  # class @ keri/cli/commands/query.py:39
+    # .queryDo (L61)
+  - cli.commands.query.query  # fn @ keri/cli/commands/query.py:31
+  - cli.commands.rename.handler  # fn @ keri/cli/commands/rename.py:26
+  - cli.commands.rename.rename  # fn @ keri/cli/commands/rename.py:31
+  - cli.commands.rollback.handler  # fn @ keri/cli/commands/rollback.py:29
+  - cli.commands.rollback.rollback  # fn @ keri/cli/commands/rollback.py:34
+  - cli.commands.status.handler  # fn @ keri/cli/commands/status.py:27
+  - cli.commands.status.status  # fn @ keri/cli/commands/status.py:32
+  - core.eventing.Kever  # class @ keri/core/eventing.py:1584
+    # .sn (L1762)
+    # .fn (L1771)
+    # .ndigs (L1780)
+    # .kevers (L1789)
+    # .prefixes (L1797)
+    # .groups (L1805)
+    # .transferable (L1813)
+    # .locallyOwned (L1823)
+    # .locallyDelegated (L1845)
+    # .locallyWitnessed (L1901)
+    # .locallyMembered (L1922)
+    # .locallyContributedIndices (L1941)
+    # .reload (L1961)
+    # .incept (L1999)
+    # .config (L2070)
+    # .update (L2089)
+    # .rotate (L2255)
+    # .deriveBacks (L2357)
+    # .valSigsWigsDel (L2408)
+    # .exposeds (L2617)
+    # .validateDelegation (L2664)
+    # .fetchDelegatingEvent (L3160)
+    # .logEvent (L3281)
+    # .escrowMFEvent (L3373)
+    # .escrowDelegableEvent (L3413)
+    # .escrowPSEvent (L3448)
+    # .escrowPWEvent (L3491)
+    # .escrowPDEvent (L3535)
+    # .state (L3599)
+    # .fetchPriorDigers (L3635)
+    # .fetchLatestContribTo (L3671)
+    # .fetchLatestContribFrom (L3721)
+  - core.eventing.query  # fn @ keri/core/eventing.py:997
+  - core.eventing.reply  # fn @ keri/core/eventing.py:1090
+  - core.eventing.validateSigs  # fn @ keri/core/eventing.py:349
+  - core.eventing.verifySigs  # fn @ keri/core/eventing.py:301
+
+keri/identity/thresholds:  # 34 items
+  - app.grouping.Counselor  # class @ keri/app/grouping.py:19
+    # .start (L51)
+    # .complete (L69)
+    # .escrowDo (L89)
+    # .processEscrows (L115)
+    # .processPartialSignedEscrow (L121)
+    # .processDelegateEscrow (L171)
+    # .processPartialWitnessEscrow (L207)
+  - app.grouping.Multiplexor  # class @ keri/app/grouping.py:549
+    # .add (L592)
+    # .get (L694)
+  - app.grouping.MultisigNotificationHandler  # class @ keri/app/grouping.py:237
+    # .handle (L253)
+  - app.grouping.getEscrowedEvent  # fn @ keri/app/grouping.py:523
+  - app.grouping.loadHandlers  # fn @ keri/app/grouping.py:266
+  - app.grouping.multisigExn  # fn @ keri/app/grouping.py:497
+  - app.grouping.multisigInceptExn  # fn @ keri/app/grouping.py:284
+  - app.grouping.multisigInteractExn  # fn @ keri/app/grouping.py:352
+  - app.grouping.multisigIssueExn  # fn @ keri/app/grouping.py:409
+  - app.grouping.multisigRegistryInceptExn  # fn @ keri/app/grouping.py:379
+  - app.grouping.multisigRevokeExn  # fn @ keri/app/grouping.py:440
+  - app.grouping.multisigRotateExn  # fn @ keri/app/grouping.py:323
+  - app.grouping.multisigRpyExn  # fn @ keri/app/grouping.py:470
+  - cli.commands.multisig.continue_.ContinueDoer  # class @ keri/cli/commands/multisig/continue_.py:31
+    # .recover (L45)
+  - cli.commands.multisig.continue_.handler  # fn @ keri/cli/commands/multisig/continue_.py:26
+  - cli.commands.multisig.demo.demo  # fn @ keri/cli/commands/multisig/demo.py:12
+  - cli.commands.multisig.incept.GroupMultisigIncept  # class @ keri/cli/commands/multisig/incept.py:72
+    # .inceptDo (L104)
+  - cli.commands.multisig.incept.inceptMultisig  # fn @ keri/cli/commands/multisig/incept.py:36
+  - cli.commands.multisig.interact.GroupMultisigInteract  # class @ keri/cli/commands/multisig/interact.py:53
+    # .interactDo (L90)
+  - cli.commands.multisig.interact.interactGroupIdentifier  # fn @ keri/cli/commands/multisig/interact.py:31
+  - cli.commands.multisig.join.JoinDoer  # class @ keri/cli/commands/multisig/join.py:50
+    # .joinDo (L99)
+    # .incept (L152)
+    # .interact (L252)
+    # .startCounselor (L321)
+    # .showEvent (L331)
+    # .rotate (L359)
+    # .showRotation (L454)
+    # .printMemberTable (L488)
+    # .rpy (L515)
+    # .vcp (L596)
+    # .iss (L673)
+    # .rev (L776)
+  - cli.commands.multisig.join.join  # fn @ keri/cli/commands/multisig/join.py:31
+  - cli.commands.multisig.notice.NoticeDoer  # class @ keri/cli/commands/multisig/notice.py:47
+    # .noticeDo (L63)
+  - cli.commands.multisig.notice.handler  # fn @ keri/cli/commands/multisig/notice.py:29
+  - cli.commands.multisig.rotate.GroupMultisigRotate  # class @ keri/cli/commands/multisig/rotate.py:60
+    # .rotateDo (L101)
+  - cli.commands.multisig.rotate.rotateGroupIdentifier  # fn @ keri/cli/commands/multisig/rotate.py:37
+  - cli.commands.multisig.shell.MultiSigShell  # class @ keri/cli/commands/multisig/shell.py:51
+    # .reset (L79)
+    # .do_show (L89)
+    # .do_delegator (L99)
+    # .do_threshold (L110)
+    # .complete_delegator (L119)
+    # .do_add (L127)
+    # .complete_add (L166)
+    # .do_save (L196)
+    # .do_exit (L216)
+    # .incept (L222)
+    # .precmd (L241)
+    # .emptyline (L263)
+    # .close (L267)
+    # .validate (L270)
+  - cli.commands.multisig.shell.handler  # fn @ keri/cli/commands/multisig/shell.py:24
+  - cli.commands.multisig.shell.isNotValidFloat  # fn @ keri/cli/commands/multisig/shell.py:297
+  - cli.commands.multisig.shell.kims  # fn @ keri/cli/commands/multisig/shell.py:32
+  - cli.commands.multisig.shell.parse  # fn @ keri/cli/commands/multisig/shell.py:286
+  - cli.commands.multisig.update.UpdateDoer  # class @ keri/cli/commands/multisig/update.py:41
+    # .updateDo (L67)
+  - cli.commands.multisig.update.update  # fn @ keri/cli/commands/multisig/update.py:33
+  - core.coring.Tholder  # class @ keri/core/coring.py:4344
+    # .weighted (L4481)
+    # .thold (L4486)
+    # .size (L4491)
+    # .limen (L4496)
+    # .sith (L4501)
+    # .json (L4531)
+    # .num (L4540)
+    # .weight (L4748)
+    # .satisfy (L4773)
+
+keri/integrity:  # 2 items
+  - cli.commands.watcher.list.handle  # fn @ keri/cli/commands/watcher/list.py:27
+  - cli.commands.watcher.list.listWatchers  # fn @ keri/cli/commands/watcher/list.py:39
+
+keri/integrity/detection:  # 6 items
+  - app.watching.AdjudicationDoer  # class @ keri/app/watching.py:165
+    # .recur (L173)
+  - app.watching.Adjudicator  # class @ keri/app/watching.py:37
+    # .performAdjudications (L72)
+    # .adjudicate (L82)
+  - app.watching.DiffState  # class @ keri/app/watching.py:24
+  - app.watching.diffState  # fn @ keri/app/watching.py:185
+  - cli.commands.watcher.add.AddDoer  # class @ keri/cli/commands/watcher/add.py:47
+    # .addDo (L93)
+  - cli.commands.watcher.add.add  # fn @ keri/cli/commands/watcher/add.py:30
+
+keri/integrity/evidence:  # 2 items
+  - cli.commands.watcher.adjudicate.AdjudicationDoer  # class @ keri/cli/commands/watcher/adjudicate.py:49
+    # .adjudicate (L67)
+  - cli.commands.watcher.adjudicate.handle  # fn @ keri/cli/commands/watcher/adjudicate.py:35
+
+local-agent:  # 56 items
+  - app.apping.Consoler  # class @ keri/app/apping.py:17
+    # .enter (L30)
+    # .recur (L35)
+    # .exit (L93)
+  - app.configing.Configer  # class @ keri/app/configing.py:29
+    # .put (L122)
+    # .get (L160)
+  - app.configing.ConfigerDoer  # class @ keri/app/configing.py:197
+    # .enter (L228)
+    # .exit (L233)
+  - app.configing.openCF  # fn @ keri/app/configing.py:19
+  - app.directing.Directant  # class @ keri/app/directing.py:299
+    # .wind (L383)
+    # .serviceDo (L392)
+    # .closeConnection (L432)
+  - app.directing.Director  # class @ keri/app/directing.py:18
+    # .wind (L69)
+    # .sendOwnEvent (L77)
+    # .sendOwnInception (L86)
+  - app.directing.Reactant  # class @ keri/app/directing.py:444
+    # .wind (L556)
+    # .msgDo (L565)
+    # .cueDo (L593)
+    # .escrowDo (L624)
+    # .sendMessage (L651)
+  - app.directing.Reactor  # class @ keri/app/directing.py:93
+    # .wind (L201)
+    # .msgDo (L210)
+    # .cueDo (L237)
+    # .escrowDo (L264)
+    # .sendMessage (L291)
+  - app.directing.runController  # fn @ keri/app/directing.py:660
+  - app.habbing.BaseHab  # class @ keri/app/habbing.py:915
+    # .make (L995)
+    # .save (L1061)
+    # .reconfigure (L1071)
+    # .iserder (L1135)
+    # .kevers (L1149)
+    # .accepted (L1156)
+    # .kever (L1160)
+    # .prefixes (L1167)
+    # .incept (L1173)
+    # .rotate (L1177)
+    # .interact (L1269)
+    # .sign (L1295)
+    # .decrypt (L1326)
+    # .query (L1347)
+    # .endorse (L1367)
+    # .exchange (L1410)
+    # .receipt (L1449)
+    # .witness (L1477)
+    # .replay (L1519)
+    # .replayAll (L1544)
+    # .makeOtherEvent (L1558)
+    # .fetchEnd (L1587)
+    # .fetchLoc (L1595)
+    # .fetchEndAllowed (L1603)
+    # .fetchEndEnabled (L1618)
+    # .fetchEndAuthzed (L1633)
+    # .fetchUrl (L1648)
+    # .fetchUrls (L1659)
+    # .fetchRoleUrls (L1674)
+    # .fetchWitnessUrls (L1716)
+    # .endsFor (L1744)
+    # .reply (L1783)
+    # .makeEndRole (L1799)
+    # .loadEndRole (L1818)
+    # .makeLocScheme (L1850)
+    # .replyLocScheme (L1869)
+    # .loadLocScheme (L1898)
+    # .replyEndRole (L1929)
+    # .replyToOobi (L1996)
+    # .getOwnEvent (L2021)
+    # .makeOwnEvent (L2047)
+    # .makeOwnInception (L2077)
+    # .processCues (L2086)
+    # .processCuesIter (L2099)
+    # .witnesser (L2162)
+  - app.habbing.GroupHab  # class @ keri/app/habbing.py:2622
+    # .make (L2706)
+    # .rotate (L2793)
+    # .sign (L2823)
+    # .witness (L2908)
+    # .query (L2915)
+    # .witnesser (L2937)
+  - app.habbing.Hab  # class @ keri/app/habbing.py:2166
+    # .make (L2209)
+    # .algo (L2332)
+    # .rotate (L2336)
+  - app.habbing.Habery  # class @ keri/app/habbing.py:111
+    # .setup (L246)
+    # .loadHabs (L321)
+    # .makeHab (L373)
+    # .makeGroupHab (L406)
+    # .joinGroupHab (L477)
+    # .makeSignifyHab (L535)
+    # .makeSignifyGroupHab (L545)
+    # .joinSignifyGroupHab (L556)
+    # .deleteHab (L614)
+    # .extractMerfersMigers (L633)
+    # .close (L669)
+    # .kevers (L684)
+    # .prefixes (L691)
+    # .habByPre (L697)
+    # .habByName (L713)
+    # .reconfigure (L731)
+    # .signator (L787)
+  - app.habbing.HaberyDoer  # class @ keri/app/habbing.py:855
+    # .enter (L904)
+    # .exit (L909)
+  - app.habbing.Signator  # class @ keri/app/habbing.py:801
+    # .sign (L829)
+    # .verify (L841)
+  - app.habbing.SignifyGroupHab  # class @ keri/app/habbing.py:2566
+    # .make (L2574)
+    # .processEvent (L2586)
+    # .rotate (L2607)
+  - app.habbing.SignifyHab  # class @ keri/app/habbing.py:2402
+    # .make (L2412)
+    # .sign (L2423)
+    # .rotate (L2446)
+    # .interact (L2460)
+    # .exchange (L2469)
+    # .processEvent (L2483)
+    # .replyEndRole (L2501)
+  - app.habbing.openHab  # fn @ keri/app/habbing.py:86
+  - app.habbing.openHby  # fn @ keri/app/habbing.py:29
+  - app.keeping.Creator  # class @ keri/app/keeping.py:357
+    # .create (L380)
+    # .salt (L387)
+    # .stem (L394)
+    # .tier (L401)
+  - app.keeping.Creatory  # class @ keri/app/keeping.py:536
+    # .make (L571)
+  - app.keeping.Keeper  # class @ keri/app/keeping.py:133
+    # .reopen (L257)
+  - app.keeping.KeeperDoer  # class @ keri/app/keeping.py:296
+    # .enter (L346)
+    # .exit (L352)
+  - app.keeping.Manager  # class @ keri/app/keeping.py:594
+    # .setup (L688)
+    # .updateAeid (L763)
+    # .seed (L825)
+    # .aeid (L834)
+    # .pidx (L844)
+    # .pidx (L856)
+    # .algo (L865)
+    # .algo (L875)
+    # .salt (L884)
+    # .salt (L897)
+    # .tier (L910)
+    # .tier (L920)
+    # .incept (L928)
+    # .move (L1061)
+    # .rotate (L1121)
+    # .sign (L1230)
+    # .decrypt (L1399)
+    # .ingest (L1455)
+    # .replay (L1631)
+  - app.keeping.ManagerDoer  # class @ keri/app/keeping.py:1710
+    # .enter (L1759)
+    # .exit (L1765)
+  - app.keeping.PrePrm  # class @ keri/app/keeping.py:80
+  - app.keeping.PreSit  # class @ keri/app/keeping.py:67
+  - app.keeping.PubLot  # class @ keri/app/keeping.py:43
+  - app.keeping.PubSet  # class @ keri/app/keeping.py:95
+  - app.keeping.RandyCreator  # class @ keri/app/keeping.py:408
+    # .create (L432)
+  - app.keeping.SaltyCreator  # class @ keri/app/keeping.py:452
+    # .salt (L485)
+    # .stem (L492)
+    # .tier (L499)
+    # .create (L505)
+  - app.keeping.openKS  # fn @ keri/app/keeping.py:116
+  - app.keeping.riKey  # fn @ keri/app/keeping.py:105
+  - app.organizing.BaseOrganizer  # class @ keri/app/organizing.py:14
+    # .update (L33)
+    # .replace (L56)
+    # .set (L67)
+    # .unset (L81)
+    # .rem (L94)
+    # .get (L107)
+    # .list (L136)
+    # .find (L160)
+    # .values (L179)
+    # .setImg (L199)
+    # .getImgData (L230)
+    # .getImg (L255)
+  - app.organizing.IdentifierOrganizer  # class @ keri/app/organizing.py:290
+  - app.organizing.Organizer  # class @ keri/app/organizing.py:272
+  - app.storing.Mailboxer  # class @ keri/app/storing.py:19
+    # .reopen (L53)
+    # .delTopic (L65)
+    # .appendToTopic (L75)
+    # .getTopicMsgs (L90)
+    # .storeMsg (L110)
+    # .cloneTopicIter (L133)
+  - app.storing.Respondant  # class @ keri/app/storing.py:158
+    # .responseDo (L188)
+    # .cueDo (L234)
+  - cli.commands.contacts.add.ContactAddDoer  # class @ keri/cli/commands/contacts/add.py:55
+    # .add (L68)
+  - cli.commands.contacts.add.handler  # fn @ keri/cli/commands/contacts/add.py:36
+  - cli.commands.contacts.delete.delete  # fn @ keri/cli/commands/contacts/delete.py:37
+  - cli.commands.contacts.delete.handler  # fn @ keri/cli/commands/contacts/delete.py:32
+  - cli.commands.contacts.find.find  # fn @ keri/cli/commands/contacts/find.py:36
+  - cli.commands.contacts.find.handler  # fn @ keri/cli/commands/contacts/find.py:31
+  - cli.commands.contacts.get.get  # fn @ keri/cli/commands/contacts/get.py:36
+  - cli.commands.contacts.get.handler  # fn @ keri/cli/commands/contacts/get.py:31
+  - cli.commands.contacts.list.handler  # fn @ keri/cli/commands/contacts/list.py:25
+  - cli.commands.contacts.list.list  # fn @ keri/cli/commands/contacts/list.py:30
+  - cli.commands.contacts.query.ContactQueryDoer  # class @ keri/cli/commands/contacts/query.py:59
+    # .queryDo (L74)
+  - cli.commands.contacts.query.handler  # fn @ keri/cli/commands/contacts/query.py:36
+  - cli.commands.contacts.rename.handler  # fn @ keri/cli/commands/contacts/rename.py:32
+  - cli.commands.contacts.rename.rename  # fn @ keri/cli/commands/contacts/rename.py:37
+  - cli.commands.contacts.replace.handler  # fn @ keri/cli/commands/contacts/replace.py:28
+  - cli.commands.contacts.replace.replace  # fn @ keri/cli/commands/contacts/replace.py:33
+  - cli.commands.local.watch.WatchDoer  # class @ keri/cli/commands/local/watch.py:34
+    # .watchDo (L50)
+    # .cueDo (L176)
+  - cli.commands.local.watch.watch  # fn @ keri/cli/commands/local/watch.py:27
+
+local-agent/api:  # 24 items
+  - cli.commands.time.handler  # fn @ keri/cli/commands/time.py:17
+  - cli.commands.time.time  # fn @ keri/cli/commands/time.py:21
+  - cli.commands.version.handler  # fn @ keri/cli/commands/version.py:19
+  - cli.commands.version.version  # fn @ keri/cli/commands/version.py:24
+  - cli.common.config.Config  # class @ keri/cli/common/config.py:15
+  - cli.common.config.checkRequiredArgs  # fn @ keri/cli/common/config.py:62
+  - cli.common.config.loadConfig  # fn @ keri/cli/common/config.py:28
+  - cli.common.config.loadFileOptions  # fn @ keri/cli/common/config.py:80
+  - cli.common.config.parseData  # fn @ keri/cli/common/config.py:40
+  - cli.common.displaying.printExternal  # fn @ keri/cli/common/displaying.py:73
+  - cli.common.displaying.printIdentifier  # fn @ keri/cli/common/displaying.py:13
+  - cli.common.existing.aliasInput  # fn @ keri/cli/common/existing.py:99
+  - cli.common.existing.existingHab  # fn @ keri/cli/common/existing.py:82
+  - cli.common.existing.existingHby  # fn @ keri/cli/common/existing.py:60
+  - cli.common.existing.setupHby  # fn @ keri/cli/common/existing.py:15
+  - cli.common.parsing.Parsery  # class @ keri/cli/common/parsing.py:13
+    # .keystore (L20)
+  - cli.common.parsing.coerce  # fn @ keri/cli/common/parsing.py:69
+  - cli.common.parsing.isNumber  # fn @ keri/cli/common/parsing.py:61
+  - cli.common.parsing.loadJSON  # fn @ keri/cli/common/parsing.py:56
+  - cli.common.parsing.parseDataItems  # fn @ keri/cli/common/parsing.py:81
+  - cli.common.rotating.addRotationArgs  # fn @ keri/cli/common/rotating.py:8
+  - cli.common.terming.Colors  # class @ keri/cli/common/terming.py:8
+  - cli.common.terming.Symbols  # class @ keri/cli/common/terming.py:21
+  - cli.kli.main  # fn @ keri/cli/kli.py:17
+
+signify-client/key-management:  # 6 items
+  - cli.commands.passcode.generate.handler  # fn @ keri/cli/commands/passcode/generate.py:20
+  - cli.commands.passcode.generate.salt  # fn @ keri/cli/commands/passcode/generate.py:24
+  - cli.commands.passcode.remove.handler  # fn @ keri/cli/commands/passcode/remove.py:23
+  - cli.commands.passcode.remove.remove  # fn @ keri/cli/commands/passcode/remove.py:31
+  - cli.commands.passcode.set.handler  # fn @ keri/cli/commands/passcode/set.py:26
+  - cli.commands.passcode.set.set_passcode  # fn @ keri/cli/commands/passcode/set.py:34
+

@@ -1,6 +1,10 @@
 # verification.yaml
 domain_ref: "signify-client/resources"
 
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
 # Formalized invariants from ubiquitous_language terms
 properties:
   - invariant: "All resource operations return Operation handles (API contract)"
@@ -112,7 +116,7 @@ properties:
     term: "Credential Resource"
     technique: property-based
     formal:
-      language: python
+      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
       expression: |
         @given(
             schema_said=st.text(min_size=44, max_size=44),
@@ -132,7 +136,7 @@ properties:
     term: "End-Role"
     technique: property-based
     formal:
-      language: python
+      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
       expression: |
         @given(role=st.text(min_size=1, max_size=20))
         def test_end_role_valid_roles(role):

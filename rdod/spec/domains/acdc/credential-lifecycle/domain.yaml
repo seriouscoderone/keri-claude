@@ -1,0 +1,71 @@
+# domain.yaml
+template_version: "1.0"
+id: "acdc/credential-lifecycle"
+name: "Credential Lifecycle"
+description: >
+  Issue, track, and revoke credentials — managing a credential from creation
+  through revocation. Transaction Event Logs (TELs) provide hash-chained,
+  KEL-sealed event structures that track dynamic ACDC state without requiring
+  direct signatures on TEL events. TELs support both public (unblinded)
+  and private (blinded) state registries.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "acdc-specification.md — Transaction Event Logs (TELs) as ACDC State Registries section"
+  - type: document
+    reference: "acdc-specification.md — Binding to Key State at Time of ACDC State Change section"
+  - type: document
+    reference: "KERIArchGroupIssuance.md — KERI architectures for group issuance"
+  - type: implementation
+    reference: "keripy — src/keri/vdr/viring.py (Reger: TEL database), src/keri/vdr/eventing.py (Tever/Tevery: TEL state/processor, Regery: registry collection)"
+  - type: implementation
+    reference: "keriox/teliox — src/state.rs (TelState, ManagerTelState), src/processor.rs (TelEventProcessor), src/event/verifiable_event.rs (VerifiableEvent), src/database/mod.rs (TelEventDatabase trait)"
+
+ubiquitous_language:
+  - term: "TEL"
+    definition: "Transaction Event Log — a hash-chained log of sealed transaction events tracking ACDC state, anchored to the issuer's KEL"
+    invariants:
+      - "Events are hash-chained via prior event SAID (p field)"
+      - "Each event is sealed in the issuer's KEL via a transaction event seal"
+      - "TEL events do not need to be signed — the KEL seal provides equivalent commitment"
+
+  - term: "Registry"
+    definition: "A TEL serving as a Verifiable Container/Credential Registry (VCR), tracking the issuance and revocation state of ACDCs"
+    invariants:
+      - "Initialized by a registry inception (rip) event"
+      - "SAID of the rip event serves as the registry's unique identifier (REGID)"
+      - "Registry SAID appears as the rd field in associated ACDCs"
+
+domain_clients:
+  - ref: "domain://acdc"
+    relationship: "ACDC core domain drives credential lifecycle for credential state management"
+    via_port: "port://acdc/credential-lifecycle/inbound/state-management"
+
+subdomains:
+  - ref: "domain://acdc/credential-lifecycle/status"
+    relationship: "Credential and registry state machines — tracks lifecycle (NotIssued -> Issued -> Revoked) and registry management state"
+  - ref: "domain://acdc/credential-lifecycle/verification"
+    relationship: "Multi-step validation pipeline for TEL events — KEL anchor verification, escrow management, notification bus"
+  - ref: "domain://acdc/credential-lifecycle/registry"
+    relationship: "Credential registry management — creating, configuring, and managing the containers that track groups of credentials"
+
+kernels: []
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    The TEL is implemented alongside the KEL in KERI infrastructure. Registry events
+    use ACDC protocol version strings and message types (rip, bup, upd). The key
+    insight is that TEL events derive their non-repudiability from the KEL seal, not
+    from direct signatures. Blinded registries require a shared secret salt between
+    issuer and discloser for hierarchically deterministic UUID derivation.
+
+issues: []
+
+tags: ["state", "registry", "revocation", "issuance", "credential-lifecycle"]
