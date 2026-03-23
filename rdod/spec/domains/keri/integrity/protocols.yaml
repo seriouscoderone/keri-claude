@@ -17,39 +17,64 @@ protocols:
       - seq: 1
         domain: "domain://discovery"
         action: "resolve_witness_endpoints"
-        input: "AID prefix + its witness list from key state"
-        output: "Resolvable URLs for each designated witness"
+        port: "port://discovery/inbound/discovery"
+        input:
+          description: "AID prefix + its witness list from key state"
+          types:
+            - ref: "types://discovery#OOBI/witness"
+              fields: ["aid", "role"]
+        output:
+          description: "Resolvable URLs for each designated witness"
+          type: "types://discovery#LocationScheme"
       - seq: 2
         domain: "domain://keri/integrity/detection"
         action: "fetch_kel_from_witnesses"
-        input: "Witness endpoints for the monitored AID"
-        output: "KEL copy from each witness"
+        port: "port://keri/integrity/detection/outbound/kel-sources"
+        input:
+          description: "Witness endpoints for the monitored AID"
+        output:
+          description: "KEL copy from each witness"
         depends_on: [1]
         on_failure:
           - error: "OOBIResolutionError"
+            ref: "errors://discovery#OOBIResolutionTimeoutError"
             action: "retry"
             compensation: "Retry unreachable witnesses, proceed with available copies"
       - seq: 3
         domain: "domain://keri/integrity/detection"
         action: "compare_events_by_sn"
-        input: "Multiple KEL copies"
-        output: "List of (prefix, sn) positions where SAIDs differ across witnesses"
+        port: "port://keri/integrity/detection/inbound/monitoring-lifecycle"
+        input:
+          description: "Multiple KEL copies"
+        output:
+          description: "List of (prefix, sn) positions where SAIDs differ across witnesses"
         depends_on: [2]
+        preconditions:
+          - "verification://keri/integrity/detection#Watcher"
       - seq: 4
         domain: "domain://keri/integrity/evidence"
         action: "record_duplicity_evidence"
-        input: "Conflicting events with their signatures"
-        output: "DuplicityEvidence entries stored permanently in DEL"
+        port: "port://keri/integrity/evidence/inbound/evidence-management"
+        input:
+          description: "Conflicting events with their signatures"
+        output:
+          description: "DuplicityEvidence entries stored permanently in DEL"
         depends_on: [3]
+        preconditions:
+          - "verification://keri/integrity/evidence#Duplicity Evidence"
         on_failure:
           - error: "NoDuplicity"
+            ref: "errors://keri/integrity/evidence#NotDuplicityError"
             action: "abort"
             compensation: "No duplicity found — normal case, nothing to record"
       - seq: 5
         domain: "domain://keri/integrity/detection"
         action: "alert_validators"
-        input: "Duplicity evidence"
-        output: "Cue with kin='duplicity' sent to interested parties"
+        port: "port://keri/integrity/evidence/inbound/notification"
+        input:
+          description: "Duplicity evidence"
+        output:
+          description: "Cue with kin='duplicity' sent to interested parties"
         depends_on: [4]
     timeout: "60s per witness fetch"
     terminal_states:
@@ -74,50 +99,83 @@ protocols:
       - seq: 1
         domain: "domain://keri/integrity/evidence"
         action: "verify_duplicity_exists"
-        input: "AID prefix, conflicting events at the same sn"
-        output: "Confirmed DuplicityEvidence entry in DEL"
+        port: "port://keri/integrity/evidence/inbound/evidence-management"
+        input:
+          description: "AID prefix, conflicting events at the same sn"
+        output:
+          description: "Confirmed DuplicityEvidence entry in DEL"
+        preconditions:
+          - "verification://keri/integrity/evidence#Duplicity Evidence"
         on_failure:
           - error: "NotDuplicityError"
+            ref: "errors://keri/integrity/evidence#NotDuplicityError"
             action: "abort"
             compensation: "Events are duplicates not duplicity — no recovery needed"
       - seq: 2
         domain: "domain://keri/integrity/recovery"
         action: "determine_fork_point"
-        input: "DEL entries for this AID"
-        output: "Fork point sn and last trusted establishment event before fork"
+        port: "port://keri/integrity/recovery/inbound/reconciliation"
+        input:
+          description: "DEL entries for this AID"
+        output:
+          description: "Fork point sn and last trusted establishment event before fork"
         depends_on: [1]
       - seq: 3
         domain: "domain://keri/identity/key-commitment"
         action: "verify_recovery_keys"
-        input: "New keys must match next key digests from last establishment event BEFORE fork"
-        output: "Pre-rotation binding confirmed for recovery keys"
+        port: "port://keri/identity/key-commitment/inbound/key-commitment"
+        input:
+          description: "New keys must match next key digests from last establishment event BEFORE fork"
+        output:
+          description: "Pre-rotation binding confirmed for recovery keys"
         depends_on: [2]
+        preconditions:
+          - "verification://keri/identity/key-commitment#Pre-rotation Commitment"
         on_failure:
           - error: "PreRotationBindingError"
+            ref: "errors://keri/identity/key-commitment#PreRotationBindingError"
             action: "abort"
             compensation: "Recovery keys don't match pre-commitments — cannot recover"
       - seq: 4
         domain: "domain://keri/identity/establishment"
         action: "process_superseding_rotation"
-        input: "Rotation event at recovery_sn >= fork_point_sn with verified recovery keys"
-        output: "Superseding rotation accepted — key state updated, forked branch invalidated"
+        port: "port://keri/identity/establishment/inbound/validate-rotation"
+        input:
+          description: "Rotation event at recovery_sn >= fork_point_sn with verified recovery keys"
+          types:
+            - ref: "types://keri/identity#RotationEvent/non-delegated"
+              fields: ["k", "n", "s"]
+        output:
+          description: "Superseding rotation accepted — key state updated, forked branch invalidated"
+          type: "types://keri/identity#KeyState"
         depends_on: [3]
+        preconditions:
+          - "verification://keri/integrity/recovery#Superseding Recovery"
         on_failure:
           - error: "InvalidRecoveryRotationError"
+            ref: "errors://keri/integrity/recovery#InvalidRecoveryRotationError"
             action: "abort"
             compensation: "Recovery rotation itself is invalid"
       - seq: 5
         domain: "domain://keri/accountability/receipting"
         action: "collect_witness_receipts"
-        input: "Superseding rotation event"
-        output: "Witness receipts — recovery is now accountable"
+        port: "port://keri/accountability/receipting/inbound/receipt-lifecycle"
+        input:
+          description: "Superseding rotation event"
+        output:
+          description: "Witness receipts — recovery is now accountable"
         depends_on: [4]
       - seq: 6
         domain: "domain://keri/integrity/recovery"
         action: "reconcile_kel"
-        input: "Superseding rotation accepted and receipted"
-        output: "KEL reconciled — forked events at sn >= fork_point removed, recovery branch is the new trunk"
+        port: "port://keri/integrity/recovery/inbound/reconciliation"
+        input:
+          description: "Superseding rotation accepted and receipted"
+        output:
+          description: "KEL reconciled — forked events at sn >= fork_point removed, recovery branch is the new trunk"
         depends_on: [5]
+        preconditions:
+          - "verification://keri/integrity/recovery#Trunk"
     timeout: "No timeout — recovery can happen at any point after duplicity detection"
     compensation: "If recovery fails, duplicity evidence remains in DEL — the AID is flagged but not recovered"
     terminal_states:

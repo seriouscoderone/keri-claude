@@ -17,42 +17,76 @@ protocols:
       - seq: 1
         domain: "domain://discovery"
         action: "fetch_oobi"
-        input: "OOBI URL (e.g., http://witness.example.com/oobi/{aid}/{role}/{eid})"
-        output: "KEL replay stream + end-role reply messages"
+        port: "port://discovery/inbound/discovery"
+        input:
+          description: "OOBI URL (e.g., http://witness.example.com/oobi/{aid}/{role}/{eid})"
+          types:
+            - ref: "types://discovery#OOBI/witness"
+              fields: ["url", "aid", "role"]
+        output:
+          description: "KEL replay stream + end-role reply messages"
+        preconditions:
+          - "verification://discovery#OOBI"
         on_failure:
           - error: "OOBIResolutionError"
+            ref: "errors://discovery#OOBIResolutionTimeoutError"
             action: "retry"
             compensation: "Retry with exponential backoff up to 3 attempts"
       - seq: 2
         domain: "domain://keri/identity/establishment"
         action: "validate_kel_replay"
-        input: "Stream of KEL events from the OOBI response"
-        output: "Each event validated and accepted to local database"
+        port: "port://keri/identity/establishment/inbound/validate-event"
+        input:
+          description: "Stream of KEL events from the OOBI response"
+        output:
+          description: "Each event validated and accepted to local database"
         depends_on: [1]
+        preconditions:
+          - "verification://keri/identity/establishment#Event Validation Pipeline"
         on_failure:
           - error: "ValidationError"
+            ref: "errors://keri/identity/establishment#ValidationError"
             action: "abort"
             compensation: "Reject entire OOBI — do not partially accept a KEL"
       - seq: 3
         domain: "domain://keri/accountability/receipting"
         action: "validate_witness_receipts"
-        input: "Witness receipts included in the replay"
-        output: "Receipts verified — events are fully witnessed"
+        port: "port://keri/accountability/receipting/inbound/receipt-lifecycle"
+        input:
+          description: "Witness receipts included in the replay"
+        output:
+          description: "Receipts verified — events are fully witnessed"
         depends_on: [2]
+        preconditions:
+          - "verification://keri/accountability/receipting#Receipt"
       - seq: 4
         domain: "domain://keri/identity/state"
         action: "establish_key_state"
-        input: "Validated KEL events"
-        output: "Remote AID's key state available locally"
+        port: "port://keri/identity/state/inbound/state-tracking"
+        input:
+          description: "Validated KEL events"
+        output:
+          description: "Remote AID's key state available locally"
+          type: "types://keri/identity#KeyState"
         depends_on: [3]
       - seq: 5
         domain: "domain://discovery"
         action: "process_endpoint_replies"
-        input: "End-role reply messages from OOBI response"
-        output: "Remote AID's service endpoints stored locally (witness URLs, agent URLs, etc.)"
+        port: "port://discovery/inbound/discovery"
+        input:
+          description: "End-role reply messages from OOBI response"
+          types:
+            - ref: "types://discovery#EndRole"
+              fields: ["cid", "role", "eid"]
+        output:
+          description: "Remote AID's service endpoints stored locally (witness URLs, agent URLs, etc.)"
+          type: "types://discovery#LocationScheme"
         depends_on: [4]
+        preconditions:
+          - "verification://discovery#BADA"
         on_failure:
           - error: "BADARejectError"
+            ref: "errors://discovery#StaleReplyError"
             action: "abort"
             compensation: "Endpoint data rejected as stale — key state still valid"
     timeout: "30s for HTTP fetch, then standard event processing timeouts"
@@ -74,32 +108,62 @@ protocols:
       - seq: 1
         domain: "domain://keri/identity/anchoring"
         action: "construct_endpoint_seal"
-        input: "AID, role (witness/agent/watcher/etc.), endpoint URL, endpoint AID"
-        output: "Interaction event with endpoint authorization seal"
+        port: "port://keri/identity/anchoring/inbound/data-anchoring"
+        input:
+          description: "AID, role (witness/agent/watcher/etc.), endpoint URL, endpoint AID"
+          types:
+            - ref: "types://discovery#EndRole"
+              fields: ["cid", "role", "eid"]
+        output:
+          description: "Interaction event with endpoint authorization seal"
+          type: "types://keri/identity#InteractionEvent"
+        preconditions:
+          - "verification://keri/identity/anchoring#Seal"
       - seq: 2
         domain: "domain://discovery"
         action: "construct_end_role_reply"
-        input: "Signed reply message (rpy) with route=/end/role containing endpoint data"
-        output: "Reply message ready for dissemination"
+        port: "port://discovery/inbound/discovery"
+        input:
+          description: "Signed reply message (rpy) with route=/end/role containing endpoint data"
+          types:
+            - ref: "types://discovery#EndRole"
+        output:
+          description: "Reply message ready for dissemination"
         depends_on: [1]
+        preconditions:
+          - "verification://discovery#Endpoint Authorization"
       - seq: 3
         domain: "domain://keri/identity/state"
         action: "verify_reply_signature"
-        input: "Reply message + controller's current key state"
-        output: "Signature verified — controller authorized this endpoint"
+        port: "port://keri/identity/state/inbound/state-query"
+        input:
+          description: "Reply message + controller's current key state"
+        output:
+          description: "Signature verified — controller authorized this endpoint"
         depends_on: [2]
         on_failure:
           - error: "EndRoleAuthorizationError"
+            ref: "errors://discovery#EndRoleValidationError"
             action: "abort"
             compensation: "Reply rejected — endpoint not stored"
       - seq: 4
         domain: "domain://discovery"
         action: "store_endpoint"
-        input: "Verified reply with endpoint data"
-        output: "Endpoint mapping stored — discoverable via OOBI"
+        port: "port://discovery/inbound/discovery"
+        input:
+          description: "Verified reply with endpoint data"
+          types:
+            - ref: "types://discovery#LocationScheme"
+              fields: ["eid", "scheme", "url"]
+        output:
+          description: "Endpoint mapping stored — discoverable via OOBI"
+          type: "types://discovery#LocationScheme"
         depends_on: [3]
+        preconditions:
+          - "verification://discovery#BADA"
         on_failure:
           - error: "BADARejectError"
+            ref: "errors://discovery#StaleReplyError"
             action: "abort"
             compensation: "Reply is stale — a newer endpoint already exists"
     timeout: "30s"

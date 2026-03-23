@@ -15,24 +15,40 @@ protocols:
       - seq: 1
         domain: "domain://acdc/credential-exchange/negotiation"
         action: "construct_grant"
-        input: "Credential SAID, recipient AID, embedded ACDC + TEL event + KEL seal"
-        output: "exn with route=/ipex/grant containing credential bundle"
+        port: "port://acdc/credential-exchange/negotiation/inbound/direct-issuance"
+        input:
+          description: "Credential SAID, recipient AID, embedded ACDC + TEL event + KEL seal"
+          types:
+            - ref: "types://acdc/credential-lifecycle#IssuanceEvent"
+        output:
+          description: "exn with route=/ipex/grant containing credential bundle"
+        preconditions:
+          - "verification://acdc/credential-exchange/negotiation#IPEX Message Construction"
       - seq: 2
         domain: "domain://acdc/credential-lifecycle/verification"
         action: "verify_credential_chain"
-        input: "ACDC → TEL → KEL anchor verification"
-        output: "Credential chain validated"
+        port: "port://acdc/credential-lifecycle/verification/inbound/validate-tel-event"
+        input:
+          description: "ACDC → TEL → KEL anchor verification"
+        output:
+          description: "Credential chain validated"
         depends_on: [1]
         on_failure:
           - error: "MissingKELAnchorError"
+            ref: "errors://acdc/credential-lifecycle/verification#MissingIssuerError"
             action: "escrow"
             compensation: "Await issuer's KEL events"
       - seq: 3
         domain: "domain://acdc/credential-exchange/negotiation"
         action: "recipient_admits"
-        input: "Recipient verifies credential, sends admit acknowledgment"
-        output: "exn with route=/ipex/admit referencing grant SAID"
+        port: "port://acdc/credential-exchange/negotiation/inbound/direct-issuance"
+        input:
+          description: "Recipient verifies credential, sends admit acknowledgment"
+        output:
+          description: "exn with route=/ipex/admit referencing grant SAID"
         depends_on: [2]
+        preconditions:
+          - "verification://acdc/credential-exchange/negotiation#IPEX Message Type Pattern"
     timeout: "No protocol-level timeout — grant can be admitted at any time"
     terminal_states:
       success: "Recipient has verified credential in their store, admit sent to grantor"
@@ -52,40 +68,70 @@ protocols:
       - seq: 1
         domain: "domain://acdc/credential-exchange/negotiation"
         action: "apply"
-        input: "Schema SAID, issuer AID, requested attributes"
-        output: "exn with route=/ipex/apply — request for credential"
+        port: "port://acdc/credential-exchange/negotiation/inbound/negotiate"
+        input:
+          description: "Schema SAID, issuer AID, requested attributes"
+        output:
+          description: "exn with route=/ipex/apply — request for credential"
+        preconditions:
+          - "verification://acdc/credential-exchange/negotiation#IPEX Message Type Pattern"
       - seq: 2
         domain: "domain://acdc/credential-exchange/negotiation"
         action: "offer"
-        input: "Issuer reviews application, constructs credential offer (may be metadata ACDC for chain-link confidentiality)"
-        output: "exn with route=/ipex/offer referencing apply SAID"
+        port: "port://acdc/credential-exchange/negotiation/inbound/negotiate"
+        input:
+          description: "Issuer reviews application, constructs credential offer (may be metadata ACDC for chain-link confidentiality)"
+        output:
+          description: "exn with route=/ipex/offer referencing apply SAID"
         depends_on: [1]
         on_failure:
           - error: "InvalidExchangeMessageError"
+            ref: "errors://acdc/credential-exchange/negotiation#ValidationError"
             action: "abort"
       - seq: 3
         domain: "domain://acdc/credential-exchange/negotiation"
         action: "agree"
-        input: "Holder reviews offer, agrees to terms (if chain-link: agrees to contractual terms before seeing full credential)"
-        output: "exn with route=/ipex/agree referencing offer SAID"
+        port: "port://acdc/credential-exchange/negotiation/inbound/negotiate"
+        input:
+          description: "Holder reviews offer, agrees to terms (if chain-link: agrees to contractual terms before seeing full credential)"
+        output:
+          description: "exn with route=/ipex/agree referencing offer SAID"
         depends_on: [2]
+        preconditions:
+          - "verification://acdc/credential-exchange/negotiation#Full Negotiation"
       - seq: 4
         domain: "domain://acdc/credential-lifecycle/status"
         action: "issue_credential"
-        input: "Issuer creates ACDC and TEL issuance event"
-        output: "Issued credential with TEL entry"
+        port: "port://acdc/credential-lifecycle/status/inbound/state-query"
+        input:
+          description: "Issuer creates ACDC and TEL issuance event"
+          types:
+            - ref: "types://acdc/credential-lifecycle#IssuanceEvent"
+        output:
+          description: "Issued credential with TEL entry"
+          type: "types://acdc/credential-lifecycle#CredentialState"
         depends_on: [3]
       - seq: 5
         domain: "domain://acdc/credential-exchange/negotiation"
         action: "grant"
-        input: "Issued credential + TEL event + KEL seal"
-        output: "exn with route=/ipex/grant with full credential bundle"
+        port: "port://acdc/credential-exchange/negotiation/inbound/negotiate"
+        input:
+          description: "Issued credential + TEL event + KEL seal"
+          types:
+            - ref: "types://acdc/credential-lifecycle#IssuanceEvent"
+        output:
+          description: "exn with route=/ipex/grant with full credential bundle"
         depends_on: [4]
+        preconditions:
+          - "verification://acdc/credential-exchange/negotiation#IPEX Message Construction"
       - seq: 6
         domain: "domain://acdc/credential-exchange/negotiation"
         action: "admit"
-        input: "Holder verifies credential chain, admits the grant"
-        output: "exn with route=/ipex/admit referencing grant SAID"
+        port: "port://acdc/credential-exchange/negotiation/inbound/negotiate"
+        input:
+          description: "Holder verifies credential chain, admits the grant"
+        output:
+          description: "exn with route=/ipex/admit referencing grant SAID"
         depends_on: [5]
     timeout: "No protocol-level timeout — each step awaits the counterparty"
     compensation: "Any party can spurn at any step (exn route=/ipex/spurn) — terminates the negotiation"

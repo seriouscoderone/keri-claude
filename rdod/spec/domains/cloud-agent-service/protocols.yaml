@@ -17,38 +17,69 @@ protocols:
       - seq: 1
         domain: "domain://signify-client/key-management"
         action: "generate_agent_keys"
-        input: "Controller passcode, salt, key tier"
-        output: "Agent inception event signed with edge keys"
+        port: "port://signify-client/key-management/inbound/key-ops"
+        input:
+          description: "Controller passcode, salt, key tier"
+          types:
+            - ref: "types://signify-client#KeyTier"
+        output:
+          description: "Agent inception event signed with edge keys"
+          type: "types://keri/identity#InceptionEvent"
+        preconditions:
+          - "verification://signify-client/key-management#Passcode"
       - seq: 2
         domain: "domain://cloud-agent-service/api"
         action: "receive_boot_request"
-        input: "POST /boot with signed inception event"
-        output: "Request validated for structure"
+        port: "port://cloud-agent-service/api/inbound/admin-api"
+        input:
+          description: "POST /boot with signed inception event"
+          types:
+            - ref: "types://cloud-agent-service/api#BootRequest"
+        output:
+          description: "Request validated for structure"
         on_failure:
           - error: "MissingParameterError"
+            ref: "errors://cloud-agent-service/api#MissingParameterError"
             action: "abort"
       - seq: 3
         domain: "domain://cloud-agent-service/provisioning"
         action: "create_agent"
-        input: "Controller AID, inception event"
-        output: "Agent instance created with dedicated databases (Identifier Repository, Registry Manager, Event Database)"
+        port: "port://cloud-agent-service/provisioning/inbound/agent-lifecycle"
+        input:
+          description: "Controller AID, inception event"
+        output:
+          description: "Agent instance created with dedicated databases (Identifier Repository, Registry Manager, Event Database)"
         depends_on: [2]
+        preconditions:
+          - "verification://cloud-agent-service/provisioning#Agency"
         on_failure:
           - error: "AgentAlreadyExistsError"
+            ref: "errors://cloud-agent-service/provisioning#AgentAlreadyExistsError"
             action: "abort"
             compensation: "Return existing agent reference"
       - seq: 4
         domain: "domain://keri/identity/establishment"
         action: "validate_agent_inception"
-        input: "Agent's inception event"
-        output: "Agent AID established with key state"
+        port: "port://keri/identity/establishment/inbound/validate-event"
+        input:
+          description: "Agent's inception event"
+          types:
+            - ref: "types://keri/identity#InceptionEvent"
+        output:
+          description: "Agent AID established with key state"
+          type: "types://keri/identity#KeyState"
         depends_on: [3]
       - seq: 5
         domain: "domain://cloud-agent-service/provisioning"
         action: "register_controller_mapping"
-        input: "Controller AID → Agent AID mapping"
-        output: "Agent discoverable by controller AID"
+        port: "port://cloud-agent-service/provisioning/inbound/agent-lifecycle"
+        input:
+          description: "Controller AID → Agent AID mapping"
+        output:
+          description: "Agent discoverable by controller AID"
         depends_on: [4]
+        preconditions:
+          - "verification://cloud-agent-service/provisioning#Multi-tenancy"
     timeout: "30s — provisioning is synchronous"
     terminal_states:
       success: "Agent running, databases initialized, controller can authenticate via Signify signatures"
