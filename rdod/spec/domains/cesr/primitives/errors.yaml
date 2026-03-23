@@ -1,0 +1,109 @@
+# errors.yaml
+domain_ref: "cesr/primitives"
+
+# Error catalog for the CESR Primitives domain.
+# Covers failures in primitive construction, domain conversion,
+# code table lookup, and cryptographic verification operations.
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action
+#   fatal      — unrecoverable; event is permanently rejected
+
+errors:
+  - name: "UnknownCodeError"
+    description: "CESR type code not found in the master code table"
+    cause: "The leading characters of a primitive do not match any registered code in the active protocol genus/version"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "code"
+        type: "string"
+        description: "The unrecognized code characters"
+      - field: "genus"
+        type: "string"
+        description: "The active protocol genus/version"
+
+  - name: "RawSizeMismatchError"
+    description: "Raw material size does not match the expected size for the given code"
+    cause: "The code specifies a fixed raw size but the provided raw bytes are a different length"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "code"
+        type: "string"
+        description: "The CESR type code"
+      - field: "expected_size"
+        type: "integer"
+        description: "Expected raw byte count from code table"
+      - field: "actual_size"
+        type: "integer"
+        description: "Actual raw byte count provided"
+
+  - name: "InvalidQB64Error"
+    description: "Text domain (qb64) string is malformed"
+    cause: "The Base64url string is not a valid CESR text domain primitive — wrong length, invalid characters, or code prefix doesn't match"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "qb64"
+        type: "string"
+        description: "The invalid qb64 string"
+      - field: "reason"
+        type: "string"
+        description: "Specific parse failure (length not multiple of 4, invalid Base64 chars, unknown code)"
+
+  - name: "InvalidQB2Error"
+    description: "Binary domain (qb2) bytes are malformed"
+    cause: "The binary representation is not a valid CESR binary domain primitive — wrong length or code prefix doesn't match"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "qb2_length"
+        type: "integer"
+        description: "Length of the invalid qb2 bytes"
+      - field: "reason"
+        type: "string"
+        description: "Specific parse failure"
+
+  - name: "SignatureVerificationError"
+    description: "Cryptographic signature does not verify against the public key and message"
+    cause: "Verfer.verify(sig, ser) returned false — the signature is invalid for this key and serialization"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "verfer_code"
+        type: "string"
+        description: "The public key algorithm code (D=Ed25519, etc.)"
+      - field: "message_length"
+        type: "integer"
+        description: "Length of the serialized message that was verified"
+
+  - name: "DigestMismatchError"
+    description: "Computed digest does not match expected digest"
+    cause: "Diger.verify(ser) returned false — the data has been tampered with or the wrong digest algorithm was used"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "diger_code"
+        type: "string"
+        description: "The digest algorithm code (E=Blake3-256, etc.)"
+      - field: "expected"
+        type: "string"
+        description: "The expected digest (qb64)"
+      - field: "computed"
+        type: "string"
+        description: "The computed digest (qb64)"
+
+  - name: "SAIDVerificationError"
+    description: "SAID field does not match the computed digest of the field map"
+    cause: "The d field value does not equal the digest computed over the serialized field map with d replaced by placeholder"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "expected_said"
+        type: "string"
+        description: "The d field value in the field map"
+      - field: "computed_said"
+        type: "string"
+        description: "The SAID computed from the serialized body"

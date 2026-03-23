@@ -1,0 +1,77 @@
+# errors.yaml
+domain_ref: "cesr/composition"
+
+# Error catalog for the CESR Composition domain.
+# Covers failures in stream parsing, count code processing,
+# cold start detection, version string extraction, and group nesting.
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action
+#   fatal      — unrecoverable; event is permanently rejected
+
+errors:
+  - name: "UnexpectedCountCodeError"
+    description: "Count code type is not valid in this context"
+    cause: "A count code was encountered that is not allowed at this position in the stream (e.g., attachment group inside a signed body)"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "code"
+        type: "string"
+        description: "The unexpected count code"
+      - field: "context"
+        type: "string"
+        description: "Where in the stream it was encountered"
+
+  - name: "TruncatedStreamError"
+    description: "Stream ended before the expected number of bytes were available"
+    cause: "A count code declared N quadlets/triplets but fewer bytes remain in the stream"
+    recovery: "retry"
+    severity: "transient"
+    context:
+      - field: "expected_bytes"
+        type: "integer"
+        description: "Bytes expected based on count code"
+      - field: "available_bytes"
+        type: "integer"
+        description: "Bytes actually available"
+
+  - name: "ColdStartError"
+    description: "Cannot determine stream framing from the first byte"
+    cause: "The first tritet (3 bits) of the stream does not match any known framing type (JSON, CBOR, MGPK, CESR text, CESR binary)"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "first_byte"
+        type: "integer"
+        description: "The first byte value"
+      - field: "tritet"
+        type: "integer"
+        description: "The computed tritet (first_byte >> 5)"
+
+  - name: "VersionStringParseError"
+    description: "Version string does not conform to the expected format"
+    cause: "The version string is not 17 (v1) or 19 (v2) characters, has wrong terminator, or contains invalid protocol/kind identifiers"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "raw_version"
+        type: "string"
+        description: "The raw version string bytes"
+      - field: "reason"
+        type: "string"
+        description: "Specific parse failure"
+
+  - name: "GroupNestingError"
+    description: "Invalid group nesting — a group type appeared inside a context that doesn't allow it"
+    cause: "Stream contains a nested group type that violates composition rules"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "outer_group"
+        type: "string"
+        description: "The enclosing group type"
+      - field: "inner_group"
+        type: "string"
+        description: "The invalid nested group type"
