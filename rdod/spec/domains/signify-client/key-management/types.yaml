@@ -1,0 +1,101 @@
+domain_ref: "signify-client/key-management"
+
+types:
+  - name: "Keeper"
+    description: "Key management strategy for a Signify edge client. Determines how signing keys are generated, stored, and rotated. Four variants for different security/convenience tradeoffs."
+    variants:
+      - name: "salty"
+        fields:
+          - name: "salt"
+            type: "string"
+            required: true
+            description: "CESR-qualified salt (Salter qb64) — the root secret"
+          - name: "tier"
+            type: "TypeRef:signify-client#KeyTier"
+            required: true
+            description: "Argon2 stretching tier (low/med/high)"
+          - name: "stem"
+            type: "string"
+            required: true
+            description: "Derivation path stem for hierarchical key generation"
+          - name: "signing_indices"
+            type: "array[integer]"
+            required: true
+            description: "Which key indices to use for signing"
+          - name: "rotation_indices"
+            type: "array[integer]"
+            required: true
+            description: "Which key indices to use for next key commitments"
+        invariants:
+          - "Deterministic: same salt + tier + stem + indices produces same keys"
+          - "Salt is encrypted at rest with passcode-derived key"
+          - "Keys never leave the edge device"
+      - name: "randy"
+        fields:
+          - name: "signing_keys"
+            type: "array[bytes]"
+            required: true
+            description: "Random private signing keys"
+          - name: "next_keys"
+            type: "array[bytes]"
+            required: true
+            description: "Random private next keys (for pre-rotation)"
+        invariants:
+          - "Non-deterministic: keys are randomly generated"
+          - "Private keys stored encrypted"
+          - "No recovery from lost keys — no derivation path"
+      - name: "group"
+        fields:
+          - name: "member_keeper"
+            type: "TypeRef:signify-client/key-management#Keeper"
+            required: true
+            description: "This member's individual keeper (salty or randy)"
+          - name: "group_aid"
+            type: "string"
+            required: true
+            description: "The group identifier this member contributes to"
+          - name: "local_member_index"
+            type: "integer"
+            required: true
+            description: "This member's key index within the group"
+        invariants:
+          - "Group signing produces partial signatures at the local member's index"
+          - "Threshold satisfaction requires coordination across multiple group members"
+      - name: "extern"
+        fields:
+          - name: "provider"
+            type: "string"
+            required: true
+            description: "External key provider identifier (HSM, cloud KMS, etc.)"
+        invariants:
+          - "Keys are managed externally — Signify client delegates signing to the provider"
+          - "No private key material stored locally"
+
+  - name: "SessionState"
+    description: "The authenticated session between a Signify client and its cloud agent."
+    variants:
+      - name: "default"
+        fields:
+          - name: "controller_aid"
+            type: "string"
+            required: true
+            description: "The controller's AID"
+          - name: "agent_aid"
+            type: "string"
+            required: true
+            description: "The cloud agent's AID"
+          - name: "agent_url"
+            type: "string"
+            required: true
+            description: "The agent's admin API URL"
+          - name: "passcode_active"
+            type: "boolean"
+            required: true
+            description: "Whether the passcode is currently unlocked in memory"
+          - name: "passcode_timeout"
+            type: "integer"
+            required: false
+            description: "Seconds until passcode is zeroed from memory"
+        invariants:
+          - "All requests to agent_url are signed with controller's current keys"
+          - "When passcode_active is false, signing operations fail until re-authenticated"

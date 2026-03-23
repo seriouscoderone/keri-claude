@@ -1,0 +1,54 @@
+domain_ref: "keri/identity/state"
+
+types:
+  - name: "KeyStateNotice"
+    description: "A signed reply message containing the current key state for an identifier. Used in key state queries (qry route=ksn) and key state notifications."
+    variants:
+      - name: "default"
+        fields:
+          - name: "key_state"
+            type: "TypeRef:keri/identity#KeyState"
+            required: true
+            description: "The current key state snapshot"
+          - name: "reply_datetime"
+            type: "string"
+            required: true
+            description: "ISO 8601 datetime of this notice"
+          - name: "route"
+            type: "string"
+            required: true
+            description: "Reply route — /ksn/{aid}"
+            constraints:
+              pattern: "^/ksn/.+"
+        invariants:
+          - "Key state is a pure function of the KEL — two validators with the same KEL produce the same notice"
+          - "Reply is signed by the responder's current keys"
+          - "Subject to BADA acceptance — staler notices do not overwrite fresher ones"
+
+  - name: "QueryResult"
+    description: "The outcome of querying for key state or KEL events."
+    variants:
+      - name: "found"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The queried AID"
+          - name: "key_state"
+            type: "TypeRef:keri/identity#KeyState"
+            required: true
+            description: "Current key state"
+        invariants:
+          - "Key state reflects the latest verified establishment event"
+      - name: "not_found"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The queried AID"
+          - name: "escrowed"
+            type: "boolean"
+            required: true
+            description: "Whether the query was escrowed for later retry"
+        invariants:
+          - "Query is escrowed if the KEL for this AID has not been received yet"

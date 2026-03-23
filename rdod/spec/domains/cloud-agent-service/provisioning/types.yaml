@@ -1,0 +1,53 @@
+domain_ref: "cloud-agent-service/provisioning"
+
+types:
+  - name: "AgentInstance"
+    description: "A provisioned agent representing one controller's identity management workspace on the cloud agent service."
+    variants:
+      - name: "default"
+        fields:
+          - name: "controller_aid"
+            type: "string"
+            required: true
+            description: "The controller's AID (the human/entity who owns this agent)"
+          - name: "agent_aid"
+            type: "string"
+            required: true
+            description: "The agent's own AID (created at provisioning)"
+          - name: "managed_aids"
+            type: "array[string]"
+            required: true
+            description: "AIDs managed by this agent (created via the admin API)"
+          - name: "database_name"
+            type: "string"
+            required: true
+            description: "Name of the agent's dedicated LMDB database"
+          - name: "active"
+            type: "boolean"
+            required: true
+            description: "Whether the agent is currently running"
+        invariants:
+          - "One agent per controller — controller_aid is unique across the agency"
+          - "agent_aid is created during provisioning and is immutable"
+          - "Each agent has its own isolated database — no cross-tenant data access"
+
+  - name: "ControllerAgentMapping"
+    description: "The bidirectional mapping between controller AIDs and their provisioned agents."
+    variants:
+      - name: "default"
+        fields:
+          - name: "controller_aid"
+            type: "string"
+            required: true
+            description: "The controller's AID"
+          - name: "agent_aid"
+            type: "string"
+            required: true
+            description: "The agent's AID"
+          - name: "managed_aids"
+            type: "array[string]"
+            required: true
+            description: "All AIDs registered under this controller's agent"
+        invariants:
+          - "Bidirectional: lookup by controller_aid OR agent_aid OR managed AID"
+          - "A managed AID maps to exactly one agent, which maps to exactly one controller"

@@ -1,0 +1,36 @@
+domain_ref: "keri/identity/thresholds"
+
+types:
+  - name: "GroupCoordination"
+    description: "The state of an in-progress multi-signature coordination. Tracks accumulated signatures toward threshold satisfaction across group members."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event_said"
+            type: "string"
+            required: true
+            description: "SAID of the event being coordinated"
+          - name: "group_aid"
+            type: "string"
+            required: true
+            description: "The group identifier being managed"
+          - name: "required_threshold"
+            type: "TypeRef:cesr/primitives#SigningThreshold"
+            required: true
+            description: "The threshold that must be satisfied"
+          - name: "accumulated_signatures"
+            type: "array[map]"
+            required: true
+            description: "Signatures collected so far (index + siger per member)"
+          - name: "satisfied"
+            type: "boolean"
+            required: true
+            description: "Whether the accumulated signatures meet the threshold"
+          - name: "remaining_members"
+            type: "array[string]"
+            required: false
+            description: "Member AIDs that have not yet signed"
+        invariants:
+          - "All signatures MUST be for the same event SAID — divergent SAIDs are rejected"
+          - "satisfied = threshold.satisfy(collected_indices)"
+          - "Coordination times out if not satisfied within the configured period"
