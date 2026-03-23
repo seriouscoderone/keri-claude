@@ -43,13 +43,13 @@ ubiquitous_language:
 domain_clients:
   - ref: "domain://signify-client"
     relationship: "Indirect — Signify clients access witnesses via cloud-agent-service proxy"
-    via_port: "port://witness-service/inbound/event-receipt"
+    via_port: "port://witness-service/api/inbound/event-submission"
   - ref: "domain://local-agent"
     relationship: "Direct HTTP connection for local agent witness interactions"
-    via_port: "port://witness-service/inbound/event-receipt"
+    via_port: "port://witness-service/api/inbound/event-submission"
   - ref: "domain://cloud-agent-service"
     relationship: "Forwards events to witnesses and collects receipts on behalf of controllers"
-    via_port: "port://witness-service/inbound/event-receipt"
+    via_port: "port://witness-service/api/inbound/event-submission"
 
 subdomains:
   - ref: "domain://witness-service/api"

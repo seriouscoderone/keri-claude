@@ -43,13 +43,13 @@ ubiquitous_language:
 domain_clients:
   - ref: "domain://signify-client"
     relationship: "Indirect — Signify clients access watchers via cloud-agent-service proxy"
-    via_port: "port://watcher-service/inbound/query"
+    via_port: "port://watcher-service/api/inbound/kel-query"
   - ref: "domain://local-agent"
     relationship: "Direct connection for local agent watcher queries"
-    via_port: "port://watcher-service/inbound/query"
+    via_port: "port://watcher-service/api/inbound/kel-query"
   - ref: "domain://cloud-agent-service"
     relationship: "Queries watchers for duplicity status on behalf of controllers"
-    via_port: "port://watcher-service/inbound/query"
+    via_port: "port://watcher-service/api/inbound/kel-query"
 
 subdomains:
   - ref: "domain://watcher-service/api"
@@ -65,7 +65,7 @@ adjacents:
     is_cross_cutting: false
   - ref: "domain://witness-service"
     relationship: "Customer-Supplier — polls witnesses for KERL copies to cross-check"
-    via_port: "port://witness-service/inbound/kerl-query"
+    via_port: "port://witness-service/api/inbound/kerl-query"
     is_cross_cutting: false
 
 externals:

@@ -5187,20 +5187,7 @@ const RDOD_DATA = {
         "relationship": "Cryptographic algorithm output types appear directly as CESR primitive code entries — each algorithm maps to one or more fixed-size code table entries"
       }
     ],
-    "adjacents": [
-      {
-        "ref": "domain://keri",
-        "relationship": "OHS + Published Language — KERI events are encoded in CESR; CESR provides the type-qualified encoding that KERI key events, signatures, and receipts require",
-        "via_port": "port://keri/inbound/event-verification",
-        "is_cross_cutting": false
-      },
-      {
-        "ref": "domain://acdc",
-        "relationship": "OHS + Published Language — ACDC credentials are encoded in CESR; CESR provides qualified encoding for credential fields, SAIDs, and signatures",
-        "via_port": "port://acdc/inbound/credential-lifecycle",
-        "is_cross_cutting": false
-      }
-    ],
+    "adjacents": [],
     "externals": [],
     "implementation_guidance": {
       "suggested_type": "library",
@@ -6969,8 +6956,8 @@ const RDOD_DATA = {
     "domain_clients": [
       {
         "ref": "domain://signify-client",
-        "relationship": "Customer-Supplier — thin wallets drive the cloud agent via Signify protocol",
-        "via_port": "port://cloud-agent-service/inbound/admin-api"
+        "relationship": "Customer-Supplier — thin wallets drive the cloud agent via Signify protocol (signify-client/resources/outbound/cloud-agent-comms -> cloud-agent-service/api/inbound/admin-api)",
+        "via_port": "port://cloud-agent-service/api/inbound/admin-api"
       }
     ],
     "subdomains": [
@@ -7019,13 +7006,13 @@ const RDOD_DATA = {
       {
         "ref": "domain://witness-service",
         "relationship": "Customer-Supplier — forwards events to witnesses, collects receipts",
-        "via_port": "port://witness-service/inbound/event-receipt",
+        "via_port": "port://witness-service/api/inbound/event-submission",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://watcher-service",
         "relationship": "Customer-Supplier — queries watchers for duplicity status and KEL verification",
-        "via_port": "port://watcher-service/inbound/query",
+        "via_port": "port://watcher-service/api/inbound/kel-query",
         "is_cross_cutting": false
       }
     ],
@@ -7076,34 +7063,6 @@ const RDOD_DATA = {
       "Edge client polls for notifications and operations — agent cannot push to edge"
     ],
     "_ports": [
-      {
-        "id": "port://cloud-agent-service/inbound/boot",
-        "type": "inbound",
-        "name": "Agency Boot",
-        "contract": "provision_agent(inception_event) -> AgentConfig; destroy_agent(agent_id) -> Result",
-        "protocol": "REST",
-        "refs": [
-          "domain://signify-client"
-        ]
-      },
-      {
-        "id": "port://cloud-agent-service/inbound/admin-api",
-        "type": "inbound",
-        "name": "Admin API",
-        "contract": "create_identifier(config) -> AID; rotate(aid) -> RotationEvent; interact(aid, seals) -> InteractionEvent; list_credentials() -> [Credential]; get_credential(said) -> Credential; resolve_oobi(url) -> Result; list_contacts() -> [Contact]; list_notifications() -> [Notification]; mark_notification(id, read) -> Result\n",
-        "protocol": "REST",
-        "refs": [
-          "domain://signify-client"
-        ]
-      },
-      {
-        "id": "port://cloud-agent-service/inbound/message-router",
-        "type": "inbound",
-        "name": "Message Router",
-        "contract": "receive_message(keri_message) -> Result — routes protocol messages to agent instances by target AID",
-        "protocol": "REST",
-        "refs": []
-      },
       {
         "id": "port://cloud-agent-service/outbound/agent-store",
         "type": "outbound",
@@ -15692,7 +15651,7 @@ const RDOD_DATA = {
         "contract": "boot(inception_event) -> AgentConfig; request(method, path, body, kram_headers) -> Response; poll_operation(name) -> OperationStatus; send_exchange(exn, sigs, atc) -> Result\n",
         "protocol": "REST",
         "refs": [
-          "domain://cloud-agent-service"
+          "domain://cloud-agent-service/api"
         ]
       }
     ]
@@ -15836,17 +15795,17 @@ const RDOD_DATA = {
       {
         "ref": "domain://signify-client",
         "relationship": "Indirect — Signify clients access watchers via cloud-agent-service proxy",
-        "via_port": "port://watcher-service/inbound/query"
+        "via_port": "port://watcher-service/api/inbound/kel-query"
       },
       {
         "ref": "domain://local-agent",
         "relationship": "Direct connection for local agent watcher queries",
-        "via_port": "port://watcher-service/inbound/query"
+        "via_port": "port://watcher-service/api/inbound/kel-query"
       },
       {
         "ref": "domain://cloud-agent-service",
         "relationship": "Queries watchers for duplicity status on behalf of controllers",
-        "via_port": "port://watcher-service/inbound/query"
+        "via_port": "port://watcher-service/api/inbound/kel-query"
       }
     ],
     "subdomains": [
@@ -15867,7 +15826,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://witness-service",
         "relationship": "Customer-Supplier — polls witnesses for KERL copies to cross-check",
-        "via_port": "port://witness-service/inbound/kerl-query",
+        "via_port": "port://witness-service/api/inbound/kerl-query",
         "is_cross_cutting": false
       }
     ],
@@ -15935,25 +15894,6 @@ const RDOD_DATA = {
       "Watcher responses are authenticated by the watcher's own AID — validators verify signatures"
     ],
     "_ports": [
-      {
-        "id": "port://watcher-service/inbound/query",
-        "type": "inbound",
-        "name": "Watcher Query",
-        "contract": "query_kel(aid) -> KELState; query_duplicity(aid) -> DuplicityStatus — validators query for KEL state and duplicity alerts",
-        "protocol": "HTTP",
-        "refs": [
-          "domain://cloud-agent-service",
-          "domain://local-agent"
-        ]
-      },
-      {
-        "id": "port://watcher-service/inbound/oobi",
-        "type": "inbound",
-        "name": "OOBI Resolution",
-        "contract": "resolve_oobi(aid, role, eid) -> OOBIResponse — serves watcher OOBI for discovery",
-        "protocol": "HTTP",
-        "refs": []
-      },
       {
         "id": "port://watcher-service/outbound/witness-poll",
         "type": "outbound",
@@ -16300,17 +16240,17 @@ const RDOD_DATA = {
       {
         "ref": "domain://signify-client",
         "relationship": "Indirect — Signify clients access witnesses via cloud-agent-service proxy",
-        "via_port": "port://witness-service/inbound/event-receipt"
+        "via_port": "port://witness-service/api/inbound/event-submission"
       },
       {
         "ref": "domain://local-agent",
         "relationship": "Direct HTTP connection for local agent witness interactions",
-        "via_port": "port://witness-service/inbound/event-receipt"
+        "via_port": "port://witness-service/api/inbound/event-submission"
       },
       {
         "ref": "domain://cloud-agent-service",
         "relationship": "Forwards events to witnesses and collects receipts on behalf of controllers",
-        "via_port": "port://witness-service/inbound/event-receipt"
+        "via_port": "port://witness-service/api/inbound/event-submission"
       }
     ],
     "subdomains": [
@@ -16399,35 +16339,6 @@ const RDOD_DATA = {
       "Witness storage is append-only — events and receipts are never modified or deleted"
     ],
     "_ports": [
-      {
-        "id": "port://witness-service/inbound/event-receipt",
-        "type": "inbound",
-        "name": "Event Receipt",
-        "contract": "submit_event(key_event) -> Receipt — accepts event under first-seen rule, returns witness receipt",
-        "protocol": "HTTP",
-        "refs": [
-          "domain://cloud-agent-service",
-          "domain://local-agent"
-        ]
-      },
-      {
-        "id": "port://witness-service/inbound/kerl-query",
-        "type": "inbound",
-        "name": "KERL Query",
-        "contract": "query_kerl(aid, sn_range?) -> KERL — returns receipted key event log for the requested AID",
-        "protocol": "HTTP",
-        "refs": [
-          "domain://watcher-service"
-        ]
-      },
-      {
-        "id": "port://witness-service/inbound/oobi",
-        "type": "inbound",
-        "name": "OOBI Resolution",
-        "contract": "resolve_oobi(aid, role, eid) -> OOBIResponse — serves witness OOBI at /.well-known/keri/oobi/{aid}/{role}/{eid}",
-        "protocol": "HTTP",
-        "refs": []
-      },
       {
         "id": "port://witness-service/outbound/witness-store",
         "type": "outbound",

@@ -2,20 +2,10 @@
 domain_ref: "watcher-service"
 
 ports:
-  # Inbound — validator queries and OOBI resolution
-  - id: "port://watcher-service/inbound/query"
-    type: inbound
-    name: "Watcher Query"
-    contract: "query_kel(aid) -> KELState; query_duplicity(aid) -> DuplicityStatus — validators query for KEL state and duplicity alerts"
-    protocol: "HTTP"
-    refs: ["domain://cloud-agent-service", "domain://local-agent"]
-
-  - id: "port://watcher-service/inbound/oobi"
-    type: inbound
-    name: "OOBI Resolution"
-    contract: "resolve_oobi(aid, role, eid) -> OOBIResponse — serves watcher OOBI for discovery"
-    protocol: "HTTP"
-    refs: []
+  # Inbound ports are defined in subdomain:
+  #   - api: port://watcher-service/api/inbound/kel-query (KEL state queries)
+  #   - api: port://watcher-service/api/inbound/duplicity-query (duplicity queries)
+  #   - api: port://watcher-service/api/inbound/oobi-resolution (OOBI resolution)
 
   # Outbound — witness polling, storage, HTTP server
   - id: "port://watcher-service/outbound/witness-poll"

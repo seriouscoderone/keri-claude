@@ -62,7 +62,7 @@ properties:
 
 # Formalized port contracts
 contracts:
-  - port_ref: "port://cloud-agent-service/inbound/boot"
+  - port_ref: "port://cloud-agent-service/provisioning/inbound/agent-lifecycle"
     preconditions:
       - formal:
           language: python
@@ -74,7 +74,7 @@ contracts:
           expression: "lambda result: isinstance(result, AgentConfig) and result.agent_id is not None and result.controller_aid is not None"
         description: "Returns a valid AgentConfig with agent_id and controller_aid"
 
-  - port_ref: "port://cloud-agent-service/inbound/admin-api"
+  - port_ref: "port://cloud-agent-service/api/inbound/admin-api"
     preconditions:
       - formal:
           language: python
@@ -86,7 +86,7 @@ contracts:
           expression: "lambda request, result: result.scope == request.controller_aid"
         description: "All returned data is scoped to the authenticated controller's agent instance"
 
-  - port_ref: "port://cloud-agent-service/inbound/message-router"
+  - port_ref: "port://cloud-agent-service/api/inbound/message-router"
     preconditions:
       - formal:
           language: python

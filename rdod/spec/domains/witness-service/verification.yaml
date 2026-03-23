@@ -171,7 +171,7 @@ properties:
 
 # Formalized port contracts
 contracts:
-  - port_ref: "port://witness-service/inbound/event-receipt"
+  - port_ref: "port://witness-service/api/inbound/event-submission"
     preconditions:
       - formal:
           language: python
@@ -186,7 +186,7 @@ contracts:
                 or (receipt.rejected and receipt.reason == 'conflicting_event_at_sn')
         description: "First-seen event produces a valid receipt signed by witness; conflicting event is rejected"
 
-  - port_ref: "port://witness-service/inbound/kerl-query"
+  - port_ref: "port://witness-service/api/inbound/kerl-query"
     preconditions:
       - formal:
           language: python

@@ -31,8 +31,8 @@ ubiquitous_language:
 
 domain_clients:
   - ref: "domain://signify-client"
-    relationship: "Customer-Supplier — thin wallets drive the cloud agent via Signify protocol"
-    via_port: "port://cloud-agent-service/inbound/admin-api"
+    relationship: "Customer-Supplier — thin wallets drive the cloud agent via Signify protocol (signify-client/resources/outbound/cloud-agent-comms -> cloud-agent-service/api/inbound/admin-api)"
+    via_port: "port://cloud-agent-service/api/inbound/admin-api"
 
 subdomains:
   - ref: "domain://cloud-agent-service/provisioning"
@@ -66,11 +66,11 @@ adjacents:
     is_cross_cutting: false
   - ref: "domain://witness-service"
     relationship: "Customer-Supplier — forwards events to witnesses, collects receipts"
-    via_port: "port://witness-service/inbound/event-receipt"
+    via_port: "port://witness-service/api/inbound/event-submission"
     is_cross_cutting: false
   - ref: "domain://watcher-service"
     relationship: "Customer-Supplier — queries watchers for duplicity status and KEL verification"
-    via_port: "port://watcher-service/inbound/query"
+    via_port: "port://watcher-service/api/inbound/kel-query"
     is_cross_cutting: false
 
 externals:

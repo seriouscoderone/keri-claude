@@ -2,27 +2,10 @@
 domain_ref: "witness-service"
 
 ports:
-  # Inbound — event submission and KERL queries
-  - id: "port://witness-service/inbound/event-receipt"
-    type: inbound
-    name: "Event Receipt"
-    contract: "submit_event(key_event) -> Receipt — accepts event under first-seen rule, returns witness receipt"
-    protocol: "HTTP"
-    refs: ["domain://cloud-agent-service", "domain://local-agent"]
-
-  - id: "port://witness-service/inbound/kerl-query"
-    type: inbound
-    name: "KERL Query"
-    contract: "query_kerl(aid, sn_range?) -> KERL — returns receipted key event log for the requested AID"
-    protocol: "HTTP"
-    refs: ["domain://watcher-service"]
-
-  - id: "port://witness-service/inbound/oobi"
-    type: inbound
-    name: "OOBI Resolution"
-    contract: "resolve_oobi(aid, role, eid) -> OOBIResponse — serves witness OOBI at /.well-known/keri/oobi/{aid}/{role}/{eid}"
-    protocol: "HTTP"
-    refs: []
+  # Inbound ports are defined in subdomain:
+  #   - api: port://witness-service/api/inbound/event-submission (event receipt)
+  #   - api: port://witness-service/api/inbound/kerl-query (KERL queries)
+  #   - api: port://witness-service/api/inbound/oobi-resolution (OOBI resolution)
 
   # Outbound — storage and HTTP server
   - id: "port://witness-service/outbound/witness-store"
