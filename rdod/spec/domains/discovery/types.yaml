@@ -1,0 +1,89 @@
+domain_ref: "discovery"
+
+types:
+  - name: "OOBI"
+    description: "Out-of-Band Introduction — a URL that bootstraps trust by providing an endpoint where an AID's KEL can be fetched and validated."
+    variants:
+      - name: "witness"
+        fields:
+          - name: "url"
+            type: "string"
+            required: true
+            description: "HTTP(S) URL to the witness endpoint"
+            constraints:
+              pattern: "^https?://.+/oobi/.+"
+          - name: "aid"
+            type: "AID"
+            required: true
+            description: "The AID being introduced"
+          - name: "role"
+            type: "string"
+            required: true
+            description: "The role of the endpoint (witness, watcher, agent, etc.)"
+            constraints:
+              enum: ["witness", "watcher", "agent", "controller", "mailbox"]
+          - name: "eid"
+            type: "AID"
+            required: false
+            description: "Endpoint identifier — the specific witness/watcher AID serving this OOBI"
+        invariants:
+          - "URL format: {scheme}://{host}/oobi/{aid}/{role}/{eid}"
+          - "Resolution returns a KEL replay + endpoint reply messages"
+      - name: "well-known"
+        fields:
+          - name: "url"
+            type: "string"
+            required: true
+            description: "RFC 8615 well-known URL"
+            constraints:
+              pattern: "^https?://.+/\\.well-known/keri/oobi/.+"
+        invariants:
+          - "Follows RFC 8615 well-known URI format"
+          - "Enables discovery without prior knowledge of AID"
+
+  - name: "EndRole"
+    description: "An authorized endpoint for an AID — declares that a specific service (witness, watcher, agent) serves this identifier at a given URL."
+    variants:
+      - name: "default"
+        fields:
+          - name: "cid"
+            type: "AID"
+            required: true
+            description: "Controller AID — who authorized this endpoint"
+          - name: "role"
+            type: "string"
+            required: true
+            description: "Service role"
+            constraints:
+              enum: ["witness", "watcher", "agent", "controller", "mailbox"]
+          - name: "eid"
+            type: "AID"
+            required: true
+            description: "Endpoint AID — the service's identifier"
+        invariants:
+          - "Authorization via signed reply message (route=/end/role/add)"
+          - "Revocation via signed reply message (route=/end/role/cut)"
+          - "Subject to BADA acceptance policy — newer datetime replaces older"
+
+  - name: "LocationScheme"
+    description: "A physical network endpoint for a service — maps an AID + scheme to a URL."
+    variants:
+      - name: "default"
+        fields:
+          - name: "eid"
+            type: "AID"
+            required: true
+            description: "Service endpoint AID"
+          - name: "scheme"
+            type: "string"
+            required: true
+            description: "URL scheme"
+            constraints:
+              enum: ["http", "https", "tcp", "ws", "wss"]
+          - name: "url"
+            type: "string"
+            required: true
+            description: "Full URL for this endpoint"
+        invariants:
+          - "Authorization via signed reply message (route=/loc/scheme)"
+          - "Subject to BADA acceptance policy"

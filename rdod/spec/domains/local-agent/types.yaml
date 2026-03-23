@@ -1,0 +1,82 @@
+domain_ref: "local-agent"
+
+types:
+  - name: "Habitat"
+    description: "The container for a single identifier's complete state — keys, event log, witness configuration, and agent context. Called Hab/Habery in keripy."
+    variants:
+      - name: "single"
+        fields:
+          - name: "name"
+            type: "string"
+            required: true
+            description: "Human-readable identifier name (alias)"
+          - name: "prefix"
+            type: "AID"
+            required: true
+            description: "The identifier (AID)"
+          - name: "key_state"
+            type: "KeyState"
+            required: true
+            description: "Current cryptographic configuration"
+          - name: "event_log"
+            type: "array"
+            required: true
+            description: "Complete KEL for this identifier"
+          - name: "config"
+            type: "map"
+            required: true
+            description: "Configuration (witnesses, thresholds, traits)"
+        invariants:
+          - "name must be unique within the local agent"
+          - "prefix is immutable after inception"
+          - "key_state is derived from processing the event_log"
+      - name: "group"
+        fields:
+          - name: "name"
+            type: "string"
+            required: true
+            description: "Group identifier name"
+          - name: "prefix"
+            type: "AID"
+            required: true
+            description: "Group AID"
+          - name: "members"
+            type: "array[AID]"
+            required: true
+            description: "Member AIDs participating in this group"
+          - name: "local_member"
+            type: "AID"
+            required: true
+            description: "This agent's member AID within the group"
+        invariants:
+          - "local_member must be in members list"
+          - "Group operations require coordination with other members via exn"
+
+  - name: "Contact"
+    description: "A known remote identifier with cached key state and optional metadata."
+    variants:
+      - name: "default"
+        fields:
+          - name: "prefix"
+            type: "AID"
+            required: true
+            description: "The remote AID"
+          - name: "alias"
+            type: "string"
+            required: false
+            description: "Human-readable name for this contact"
+          - name: "key_state"
+            type: "KeyState"
+            required: true
+            description: "Cached key state (may be stale)"
+          - name: "endpoints"
+            type: "array[LocationScheme]"
+            required: false
+            description: "Known service endpoints"
+          - name: "metadata"
+            type: "map"
+            required: false
+            description: "User-defined metadata (tags, notes, images)"
+        invariants:
+          - "key_state obtained via OOBI resolution or direct KEL exchange"
+          - "endpoints subject to BADA acceptance policy"

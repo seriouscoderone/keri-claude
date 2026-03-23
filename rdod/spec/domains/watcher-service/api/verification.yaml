@@ -81,31 +81,28 @@ contracts:
   - port_ref: "port://watcher-service/api/inbound/kel-query"
     preconditions:
       - formal:
-          language: python
-          expression: "lambda aid: aid is not None and isinstance(aid, str) and len(aid) >= 44"
-        description: "Query requires a valid CESR-qualified AID string"
+          language: pseudocode
+          expression: "aid is not null AND is_valid_cesr_prefix(aid) AND length(aid) >= 44"
+        description: "Query requires a valid CESR-qualified AID"
     postconditions:
       - formal:
-          language: python
-          expression: |
-            lambda aid, kel_state:
-                kel_state.aid == aid and kel_state.sn >= 0
+          language: pseudocode
+          expression: "kel_state.aid == aid AND kel_state.sn >= 0"
         description: "Returns key state for the requested AID"
 
   - port_ref: "port://watcher-service/api/inbound/duplicity-query"
     preconditions:
       - formal:
-          language: python
-          expression: "lambda aid: aid is not None and isinstance(aid, str) and len(aid) >= 44"
-        description: "Query requires a valid CESR-qualified AID string"
+          language: pseudocode
+          expression: "aid is not null AND is_valid_cesr_prefix(aid) AND length(aid) >= 44"
+        description: "Query requires a valid CESR-qualified AID"
     postconditions:
       - formal:
-          language: python
+          language: pseudocode
           expression: |
-            lambda aid, status:
-                status.aid == aid
-                and isinstance(status.is_duplicitous, bool)
-                and (len(status.evidence) >= 2 if status.is_duplicitous else True)
+            status.aid == aid
+            AND (status.is_duplicitous implies length(status.evidence) >= 2)
+            AND (not status.is_duplicitous implies length(status.evidence) == 0)
         description: "Returns duplicity status with evidence if duplicitous"
 
 state_machines: []

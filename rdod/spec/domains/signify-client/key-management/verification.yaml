@@ -137,23 +137,38 @@ properties:
     strategy: "st.text for passcode, st.sampled_from for tier, st.text for derivation path"
     notes: "Core property: key derivation is a pure function of (passcode, tier, path)"
 
-  - invariant: "All keepers expose the same interface: incept(), rotate(), sign()"
+  - invariant: "All keeper algorithms support the same lifecycle: incept, sign, rotate"
     term: "Keeper"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        @given(algo=st.sampled_from(['salty', 'randy', 'group']))
-        def test_keeper_interface_consistency(algo):
-            keeper = create_keeper(algo)
-            assert hasattr(keeper, 'incept')
-            assert hasattr(keeper, 'rotate')
-            assert hasattr(keeper, 'sign')
-            assert callable(keeper.incept)
-            assert callable(keeper.rotate)
-            assert callable(keeper.sign)
-    strategy: "st.sampled_from for algorithm variants"
-    notes: "All keeper implementations (Salty, Randy, Group) must expose the same interface"
+        for each algo in [salty, randy, group]:
+          keeper = create_keeper(algo)
+          # incept() must produce public verification keys (verfers) and
+          # next-key commitment digests (digers)
+          verfers, digers = keeper.incept()
+          assert length(verfers) >= 1
+          assert length(digers) >= 1
+          # sign() must produce valid indexed signatures for arbitrary content
+          content = random_bytes()
+          sigs = keeper.sign(content)
+          assert length(sigs) >= 1
+          for each sig, verfer in zip(sigs, verfers):
+            assert verfer.verify(sig.raw, content) == true
+          # rotate() must produce new verfers and digers that differ from
+          # the originals (key material has changed)
+          new_verfers, new_digers = keeper.rotate()
+          assert new_verfers != verfers  # Keys have actually rotated
+          # sign() after rotation uses the new keys
+          new_sigs = keeper.sign(content)
+          for each sig, verfer in zip(new_sigs, new_verfers):
+            assert verfer.verify(sig.raw, content) == true
+        # The behavioral guarantee: all keeper algorithms are substitutable —
+        # they produce keys, sign content, and rotate identically from the
+        # caller's perspective.
+    strategy: "All three keeper algorithms exercised through the full incept/sign/rotate lifecycle"
+    notes: "Behavioral interface test — all keeper implementations produce valid keys, signatures, and rotations"
 
   - invariant: "SaltyKeeper: deterministic derivation from salt + path — recoverable from passcode"
     term: "Keeper"
@@ -280,20 +295,19 @@ contracts:
           expression: "lambda: not session.active and all(b == 0 for b in session._key_bytes)"
         description: "lock zeroes all key material and deactivates the session"
       - formal:
-          language: python
+          language: pseudocode
           expression: |
-            lambda aid, content, sigs:
-                len(sigs) > 0
-                and all(isinstance(s, Siger) for s in sigs)
-                and all(verify_signature(s, content, get_verfer(aid)) for s in sigs)
+            length(sigs) > 0
+            AND each sig in sigs has a valid index
+            AND each sig in sigs verifies against the corresponding public key: verify(sig, content, get_verfer(aid, sig.index)) == true
         description: "sign returns valid indexed signatures that verify against the AID's public keys"
 
   - port_ref: "port://signify-client/key-management/outbound/key-storage"
     preconditions:
       - formal:
-          language: python
-          expression: "lambda sxlt: isinstance(sxlt, Cipher) and len(sxlt.raw) > 0"
-        description: "store_encrypted_salt requires a non-empty Cipher object"
+          language: pseudocode
+          expression: "sxlt is not null AND sxlt.raw is not empty AND sxlt is encrypted (sxlt.raw != plaintext_salt)"
+        description: "store_encrypted_salt requires a non-empty encrypted salt"
     postconditions:
       - formal:
           language: python

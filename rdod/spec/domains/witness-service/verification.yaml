@@ -189,9 +189,9 @@ contracts:
   - port_ref: "port://witness-service/api/inbound/kerl-query"
     preconditions:
       - formal:
-          language: python
-          expression: "lambda aid: aid is not None and isinstance(aid, str)"
-        description: "Query requires a valid AID string"
+          language: pseudocode
+          expression: "aid is not null AND is_valid_cesr_prefix(aid)"
+        description: "Query requires a valid CESR-qualified AID"
     postconditions:
       - formal:
           language: python

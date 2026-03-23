@@ -84,25 +84,35 @@ properties:
     strategy: "st.sampled_from for valid operation types, st.text for resource OIDs"
     notes: "Operation naming convention is deterministic and parseable"
 
-  - invariant: "Operations have a done flag, optional error, and response payload"
+  - invariant: "Completed operations carry a response; failed operations carry an error; incomplete operations carry neither"
     term: "Long-running Operation"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        @given(
-            op_type=st.sampled_from(['witness', 'delegation', 'group', 'credential']),
-            oid=st.text(min_size=1, max_size=44)
-        )
-        def test_operation_structure(op_type, oid):
+        for any op_type in [witness, delegation, group, credential]:
+          for any oid:
             op = create_operation(op_type, oid)
-            assert isinstance(op.done, bool)
-            assert hasattr(op, 'error')
-            assert hasattr(op, 'response')
-            if op.done and op.error is None:
-                assert op.response is not None
-    strategy: "st.sampled_from for types, st.text for OIDs"
-    notes: "Operation structure: done=True with no error implies response payload exists"
+            # Poll the operation and verify the behavioral contract
+            status = poll_operation(op.name)
+            if status.done and status has no error:
+              # Successful completion must produce a usable response
+              response = status.response
+              assert response is not null
+              assert response can be deserialized to the expected type for op_type
+            elif status.done and status has error:
+              # Failed completion must produce a diagnostic error
+              assert status.error.code is not null
+              assert status.error.message is not empty
+              assert status.response is null
+            else:
+              # Incomplete operations have no final result yet
+              assert not status.done
+        # The behavioral guarantee: polling an operation always returns a
+        # self-consistent status — done+success implies response, done+error
+        # implies diagnostic, not-done implies still processing.
+    strategy: "All valid operation types, arbitrary OIDs"
+    notes: "Operation lifecycle contract — the done/error/response triple is always internally consistent"
 
   - invariant: "Multi-sig assembly MUST check threshold satisfaction: the event is assembled (complete) when collected signatures >= threshold; collected < threshold MUST result in the event remaining escrowed; collected == 0 with threshold > 0 MUST NOT trigger assembly"
     term: "Multi-sig Assembly"
@@ -149,28 +159,38 @@ properties:
     strategy: "st.integers for threshold and collected signature counts"
     notes: "Below-threshold signature sets must be escrowed, not rejected"
 
-  - invariant: "Monitor checks completion by querying the relevant component (Counselor for group, Boatswain for delegation, etc.)"
+  - invariant: "Monitor delegates completion checks to the correct specialized component for each operation type"
     term: "Long-running Operation"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        @given(op_type=st.sampled_from(['group', 'delegation', 'credential', 'registry', 'witness']))
-        def test_monitor_delegates_to_component(op_type):
-            monitor = create_monitor()
-            op = create_operation(op_type, 'test_oid')
-            component = monitor.get_component_for(op_type)
-            assert component is not None
-            expected_components = {
-                'group': 'Counselor',
-                'delegation': 'Boatswain',
-                'credential': 'Credentialer',
-                'registry': 'Registrar',
-                'witness': 'Witnesser'
-            }
-            assert type(component).__name__ == expected_components[op_type]
-    strategy: "st.sampled_from for operation types"
-    notes: "Monitor dispatches completion checks to the correct specialized component"
+        for each op_type in [group, delegation, credential, registry, witness]:
+          monitor = create_monitor()
+          # Create an operation that is NOT yet done
+          op = create_operation(op_type, unique_oid())
+          # Complete the operation via its specific workflow
+          complete_workflow(op_type, op.oid)
+          # Monitor must detect the completion by polling the correct component
+          status = monitor.check_completion(op)
+          assert status.done == true
+          # Verify the monitor queried the right subsystem by checking
+          # the response contains type-specific completion evidence:
+          if op_type == "group":
+            assert status.response contains multi-sig assembly result
+          elif op_type == "delegation":
+            assert status.response contains delegation approval anchor
+          elif op_type == "credential":
+            assert status.response contains credential SAID and TEL event
+          elif op_type == "registry":
+            assert status.response contains registry prefix
+          elif op_type == "witness":
+            assert status.response contains witness receipt count >= toad
+        # The behavioral guarantee: monitor produces correct completion
+        # evidence for each operation type, proving it delegated to the
+        # right component.
+    strategy: "All operation types with type-specific completion workflows"
+    notes: "Monitor dispatches completion checks to the correct specialized component — verified by type-specific response content"
 
   - invariant: "Indexes built from credential schema — each schema field becomes a searchable index"
     term: "Seeker"
@@ -205,8 +225,8 @@ contracts:
           expression: "lambda deck, item: deck in VALID_DECK_NAMES and item is not None"
         description: "enqueue_work requires a valid deck name and non-null work item"
       - formal:
-          language: python
-          expression: "lambda name: isinstance(name, str) and '.' in name"
+          language: pseudocode
+          expression: "name is not null AND name contains '.' AND split(name, '.', limit=2) yields [valid_type, non_empty_oid]"
         description: "get_operation requires a valid operation name in {type}.{oid} format"
     postconditions:
       - formal:
@@ -214,13 +234,13 @@ contracts:
           expression: "lambda deck, item, result: result.success and item in get_deck(deck)"
         description: "After enqueue, item is present in the specified deck"
       - formal:
-          language: python
+          language: pseudocode
           expression: |
-            lambda name, op:
-                op.name == name
-                and isinstance(op.done, bool)
-                and (op.response is not None if op.done and op.error is None else True)
-        description: "get_operation returns the operation with correct name and valid structure"
+            op.name == name
+            AND (op.done == true OR op.done == false)
+            AND (op.done AND op.error is null implies op.response is not null)
+            AND (op.done AND op.error is not null implies op.response is null)
+        description: "get_operation returns the operation with correct name and consistent done/error/response state"
 
   - port_ref: "port://cloud-agent-service/processing/inbound/multisig"
     preconditions:
@@ -245,9 +265,9 @@ contracts:
         description: "issue_credential requires schema SAID, issuer AID, and credential data"
     postconditions:
       - formal:
-          language: python
-          expression: "lambda result: isinstance(result, Operation) and result.name.startswith('credential.')"
-        description: "Returns a long-running Operation with credential type prefix"
+          language: pseudocode
+          expression: "result.name starts with 'credential.' AND result.done is a boolean AND poll_operation(result.name) returns a valid status"
+        description: "Returns a long-running operation with credential type prefix that is pollable"
 
   - port_ref: "port://cloud-agent-service/processing/outbound/processing-store"
     preconditions:

@@ -104,23 +104,30 @@ properties:
     strategy: "valid_keri_message_strategy() generating KERI protocol messages with valid event signatures"
     notes: "Message router uses KERI protocol authentication, not KRAM"
 
-  - invariant: "Async operations return HTTP 202 with operation handle for polling"
+  - invariant: "Async operations return HTTP 202 with a pollable operation handle"
     term: "Admin API"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        @given(config=identifier_config_strategy())
-        def test_async_returns_202_with_operation(config):
-            request = signed_request(controller, 'POST', '/identifiers', body=config)
-            response = admin_api.handle(request)
-            assert response.status_code == 202
-            op = response.json()
-            assert 'name' in op
-            assert 'done' in op
-            assert isinstance(op['name'], str)
-    strategy: "identifier_config_strategy() for valid AID creation configs"
-    notes: "All mutating operations that require async processing return 202 with an operation handle"
+        for any valid identifier config:
+          request = signed_request(controller, POST, /identifiers, body=config)
+          response = admin_api.handle(request)
+          assert response.status_code == 202
+          op = response.json()
+          # The operation handle must be pollable — not just structurally present
+          op_name = op["name"]
+          assert op_name matches pattern "{type}.{oid}"
+          # Polling the operation by name must return a valid status
+          poll_response = signed_request(controller, GET, "/operations/" + op_name)
+          assert poll_response.status_code in [200, 202]
+          poll_result = poll_response.json()
+          assert poll_result["name"] == op_name
+          # The operation must eventually resolve
+          final = poll_until_done(controller, op_name, timeout=reasonable_duration)
+          assert final["done"] == true
+    strategy: "Valid identifier configs, verified through the poll-to-completion lifecycle"
+    notes: "Operation handles are not just data — they must be pollable references that resolve to completion"
 
   - invariant: "Edge client polls for notifications via GET /notifications"
     term: "Notification"

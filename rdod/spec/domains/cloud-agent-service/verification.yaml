@@ -7,22 +7,27 @@ domain_ref: "cloud-agent-service"
 
 # Formalized invariants from ubiquitous_language terms
 properties:
-  - invariant: "Zero access to private signing or decryption keys"
+  - invariant: "Cloud agent cannot produce signatures — all signing happens at the edge"
     term: "KERIA"
     technique: property-based
     formal:
-      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
+      language: pseudocode
       expression: |
-        @given(st.binary(min_size=1, max_size=512))
-        def test_keria_never_holds_private_keys(payload):
-            agent = create_keria_agent()
-            # Agent has no signing capability — all sign methods raise or are absent
-            assert not hasattr(agent, 'private_key')
-            assert not hasattr(agent, 'signing_key')
-            with pytest.raises(AttributeError):
-                agent.sign(payload)
-    strategy: "st.binary() for arbitrary payloads"
-    notes: "Structural property — KERIA agent class must not expose signing interfaces"
+        for any message M:
+          agent = create_keria_agent()
+          # Attempt to produce a signature through any available interface
+          result = attempt_sign(agent, M)
+          assert result is failure OR result is not_implemented
+          # If agent exposes any sign-like method, its output must not be
+          # a valid signature verifiable against any known key
+          for any key_state KS in agent.managed_key_states():
+            assert not verify(result, M, KS.verfers)
+        # The architectural guarantee: private keys never reach the agent.
+        # Signing is performed by the Signify edge client, not the cloud agent.
+        # The agent receives pre-signed requests and verifies signatures,
+        # but cannot originate them.
+    strategy: "Arbitrary binary payloads for M, all managed key states for verification attempts"
+    notes: "Behavioral property — agent cannot produce a valid signature for any message under any managed key state"
 
   - invariant: "Can store, forward, and assemble — but never sign"
     term: "KERIA"
@@ -43,22 +48,24 @@ properties:
     term: "KERIA"
     technique: property-based
     formal:
-      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
+      language: pseudocode
       expression: |
-        @given(
-            controller_a=keri_aid_strategy(),
-            controller_b=keri_aid_strategy(),
-            data=st.binary(min_size=1)
-        )
-        def test_agent_isolation(controller_a, controller_b):
-            assume(controller_a != controller_b)
-            agent_a = provision_agent(controller_a)
-            agent_b = provision_agent(controller_b)
-            agent_a.store('key', data)
-            with pytest.raises(AccessDenied):
-                agent_b.get('key')
-    strategy: "keri_aid_strategy() generating distinct controller AIDs"
-    notes: "Cross-tenant access must raise — no data leakage between agents"
+        for any controller_a, controller_b where controller_a != controller_b:
+          agent_a = provision_agent(controller_a)
+          agent_b = provision_agent(controller_b)
+          # Store data via agent A
+          agent_a.store_credential(some_data)
+          agent_a.create_identifier(name="secret", keys=[...])
+          # Agent B must see none of agent A's data
+          assert agent_b.list_credentials() does not contain any of agent_a's credentials
+          assert agent_b.list_identifiers() does not contain any of agent_a's identifiers
+          # Cross-tenant operations must fail
+          assert agent_b.get_identifier("secret") fails with access denied
+          # Even with knowledge of agent A's resource IDs, agent B cannot retrieve them
+          for any resource_id in agent_a.list_resource_ids():
+            assert agent_b.get_resource(resource_id) fails
+    strategy: "Distinct controller AIDs with cross-tenant data access attempts"
+    notes: "Cross-tenant access must fail — no data leakage between agents regardless of access method"
 
 # Formalized port contracts
 contracts:
@@ -70,9 +77,9 @@ contracts:
         description: "Inception event must be structurally valid (t=='icp', sn==0, valid prefix) and all signatures must verify against the inception keys"
     postconditions:
       - formal:
-          language: python
-          expression: "lambda result: isinstance(result, AgentConfig) and result.agent_id is not None and result.controller_aid is not None"
-        description: "Returns a valid AgentConfig with agent_id and controller_aid"
+          language: pseudocode
+          expression: "result.agent_id is not null AND result.controller_aid is not null AND result.controller_aid == inception_event.pre"
+        description: "Returns a config with agent_id and controller_aid matching the inception event"
 
   - port_ref: "port://cloud-agent-service/api/inbound/admin-api"
     preconditions:

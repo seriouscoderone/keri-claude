@@ -7,46 +7,60 @@ domain_ref: "signify-client/resources"
 
 # Formalized invariants from ubiquitous_language terms
 properties:
-  - invariant: "All resource operations return Operation handles (API contract)"
+  - invariant: "All mutating resource operations return pollable operation handles"
     term: "Operation"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        @given(
-            operation=st.sampled_from([
-                ('create_identifier', {'alias': 'test', 'wits': [], 'toad': 0}),
-                ('rotate', {'aid': 'EDP1...'}),
-                ('issue_credential', {'registry': 'reg', 'schema': 'SAID', 'recipient': 'AID', 'data': {}}),
-                ('create_registry', {'aid': 'EDP1...', 'name': 'reg'}),
-                ('add_end_role', {'aid': 'EDP1...', 'role': 'agent', 'eid': 'AID'}),
-                ('resolve_oobi', {'url': 'http://example.com/oobi/...'})
-            ])
-        )
-        def test_mutating_ops_return_operation_handle(operation):
-            op_name, kwargs = operation
-            result = getattr(client.resources(), op_name)(**kwargs)
-            assert hasattr(result, 'name')
-            assert hasattr(result, 'done')
-            assert isinstance(result.done, bool)
-    strategy: "st.sampled_from for all mutating resource operations"
-    notes: "All async resource operations must return an Operation handle with name and done flag"
+        for each mutating_operation in [
+          create_identifier(alias="test", wits=[], toad=0),
+          rotate(aid="EDP1..."),
+          issue_credential(registry="reg", schema="SAID", recipient="AID", data={}),
+          create_registry(aid="EDP1...", name="reg"),
+          add_end_role(aid="EDP1...", role="agent", eid="AID"),
+          resolve_oobi(url="http://example.com/oobi/...")
+        ]:
+          result = execute(mutating_operation)
+          # The operation handle must be pollable by name
+          op_name = result.operation.name
+          assert op_name matches pattern "{type}.{oid}"
+          # Polling the operation by name must return a consistent status
+          status = client.operations().get(op_name)
+          assert status.name == op_name
+          # The status must eventually resolve to done=true (success or error)
+          # This is the behavioral contract — not just a type check
+          final_status = poll_until_done(op_name, timeout=reasonable_duration)
+          assert final_status.done == true
+          assert final_status.response is not null OR final_status.error is not null
+    strategy: "All mutating resource operations exercised through the poll-to-completion lifecycle"
+    notes: "Behavioral contract — operation handles are not just data structures, they are pollable references that resolve to completion"
 
-  - invariant: "Polled via client.operations().get(name) until done=true"
+  - invariant: "Operations are pollable by name and resolve to a consistent terminal state"
     term: "Operation"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        @given(op_name=st.text(min_size=5, max_size=50))
-        def test_operation_polling(op_name):
-            op = client.operations().get(op_name)
-            assert op.name == op_name
-            assert isinstance(op.done, bool)
-            if op.done:
-                assert op.response is not None or op.error is not None
-    strategy: "st.text for operation names"
-    notes: "Operations are polled by name — done=true means completion (success or error)"
+        for any existing operation name op_name:
+          status = client.operations().get(op_name)
+          assert status.name == op_name
+          # The status must be in one of two states: done or not done
+          if status.done:
+            # Terminal state must carry either a response or an error, never both
+            assert (status.response is not null) XOR (status.error is not null)
+          else:
+            # In-progress state carries no final result
+            assert status.response is null
+            assert status.error is null
+          # Polling the same operation again must return a consistent result
+          status2 = client.operations().get(op_name)
+          assert status2.name == op_name
+          # Once done, it stays done (no regression)
+          if status.done:
+            assert status2.done == true
+    strategy: "Existing operation names, verified by polling consistency and terminal state invariants"
+    notes: "Operations are polled by name — terminal state is immutable and self-consistent"
 
   - invariant: "The controller AID's KEL is the trust anchor for the entire agent relationship"
     term: "Controller AID"
@@ -70,87 +84,102 @@ properties:
     strategy: "st.sampled_from for HTTP methods, st.text for paths"
     notes: "Controller AID is the authentication anchor — all KRAM headers reference it"
 
-  - invariant: "create() returns inception event + signatures + operation handle"
+  - invariant: "create() returns a usable AID and a pollable witness-receipting operation"
     term: "Identifier Resource"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        @given(
-            alias=st.text(min_size=1, max_size=30, alphabet=st.characters(whitelist_categories=('L',))),
-            wits=st.lists(st.text(min_size=44, max_size=44), max_size=5),
-            toad=st.integers(min_value=0, max_value=5)
-        )
-        def test_identifier_create_returns_complete_result(alias, wits, toad):
-            assume(toad <= len(wits))
-            result = client.identifiers().create(alias, wits=wits, toad=toad)
-            assert result.aid is not None  # AID assigned
-            assert result.operation is not None  # Operation handle
-            assert isinstance(result.operation.name, str)
-            assert result.operation.name.startswith('witness.')
-    strategy: "st.text for alias, st.lists for witnesses, st.integers for toad"
-    notes: "create() must return both the AID and an operation handle for tracking witness receipting"
+        for any alias, witness list wits, toad where toad <= length(wits):
+          result = client.identifiers().create(alias, wits=wits, toad=toad)
+          # The AID must be a valid CESR-qualified prefix
+          assert is_valid_cesr_prefix(result.aid)
+          # The operation handle must be pollable and track witness receipting
+          assert result.operation.name starts with "witness."
+          status = client.operations().get(result.operation.name)
+          assert status.name == result.operation.name
+          # The identifier must be retrievable by alias after creation
+          retrieved = client.identifiers().get(alias)
+          assert retrieved.prefix == result.aid
+    strategy: "Valid alias strings, witness lists, and toad values — verified by AID usability and operation pollability"
+    notes: "create() produces a working AID and a trackable operation, not just structural fields"
 
-  - invariant: "Issuance returns a long-running operation (credential + TEL anchoring)"
+  - invariant: "Issuance produces a credential SAID and a pollable TEL-anchoring operation"
     term: "Credential Resource"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        @given(
-            schema_said=st.text(min_size=44, max_size=44),
-            recipient=st.text(min_size=44, max_size=44)
-        )
-        def test_credential_issuance_returns_operation(schema_said, recipient):
-            result = client.credentials().issue(
-                name='test', registry_name='reg',
-                schema_said=schema_said, recipient=recipient, data={}
-            )
-            assert result.operation is not None
-            assert result.operation.name.startswith('credential.')
-            assert isinstance(result.operation.done, bool)
-    strategy: "st.text for SAIDs and AIDs (44-char CESR qualified)"
-    notes: "Credential issuance is always async — TEL anchoring is a long-running operation"
+        for any valid schema_said, recipient:
+          result = client.credentials().issue(
+              name="test", registry_name="reg",
+              schema_said=schema_said, recipient=recipient, data={}
+          )
+          # The operation must track credential + TEL anchoring
+          assert result.operation.name starts with "credential."
+          # The operation must be pollable through to completion
+          status = client.operations().get(result.operation.name)
+          assert status.name == result.operation.name
+          # When done, the credential must be retrievable
+          final = poll_until_done(result.operation.name, timeout=reasonable_duration)
+          if final.done and final has no error:
+            credential = client.credentials().get(result.credential_said)
+            assert credential is not null
+            assert credential.schema == schema_said
+    strategy: "Valid CESR-qualified SAIDs and AIDs — verified through poll-to-completion and credential retrieval"
+    notes: "Credential issuance is always async — verified by tracking the operation to completion and retrieving the result"
 
-  - invariant: "Credential issuance requires a registry — the registry must be created before any credential can be issued"
+  - invariant: "Credential issuance requires a registry — issuing without one fails with a clear error"
     term: "Credential Resource"
     technique: property-based
     formal:
-      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
+      language: pseudocode
       expression: |
-        @given(
-            schema_said=st.text(min_size=44, max_size=44),
-            recipient=st.text(min_size=44, max_size=44)
-        )
-        def test_credential_requires_registry(schema_said, recipient):
-            # Issuing without a registry must fail
-            with pytest.raises(RegistryNotFound):
-                client.credentials().issue(
-                    name='test', registry_name='nonexistent',
-                    schema_said=schema_said, recipient=recipient, data={}
-                )
-    strategy: "st.text for SAIDs/AIDs"
-    notes: "Registry creation is a prerequisite for credential issuance — order matters"
+        for any valid schema_said, recipient:
+          # Attempt to issue without creating a registry first
+          result = client.credentials().issue(
+              name="test", registry_name="nonexistent",
+              schema_said=schema_said, recipient=recipient, data={}
+          )
+          assert result is an error indicating the registry was not found
+          # After creating a registry, the same issuance succeeds
+          client.registries().create(name="reg", aid="EDP1...")
+          result2 = client.credentials().issue(
+              name="test", registry_name="reg",
+              schema_said=schema_said, recipient=recipient, data={}
+          )
+          assert result2.operation is not null
+          assert result2.operation.name starts with "credential."
+        # The behavioral guarantee: registry is a hard prerequisite,
+        # not just a convention. The system enforces ordering.
+    strategy: "Valid SAIDs/AIDs with and without pre-existing registries"
+    notes: "Registry creation is a prerequisite for credential issuance — enforced by the system, not just documented"
 
-  - invariant: "Roles: witness, controller, agent, watcher, mediator"
+  - invariant: "Only the five defined roles (witness, controller, agent, watcher, mediator) are accepted"
     term: "End-Role"
     technique: property-based
     formal:
-      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
+      language: pseudocode
       expression: |
-        @given(role=st.text(min_size=1, max_size=20))
-        def test_end_role_valid_roles(role):
-            valid_roles = {'witness', 'controller', 'agent', 'watcher', 'mediator'}
-            if role in valid_roles:
-                # Valid role accepted
-                result = client.identifiers().addEndRole('test', role, 'EID...')
-                assert result is not None
-            else:
-                # Invalid role rejected
-                with pytest.raises(InvalidRole):
-                    client.identifiers().addEndRole('test', role, 'EID...')
-    strategy: "st.text for exhaustive role name testing"
-    notes: "End-role authorization is restricted to the five defined roles"
+        valid_roles = {witness, controller, agent, watcher, mediator}
+        for any role string:
+          if role in valid_roles:
+            # Valid role is accepted and persisted
+            result = client.identifiers().addEndRole("test", role, "EID...")
+            assert result.operation is not null
+            # The role authorization is observable after completion
+            roles = client.identifiers().listEndRoles("test")
+            assert role appears in roles
+          else:
+            # Invalid role is rejected — no state change occurs
+            result = client.identifiers().addEndRole("test", role, "EID...")
+            assert result is an error indicating invalid role
+            roles = client.identifiers().listEndRoles("test")
+            assert role does not appear in roles
+        # The behavioral guarantee: the valid role set is closed.
+        # Arbitrary strings outside the five defined roles are rejected.
+    strategy: "Both valid roles and arbitrary strings — verified by role persistence and rejection"
+    notes: "End-role authorization is restricted to exactly five roles — verified by observable state, not exception type"
 
   - invariant: "All resource operations require KRAM-authenticated requests — unsigned requests are rejected"
     term: "Controller AID"
@@ -178,22 +207,21 @@ contracts:
           expression: "lambda: client.session_active"
         description: "All resource operations require an active session (keys unlocked)"
       - formal:
-          language: python
-          expression: "lambda alias, config: isinstance(alias, str) and len(alias) > 0"
-        description: "create_identifier requires a non-empty string alias"
+          language: pseudocode
+          expression: "alias is not null AND length(alias) > 0"
+        description: "create_identifier requires a non-empty alias"
       - formal:
           language: python
           expression: "lambda registry, schema, recipient, data: registry is not None and schema is not None and data is not None"
         description: "issue_credential requires registry, schema SAID, and credential data"
     postconditions:
       - formal:
-          language: python
+          language: pseudocode
           expression: |
-            lambda result:
-                (hasattr(result, 'operation') and result.operation is not None)
-                or (isinstance(result, list))
-                or (isinstance(result, dict))
-        description: "Mutating operations return operation handles; list/get operations return data"
+            (result.operation is not null AND result.operation.name matches "{type}.{oid}")
+            OR (result is iterable AND each element has an identifiable prefix/said)
+            OR (result contains resource-specific fields for the requested resource type)
+        description: "Mutating operations return pollable operation handles; list/get operations return resource data"
       - formal:
           language: python
           expression: |
@@ -220,12 +248,12 @@ contracts:
                 and config.controller_aid == inception_event.pre
         description: "boot returns AgentConfig with valid agent_id and matching controller_aid"
       - formal:
-          language: python
+          language: pseudocode
           expression: |
-            lambda name, status:
-                status.name == name
-                and isinstance(status.done, bool)
-        description: "poll_operation returns status for the named operation"
+            status.name == name
+            AND (status.done == true OR status.done == false)
+            AND (status.done implies status.response is not null OR status.error is not null)
+        description: "poll_operation returns a consistent status for the named operation"
 
 # No state machine — resource operations are stateless request/response
 # (the operation lifecycle state machine is in cloud-agent-service/processing)

@@ -11,23 +11,25 @@ properties:
     term: "Watcher Node"
     technique: property-based
     formal:
-      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
+      language: pseudocode
       expression: |
-        @given(
-            validator=keri_aid_strategy(),
-            controller=keri_aid_strategy()
-        )
-        def test_watcher_controlled_by_validator(validator, controller):
-            assume(validator != controller)
-            watcher = create_watcher_node()
-            # Only the validator can configure the watcher
-            watcher.configure(validator_aid=validator)
-            assert watcher.validator == validator
-            # Controller cannot influence which AIDs the watcher monitors
-            with pytest.raises(Unauthorized):
-                watcher.configure(validator_aid=controller)
-    strategy: "keri_aid_strategy() for distinct validator and controller AIDs"
-    notes: "Watchers are under validator control — controllers cannot influence watcher behavior"
+        for any validator, controller where validator != controller:
+          watcher = create_watcher_node()
+          # The validator configures which AIDs to monitor
+          watcher.configure(validator_aid=validator)
+          watcher.add_watch(target_aid=some_aid)
+          assert watcher.watched_aids() contains some_aid
+          # A different party (the controller) cannot reconfigure the watcher
+          result = watcher.configure(requester_aid=controller, validator_aid=controller)
+          assert result is unauthorized
+          # The watcher's watch list is unchanged after the unauthorized attempt
+          assert watcher.watched_aids() == [some_aid]
+          assert watcher.validator_aid() == validator
+        # The behavioral guarantee: only the original validator can modify
+        # the watcher's configuration. Unauthorized parties cannot change
+        # the watch list, validator binding, or any operational parameters.
+    strategy: "Distinct validator and controller AIDs with unauthorized reconfiguration attempts"
+    notes: "Watchers are under validator control — unauthorized parties cannot influence watcher behavior"
 
   - invariant: "Compares events at the same (prefix, sn) across witness sources"
     term: "KEL Cross-Check"
@@ -150,25 +152,22 @@ contracts:
   - port_ref: "port://watcher-service/api/inbound/kel-query"
     preconditions:
       - formal:
-          language: python
-          expression: "lambda aid: aid is not None and isinstance(aid, str)"
-        description: "Query requires a valid AID string"
+          language: pseudocode
+          expression: "aid is not null AND is_valid_cesr_prefix(aid)"
+        description: "Query requires a valid CESR-qualified AID"
     postconditions:
       - formal:
-          language: python
+          language: pseudocode
           expression: |
-            lambda aid, kel_state:
-                kel_state.aid == aid
-                and kel_state.sn >= 0
-                and isinstance(kel_state.key_state, dict)
-        description: "query_kel returns key state for the requested AID with valid sequence number"
+            kel_state.aid == aid
+            AND kel_state.sn >= 0
+            AND kel_state.key_state contains verfers AND kel_state.key_state contains digers
+        description: "query_kel returns key state for the requested AID with verification keys and next-key digests"
       - formal:
-          language: python
+          language: pseudocode
           expression: |
-            lambda aid, duplicity_status:
-                duplicity_status.aid == aid
-                and isinstance(duplicity_status.is_duplicitous, bool)
-                and (len(duplicity_status.evidence) > 0 if duplicity_status.is_duplicitous else True)
+            duplicity_status.aid == aid
+            AND (duplicity_status.is_duplicitous implies length(duplicity_status.evidence) > 0)
         description: "query_duplicity returns duplicity status with evidence if duplicitous"
 
   - port_ref: "port://watcher-service/outbound/witness-poll"

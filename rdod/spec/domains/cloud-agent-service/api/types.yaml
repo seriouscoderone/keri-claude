@@ -1,0 +1,55 @@
+domain_ref: "cloud-agent-service/api"
+
+types:
+  - name: "BootRequest"
+    description: "Agent provisioning request sent to the boot endpoint (POST /boot)."
+    variants:
+      - name: "default"
+        fields:
+          - name: "icp"
+            type: "InceptionEvent"
+            required: true
+            description: "Agent inception event"
+          - name: "sig"
+            type: "string"
+            required: true
+            description: "Controller signature over the inception event"
+          - name: "salty"
+            type: "map"
+            required: false
+            description: "Salty key parameters (if using salty key type)"
+          - name: "randy"
+            type: "map"
+            required: false
+            description: "Randy key parameters (if using randy key type)"
+        invariants:
+          - "Exactly one of salty/randy should be present (determines key derivation type)"
+          - "icp must be a valid inception event with correct version string"
+          - "sig must verify against the keys in the inception event"
+
+  - name: "AdminRequest"
+    description: "Authenticated request to the admin API (port 3901). All requests must include HTTP Signature headers."
+    variants:
+      - name: "default"
+        fields:
+          - name: "method"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["GET", "POST", "PUT", "DELETE"]
+          - name: "path"
+            type: "string"
+            required: true
+            description: "API endpoint path"
+          - name: "body"
+            type: "map"
+            required: false
+            description: "Request body (JSON)"
+          - name: "auth"
+            type: "SignifyAuth"
+            required: true
+            description: "HTTP Signature authentication"
+        invariants:
+          - "auth.signify_resource must match the agent's controller AID"
+          - "auth.signature must verify against controller's current key state"
+          - "auth.signify_timestamp must pass KRAM timeliness check"

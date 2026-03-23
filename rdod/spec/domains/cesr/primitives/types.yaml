@@ -179,3 +179,74 @@ types:
         invariants:
           - "v1 format: PPPPvvKKKKllllll_ (17 characters, underscore terminated)"
           - "Size is hex-encoded (max 16,777,215)"
+
+  - name: "AID"
+    description: "Autonomic Identifier — a CESR-qualified self-certifying identifier prefix. The AID is the SAID of the inception event for transferable identifiers, or the qualified public key for non-transferable identifiers."
+    variants:
+      - name: "transferable"
+        fields:
+          - name: "prefix"
+            type: "string"
+            required: true
+            description: "CESR qb64 encoded — the SAID of the inception event"
+            constraints:
+              pattern: "^[A-Za-z0-9_-]+$"
+              min_length: 44
+              max_length: 88
+        invariants:
+          - "Prefix is a SAID (content digest) of the inception event body"
+          - "CESR code prefix determines the digest algorithm: E=Blake3-256 (44 chars), I=SHA2-256, 0D=Blake3-512, etc."
+          - "Transferable AIDs can produce rotation events"
+      - name: "non-transferable"
+        fields:
+          - name: "prefix"
+            type: "string"
+            required: true
+            description: "CESR qb64 encoded — the qualified public key"
+            constraints:
+              pattern: "^[A-Za-z0-9_-]+$"
+              min_length: 44
+              max_length: 88
+        invariants:
+          - "Prefix IS the public key (qualified with CESR code)"
+          - "CESR code prefix determines the key algorithm: B/D=Ed25519 (44 chars), 1AAB/1AAD=ECDSA (88 chars), etc."
+          - "Non-transferable AIDs cannot rotate — the key IS the identifier"
+          - "Commonly used for witnesses"
+
+  - name: "SAID"
+    description: "Self-Addressing Identifier — a content-addressable digest of a field map, embedded within that field map. The d field contains a placeholder during computation, which is replaced with the computed digest."
+    variants:
+      - name: "default"
+        fields:
+          - name: "digest"
+            type: "string"
+            required: true
+            description: "CESR qb64 encoded digest"
+            constraints:
+              pattern: "^[A-Za-z0-9_-]+$"
+              min_length: 44
+              max_length: 88
+        invariants:
+          - "CESR code prefix determines algorithm: E=Blake3-256 (44 chars), I=SHA2-256, 0D=Blake3-512, etc."
+          - "Computation: replace d field with '#' * code_length, serialize, hash, encode as qb64"
+          - "Verification: extract d value, replace with placeholder, serialize, hash, compare"
+          - "Field map MUST be serialized in insertion order (not lexicographic) for reproducible SAIDs"
+    encoding:
+      - format: "any"
+        notes: "SAID is encoding-agnostic — works with JSON, CBOR, MGPK, CESR native"
+
+  - name: "DateTime"
+    description: "ISO 8601 datetime string used in KERI messages for timestamps, timeliness checking, and first-seen ordering."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "ISO 8601 formatted datetime with microsecond precision"
+            constraints:
+              pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}\\+00:00$"
+        invariants:
+          - "Always UTC (timezone +00:00)"
+          - "Microsecond precision (6 decimal places) — supports up to 1M messages/second for KRAM"
+          - "Used in KRAM timeliness checking — must be monotonically increasing per sender"

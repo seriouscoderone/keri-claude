@@ -6,47 +6,55 @@ domain_ref: "local-agent/api"
 # in other languages should express equivalent assertions in their native testing framework.
 
 properties:
-  - invariant: "kli commands map directly to Identifier Repository (Habery in keripy)/Hab/Manager operations"
+  - invariant: "Every kli command produces the same observable state change as the equivalent programmatic API call"
     term: "CLI Interface"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        @given(
-            command=st.sampled_from([
-                ('init', 'create_habery'),
-                ('incept', 'makeHab'),
-                ('rotate', 'rotate'),
-                ('interact', 'interact'),
-                ('status', 'get_key_state')
-            ])
-        )
-        def test_cli_maps_to_hab_operations(command):
-            cli_cmd, hab_method = command
-            if cli_cmd == 'init':
-                assert hasattr(Habery, hab_method) or callable(hab_method)
-            else:
-                assert hasattr(Hab, hab_method)
-    strategy: "st.sampled_from for CLI command to method mapping"
-    notes: "CLI is a thin layer — each kli command maps directly to a domain operation"
+        for each (cli_command, api_equivalent) in [
+          ("kli init --name test --salt 0A...",  create_habery(name="test", salt=...)),
+          ("kli incept --alias myid ...",        habery.makeHab("myid", ...)),
+          ("kli rotate --alias myid",            hab.rotate()),
+          ("kli interact --alias myid --data {}", hab.interact(data=[...])),
+          ("kli status --alias myid",            hab.kever.key_state())
+        ]:
+          # Execute CLI command against a fresh environment
+          env_cli = create_test_environment()
+          cli_result = execute_cli(env_cli, cli_command)
+          # Execute API equivalent against an identical fresh environment
+          env_api = create_test_environment()
+          api_result = execute_api(env_api, api_equivalent)
+          # Both must produce the same observable state
+          assert env_cli.get_kel(prefix) == env_api.get_kel(prefix)
+          assert env_cli.get_key_state(prefix) == env_api.get_key_state(prefix)
+        # The behavioral guarantee: CLI is a transparent wrapper — it never
+        # adds, removes, or transforms domain behavior.
+    strategy: "Each CLI command paired with its programmatic equivalent, compared by observable state"
+    notes: "CLI is a thin layer — verified by state equivalence with the programmatic API, not by checking method existence"
 
-  - invariant: "init() creates a Habery with shared database, key manager, and event processor"
+  - invariant: "init() creates a Habery that can manage identifiers, sign content, and process events"
     term: "Hab/Habery API"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        @given(
-            name=st.text(min_size=1, max_size=20, alphabet=st.characters(whitelist_categories=('L',))),
-            salt=st.binary(min_size=16, max_size=16)
-        )
-        def test_init_creates_habery(name, salt):
-            habery = create_habery(name=name, salt=salt)
-            assert habery.db is not None
-            assert habery.mgr is not None
-            assert habery.kvy is not None
-    strategy: "st.text for name, st.binary for salt"
-    notes: "Habery initialization must create all shared resources"
+        for any valid name, salt:
+          habery = create_habery(name=name, salt=salt)
+          # Database is functional — can store and retrieve
+          hab = habery.makeHab("test_hab")
+          assert hab.pre is not null  # Identifier was created
+          # Key manager is functional — can sign
+          sigs = hab.sign(random_bytes())
+          assert length(sigs) >= 1
+          # Event processor is functional — can validate events
+          kel = habery.get_kel(hab.pre)
+          assert length(kel) >= 1  # At least the inception event
+          assert kel[0].sn == 0    # Inception is at sequence 0
+        # The behavioral guarantee: a Habery created by init() is immediately
+        # usable for the full identifier lifecycle — not just structurally present.
+    strategy: "Arbitrary valid names and salts, verified through actual identifier lifecycle operations"
+    notes: "Habery initialization verified by exercising its core capabilities, not by checking internal field existence"
 
   - invariant: "All operations are synchronous and in-process"
     term: "Hab/Habery API"

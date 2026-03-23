@@ -51,24 +51,33 @@ properties:
     strategy: "st.integers for key count and next-key count"
     notes: "Hab combines verification (Key State Tracker / Kever in keripy) with signing (Manager) — verfers must be consistent between them"
 
-  - invariant: "An Identifier Repository (Habery in keripy) provides a shared Event Database (Baser in keripy), key manager (Manager), and Event Processor (Kevery in keripy) to all its Habitats"
+  - invariant: "All Habitats from the same Identifier Repository share a unified view of event data, key material, and validation state"
     term: "Habitat"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        @given(hab_count=st.integers(min_value=2, max_value=10))
-        def test_habery_shared_resources(hab_count):
-            habery = create_habery()
-            habs = [habery.makeHab(f'hab_{i}') for i in range(hab_count)]
-            # All habs share the same database
-            assert all(h.db is habery.db for h in habs)
-            # All habs share the same key manager
-            assert all(h.mgr is habery.mgr for h in habs)
-            # All habs share the same event processor
-            assert all(h.kvy is habery.kvy for h in habs)
-    strategy: "st.integers for number of habs to create"
-    notes: "Identifier Repository (Habery in keripy) is the resource owner — all Habs created from it share Event Database (Baser), Manager, and Event Processor (Kevery)"
+        for any hab_count >= 2:
+          habery = create_habery()
+          habs = [habery.makeHab("hab_" + i) for i in range(hab_count)]
+          # Events created by one hab are visible to all others via the shared database
+          habs[0].interact(data=[{"msg": "from hab 0"}])
+          for each other_hab in habs[1:]:
+            kel = habery.get_kel(habs[0].pre)
+            assert length(kel) >= 2  # inception + interaction visible from shared db
+          # Key operations through one hab's manager affect the shared key state
+          habs[1].rotate()
+          key_state = habery.get_key_state(habs[1].pre)
+          assert key_state.sn == 1  # Rotation visible across the shared environment
+          # Validation of external events by one hab's processor updates the shared state
+          external_event = create_valid_external_event()
+          habery.process_event(external_event)
+          for each hab in habs:
+            assert habery.get_key_state(external_event.pre) is not null
+        # The behavioral guarantee: habs created from the same habery observe
+        # a consistent, shared view of all events, keys, and validation results.
+    strategy: "Multiple habs from the same habery, verified by cross-hab state visibility"
+    notes: "Shared resources verified by observable behavior — events/state from one hab visible to all others"
 
   - invariant: "Append-only semantics for KEL events — events are never modified after acceptance"
     term: "Local Database"
@@ -240,30 +249,33 @@ properties:
     strategy: "st.booleans() for temp vs persistent mode"
     notes: "LMDB memory-mapped I/O requires persistent local filesystem — Lambda/serverless is incompatible"
 
-  - invariant: "kli commands map directly to Identifier Repository (Habery in keripy)/Hab/Manager operations"
+  - invariant: "Every kli command produces the same observable state change as the equivalent programmatic API call"
     term: "CLI Interface"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        @given(
-            command=st.sampled_from([
-                ('init', 'create_habery'),
-                ('incept', 'makeHab'),
-                ('rotate', 'rotate'),
-                ('interact', 'interact'),
-                ('status', 'get_key_state')
-            ])
-        )
-        def test_cli_maps_to_hab_operations(command):
-            cli_cmd, hab_method = command
-            # kli command has a corresponding Habery/Hab method
-            if cli_cmd == 'init':
-                assert hasattr(Habery, hab_method) or callable(hab_method)
-            else:
-                assert hasattr(Hab, hab_method)
-    strategy: "st.sampled_from for CLI command to method mapping"
-    notes: "CLI is a thin layer — each kli command maps directly to a domain operation"
+        for each (cli_command, api_equivalent) in [
+          ("kli init --name test --salt 0A...",  create_habery(name="test", salt=...)),
+          ("kli incept --alias myid ...",        habery.makeHab("myid", ...)),
+          ("kli rotate --alias myid",            hab.rotate()),
+          ("kli interact --alias myid --data {}", hab.interact(data=[...])),
+          ("kli status --alias myid",            hab.kever.key_state())
+        ]:
+          # Execute CLI command against a fresh environment
+          env_cli = create_test_environment()
+          cli_result = execute_cli(env_cli, cli_command)
+          # Execute API equivalent against an identical fresh environment
+          env_api = create_test_environment()
+          api_result = execute_api(env_api, api_equivalent)
+          # Both must produce the same observable state
+          assert env_cli.get_kel(prefix) == env_api.get_kel(prefix)
+          assert env_cli.get_key_state(prefix) == env_api.get_key_state(prefix)
+        # The behavioral guarantee: CLI is a transparent wrapper — it never
+        # adds, removes, or transforms domain behavior. Every CLI command
+        # produces identical KEL entries and key state as the direct API.
+    strategy: "Each CLI command paired with its programmatic equivalent, compared by observable state"
+    notes: "CLI is a thin layer — verified by state equivalence with the programmatic API, not by checking method existence"
 
 # Formalized port contracts
 contracts:

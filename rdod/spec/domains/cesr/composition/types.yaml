@@ -1,0 +1,87 @@
+domain_ref: "cesr/composition"
+
+types:
+  - name: "CountCode"
+    description: "A self-framing prefix that declares the type and size of the following group of primitives."
+    variants:
+      - name: "small"
+        fields:
+          - name: "selector"
+            type: "string"
+            required: true
+            description: "Type character after the '-' prefix"
+            constraints:
+              pattern: "^[A-Za-z]$"
+          - name: "count"
+            type: "integer"
+            required: true
+            description: "Number of quadlets (text) or triplets (binary) in the group"
+            constraints:
+              min: 0
+              max: 4095
+        invariants:
+          - "Text format: '-' + selector + 2 Base64 chars (4 chars total)"
+          - "text_size_bytes = 4 * count"
+          - "binary_size_bytes = 3 * count"
+      - name: "large"
+        fields:
+          - name: "selector"
+            type: "string"
+            required: true
+            description: "Type character after the '--' prefix"
+          - name: "count"
+            type: "integer"
+            required: true
+            description: "Number of quadlets/triplets"
+            constraints:
+              min: 0
+              max: 1073741823
+        invariants:
+          - "Text format: '--' + selector + 5 Base64 chars (8 chars total)"
+
+  - name: "CESRGroup"
+    description: "A count-code-prefixed group of CESR primitives. Groups are self-framing and composable — they can nest."
+    variants:
+      - name: "attachment"
+        fields:
+          - name: "counter"
+            type: "CountCode"
+            required: true
+            description: "Group header — type and size"
+          - name: "primitives"
+            type: "array[Matter]"
+            required: true
+            description: "Ordered sequence of CESR primitives"
+        invariants:
+          - "Total encoded size of primitives must equal counter.count quadlets/triplets"
+          - "Attachment groups (-C##) are never part of signed content"
+      - name: "message"
+        fields:
+          - name: "body"
+            type: "map"
+            required: true
+            description: "Serialized field map (JSON, CBOR, MGPK, or CESR native)"
+          - name: "attachments"
+            type: "array[CESRGroup]"
+            required: true
+            description: "Attached signature groups, receipt groups, seal groups"
+        invariants:
+          - "Body is delimited by version string size field"
+          - "Attachments follow immediately after body"
+
+  - name: "ColdStartTritet"
+    description: "The first 3 bits of a byte that determine the frame type during cold-start stream parsing."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "integer"
+            required: true
+            description: "Tritet value (0-7)"
+            constraints:
+              min: 0
+              max: 7
+              enum: [0, 1, 2, 3, 4, 5, 6, 7]
+        invariants:
+          - "Computed as: byte >> 5"
+          - "0=whitespace, 1=CESR count code, 2=CESR op code, 3=JSON, 4=MGPK FixMap, 5=CBOR map, 6=MGPK Map16/32, 7=CESR binary"
