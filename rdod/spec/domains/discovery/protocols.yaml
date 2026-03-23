@@ -59,3 +59,50 @@ protocols:
     terminal_states:
       success: "Remote AID's key state and service endpoints available locally — can now communicate"
       failure: "OOBI unresolvable or KEL invalid — remote AID not trusted"
+
+  - name: "EndRoleAuthorization"
+    description: "Authorize a service endpoint for an identifier. The controller signs a reply message declaring an endpoint URL for a specific role (witness, agent, watcher, etc.), which is then discoverable via OOBI resolution."
+    participants:
+      - domain: "domain://keri/identity/anchoring"
+        role: "Anchors the endpoint authorization seal in the controller's KEL"
+      - domain: "domain://discovery"
+        role: "Processes the signed reply and stores the endpoint mapping"
+      - domain: "domain://keri/identity/state"
+        role: "Provides the controller's current key state for reply signature verification"
+    trigger: "Controller wants to declare a service endpoint for their AID"
+    steps:
+      - seq: 1
+        domain: "domain://keri/identity/anchoring"
+        action: "construct_endpoint_seal"
+        input: "AID, role (witness/agent/watcher/etc.), endpoint URL, endpoint AID"
+        output: "Interaction event with endpoint authorization seal"
+      - seq: 2
+        domain: "domain://discovery"
+        action: "construct_end_role_reply"
+        input: "Signed reply message (rpy) with route=/end/role containing endpoint data"
+        output: "Reply message ready for dissemination"
+        depends_on: [1]
+      - seq: 3
+        domain: "domain://keri/identity/state"
+        action: "verify_reply_signature"
+        input: "Reply message + controller's current key state"
+        output: "Signature verified — controller authorized this endpoint"
+        depends_on: [2]
+        on_failure:
+          - error: "EndRoleAuthorizationError"
+            action: "abort"
+            compensation: "Reply rejected — endpoint not stored"
+      - seq: 4
+        domain: "domain://discovery"
+        action: "store_endpoint"
+        input: "Verified reply with endpoint data"
+        output: "Endpoint mapping stored — discoverable via OOBI"
+        depends_on: [3]
+        on_failure:
+          - error: "BADARejectError"
+            action: "abort"
+            compensation: "Reply is stale — a newer endpoint already exists"
+    timeout: "30s"
+    terminal_states:
+      success: "Endpoint authorized and discoverable via OOBI for the specified AID/role"
+      failure: "Authorization rejected — endpoint not stored"

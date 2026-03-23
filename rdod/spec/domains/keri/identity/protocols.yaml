@@ -174,69 +174,6 @@ protocols:
       success: "Delegated AID exists, delegator's KEL contains approval seal, witnesses have receipted both"
       failure: "Delegation request expired — no AID created"
 
-  - name: "MultisigRotation"
-    description: "Rotate keys for a multi-signature identifier. All group members must coordinate to produce a rotation event meeting the signing threshold. Similar to MultisigInception but modifies existing key state."
-    participants:
-      - domain: "domain://keri/identity/thresholds"
-        role: "Coordinates signature collection across group members"
-      - domain: "domain://keri/identity/establishment"
-        role: "Validates rotation event with pre-rotation binding"
-      - domain: "domain://keri/identity/key-commitment"
-        role: "Verifies new keys match prior next commitments"
-      - domain: "domain://keri/accountability/receipting"
-        role: "Witnesses receipt the rotation"
-      - domain: "domain://cloud-agent-service/api"
-        role: "Routes coordination messages between members"
-    trigger: "Lead member proposes group rotation with new keys"
-    steps:
-      - seq: 1
-        domain: "domain://keri/identity/thresholds"
-        action: "propose_group_rotation"
-        input: "New keys (matching prior next commitments), new next digests, new thresholds, witness changes"
-        output: "Unsigned rotation event (rot) + exn proposal (route=/multisig/rot)"
-      - seq: 2
-        domain: "domain://cloud-agent-service/api"
-        action: "distribute_rotation_proposal"
-        input: "exn with route=/multisig/rot"
-        output: "Each member receives the rotation proposal"
-        depends_on: [1]
-      - seq: 3
-        domain: "domain://keri/identity/key-commitment"
-        action: "verify_pre_rotation_binding"
-        input: "Each member verifies new keys match prior next key digests"
-        output: "Pre-rotation binding confirmed"
-        depends_on: [2]
-        on_failure:
-          - error: "ValidationError"
-            action: "abort"
-            compensation: "Members reject rotation — prior key state unchanged"
-      - seq: 4
-        domain: "domain://keri/identity/thresholds"
-        action: "accumulate_rotation_signatures"
-        input: "Each member signs the rotation event, returns via exn"
-        output: "Signatures accumulated in PSE until threshold met"
-        depends_on: [3]
-        on_failure:
-          - error: "GroupCoordinationTimeoutError"
-            action: "abort"
-            compensation: "Signatures pruned after timeout"
-      - seq: 5
-        domain: "domain://keri/identity/establishment"
-        action: "validate_and_accept_rotation"
-        input: "Rotation event with threshold-satisfying signatures"
-        output: "Key state updated"
-        depends_on: [4]
-      - seq: 6
-        domain: "domain://keri/accountability/receipting"
-        action: "collect_witness_receipts"
-        input: "Accepted rotation event"
-        output: "Witness receipts meeting TOAD"
-        depends_on: [5]
-    timeout: "3600s for signatures, 3600s for witness receipts"
-    terminal_states:
-      success: "Group AID rotated — new keys active, old keys invalid for new events"
-      failure: "Rotation timeout — prior key state remains active"
-
   - name: "KeyStateQuery"
     description: "Query another controller or service for the current key state of an identifier. Returns the key state notice (ksn) which can be verified against the queried identifier's KEL."
     participants:
@@ -275,3 +212,77 @@ protocols:
     terminal_states:
       success: "Local key state updated to latest from remote source"
       failure: "Query unanswered or reply rejected — cached state unchanged"
+
+  - name: "DelegatedRotation"
+    description: "Rotate keys for a delegated identifier. Requires both the delegate's rotation event and the delegator's re-approval via a new KEL seal — same two-party coordination as delegated inception."
+    participants:
+      - domain: "domain://keri/identity/establishment"
+        role: "Validates the delegated rotation event with pre-rotation binding"
+      - domain: "domain://keri/identity/key-commitment"
+        role: "Verifies new keys match prior next commitments"
+      - domain: "domain://keri/delegation/authorization"
+        role: "Verifies delegator's re-approval seal"
+      - domain: "domain://keri/identity/anchoring"
+        role: "Delegator anchors re-approval seal via interaction event"
+      - domain: "domain://keri/accountability/receipting"
+        role: "Witnesses receipt both delegate's and delegator's events"
+    trigger: "Delegate requests key rotation for a delegated identifier"
+    steps:
+      - seq: 1
+        domain: "domain://keri/identity/establishment"
+        action: "construct_delegated_rotation"
+        input: "New keys (matching prior next commitments), new next digests, witness changes"
+        output: "Signed delegated rotation event (drt)"
+      - seq: 2
+        domain: "domain://keri/identity/key-commitment"
+        action: "verify_pre_rotation_binding"
+        input: "New key digests compared against prior establishment event's n field"
+        output: "Binding confirmed"
+        depends_on: [1]
+        on_failure:
+          - error: "PreRotationBindingError"
+            action: "abort"
+            compensation: "Rotation rejected — prior key state unchanged"
+      - seq: 3
+        domain: "domain://keri/identity/establishment"
+        action: "validate_basic_structure"
+        input: "Delegated rotation event + signatures"
+        output: "Event structurally valid, signatures verified"
+        depends_on: [2]
+        on_failure:
+          - error: "MissingSignatureError"
+            action: "escrow"
+            compensation: "PSE — accumulates signatures"
+      - seq: 4
+        domain: "domain://keri/delegation/authorization"
+        action: "await_delegator_seal"
+        input: "Delegate's drt event SAID, delegator's AID"
+        output: "Delegator's event containing re-approval seal"
+        depends_on: [3]
+        on_failure:
+          - error: "MissingDelegatorSealError"
+            action: "escrow"
+            compensation: "PDE — retried when delegator's event arrives"
+      - seq: 5
+        domain: "domain://keri/identity/anchoring"
+        action: "delegator_anchors_seal"
+        input: "Delegator creates ixn with seal of delegate's drt SAID"
+        output: "Delegator's ixn accepted to their KEL"
+        depends_on: [3]
+      - seq: 6
+        domain: "domain://keri/identity/establishment"
+        action: "accept_delegated_rotation"
+        input: "drt event + delegator seal confirmation"
+        output: "Key state updated for delegated AID"
+        depends_on: [4, 5]
+      - seq: 7
+        domain: "domain://keri/accountability/receipting"
+        action: "collect_witness_receipts"
+        input: "Both delegate's drt and delegator's ixn"
+        output: "Witness receipts for both events"
+        depends_on: [6]
+    timeout: "86400s (24 hours — delegation may require human approval)"
+    compensation: "If delegator never approves, rotation held in PDE until timeout"
+    terminal_states:
+      success: "Delegated AID rotated, delegator's KEL contains re-approval seal, witnesses receipted"
+      failure: "Delegation re-approval timeout — prior key state remains active"
