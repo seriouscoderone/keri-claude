@@ -45,18 +45,16 @@ subdomains:
     relationship: "Owns the async event processing pipeline — Processing Units, Message Queues, escrow management, long-running operation tracking, and specialized processing components"
     via_port: "port://cloud-agent-service/processing/inbound/process-work"
 
-kernels: []
+kernels:
+  - ref: "kernel://cesr"
+    source: "domain://cesr"
+    relationship: "Conformist — all events and messages encoded in CESR format"
 
 adjacents:
   - ref: "domain://keri"
     relationship: "Conformist — runs KERI protocol stack on behalf of controllers"
     pattern: "Conformist"
     via_port: "port://keri/inbound/identifier-lifecycle"
-    is_cross_cutting: false
-  - ref: "domain://cesr"
-    relationship: "Conformist — all events and messages encoded in CESR format"
-    pattern: "Conformist"
-    via_port: "port://cesr/inbound/encoding"
     is_cross_cutting: false
   - ref: "domain://acdc"
     relationship: "Conformist — issues, stores, and presents ACDC credentials"

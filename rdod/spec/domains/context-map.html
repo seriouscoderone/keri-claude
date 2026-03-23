@@ -1080,6 +1080,11 @@ const RDOD_DATA = {
         "ref": "kernel://cryptographic-algorithms",
         "source": "Blake3-256/Blake2b-256/SHA-256 (digests for SAIDs), Ed25519 (signing)",
         "relationship": "Cryptographic digest and signature types appear directly in ACDC field values — qualified via CESR encoding"
+      },
+      {
+        "ref": "kernel://cesr",
+        "source": "domain://cesr",
+        "relationship": "OHS + Published Language — ACDCs are encoded in CESR format (JSON, CBOR, MGPK, or native CESR); all SAIDs use CESR-qualified digests"
       }
     ],
     "adjacents": [
@@ -1088,13 +1093,6 @@ const RDOD_DATA = {
         "relationship": "Partnership — ACDC credentials anchor to KERI identifiers for issuer/issuee authentication; credential state is sealed in the issuer's KEL",
         "pattern": "Partnership",
         "via_port": "port://keri/inbound/identifier-lifecycle",
-        "is_cross_cutting": false
-      },
-      {
-        "ref": "domain://cesr",
-        "relationship": "OHS + Published Language — ACDCs are encoded in CESR format (JSON, CBOR, MGPK, or native CESR); all SAIDs use CESR-qualified digests",
-        "pattern": "Published Language",
-        "via_port": "port://cesr/inbound/encoding",
         "is_cross_cutting": false
       }
     ],
@@ -6986,20 +6984,19 @@ const RDOD_DATA = {
         "via_port": "port://cloud-agent-service/processing/inbound/process-work"
       }
     ],
-    "kernels": [],
+    "kernels": [
+      {
+        "ref": "kernel://cesr",
+        "source": "domain://cesr",
+        "relationship": "Conformist — all events and messages encoded in CESR format"
+      }
+    ],
     "adjacents": [
       {
         "ref": "domain://keri",
         "relationship": "Conformist — runs KERI protocol stack on behalf of controllers",
         "pattern": "Conformist",
         "via_port": "port://keri/inbound/identifier-lifecycle",
-        "is_cross_cutting": false
-      },
-      {
-        "ref": "domain://cesr",
-        "relationship": "Conformist — all events and messages encoded in CESR format",
-        "pattern": "Conformist",
-        "via_port": "port://cesr/inbound/encoding",
         "is_cross_cutting": false
       },
       {
@@ -8694,16 +8691,14 @@ const RDOD_DATA = {
         "ref": "kernel://cryptographic-algorithms",
         "source": "Ed25519 (signing), X25519 (DH), Blake3-256/Blake2b-256/SHA-256 (digests), argon2 (key stretching)",
         "relationship": "Cryptographic algorithm types appear directly in KERI key state and event structures — no translation layer"
+      },
+      {
+        "ref": "kernel://cesr",
+        "source": "domain://cesr",
+        "relationship": "OHS + Published Language — KERI events are encoded in CESR format; CESR defines the encoding contract"
       }
     ],
     "adjacents": [
-      {
-        "ref": "domain://cesr",
-        "relationship": "OHS + Published Language — KERI events are encoded in CESR format; CESR defines the encoding contract",
-        "pattern": "Published Language",
-        "via_port": "port://cesr/inbound/encoding",
-        "is_cross_cutting": false
-      },
       {
         "ref": "domain://acdc",
         "relationship": "Partnership — ACDC credentials anchor to KERI identifiers for issuer authentication",
@@ -13093,8 +13088,8 @@ const RDOD_DATA = {
     "kernels": [
       {
         "ref": "kernel://cesr/primitives",
-        "source": "Tholder type for threshold representation (simple integer and fractionally weighted), satisfaction checking via satisfy() / enough()",
-        "relationship": "The Tholder/SignatureThreshold type is a kernel primitive that parses threshold expressions and evaluates them against index sets — this subdomain uses it for all three threshold roles"
+        "source": "domain://cesr/primitives",
+        "relationship": "Published Language — uses Tholder/SignatureThreshold type for threshold representation (simple integer and fractionally weighted) and satisfaction checking"
       }
     ],
     "adjacents": [],
@@ -14440,6 +14435,11 @@ const RDOD_DATA = {
         "ref": "kernel://cryptographic-algorithms",
         "source": "Ed25519 (signing), X25519 (key agreement), Blake3-256/Blake2b-256/SHA-256 (digests), argon2 (key stretching), libsodium",
         "relationship": "Cryptographic algorithm types used directly for local key generation, signing, hashing, and key stretching"
+      },
+      {
+        "ref": "kernel://cesr",
+        "source": "domain://cesr",
+        "relationship": "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly for all encoding"
       }
     ],
     "adjacents": [
@@ -14448,13 +14448,6 @@ const RDOD_DATA = {
         "relationship": "Conformist — runs the full KERI protocol stack locally, using all event types, key state computation, and escrow processing directly",
         "pattern": "Conformist",
         "via_port": "port://keri/inbound/identifier-lifecycle",
-        "is_cross_cutting": false
-      },
-      {
-        "ref": "domain://cesr",
-        "relationship": "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly for all encoding",
-        "pattern": "Conformist",
-        "via_port": "port://cesr/inbound/encoding",
         "is_cross_cutting": false
       },
       {
@@ -14737,7 +14730,13 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [],
+    "kernels": [
+      {
+        "ref": "kernel://cesr",
+        "source": "domain://cesr",
+        "relationship": "Published Language — CESR encoding for all messages"
+      }
+    ],
     "adjacents": [
       {
         "ref": "domain://keri/identity",
@@ -14748,11 +14747,6 @@ const RDOD_DATA = {
         "ref": "domain://acdc",
         "relationship": "Conformist — full ACDC credential management",
         "pattern": "Conformist"
-      },
-      {
-        "ref": "domain://cesr",
-        "relationship": "Published Language — CESR encoding for all messages",
-        "pattern": "Published Language"
       },
       {
         "ref": "domain://discovery",
@@ -14965,7 +14959,13 @@ const RDOD_DATA = {
         "via_port": "port://signify-client/resources/inbound/resource-ops"
       }
     ],
-    "kernels": [],
+    "kernels": [
+      {
+        "ref": "kernel://cesr",
+        "source": "domain://cesr",
+        "relationship": "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly"
+      }
+    ],
     "adjacents": [
       {
         "ref": "domain://cloud-agent-service",
@@ -14979,13 +14979,6 @@ const RDOD_DATA = {
         "relationship": "Conformist — uses KERI protocol types and event structures directly without translation",
         "pattern": "Conformist",
         "via_port": "port://keri/inbound/identifier-lifecycle",
-        "is_cross_cutting": false
-      },
-      {
-        "ref": "domain://cesr",
-        "relationship": "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly",
-        "pattern": "Conformist",
-        "via_port": "port://cesr/inbound/encoding",
         "is_cross_cutting": false
       },
       {
@@ -16014,17 +16007,18 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [],
+    "kernels": [
+      {
+        "ref": "kernel://cesr",
+        "source": "domain://cesr",
+        "relationship": "Published Language — CESR encoding for all inbound/outbound messages"
+      }
+    ],
     "adjacents": [
       {
         "ref": "domain://keri/integrity/detection",
         "relationship": "Conformist — implements integrity detection protocol",
         "pattern": "Conformist"
-      },
-      {
-        "ref": "domain://cesr",
-        "relationship": "Published Language — CESR encoding for all inbound/outbound messages",
-        "pattern": "Published Language"
       }
     ],
     "externals": [],
@@ -16476,17 +16470,18 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [],
+    "kernels": [
+      {
+        "ref": "kernel://cesr",
+        "source": "domain://cesr",
+        "relationship": "Published Language — CESR encoding for all inbound/outbound messages"
+      }
+    ],
     "adjacents": [
       {
         "ref": "domain://keri/accountability/receipting",
         "relationship": "Conformist — implements receipting protocol",
         "pattern": "Conformist"
-      },
-      {
-        "ref": "domain://cesr",
-        "relationship": "Published Language — CESR encoding for all inbound/outbound messages",
-        "pattern": "Published Language"
       }
     ],
     "externals": [],

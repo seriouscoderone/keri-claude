@@ -103,13 +103,11 @@ kernels:
   - ref: "kernel://cryptographic-algorithms"
     source: "Ed25519 (signing), X25519 (DH), Blake3-256/Blake2b-256/SHA-256 (digests), argon2 (key stretching)"
     relationship: "Cryptographic algorithm types appear directly in KERI key state and event structures — no translation layer"
+  - ref: "kernel://cesr"
+    source: "domain://cesr"
+    relationship: "OHS + Published Language — KERI events are encoded in CESR format; CESR defines the encoding contract"
 
 adjacents:
-  - ref: "domain://cesr"
-    relationship: "OHS + Published Language — KERI events are encoded in CESR format; CESR defines the encoding contract"
-    pattern: "Published Language"
-    via_port: "port://cesr/inbound/encoding"
-    is_cross_cutting: false
   - ref: "domain://acdc"
     relationship: "Partnership — ACDC credentials anchor to KERI identifiers for issuer authentication"
     pattern: "Partnership"

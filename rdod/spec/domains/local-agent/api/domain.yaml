@@ -44,15 +44,15 @@ adjacents:
   - ref: "domain://acdc"
     relationship: "Conformist — full ACDC credential management"
     pattern: "Conformist"
-  - ref: "domain://cesr"
-    relationship: "Published Language — CESR encoding for all messages"
-    pattern: "Published Language"
   - ref: "domain://discovery"
     relationship: "Conformist — OOBI resolution and endpoint management"
     pattern: "Conformist"
 
 externals: []
-kernels: []
+kernels:
+  - ref: "kernel://cesr"
+    source: "domain://cesr"
+    relationship: "Published Language — CESR encoding for all messages"
 
 invariants:
   - "Private keys never leave the local device"
