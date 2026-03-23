@@ -8,6 +8,9 @@ imports:
   - term: "Salter"
     from: "domain://cesr/primitives"
     usage: "Key derivation from salt"
+  - term: "KRAM"
+    from: "domain://keri"
+    usage: "Signify clients must produce KRAM-compatible timestamps and signatures for cloud agent authentication"
 
 terms:
   - term: "Signify Client"
@@ -36,17 +39,6 @@ terms:
       - "client.boot() → POST /boot with inception event → provisions agent instance"
       - "client.identifiers().create() → edge signs inception → POST /identifiers with KRAM headers → polls operation until witnesses receipt"
     related_terms: ["Signify Client", "KRAM", "Signing Request"]
-
-  - term: "KRAM"
-    synonyms: ["KERI Request Authentication Method"]
-    definition: "HTTP signature-based authentication using KERI identifiers. Each request includes signed headers that the cloud agent verifies against the controller's KEL. Spans both subdomains — key-management produces the signatures, resources attaches them to requests."
-    invariants:
-      - "Signature covers HTTP method, path, and body digest"
-      - "Cloud agent verifies against controller AID's current key state"
-      - "Replay protection via nonce and timestamp"
-    examples:
-      - "Signify-TS header: `Signature: keyid=AID;created=timestamp;...`"
-    related_terms: ["Signify Protocol", "Signify Client"]
 
   - term: "Browser Extension"
     synonyms: ["Signify Browser Extension"]

@@ -6021,6 +6021,7 @@ const RDOD_DATA = {
           "CESR Matter",
           "Base Primitive"
         ],
+        "specializes": "domain://cesr",
         "definition": "The base type for all non-indexed CESR primitives. Encapsulates a (code, raw) pair and provides bidirectional domain transforms to qb64, qb2, and (code, raw).",
         "invariants": [
           "Every Matter instance holds exactly one code (text) and one raw (bytes) value",
@@ -6048,6 +6049,7 @@ const RDOD_DATA = {
           "Verifier",
           "Public Key Primitive"
         ],
+        "specializes": "domain://cesr",
         "definition": "A public verification key primitive. Extends Matter with a verify(sig, ser) method that validates a signature against serialized data using the embedded public key.",
         "invariants": [
           "Code determines the key algorithm: D=Ed25519, 1AAA=ECDSA secp256k1 non-transferable, 1AAB=ECDSA secp256k1, 1AAI=ECDSA secp256r1 non-transferable, 1AAJ=ECDSA secp256r1, 1AAC=Ed448 non-transferable, 1AAD=Ed448",
@@ -6074,6 +6076,7 @@ const RDOD_DATA = {
           "Digest Primitive",
           "Hash Primitive"
         ],
+        "specializes": "domain://cesr",
         "definition": "A cryptographic digest primitive. Extends Matter with methods to compute digests from serialized data and compare digest values.",
         "invariants": [
           "Code determines the hash algorithm: E=Blake3-256, F=Blake2b-256, G=Blake2s-256, H=SHA3-256, I=SHA2-256",
@@ -13764,7 +13767,7 @@ const RDOD_DATA = {
     "template_version": "1.0",
     "id": "keri/integrity/evidence",
     "name": "Duplicity Evidence",
-    "description": "Detection and storage of duplicitous events — fork detection, evidence collection, the Likely Duplicitous Escrow (temporary holding), the Duplicitous Event Log (permanent forensic evidence), and the notification bus for cross-component coordination. When an incoming event conflicts with an already-accepted event at the same (prefix, sn), this subdomain detects the fork, stages the evidence in .ldes, promotes confirmed duplicity to .dels, and notifies dependent components.\n",
+    "description": "Detection and storage of duplicitous events — fork detection, evidence collection, the Likely Duplicitous Escrow (temporary holding), the Duplicitous Event Log (permanent forensic evidence), and the notification bus for cross-component coordination. When an incoming event conflicts with an already-accepted event at the same (prefix, sn), this subdomain detects the fork, stages the evidence in the Likely Duplicitous Escrow [.ldes in keripy], promotes confirmed duplicity to the Duplicitous Event Log store [.dels in keripy], and notifies dependent components.\n",
     "version": "0.1.0",
     "source_material": [
       {
@@ -13913,7 +13916,7 @@ const RDOD_DATA = {
     "externals": [
       {
         "ref": "external://persistence",
-        "source": "Escrow storage (.ldes temporary, .dels permanent)",
+        "source": "Escrow storage (Likely Duplicitous Escrow [.ldes in keripy] temporary, Duplicitous Event Log store [.dels in keripy] permanent)",
         "relationship": "Evidence lifecycle requires persistent storage — temporary escrow with timeout for likely duplicitous events, permanent append-only storage for confirmed duplicity evidence"
       }
     ],
@@ -14879,25 +14882,6 @@ const RDOD_DATA = {
         ]
       },
       {
-        "term": "KRAM",
-        "synonyms": [
-          "KERI Request Authentication Method"
-        ],
-        "definition": "HTTP signature-based authentication using KERI identifiers. Each request includes signed headers that the cloud agent verifies against the controller's KEL. Spans both subdomains — key-management produces the signatures, resources attaches them to requests.",
-        "invariants": [
-          "Signature covers HTTP method, path, and body digest",
-          "Cloud agent verifies against controller AID's current key state",
-          "Replay protection via nonce and timestamp"
-        ],
-        "examples": [
-          "Signify-TS header: `Signature: keyid=AID;created=timestamp;...`"
-        ],
-        "related_terms": [
-          "Signify Protocol",
-          "Signify Client"
-        ]
-      },
-      {
         "term": "Browser Extension",
         "synonyms": [
           "Signify Browser Extension"
@@ -14950,6 +14934,15 @@ const RDOD_DATA = {
         "related_terms": [
           "Signify Protocol",
           "Browser Extension"
+        ]
+      },
+      {
+        "term": "KRAM",
+        "definition": "KERI Request Authentication Method — HTTP signature-based authentication using KERI identifiers. Each request includes signed headers that the cloud agent verifies against the controller's KEL",
+        "invariants": [
+          "Signature covers HTTP method, path, and body digest",
+          "Cloud agent verifies against controller AID's current key state",
+          "Replay protection via nonce and timestamp"
         ]
       }
     ],

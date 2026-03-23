@@ -21,6 +21,7 @@ terms:
 
   - term: "Matter"
     synonyms: ["CESR Matter", "Base Primitive"]
+    specializes: "domain://cesr"
     definition: "The base type for all non-indexed CESR primitives. Encapsulates a (code, raw) pair and provides bidirectional domain transforms to qb64, qb2, and (code, raw)."
     invariants:
       - "Every Matter instance holds exactly one code (text) and one raw (bytes) value"
@@ -34,6 +35,7 @@ terms:
 
   - term: "Verfer"
     synonyms: ["Verifier", "Public Key Primitive"]
+    specializes: "domain://cesr"
     definition: "A public verification key primitive. Extends Matter with a verify(sig, ser) method that validates a signature against serialized data using the embedded public key."
     invariants:
       - "Code determines the key algorithm: D=Ed25519, 1AAA=ECDSA secp256k1 non-transferable, 1AAB=ECDSA secp256k1, 1AAI=ECDSA secp256r1 non-transferable, 1AAJ=ECDSA secp256r1, 1AAC=Ed448 non-transferable, 1AAD=Ed448"
@@ -48,6 +50,7 @@ terms:
 
   - term: "Diger"
     synonyms: ["Digester", "Digest Primitive", "Hash Primitive"]
+    specializes: "domain://cesr"
     definition: "A cryptographic digest primitive. Extends Matter with methods to compute digests from serialized data and compare digest values."
     invariants:
       - "Code determines the hash algorithm: E=Blake3-256, F=Blake2b-256, G=Blake2s-256, H=SHA3-256, I=SHA2-256"

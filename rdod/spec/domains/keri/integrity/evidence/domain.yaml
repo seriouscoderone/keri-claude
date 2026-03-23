@@ -7,7 +7,8 @@ description: >
   Duplicitous Escrow (temporary holding), the Duplicitous Event Log (permanent forensic evidence),
   and the notification bus for cross-component coordination. When an incoming event conflicts with
   an already-accepted event at the same (prefix, sn), this subdomain detects the fork, stages the
-  evidence in .ldes, promotes confirmed duplicity to .dels, and notifies dependent components.
+  evidence in the Likely Duplicitous Escrow [.ldes in keripy], promotes confirmed duplicity to the
+  Duplicitous Event Log store [.dels in keripy], and notifies dependent components.
 version: "0.1.0"
 
 source_material:
@@ -46,7 +47,7 @@ adjacents: []
 
 externals:
   - ref: "external://persistence"
-    source: "Escrow storage (.ldes temporary, .dels permanent)"
+    source: "Escrow storage (Likely Duplicitous Escrow [.ldes in keripy] temporary, Duplicitous Event Log store [.dels in keripy] permanent)"
     relationship: "Evidence lifecycle requires persistent storage — temporary escrow with timeout for likely duplicitous events, permanent append-only storage for confirmed duplicity evidence"
 
 implementation_guidance:
