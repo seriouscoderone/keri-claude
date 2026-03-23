@@ -396,29 +396,6 @@ const RDOD_DATA = {
         ]
       },
       {
-        "term": "SAID",
-        "synonyms": [
-          "Self-Addressing Identifier",
-          "Self-Addressing Data Identifier"
-        ],
-        "definition": "A cryptographic digest of the enclosing field map (block) that serves as a content-addressable, universally unique identifier. Computed via the SAID protocol with depth-first most compact form algorithm.",
-        "invariants": [
-          "Must have >= 128 bits of cryptographic strength",
-          "A signature on a SAID is equivalent to a commitment on the full SAD from which it was derived",
-          "Most compact form SAID computed by depth-first: SAIDify leaves, compact them, SAIDify parents, repeat to root",
-          "CESR-encoded with type prefix indicating the digest algorithm (e.g., E for Blake3-256)"
-        ],
-        "examples": [
-          "Top-level d field: EBdXt3gIXOf2BBWNHdSXCJnFJL5OuQPyM5K0neuniccM",
-          "Attribute section d field used as compact form value of a field"
-        ],
-        "related_terms": [
-          "SAD",
-          "Compact Disclosure",
-          "CESR"
-        ]
-      },
-      {
         "term": "SAD",
         "synonyms": [
           "Self-Addressed Data"
@@ -2434,6 +2411,46 @@ const RDOD_DATA = {
           "TEL Storage Schema",
           "TEL Database",
           "Credential Storage"
+        ]
+      },
+      {
+        "term": "Credentialer",
+        "synonyms": [],
+        "definition": "Issues and manages ACDC credentials — validates schemas, creates credential events, tracks issuance completion. Companion to TEL Registrar.",
+        "invariants": [
+          "complete() returns true when credential issuance is fully anchored",
+          "Has processEscrows() for pending credential operations",
+          "Monitor queries Credentialer to detect credential operation completion"
+        ],
+        "examples": [
+          "POST /credentials triggers Credentialer -> issues ACDC -> anchors to KEL via TEL Registrar"
+        ],
+        "related_terms": [
+          "TEL Registrar",
+          "Registry",
+          "TEL",
+          "Credential State"
+        ]
+      },
+      {
+        "term": "Seeker",
+        "synonyms": [
+          "Credential Search"
+        ],
+        "definition": "Full-text search index for credentials. Creates static indexes (issuer/schema, issuee/schema) and dynamic indexes (all scalar fields in credential payload) for efficient querying.",
+        "invariants": [
+          "Indexes built from credential schema — each schema field becomes a searchable index",
+          "Queries via find(filter, sort, skip, limit) returning matching SAIDs",
+          "Triggered by Verifier cues when credentials are saved"
+        ],
+        "examples": [
+          "seeker.find({'schema': schemaSaid, '-a-i': issuerAid}) -> [SAID, ...]",
+          "Dynamic index: credential attribute 'LEI' becomes searchable via '-a-LEI'"
+        ],
+        "related_terms": [
+          "Credentialer",
+          "Credential Storage",
+          "Registry Collection"
         ]
       }
     ],
@@ -6236,6 +6253,30 @@ const RDOD_DATA = {
         ]
       },
       {
+        "term": "SAID",
+        "synonyms": [
+          "Self-Addressing Identifier",
+          "Self-Addressing Data Identifier"
+        ],
+        "definition": "A cryptographic digest of the enclosing field map (block) that serves as a content-addressable, universally unique identifier. Computed via the SAID protocol with depth-first most compact form algorithm.",
+        "invariants": [
+          "Must have >= 128 bits of cryptographic strength",
+          "A signature on a SAID is equivalent to a commitment on the full SAD from which it was derived",
+          "Most compact form SAID computed by depth-first: SAIDify leaves, compact them, SAIDify parents, repeat to root",
+          "CESR-encoded with type prefix indicating the digest algorithm (e.g., E for Blake3-256)"
+        ],
+        "examples": [
+          "Top-level d field: EBdXt3gIXOf2BBWNHdSXCJnFJL5OuQPyM5K0neuniccM",
+          "Attribute section d field used as compact form value of a field"
+        ],
+        "related_terms": [
+          "SAD",
+          "Saider",
+          "Saidify",
+          "Diger"
+        ]
+      },
+      {
         "term": "Saider",
         "synonyms": [
           "SAID Primitive",
@@ -7484,97 +7525,6 @@ const RDOD_DATA = {
           "Boatswain",
           "Registrar",
           "Credentialer"
-        ]
-      },
-      {
-        "term": "Counselor",
-        "synonyms": [],
-        "definition": "Tracks multi-sig group event approval progress. Monitors whether all required group members have provided their partial signatures for a pending group event.",
-        "invariants": [
-          "Agent owns one Counselor instance",
-          "Monitor queries Counselor to detect group operation completion",
-          "Works with Multiplexor to collect exchange messages by SAID"
-        ],
-        "examples": [
-          "3-of-5 group rotation: Counselor tracks 3 partial sigs arrived -> marks complete"
-        ],
-        "related_terms": [
-          "Multi-sig Assembly",
-          "Long-running Operation",
-          "Escrow"
-        ]
-      },
-      {
-        "term": "Boatswain",
-        "synonyms": [],
-        "definition": "Tracks delegation approval progress. Monitors whether a delegator has anchored the required seal approving a delegated event.",
-        "invariants": [
-          "Agent owns one Boatswain instance",
-          "Monitor queries Boatswain to detect delegation operation completion"
-        ],
-        "examples": [
-          "Delegated inception: Boatswain waits for delegator's anchoring seal -> marks complete"
-        ],
-        "related_terms": [
-          "Long-running Operation",
-          "Escrow"
-        ]
-      },
-      {
-        "term": "Registrar",
-        "synonyms": [],
-        "definition": "Manages TEL (Transaction Event Log) events for credential registries — registry inception, credential issuance events, revocation events. Works with Credentialer for the full credential lifecycle.",
-        "invariants": [
-          "Creates and manages registry TEL events",
-          "Has processEscrows() called by Escrower for pending TEL events",
-          "Integrates with Monitor for tracking registry/credential operations"
-        ],
-        "examples": [
-          "Registrar processes vcp (registry inception) -> creates management TEL",
-          "Registrar processes iss (credential issuance) -> creates credential TEL entry"
-        ],
-        "related_terms": [
-          "Credentialer",
-          "Escrow",
-          "Long-running Operation"
-        ]
-      },
-      {
-        "term": "Credentialer",
-        "synonyms": [],
-        "definition": "Issues and manages ACDC credentials — validates schemas, creates credential events, tracks issuance completion. Companion to Registrar.",
-        "invariants": [
-          "complete() returns true when credential issuance is fully anchored",
-          "Has processEscrows() for pending credential operations",
-          "Monitor queries Credentialer to detect credential operation completion"
-        ],
-        "examples": [
-          "POST /credentials triggers Credentialer -> issues ACDC -> anchors to KEL via Registrar"
-        ],
-        "related_terms": [
-          "Registrar",
-          "Long-running Operation",
-          "Escrow"
-        ]
-      },
-      {
-        "term": "Seeker",
-        "synonyms": [
-          "Credential Search"
-        ],
-        "definition": "Full-text search index for credentials. Creates static indexes (issuer/schema, issuee/schema) and dynamic indexes (all scalar fields in credential payload) for efficient querying.",
-        "invariants": [
-          "Indexes built from credential schema — each schema field becomes a searchable index",
-          "Queries via find(filter, sort, skip, limit) returning matching SAIDs",
-          "Triggered by Verifier cues when credentials are saved"
-        ],
-        "examples": [
-          "seeker.find({'schema': schemaSaid, '-a-i': issuerAid}) -> [SAID, ...]",
-          "Dynamic index: credential attribute 'LEI' becomes searchable via '-a-LEI'"
-        ],
-        "related_terms": [
-          "Credentialer",
-          "Processing Unit"
         ]
       },
       {
@@ -8990,6 +8940,30 @@ const RDOD_DATA = {
           "KAWA",
           "Witness"
         ]
+      },
+      {
+        "term": "Witness Threshold Check",
+        "synonyms": [
+          "toader.satisfy() [keripy]",
+          "WitnessConfig.enough_receipts() [keriox]"
+        ],
+        "definition": "Verification that a sufficient number of designated witnesses have receipted an event, meeting or exceeding the witness threshold (TOAD). The check compares the count of verified witness receipt indices against the threshold.",
+        "invariants": [
+          "Each witness receipt is a signature (indexed or non-indexed) from a designated witness",
+          "Witness receipts are verified against the witness's own public key",
+          "toader.satisfy(windices) checks whether the count of valid witness signatures meets the TOAD",
+          "Insufficient witness receipts route the event to the Partially-Witnessed Escrow (PWE)",
+          "New witness receipts arriving later trigger reprocessing of PWE-escrowed events"
+        ],
+        "examples": [
+          "TOAD=3 with 5 witnesses: 3 valid witness receipts arrive -> toader.satisfy([0, 2, 4]) -> True -> pass",
+          "TOAD=3 but only 2 receipts -> toader.satisfy([0, 2]) -> False -> escrow to PWE"
+        ],
+        "related_terms": [
+          "KAWA",
+          "TOAD",
+          "Witness"
+        ]
       }
     ],
     "domain_clients": [
@@ -9253,6 +9227,30 @@ const RDOD_DATA = {
           "Accountability Threshold",
           "Immune Constraint",
           "First-seen Rule"
+        ]
+      },
+      {
+        "term": "Quorum Calculation",
+        "synonyms": [
+          "ample() [keripy]",
+          "simple() [keripy]",
+          "majority computation"
+        ],
+        "definition": "Functions that compute Byzantine fault-tolerant majority thresholds for witness quorums and multi-signature groups. Used during event construction to derive default thresholds when not explicitly specified by the caller.",
+        "invariants": [
+          "simple(n) = floor(n/2) + 1 — simple majority of n participants",
+          "ample(n, f) computes m where ceil((n+f+1)/2) <= m <= n-f, subject to n >= 3f+1",
+          "When f is not specified, ample defaults to the maximum fault tolerance: f = floor((n-1)/3)",
+          "Ensures Byzantine fault tolerance — the quorum is large enough to tolerate f faulty participants out of n total"
+        ],
+        "examples": [
+          "simple(5) = 3 — majority of 5",
+          "ample(7) = 5 — with 7 witnesses, f = floor(6/3) = 2, need 5 to tolerate 2 faulty"
+        ],
+        "related_terms": [
+          "BFT Quorum",
+          "Accountability Threshold",
+          "Immune Constraint"
         ]
       }
     ],
@@ -9899,6 +9897,23 @@ const RDOD_DATA = {
         "related_terms": [
           "Delegation Chain",
           "Delegated Inception"
+        ]
+      },
+      {
+        "term": "Boatswain",
+        "synonyms": [],
+        "definition": "Tracks delegation approval progress. Monitors whether a delegator has anchored the required seal approving a delegated event.",
+        "invariants": [
+          "Agent owns one Boatswain instance",
+          "Monitor queries Boatswain to detect delegation operation completion"
+        ],
+        "examples": [
+          "Delegated inception: Boatswain waits for delegator's anchoring seal -> marks complete"
+        ],
+        "related_terms": [
+          "Delegated Inception",
+          "Delegated Rotation",
+          "Partially-Delegated Escrow"
         ]
       }
     ],
@@ -11833,32 +11848,6 @@ const RDOD_DATA = {
         ]
       },
       {
-        "term": "Threshold Satisfaction",
-        "synonyms": [
-          "tholder.satisfy() [keripy]",
-          "SignatureThreshold.enough() [keriox]"
-        ],
-        "definition": "Checking whether a set of verified signature indices satisfies a signing threshold expression. The threshold can be a simple integer (M-of-N) or a fractionally weighted expression. Returns True if the provided indices meet the threshold requirement.",
-        "invariants": [
-          "Simple threshold: len(valid_indices) >= M where threshold is M",
-          "Weighted threshold: sum of weights at valid_indices >= 1.0",
-          "The Tholder instance stores the parsed threshold expression from kt or nt fields",
-          "Tholder.size gives the minimum number of keys needed to possibly satisfy the threshold",
-          "The same satisfy() mechanism is used for both signing threshold (tholder) and rotation threshold (ntholder)"
-        ],
-        "examples": [
-          "Simple: tholder(sith='2'), indices=[0, 2] -> 2 >= 2 -> True",
-          "Weighted: tholder(sith=['1/2','1/2','1/2']), indices=[0, 1] -> 0.5 + 0.5 = 1.0 >= 1 -> True",
-          "Insufficient: tholder(sith='3'), indices=[0, 2] -> 2 < 3 -> False -> escrow to PSE"
-        ],
-        "related_terms": [
-          "Dual Threshold Verification",
-          "Signature Verification",
-          "Signing Threshold",
-          "Fractionally Weighted Threshold"
-        ]
-      },
-      {
         "term": "Pre-rotation Binding",
         "synonyms": [
           "exposeds() [keripy]",
@@ -11882,30 +11871,6 @@ const RDOD_DATA = {
           "Threshold Satisfaction",
           "Pre-rotation Commitment",
           "Ondex"
-        ]
-      },
-      {
-        "term": "Witness Threshold Check",
-        "synonyms": [
-          "toader.satisfy() [keripy]",
-          "WitnessConfig.enough_receipts() [keriox]"
-        ],
-        "definition": "Verification that a sufficient number of designated witnesses have receipted an event, meeting or exceeding the witness threshold (TOAD). The check compares the count of verified witness receipt indices against the threshold.",
-        "invariants": [
-          "Each witness receipt is a signature (indexed or non-indexed) from a designated witness",
-          "Witness receipts are verified against the witness's own public key",
-          "toader.satisfy(windices) checks whether the count of valid witness signatures meets the TOAD",
-          "Insufficient witness receipts route the event to the Partially-Witnessed Escrow (PWE)",
-          "New witness receipts arriving later trigger reprocessing of PWE-escrowed events"
-        ],
-        "examples": [
-          "TOAD=3 with 5 witnesses: 3 valid witness receipts arrive -> toader.satisfy([0, 2, 4]) -> True -> pass",
-          "TOAD=3 but only 2 receipts -> toader.satisfy([0, 2]) -> False -> escrow to PWE"
-        ],
-        "related_terms": [
-          "Dual Threshold Verification",
-          "Witness Threshold",
-          "TOAD"
         ]
       },
       {
@@ -12058,29 +12023,6 @@ const RDOD_DATA = {
         "related_terms": [
           "Event Field Structure",
           "Event Creation Functions"
-        ]
-      },
-      {
-        "term": "Quorum Calculation",
-        "synonyms": [
-          "ample() [keripy]",
-          "simple() [keripy]",
-          "majority computation"
-        ],
-        "definition": "Functions that compute Byzantine fault-tolerant majority thresholds for witness quorums and multi-signature groups. Used during event construction to derive default thresholds when not explicitly specified by the caller.",
-        "invariants": [
-          "simple(n) = floor(n/2) + 1 — simple majority of n participants",
-          "ample(n, f) computes m where ceil((n+f+1)/2) <= m <= n-f, subject to n >= 3f+1",
-          "When f is not specified, ample defaults to the maximum fault tolerance: f = floor((n-1)/3)",
-          "Ensures Byzantine fault tolerance — the quorum is large enough to tolerate f faulty participants out of n total"
-        ],
-        "examples": [
-          "simple(5) = 3 — majority of 5",
-          "ample(7) = 5 — with 7 witnesses, f = floor(6/3) = 2, need 5 to tolerate 2 faulty"
-        ],
-        "related_terms": [
-          "Event Creation Functions",
-          "Event Field Structure"
         ]
       },
       {
@@ -13062,6 +13004,32 @@ const RDOD_DATA = {
         ]
       },
       {
+        "term": "Threshold Satisfaction",
+        "synonyms": [
+          "tholder.satisfy() [keripy]",
+          "SignatureThreshold.enough() [keriox]"
+        ],
+        "definition": "Checking whether a set of verified signature indices satisfies a signing threshold expression. The threshold can be a simple integer (M-of-N) or a fractionally weighted expression. Returns True if the provided indices meet the threshold requirement.",
+        "invariants": [
+          "Simple threshold: len(valid_indices) >= M where threshold is M",
+          "Weighted threshold: sum of weights at valid_indices >= 1.0",
+          "The Tholder instance stores the parsed threshold expression from kt or nt fields",
+          "Tholder.size gives the minimum number of keys needed to possibly satisfy the threshold",
+          "The same satisfy() mechanism is used for both signing threshold (tholder) and rotation threshold (ntholder)"
+        ],
+        "examples": [
+          "Simple: tholder(sith='2'), indices=[0, 2] -> 2 >= 2 -> True",
+          "Weighted: tholder(sith=['1/2','1/2','1/2']), indices=[0, 1] -> 0.5 + 0.5 = 1.0 >= 1 -> True",
+          "Insufficient: tholder(sith='3'), indices=[0, 2] -> 2 < 3 -> False -> escrow to PSE"
+        ],
+        "related_terms": [
+          "Signing Threshold",
+          "Rotation Threshold",
+          "Dual Threshold",
+          "Fractionally Weighted Threshold"
+        ]
+      },
+      {
         "term": "Witness Configuration",
         "synonyms": [
           "WitnessConfig [keriox]",
@@ -13113,6 +13081,24 @@ const RDOD_DATA = {
         "related_terms": [
           "Witness Threshold",
           "Witness Configuration"
+        ]
+      },
+      {
+        "term": "Counselor",
+        "synonyms": [],
+        "definition": "Tracks multi-sig group event approval progress. Monitors whether all required group members have provided their partial signatures for a pending group event.",
+        "invariants": [
+          "Agent owns one Counselor instance",
+          "Monitor queries Counselor to detect group operation completion",
+          "Works with Multiplexor to collect exchange messages by SAID"
+        ],
+        "examples": [
+          "3-of-5 group rotation: Counselor tracks 3 partial sigs arrived -> marks complete"
+        ],
+        "related_terms": [
+          "Threshold Satisfaction",
+          "Partially-Signed Escrow",
+          "Signature Accumulation"
         ]
       }
     ],

@@ -1,6 +1,17 @@
 # ubiquitous-language.yaml
 domain_ref: "acdc"
 
+imports:
+  - term: "SAID"
+    from: "domain://cesr/primitives"
+    usage: "Every ACDC has a SAID (d field) computed over its field map"
+  - term: "AID"
+    from: "domain://keri"
+    usage: "Issuers and issuees are identified by their KERI AIDs"
+  - term: "KEL"
+    from: "domain://keri"
+    usage: "ACDC credentials are anchored to issuer KELs for non-repudiability"
+
 terms:
   - term: "ACDC"
     synonyms: ["Authentic Chained Data Container", "Verifiable Container", "Credential"]
@@ -40,19 +51,6 @@ terms:
       - "A QVI organization designated as issuee of a GLEIF-issued credential"
       - "A person designated as issuee of a legal entity credential"
     related_terms: ["Issuer", "Targeted ACDC", "Untargeted ACDC", "Discloser"]
-
-  - term: "SAID"
-    synonyms: ["Self-Addressing Identifier", "Self-Addressing Data Identifier"]
-    definition: "A cryptographic digest of the enclosing field map (block) that serves as a content-addressable, universally unique identifier. Computed via the SAID protocol with depth-first most compact form algorithm."
-    invariants:
-      - "Must have >= 128 bits of cryptographic strength"
-      - "A signature on a SAID is equivalent to a commitment on the full SAD from which it was derived"
-      - "Most compact form SAID computed by depth-first: SAIDify leaves, compact them, SAIDify parents, repeat to root"
-      - "CESR-encoded with type prefix indicating the digest algorithm (e.g., E for Blake3-256)"
-    examples:
-      - "Top-level d field: EBdXt3gIXOf2BBWNHdSXCJnFJL5OuQPyM5K0neuniccM"
-      - "Attribute section d field used as compact form value of a field"
-    related_terms: ["SAD", "Compact Disclosure", "CESR"]
 
   - term: "SAD"
     synonyms: ["Self-Addressed Data"]

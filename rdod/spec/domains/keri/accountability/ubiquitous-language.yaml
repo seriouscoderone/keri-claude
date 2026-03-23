@@ -44,6 +44,20 @@ terms:
       - "Toader(toad=4) in keripy wrapping bt=4 for a 6-witness configuration"
     related_terms: ["KAWA", "Witness"]
 
+  - term: "Witness Threshold Check"
+    synonyms: ["toader.satisfy() [keripy]", "WitnessConfig.enough_receipts() [keriox]"]
+    definition: "Verification that a sufficient number of designated witnesses have receipted an event, meeting or exceeding the witness threshold (TOAD). The check compares the count of verified witness receipt indices against the threshold."
+    invariants:
+      - "Each witness receipt is a signature (indexed or non-indexed) from a designated witness"
+      - "Witness receipts are verified against the witness's own public key"
+      - "toader.satisfy(windices) checks whether the count of valid witness signatures meets the TOAD"
+      - "Insufficient witness receipts route the event to the Partially-Witnessed Escrow (PWE)"
+      - "New witness receipts arriving later trigger reprocessing of PWE-escrowed events"
+    examples:
+      - "TOAD=3 with 5 witnesses: 3 valid witness receipts arrive -> toader.satisfy([0, 2, 4]) -> True -> pass"
+      - "TOAD=3 but only 2 receipts -> toader.satisfy([0, 2]) -> False -> escrow to PWE"
+    related_terms: ["KAWA", "TOAD", "Witness"]
+
 events:
   - name: "WitnessAgreementComplete"
     payload: "aid: AID, sn: int, event_said: SAID, witness_count: int, threshold: int"

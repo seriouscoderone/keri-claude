@@ -239,6 +239,29 @@ terms:
       - "A credential event escrowed in missing registry escrow [.mre in keripy] because the registry VCP has not yet been received"
     related_terms: ["TEL Storage Schema", "TEL Database", "Credential Storage"]
 
+  - term: "Credentialer"
+    synonyms: []
+    definition: "Issues and manages ACDC credentials — validates schemas, creates credential events, tracks issuance completion. Companion to TEL Registrar."
+    invariants:
+      - "complete() returns true when credential issuance is fully anchored"
+      - "Has processEscrows() for pending credential operations"
+      - "Monitor queries Credentialer to detect credential operation completion"
+    examples:
+      - "POST /credentials triggers Credentialer -> issues ACDC -> anchors to KEL via TEL Registrar"
+    related_terms: ["TEL Registrar", "Registry", "TEL", "Credential State"]
+
+  - term: "Seeker"
+    synonyms: ["Credential Search"]
+    definition: "Full-text search index for credentials. Creates static indexes (issuer/schema, issuee/schema) and dynamic indexes (all scalar fields in credential payload) for efficient querying."
+    invariants:
+      - "Indexes built from credential schema — each schema field becomes a searchable index"
+      - "Queries via find(filter, sort, skip, limit) returning matching SAIDs"
+      - "Triggered by Verifier cues when credentials are saved"
+    examples:
+      - "seeker.find({'schema': schemaSaid, '-a-i': issuerAid}) -> [SAID, ...]"
+      - "Dynamic index: credential attribute 'LEI' becomes searchable via '-a-LEI'"
+    related_terms: ["Credentialer", "Credential Storage", "Registry Collection"]
+
 events:
   - name: "RegistryCreated"
     payload: "regid: REGID, issuer_aid: AID, dt: DateTime"

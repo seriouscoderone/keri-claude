@@ -68,6 +68,19 @@ terms:
       - "ample(7) = 5: with 7 witnesses tolerating 2 faults, 5 receipts needed"
     related_terms: ["Accountability Threshold", "Immune Constraint", "First-seen Rule"]
 
+  - term: "Quorum Calculation"
+    synonyms: ["ample() [keripy]", "simple() [keripy]", "majority computation"]
+    definition: "Functions that compute Byzantine fault-tolerant majority thresholds for witness quorums and multi-signature groups. Used during event construction to derive default thresholds when not explicitly specified by the caller."
+    invariants:
+      - "simple(n) = floor(n/2) + 1 — simple majority of n participants"
+      - "ample(n, f) computes m where ceil((n+f+1)/2) <= m <= n-f, subject to n >= 3f+1"
+      - "When f is not specified, ample defaults to the maximum fault tolerance: f = floor((n-1)/3)"
+      - "Ensures Byzantine fault tolerance — the quorum is large enough to tolerate f faulty participants out of n total"
+    examples:
+      - "simple(5) = 3 — majority of 5"
+      - "ample(7) = 5 — with 7 witnesses, f = floor(6/3) = 2, need 5 to tolerate 2 faulty"
+    related_terms: ["BFT Quorum", "Accountability Threshold", "Immune Constraint"]
+
 events:
   - name: "AccountabilityThresholdMet"
     payload: "aid: AID, sn: int, event_said: SAID, receipt_count: int, threshold: int"

@@ -43,12 +43,6 @@ ubiquitous_language:
       - "Issuee AID must be provably controllable"
       - "Presence of issuee makes the ACDC targeted; absence makes it untargeted"
 
-  - term: "SAID"
-    definition: "Self-Addressing Identifier — a cryptographic digest of the enclosing field map that serves as a content-addressable identifier"
-    invariants:
-      - "Computed using the most compact form algorithm with depth-first SAIDification"
-      - "Provides collision-resistant unique reference with >= 128 bits cryptographic strength"
-
 domain_clients: []
 
 subdomains:
@@ -99,5 +93,15 @@ implementation_guidance:
     explicit rather than exposing raw field map manipulation.
 
 issues: []
+
+published_language:
+  - term: "ACDC"
+    description: "Authentic Chained Data Container — the credential type used across exchange, lifecycle, and privacy domains"
+  - term: "Credential Type Dimensions"
+    description: "Six orthogonal credential classification dimensions — referenced by all ACDC subdomains"
+  - term: "Issuee"
+    description: "Credential recipient AID — referenced in exchange and privacy domains"
+  - term: "Issuer"
+    description: "Credential creator AID — referenced in lifecycle, exchange, and privacy domains"
 
 tags: ["credential", "verifiable", "chained", "disclosure", "authentic-data"]

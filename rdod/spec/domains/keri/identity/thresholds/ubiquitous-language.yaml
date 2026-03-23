@@ -81,6 +81,21 @@ terms:
       - "bt='0' for an AID with no witnesses (NoBackers config trait)"
     related_terms: ["Witness Configuration", "Witness List", "Signing Threshold"]
 
+  - term: "Threshold Satisfaction"
+    synonyms: ["tholder.satisfy() [keripy]", "SignatureThreshold.enough() [keriox]"]
+    definition: "Checking whether a set of verified signature indices satisfies a signing threshold expression. The threshold can be a simple integer (M-of-N) or a fractionally weighted expression. Returns True if the provided indices meet the threshold requirement."
+    invariants:
+      - "Simple threshold: len(valid_indices) >= M where threshold is M"
+      - "Weighted threshold: sum of weights at valid_indices >= 1.0"
+      - "The Tholder instance stores the parsed threshold expression from kt or nt fields"
+      - "Tholder.size gives the minimum number of keys needed to possibly satisfy the threshold"
+      - "The same satisfy() mechanism is used for both signing threshold (tholder) and rotation threshold (ntholder)"
+    examples:
+      - "Simple: tholder(sith='2'), indices=[0, 2] -> 2 >= 2 -> True"
+      - "Weighted: tholder(sith=['1/2','1/2','1/2']), indices=[0, 1] -> 0.5 + 0.5 = 1.0 >= 1 -> True"
+      - "Insufficient: tholder(sith='3'), indices=[0, 2] -> 2 < 3 -> False -> escrow to PSE"
+    related_terms: ["Signing Threshold", "Rotation Threshold", "Dual Threshold", "Fractionally Weighted Threshold"]
+
   - term: "Witness Configuration"
     synonyms: ["WitnessConfig [keriox]", "witness config"]
     definition: "The current witness list paired with the receipt threshold (TOAD). Provides the accountability layer of key state — which witnesses must receipt events and how many receipts are required. Updated atomically at establishment events when witnesses are added, removed, or the threshold changes."
@@ -114,6 +129,17 @@ terms:
       - "After rotation: one witness removed via br=['BJfu...'], two added via ba=['BNew1...', 'BNew2...']"
       - "Single witness setup: b=['BGKV...'] with bt='1' requiring the one witness receipt"
     related_terms: ["Witness Threshold", "Witness Configuration"]
+
+  - term: "Counselor"
+    synonyms: []
+    definition: "Tracks multi-sig group event approval progress. Monitors whether all required group members have provided their partial signatures for a pending group event."
+    invariants:
+      - "Agent owns one Counselor instance"
+      - "Monitor queries Counselor to detect group operation completion"
+      - "Works with Multiplexor to collect exchange messages by SAID"
+    examples:
+      - "3-of-5 group rotation: Counselor tracks 3 partial sigs arrived -> marks complete"
+    related_terms: ["Threshold Satisfaction", "Partially-Signed Escrow", "Signature Accumulation"]
 
 events:
   - name: "SigningThresholdSatisfied"

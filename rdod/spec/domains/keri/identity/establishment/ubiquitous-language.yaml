@@ -1,6 +1,19 @@
 # ubiquitous-language.yaml
 domain_ref: "keri/identity/establishment"
 
+imports:
+  - term: "Threshold Satisfaction"
+    from: "domain://keri/identity/thresholds"
+    usage: "Used in step 3 of the event validation pipeline to check if verified signature indices meet the signing threshold, and in step 4 to check the rotation threshold"
+
+  - term: "Witness Threshold Check"
+    from: "domain://keri/accountability"
+    usage: "Used in step 5 of the event validation pipeline to verify that sufficient witness receipts have been collected before accepting an event"
+
+  - term: "Quorum Calculation"
+    from: "domain://keri/accountability/consensus"
+    usage: "Used by Event Creation Functions to derive default signing and witness thresholds when not explicitly provided by the caller"
+
 terms:
   - term: "Event Validation Pipeline"
     synonyms: ["processEvent() [keripy]", "process_notice() [keriox]"]
@@ -47,21 +60,6 @@ terms:
       - "Siger at index 1 fails verification -> index 1 excluded from the valid set"
     related_terms: ["Dual Threshold Verification", "Threshold Satisfaction", "Indexed Signature"]
 
-  - term: "Threshold Satisfaction"
-    synonyms: ["tholder.satisfy() [keripy]", "SignatureThreshold.enough() [keriox]"]
-    definition: "Checking whether a set of verified signature indices satisfies a signing threshold expression. The threshold can be a simple integer (M-of-N) or a fractionally weighted expression. Returns True if the provided indices meet the threshold requirement."
-    invariants:
-      - "Simple threshold: len(valid_indices) >= M where threshold is M"
-      - "Weighted threshold: sum of weights at valid_indices >= 1.0"
-      - "The Tholder instance stores the parsed threshold expression from kt or nt fields"
-      - "Tholder.size gives the minimum number of keys needed to possibly satisfy the threshold"
-      - "The same satisfy() mechanism is used for both signing threshold (tholder) and rotation threshold (ntholder)"
-    examples:
-      - "Simple: tholder(sith='2'), indices=[0, 2] -> 2 >= 2 -> True"
-      - "Weighted: tholder(sith=['1/2','1/2','1/2']), indices=[0, 1] -> 0.5 + 0.5 = 1.0 >= 1 -> True"
-      - "Insufficient: tholder(sith='3'), indices=[0, 2] -> 2 < 3 -> False -> escrow to PSE"
-    related_terms: ["Dual Threshold Verification", "Signature Verification", "Signing Threshold", "Fractionally Weighted Threshold"]
-
   - term: "Pre-rotation Binding"
     synonyms: ["exposeds() [keripy]", "verify_next() / check_threshold() [keriox]"]
     definition: "The mechanism that enforces pre-rotation commitments during key rotation. Each indexed signature in a rotation event carries both an index (position in current key list) and an ondex (position in the prior next-key digest list). The binding is verified by computing the digest of the new signing key and comparing it to the pre-committed digest at the ondex position."
@@ -76,20 +74,6 @@ terms:
       - "Prior inception committed to next digests [D(N1), D(N2), D(N3)]. Rotation presents keys [N1, N2, N3]. Siger at index=0 has ondex=0 -> digest(N1) must equal D(N1) -> match."
       - "Attacker tries rotation with unauthorized key K4 at index=0 -> digest(K4) != D(N1) -> no ondex match -> next threshold not satisfied -> rejected"
     related_terms: ["Dual Threshold Verification", "Threshold Satisfaction", "Pre-rotation Commitment", "Ondex"]
-
-  - term: "Witness Threshold Check"
-    synonyms: ["toader.satisfy() [keripy]", "WitnessConfig.enough_receipts() [keriox]"]
-    definition: "Verification that a sufficient number of designated witnesses have receipted an event, meeting or exceeding the witness threshold (TOAD). The check compares the count of verified witness receipt indices against the threshold."
-    invariants:
-      - "Each witness receipt is a signature (indexed or non-indexed) from a designated witness"
-      - "Witness receipts are verified against the witness's own public key"
-      - "toader.satisfy(windices) checks whether the count of valid witness signatures meets the TOAD"
-      - "Insufficient witness receipts route the event to the Partially-Witnessed Escrow (PWE)"
-      - "New witness receipts arriving later trigger reprocessing of PWE-escrowed events"
-    examples:
-      - "TOAD=3 with 5 witnesses: 3 valid witness receipts arrive -> toader.satisfy([0, 2, 4]) -> True -> pass"
-      - "TOAD=3 but only 2 receipts -> toader.satisfy([0, 2]) -> False -> escrow to PWE"
-    related_terms: ["Dual Threshold Verification", "Witness Threshold", "TOAD"]
 
   - term: "Delegation Validation"
     synonyms: ["validateDelegation() [keripy]", "validate_seal() / get_delegator_seal() [keriox]"]
@@ -176,19 +160,6 @@ terms:
       - "Digest seal: a=[{d: 'ECRED_SAID...'}] — anchoring an ACDC credential issuance"
       - "Event seal for delegation: a=[{i: 'EDELEG_AID...', s: '0', d: 'EDIP_SAID...'}] — delegator approving a delegated inception"
     related_terms: ["Event Field Structure", "Event Creation Functions"]
-
-  - term: "Quorum Calculation"
-    synonyms: ["ample() [keripy]", "simple() [keripy]", "majority computation"]
-    definition: "Functions that compute Byzantine fault-tolerant majority thresholds for witness quorums and multi-signature groups. Used during event construction to derive default thresholds when not explicitly specified by the caller."
-    invariants:
-      - "simple(n) = floor(n/2) + 1 — simple majority of n participants"
-      - "ample(n, f) computes m where ceil((n+f+1)/2) <= m <= n-f, subject to n >= 3f+1"
-      - "When f is not specified, ample defaults to the maximum fault tolerance: f = floor((n-1)/3)"
-      - "Ensures Byzantine fault tolerance — the quorum is large enough to tolerate f faulty participants out of n total"
-    examples:
-      - "simple(5) = 3 — majority of 5"
-      - "ample(7) = 5 — with 7 witnesses, f = floor(6/3) = 2, need 5 to tolerate 2 faulty"
-    related_terms: ["Event Creation Functions", "Event Field Structure"]
 
   - term: "Event Serialization Kinds"
     synonyms: ["Serialization Kind", "Serials [keripy]", "SerializationKind [keriox]"]

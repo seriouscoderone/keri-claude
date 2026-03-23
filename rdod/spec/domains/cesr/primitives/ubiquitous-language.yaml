@@ -151,6 +151,19 @@ terms:
       - "Seqner(sn=257) — sequence number 257, code 'M', qb64 'MAQB'"
     related_terms: ["Matter"]
 
+  - term: "SAID"
+    synonyms: ["Self-Addressing Identifier", "Self-Addressing Data Identifier"]
+    definition: "A cryptographic digest of the enclosing field map (block) that serves as a content-addressable, universally unique identifier. Computed via the SAID protocol with depth-first most compact form algorithm."
+    invariants:
+      - "Must have >= 128 bits of cryptographic strength"
+      - "A signature on a SAID is equivalent to a commitment on the full SAD from which it was derived"
+      - "Most compact form SAID computed by depth-first: SAIDify leaves, compact them, SAIDify parents, repeat to root"
+      - "CESR-encoded with type prefix indicating the digest algorithm (e.g., E for Blake3-256)"
+    examples:
+      - "Top-level d field: EBdXt3gIXOf2BBWNHdSXCJnFJL5OuQPyM5K0neuniccM"
+      - "Attribute section d field used as compact form value of a field"
+    related_terms: ["SAD", "Saider", "Saidify", "Diger"]
+
   - term: "Saider"
     synonyms: ["SAID Primitive", "Self-Addressing Identifier Primitive"]
     definition: "A Self-Addressing Identifier primitive. Computes or verifies a SAID — a cryptographic digest used as the unique identifier of the data structure it is embedded in."

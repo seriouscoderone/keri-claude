@@ -53,6 +53,16 @@ terms:
       - "c:['DID'] in Ean's inception — Fay (Ean's delegate) may be treated as Ean by validators"
     related_terms: ["Delegation Chain", "Delegated Inception"]
 
+  - term: "Boatswain"
+    synonyms: []
+    definition: "Tracks delegation approval progress. Monitors whether a delegator has anchored the required seal approving a delegated event."
+    invariants:
+      - "Agent owns one Boatswain instance"
+      - "Monitor queries Boatswain to detect delegation operation completion"
+    examples:
+      - "Delegated inception: Boatswain waits for delegator's anchoring seal -> marks complete"
+    related_terms: ["Delegated Inception", "Delegated Rotation", "Partially-Delegated Escrow"]
+
 events:
   - name: "DelegatedInceptionCreated"
     payload: "delegatee_aid: AID, delegator_aid: AID, key_state: KeyState, seal: DelegationSeal"

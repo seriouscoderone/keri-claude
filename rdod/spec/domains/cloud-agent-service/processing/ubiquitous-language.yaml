@@ -1,6 +1,27 @@
 # ubiquitous-language.yaml
 domain_ref: "cloud-agent-service/processing"
 
+imports:
+  - term: "Counselor"
+    from: "domain://keri/identity/thresholds"
+    usage: "Monitor queries Counselor to detect multi-sig group operation completion; processes group queue work items"
+
+  - term: "Boatswain"
+    from: "domain://keri/delegation"
+    usage: "Monitor queries Boatswain to detect delegation operation completion; processes delegation queue work items"
+
+  - term: "Registrar"
+    from: "domain://acdc/credential-lifecycle"
+    usage: "TEL Registrar manages registry TEL events; has processEscrows() called by Escrow Processing Worker; integrates with Monitor for registry/credential operations"
+
+  - term: "Credentialer"
+    from: "domain://acdc/credential-lifecycle"
+    usage: "Issues and manages ACDC credentials; Monitor queries Credentialer to detect credential operation completion"
+
+  - term: "Seeker"
+    from: "domain://acdc/credential-lifecycle"
+    usage: "Credential search index triggered by Verifier cues when credentials are saved; queried by API handlers"
+
 terms:
   - term: "Processing Unit"
     synonyms: ["Async Worker", "Doer (HIO in keripy)", "DoDoer (composite, HIO in keripy)"]
@@ -55,62 +76,6 @@ terms:
       - "POST /identifiers returns op name 'witness.EDP1...' — poll until done"
       - "POST /credentials returns op name 'credential.EDP1...' — poll until TEL anchored"
     related_terms: ["Processing Unit", "Counselor", "Boatswain", "Registrar", "Credentialer"]
-
-  - term: "Counselor"
-    synonyms: []
-    definition: "Tracks multi-sig group event approval progress. Monitors whether all required group members have provided their partial signatures for a pending group event."
-    invariants:
-      - "Agent owns one Counselor instance"
-      - "Monitor queries Counselor to detect group operation completion"
-      - "Works with Multiplexor to collect exchange messages by SAID"
-    examples:
-      - "3-of-5 group rotation: Counselor tracks 3 partial sigs arrived -> marks complete"
-    related_terms: ["Multi-sig Assembly", "Long-running Operation", "Escrow"]
-
-  - term: "Boatswain"
-    synonyms: []
-    definition: "Tracks delegation approval progress. Monitors whether a delegator has anchored the required seal approving a delegated event."
-    invariants:
-      - "Agent owns one Boatswain instance"
-      - "Monitor queries Boatswain to detect delegation operation completion"
-    examples:
-      - "Delegated inception: Boatswain waits for delegator's anchoring seal -> marks complete"
-    related_terms: ["Long-running Operation", "Escrow"]
-
-  - term: "Registrar"
-    synonyms: []
-    definition: "Manages TEL (Transaction Event Log) events for credential registries — registry inception, credential issuance events, revocation events. Works with Credentialer for the full credential lifecycle."
-    invariants:
-      - "Creates and manages registry TEL events"
-      - "Has processEscrows() called by Escrower for pending TEL events"
-      - "Integrates with Monitor for tracking registry/credential operations"
-    examples:
-      - "Registrar processes vcp (registry inception) -> creates management TEL"
-      - "Registrar processes iss (credential issuance) -> creates credential TEL entry"
-    related_terms: ["Credentialer", "Escrow", "Long-running Operation"]
-
-  - term: "Credentialer"
-    synonyms: []
-    definition: "Issues and manages ACDC credentials — validates schemas, creates credential events, tracks issuance completion. Companion to Registrar."
-    invariants:
-      - "complete() returns true when credential issuance is fully anchored"
-      - "Has processEscrows() for pending credential operations"
-      - "Monitor queries Credentialer to detect credential operation completion"
-    examples:
-      - "POST /credentials triggers Credentialer -> issues ACDC -> anchors to KEL via Registrar"
-    related_terms: ["Registrar", "Long-running Operation", "Escrow"]
-
-  - term: "Seeker"
-    synonyms: ["Credential Search"]
-    definition: "Full-text search index for credentials. Creates static indexes (issuer/schema, issuee/schema) and dynamic indexes (all scalar fields in credential payload) for efficient querying."
-    invariants:
-      - "Indexes built from credential schema — each schema field becomes a searchable index"
-      - "Queries via find(filter, sort, skip, limit) returning matching SAIDs"
-      - "Triggered by Verifier cues when credentials are saved"
-    examples:
-      - "seeker.find({'schema': schemaSaid, '-a-i': issuerAid}) -> [SAID, ...]"
-      - "Dynamic index: credential attribute 'LEI' becomes searchable via '-a-LEI'"
-    related_terms: ["Credentialer", "Processing Unit"]
 
   - term: "Postman"
     synonyms: ["Message Sender"]
