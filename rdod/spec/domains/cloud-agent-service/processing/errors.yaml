@@ -1,0 +1,31 @@
+domain_ref: "cloud-agent-service/processing"
+
+errors:
+  - name: "EscrowTimeoutError"
+    description: "Escrowed item exceeded its configured TTL and was pruned"
+    cause: "The escrow processing loop detected an item older than the timeout threshold"
+    recovery: "abort"
+    severity: "recoverable"
+    context:
+      - field: "escrow_type"
+        type: "string"
+        description: "Which escrow queue (PSE, PWE, PDE, OOE, etc.)"
+      - field: "item_said"
+        type: "string"
+        description: "SAID of the pruned item"
+      - field: "age_seconds"
+        type: "integer"
+        description: "How long the item was escrowed"
+      - field: "timeout_seconds"
+        type: "integer"
+        description: "The configured timeout"
+
+  - name: "OperationNotFoundError"
+    description: "Requested long-running operation does not exist"
+    cause: "GET /operations/{name} for an operation that was never submitted or has been cleaned up"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "operation_name"
+        type: "string"
+        description: "The missing operation name"

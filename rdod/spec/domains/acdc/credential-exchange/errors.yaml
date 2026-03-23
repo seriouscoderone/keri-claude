@@ -1,0 +1,15 @@
+domain_ref: "acdc/credential-exchange"
+
+errors:
+  - name: "UnknownExchangeRouteError"
+    description: "Exchange message has an unrecognized IPEX route"
+    cause: "The exn message route does not match any registered IPEX route (/ipex/apply, /ipex/offer, /ipex/agree, /ipex/grant, /ipex/admit, /ipex/spurn)"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "route"
+        type: "string"
+        description: "The unrecognized route"
+      - field: "message_said"
+        type: "string"
+        description: "SAID of the rejected message"

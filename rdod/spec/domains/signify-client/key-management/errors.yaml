@@ -1,0 +1,35 @@
+domain_ref: "signify-client/key-management"
+
+errors:
+  - name: "InvalidPasscodeError"
+    description: "Passcode does not derive the expected salt"
+    cause: "The user-provided passcode, when stretched through Argon2, does not produce a salt that matches the stored encrypted salt"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "tier"
+        type: "string"
+        description: "The key stretching tier (low, med, high)"
+
+  - name: "PasscodeExpiredError"
+    description: "Passcode has timed out and been zeroed from memory"
+    cause: "The security timeout expired — passcode was wiped for security"
+    recovery: "abort"
+    severity: "recoverable"
+    context:
+      - field: "timeout_seconds"
+        type: "integer"
+        description: "The configured timeout duration"
+
+  - name: "UnsupportedKeeperTypeError"
+    description: "Requested keeper type is not supported"
+    cause: "Key generation requested a keeper type that is not one of: salty, randy, group, extern"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "requested_type"
+        type: "string"
+        description: "The unsupported keeper type"
+      - field: "supported_types"
+        type: "array[string]"
+        description: "List of supported types"

@@ -1,0 +1,28 @@
+domain_ref: "local-agent/api"
+
+errors:
+  - name: "CLIConfigError"
+    description: "CLI configuration file is missing or malformed"
+    cause: "The --config-file or --config-dir arguments point to a file that does not exist or cannot be parsed"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "config_path"
+        type: "string"
+        description: "The configuration file path"
+      - field: "reason"
+        type: "string"
+        description: "Parse error details"
+
+  - name: "CLIArgumentError"
+    description: "Required CLI argument is missing or invalid"
+    cause: "A kli command was invoked without a required argument or with an invalid value"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "command"
+        type: "string"
+        description: "The kli command (incept, rotate, etc.)"
+      - field: "argument"
+        type: "string"
+        description: "The missing or invalid argument"

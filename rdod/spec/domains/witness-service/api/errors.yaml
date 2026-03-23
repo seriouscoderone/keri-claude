@@ -1,0 +1,35 @@
+domain_ref: "witness-service/api"
+
+errors:
+  - name: "MalformedEventError"
+    description: "Submitted event is not valid CESR or has structural problems"
+    cause: "The CESR stream cannot be parsed or the deserialized event is missing required fields"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "reason"
+        type: "string"
+        description: "Parse or structural failure"
+
+  - name: "UnsupportedEventTypeError"
+    description: "Submitted event type is not handled by the witness API"
+    cause: "Witness only accepts KEL events (icp, rot, ixn, dip, drt) and receipts (rct) — other ilks are rejected"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "ilk"
+        type: "string"
+        description: "The rejected event type"
+
+  - name: "SignatureVerificationFailedError"
+    description: "Controller signatures on the submitted event do not verify"
+    cause: "Event signatures could not be verified against the controller's current key state"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "aid"
+        type: "string"
+        description: "The AID whose signatures failed"
+      - field: "event_said"
+        type: "string"
+        description: "SAID of the rejected event"

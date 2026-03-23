@@ -1,0 +1,35 @@
+domain_ref: "local-agent"
+
+errors:
+  - name: "DatabaseOpenError"
+    description: "Cannot open the local LMDB database"
+    cause: "Database file is locked by another process, corrupted, or the path does not exist"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "database_path"
+        type: "string"
+        description: "The LMDB database path"
+      - field: "reason"
+        type: "string"
+        description: "OS-level error message"
+
+  - name: "IdentifierNotFoundError"
+    description: "Requested identifier alias does not exist in the local Identifier Repository"
+    cause: "No Hab with this name has been incepted"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "alias"
+        type: "string"
+        description: "The identifier alias that was not found"
+
+  - name: "DuplicateAliasError"
+    description: "An identifier with this alias already exists"
+    cause: "Attempted to incept a new identifier with an alias that is already in use"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "alias"
+        type: "string"
+        description: "The duplicate alias"

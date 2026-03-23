@@ -1,0 +1,41 @@
+domain_ref: "acdc/credential-exchange/proof"
+
+errors:
+  - name: "MissingProofArtifactError"
+    description: "Grant message is missing one or more required proof artifacts"
+    cause: "A valid grant must bundle ACDC + TEL event + KEL seal — one or more is absent"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "grant_said"
+        type: "string"
+        description: "SAID of the grant message"
+      - field: "missing_artifacts"
+        type: "array[string]"
+        description: "Which artifacts are missing (acdc, tel_event, kel_seal)"
+
+  - name: "ProofChainVerificationError"
+    description: "Proof of Issuance chain is broken — ACDC → TEL → KEL link does not verify"
+    cause: "The TEL event SAID does not match the ACDC's registry entry, or the KEL seal does not anchor the TEL event"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "credential_said"
+        type: "string"
+        description: "The credential being verified"
+      - field: "broken_link"
+        type: "string"
+        description: "Which link is broken (acdc_to_tel, tel_to_kel)"
+
+  - name: "ProofOfDisclosureError"
+    description: "Disclosed credential form does not match the committed compact form"
+    cause: "The expanded credential's SAID does not match the SAID committed in the compact form — the credential was tampered with after commitment"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "compact_said"
+        type: "string"
+        description: "The committed SAID"
+      - field: "expanded_said"
+        type: "string"
+        description: "The SAID computed from the expanded form"

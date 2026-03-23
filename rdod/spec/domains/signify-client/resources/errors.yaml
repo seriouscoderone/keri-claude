@@ -1,0 +1,28 @@
+domain_ref: "signify-client/resources"
+
+errors:
+  - name: "ResourceNotFoundError"
+    description: "Requested resource does not exist on the agent"
+    cause: "GET request for an identifier, credential, or other resource that has not been created"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "resource_type"
+        type: "string"
+        description: "Type of resource (identifier, credential, registry, contact)"
+      - field: "resource_id"
+        type: "string"
+        description: "The identifier or name of the missing resource"
+
+  - name: "OperationTimeoutError"
+    description: "Long-running operation did not complete within the polling timeout"
+    cause: "Polled GET /operations/{name} repeatedly but done never became true before timeout"
+    recovery: "retry"
+    severity: "transient"
+    context:
+      - field: "operation_name"
+        type: "string"
+        description: "The operation that timed out"
+      - field: "operation_type"
+        type: "string"
+        description: "Type: witness, delegation, group, query, etc."
