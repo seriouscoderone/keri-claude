@@ -14731,6 +14731,29 @@ const RDOD_DATA = {
           "Hab/Habery API",
           "CLI Interface"
         ]
+      },
+      {
+        "term": "Message Intake",
+        "definition": "CESR deserialization for direct mode message processing — the local agent processes KERI streams in-process rather than over HTTP",
+        "invariants": [
+          "Same CESR deserialization as service APIs, but in-process rather than over network"
+        ]
+      },
+      {
+        "term": "Request Authentication",
+        "definition": "Signature verification for locally-sourced and remotely-received messages",
+        "invariants": [
+          "Local operations are trusted (signed by the controller's own keys)",
+          "Remote messages (from witnesses, watchers, peers) are verified against key state"
+        ]
+      },
+      {
+        "term": "Protocol Dispatch",
+        "definition": "Routing operations to the appropriate domain handler — CLI commands and API calls both dispatch through the same domain layer",
+        "invariants": [
+          "Every kli command maps to exactly one domain operation",
+          "The programmatic API provides the same operations as the CLI"
+        ]
       }
     ],
     "domain_clients": [
@@ -15987,6 +16010,27 @@ const RDOD_DATA = {
           "KEL State Query",
           "Duplicity Query"
         ]
+      },
+      {
+        "term": "Message Intake",
+        "definition": "CESR deserialization of inbound KEL streams at the watcher HTTP boundary",
+        "invariants": [
+          "All inbound bytes are CESR-decoded before any domain processing"
+        ]
+      },
+      {
+        "term": "Request Authentication",
+        "definition": "Verification that inbound KEL copies come from designated witnesses",
+        "invariants": [
+          "KEL copies with unverifiable source are rejected"
+        ]
+      },
+      {
+        "term": "Protocol Dispatch",
+        "definition": "Routing deserialized messages to the integrity detection domain for cross-checking",
+        "invariants": [
+          "Accepts KEL queries and duplicity queries — other message types rejected"
+        ]
       }
     ],
     "domain_clients": [
@@ -16427,6 +16471,27 @@ const RDOD_DATA = {
         "related_terms": [
           "Event Submission",
           "KERL Query"
+        ]
+      },
+      {
+        "term": "Message Intake",
+        "definition": "CESR deserialization of inbound event streams at the witness HTTP boundary",
+        "invariants": [
+          "All inbound bytes are CESR-decoded before any domain processing"
+        ]
+      },
+      {
+        "term": "Request Authentication",
+        "definition": "Signature verification against the sender's current key state before accepting events",
+        "invariants": [
+          "Events with invalid or missing signatures are rejected at the API boundary"
+        ]
+      },
+      {
+        "term": "Protocol Dispatch",
+        "definition": "Routing deserialized, authenticated messages to the appropriate domain handler by ilk",
+        "invariants": [
+          "Only KEL events (icp, rot, ixn, dip, drt) and receipts (rct) are accepted — other ilks rejected"
         ]
       }
     ],

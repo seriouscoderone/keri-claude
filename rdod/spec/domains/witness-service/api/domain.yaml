@@ -15,6 +15,20 @@ source_material:
   - type: document
     reference: "keripy witness module — Python witness implementation"
 
+ubiquitous_language:
+  - term: "Message Intake"
+    definition: "CESR deserialization of inbound event streams at the witness HTTP boundary"
+    invariants:
+      - "All inbound bytes are CESR-decoded before any domain processing"
+  - term: "Request Authentication"
+    definition: "Signature verification against the sender's current key state before accepting events"
+    invariants:
+      - "Events with invalid or missing signatures are rejected at the API boundary"
+  - term: "Protocol Dispatch"
+    definition: "Routing deserialized, authenticated messages to the appropriate domain handler by ilk"
+    invariants:
+      - "Only KEL events (icp, rot, ixn, dip, drt) and receipts (rct) are accepted — other ilks rejected"
+
 domain_clients:
   - ref: "domain://witness-service"
     relationship: "Parent domain"
