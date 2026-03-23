@@ -10,9 +10,4 @@ ports:
     protocol: "method-call"
     refs: ["domain://acdc"]
 
-  - id: "port://acdc/credential-exchange/inbound/direct-issuance"
-    type: inbound
-    name: "Direct Issuance"
-    contract: "grant(issuer_aid, issuee_aid, acdc, signature) -> GrantMessage; admit(grant_msg, disclosee_signature) -> AdmitMessage"
-    protocol: "method-call"
-    refs: ["domain://acdc"]
+  # Direct Issuance port defined in child: port://acdc/credential-exchange/negotiation/inbound/direct-issuance
