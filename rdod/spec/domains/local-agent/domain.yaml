@@ -90,26 +90,32 @@ kernels:
 adjacents:
   - ref: "domain://keri"
     relationship: "Conformist — runs the full KERI protocol stack locally, using all event types, key state computation, and escrow processing directly"
+    pattern: "Conformist"
     via_port: "port://keri/inbound/identifier-lifecycle"
     is_cross_cutting: false
   - ref: "domain://cesr"
     relationship: "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly for all encoding"
+    pattern: "Conformist"
     via_port: "port://cesr/inbound/encoding"
     is_cross_cutting: false
   - ref: "domain://acdc"
     relationship: "Conformist — uses ACDC credential types, TEL events, and IPEX exchange protocol directly"
+    pattern: "Conformist"
     via_port: "port://acdc/inbound/credential-lifecycle"
     is_cross_cutting: false
   - ref: "domain://discovery"
     relationship: "Customer-Supplier — resolves OOBIs directly over HTTP for endpoint and key state discovery"
+    pattern: "Customer-Supplier"
     via_port: "port://discovery/inbound/discovery"
     is_cross_cutting: false
   - ref: "domain://witness-service"
     relationship: "Customer-Supplier — connects to witnesses directly via HTTP for event receipting and key state verification"
+    pattern: "Customer-Supplier"
     via_port: "port://local-agent/outbound/witness-comms"
     is_cross_cutting: false
   - ref: "domain://watcher-service"
     relationship: "Customer-Supplier — connects to watchers directly via HTTP for duplicity monitoring and key state queries"
+    pattern: "Customer-Supplier"
     via_port: "port://local-agent/outbound/watcher-comms"
     is_cross_cutting: false
 

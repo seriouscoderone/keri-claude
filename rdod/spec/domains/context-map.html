@@ -1094,12 +1094,14 @@ const RDOD_DATA = {
       {
         "ref": "domain://keri",
         "relationship": "Partnership — ACDC credentials anchor to KERI identifiers for issuer/issuee authentication; credential state is sealed in the issuer's KEL",
+        "pattern": "Partnership",
         "via_port": "port://keri/inbound/identifier-lifecycle",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://cesr",
         "relationship": "OHS + Published Language — ACDCs are encoded in CESR format (JSON, CBOR, MGPK, or native CESR); all SAIDs use CESR-qualified digests",
+        "pattern": "Published Language",
         "via_port": "port://cesr/inbound/encoding",
         "is_cross_cutting": false
       }
@@ -2696,6 +2698,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://keri/identity",
         "relationship": "Registries anchor to the issuer's KEL — the issuer AID in the rip event must have verifiable key state",
+        "pattern": "Conformist",
         "via_port": "port://keri/identity/inbound/identity-management",
         "is_cross_cutting": false
       }
@@ -7026,36 +7029,42 @@ const RDOD_DATA = {
       {
         "ref": "domain://keri",
         "relationship": "Conformist — runs KERI protocol stack on behalf of controllers",
+        "pattern": "Conformist",
         "via_port": "port://keri/inbound/identifier-lifecycle",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://cesr",
         "relationship": "Conformist — all events and messages encoded in CESR format",
+        "pattern": "Conformist",
         "via_port": "port://cesr/inbound/encoding",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://acdc",
         "relationship": "Conformist — issues, stores, and presents ACDC credentials",
+        "pattern": "Conformist",
         "via_port": "port://acdc/inbound/credential-lifecycle",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://discovery",
         "relationship": "Customer-Supplier — resolves OOBIs for endpoint discovery and contact resolution",
+        "pattern": "Customer-Supplier",
         "via_port": "port://discovery/inbound/discovery",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://witness-service",
         "relationship": "Customer-Supplier — forwards events to witnesses, collects receipts",
+        "pattern": "Customer-Supplier",
         "via_port": "port://witness-service/api/inbound/event-submission",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://watcher-service",
         "relationship": "Customer-Supplier — queries watchers for duplicity status and KEL verification",
+        "pattern": "Customer-Supplier",
         "via_port": "port://watcher-service/api/inbound/kel-query",
         "is_cross_cutting": false
       }
@@ -8083,6 +8092,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://keri",
         "relationship": "Partnership — OOBIs resolve to KERI endpoints; BADA authorizations are anchored in KELs",
+        "pattern": "Partnership",
         "is_cross_cutting": false
       }
     ],
@@ -8727,18 +8737,21 @@ const RDOD_DATA = {
       {
         "ref": "domain://cesr",
         "relationship": "OHS + Published Language — KERI events are encoded in CESR format; CESR defines the encoding contract",
+        "pattern": "Published Language",
         "via_port": "port://cesr/inbound/encoding",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://acdc",
         "relationship": "Partnership — ACDC credentials anchor to KERI identifiers for issuer authentication",
+        "pattern": "Partnership",
         "via_port": "port://acdc/inbound/credential-lifecycle",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://discovery",
         "relationship": "Partnership — OOBIs bootstrap discovery of KERI identifiers and their service endpoints",
+        "pattern": "Partnership",
         "via_port": "port://discovery/inbound/discovery",
         "is_cross_cutting": false
       }
@@ -14469,36 +14482,42 @@ const RDOD_DATA = {
       {
         "ref": "domain://keri",
         "relationship": "Conformist — runs the full KERI protocol stack locally, using all event types, key state computation, and escrow processing directly",
+        "pattern": "Conformist",
         "via_port": "port://keri/inbound/identifier-lifecycle",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://cesr",
         "relationship": "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly for all encoding",
+        "pattern": "Conformist",
         "via_port": "port://cesr/inbound/encoding",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://acdc",
         "relationship": "Conformist — uses ACDC credential types, TEL events, and IPEX exchange protocol directly",
+        "pattern": "Conformist",
         "via_port": "port://acdc/inbound/credential-lifecycle",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://discovery",
         "relationship": "Customer-Supplier — resolves OOBIs directly over HTTP for endpoint and key state discovery",
+        "pattern": "Customer-Supplier",
         "via_port": "port://discovery/inbound/discovery",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://witness-service",
         "relationship": "Customer-Supplier — connects to witnesses directly via HTTP for event receipting and key state verification",
+        "pattern": "Customer-Supplier",
         "via_port": "port://local-agent/outbound/witness-comms",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://watcher-service",
         "relationship": "Customer-Supplier — connects to watchers directly via HTTP for duplicity monitoring and key state queries",
+        "pattern": "Customer-Supplier",
         "via_port": "port://local-agent/outbound/watcher-comms",
         "is_cross_cutting": false
       }
@@ -14964,30 +14983,35 @@ const RDOD_DATA = {
       {
         "ref": "domain://cloud-agent-service",
         "relationship": "Customer-Supplier — signify-client drives cloud-agent-service via Signify protocol (delegated to resources subdomain's cloud-agent-comms port)",
+        "pattern": "Customer-Supplier",
         "via_port": "port://signify-client/resources/outbound/cloud-agent-comms",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://keri",
         "relationship": "Conformist — uses KERI protocol types and event structures directly without translation",
+        "pattern": "Conformist",
         "via_port": "port://keri/inbound/identifier-lifecycle",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://cesr",
         "relationship": "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly",
+        "pattern": "Conformist",
         "via_port": "port://cesr/inbound/encoding",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://acdc",
         "relationship": "Conformist — uses ACDC credential types, schemas, and IPEX exchange protocol directly",
+        "pattern": "Conformist",
         "via_port": "port://acdc/inbound/credential-lifecycle",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://discovery",
         "relationship": "Customer-Supplier — resolves OOBIs via cloud agent for endpoint and key state discovery",
+        "pattern": "Customer-Supplier",
         "via_port": "port://discovery/inbound/discovery",
         "is_cross_cutting": false
       }
@@ -15799,12 +15823,14 @@ const RDOD_DATA = {
       {
         "ref": "domain://keri",
         "relationship": "Conformist — implements integrity detection and evidence collection",
+        "pattern": "Conformist",
         "via_port": "port://keri/inbound/identifier-lifecycle",
         "is_cross_cutting": false
       },
       {
         "ref": "domain://witness-service",
         "relationship": "Customer-Supplier — polls witnesses for KERL copies to cross-check",
+        "pattern": "Customer-Supplier",
         "via_port": "port://witness-service/api/inbound/kerl-query",
         "is_cross_cutting": false
       }
@@ -16250,6 +16276,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://keri",
         "relationship": "Conformist — implements accountability protocol (first-seen rule, receipting, KERL dissemination)",
+        "pattern": "Conformist",
         "via_port": "port://keri/inbound/identifier-lifecycle",
         "is_cross_cutting": false
       }

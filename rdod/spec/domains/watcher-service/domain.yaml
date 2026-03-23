@@ -61,10 +61,12 @@ kernels: []
 adjacents:
   - ref: "domain://keri"
     relationship: "Conformist — implements integrity detection and evidence collection"
+    pattern: "Conformist"
     via_port: "port://keri/inbound/identifier-lifecycle"
     is_cross_cutting: false
   - ref: "domain://witness-service"
     relationship: "Customer-Supplier — polls witnesses for KERL copies to cross-check"
+    pattern: "Customer-Supplier"
     via_port: "port://witness-service/api/inbound/kerl-query"
     is_cross_cutting: false
 

@@ -79,22 +79,27 @@ kernels: []
 adjacents:
   - ref: "domain://cloud-agent-service"
     relationship: "Customer-Supplier — signify-client drives cloud-agent-service via Signify protocol (delegated to resources subdomain's cloud-agent-comms port)"
+    pattern: "Customer-Supplier"
     via_port: "port://signify-client/resources/outbound/cloud-agent-comms"
     is_cross_cutting: false
   - ref: "domain://keri"
     relationship: "Conformist — uses KERI protocol types and event structures directly without translation"
+    pattern: "Conformist"
     via_port: "port://keri/inbound/identifier-lifecycle"
     is_cross_cutting: false
   - ref: "domain://cesr"
     relationship: "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly"
+    pattern: "Conformist"
     via_port: "port://cesr/inbound/encoding"
     is_cross_cutting: false
   - ref: "domain://acdc"
     relationship: "Conformist — uses ACDC credential types, schemas, and IPEX exchange protocol directly"
+    pattern: "Conformist"
     via_port: "port://acdc/inbound/credential-lifecycle"
     is_cross_cutting: false
   - ref: "domain://discovery"
     relationship: "Customer-Supplier — resolves OOBIs via cloud agent for endpoint and key state discovery"
+    pattern: "Customer-Supplier"
     via_port: "port://discovery/inbound/discovery"
     is_cross_cutting: false
 
