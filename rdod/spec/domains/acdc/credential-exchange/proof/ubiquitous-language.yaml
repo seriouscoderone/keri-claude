@@ -1,6 +1,11 @@
 # ubiquitous-language.yaml
 domain_ref: "acdc/credential-exchange/proof"
 
+imports:
+  - term: "KRAM"
+    from: "domain://keri"
+    usage: "Exchange messages are authenticated via KRAM — signature validity checked before processing any IPEX content"
+
 terms:
   - term: "Proof of Issuance"
     synonyms: ["PoI"]
@@ -36,18 +41,6 @@ terms:
       - "Grant message carrying an ACDC, its iss event from the TEL, and the seal from the issuer's KEL interaction event"
       - "Recipient verifying the grant by checking: ACDC SAID matches iss event, iss event digest matches KEL seal"
     related_terms: ["Proof of Issuance", "Proof of Disclosure", "Transaction Event Seal", "TEL"]
-
-  - term: "KRAM"
-    synonyms: ["KERI Request Authentication Method"]
-    definition: "The authentication mechanism for KERI exchange messages, providing secure attribution of over-the-wire messages to the controller of the signing AID, with replay attack protection via timeliness-ordered authentication."
-    invariants:
-      - "Messages are signed by the source AID's current signing keys"
-      - "Signature validity depends on the key state not having changed since signing"
-      - "Provides ephemeral authentication suitable for over-the-wire messages"
-      - "Timeliness-ordered authentication provides replay attack protection for asynchronous channels"
-    examples:
-      - "An IPEX grant message signed by the issuer's current key for authenticated attribution"
-    related_terms: ["Proof of Issuance", "Key State", "Secure Attribution"]
 
 events:
   - name: "IssuanceProofVerified"

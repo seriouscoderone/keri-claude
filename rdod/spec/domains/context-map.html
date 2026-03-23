@@ -536,6 +536,7 @@ const RDOD_DATA = {
       {
         "term": "Version String",
         "synonyms": [],
+        "specializes": "domain://cesr",
         "definition": "The v field value providing protocol type, version, CESR genus version, serialization kind, size, and terminator in a regexable format for stream parsing.",
         "invariants": [
           "Must be the first field in any top-level ACDC field map",
@@ -762,30 +763,6 @@ const RDOD_DATA = {
           "SAD",
           "SAID",
           "Version String"
-        ]
-      },
-      {
-        "term": "Credential Construction",
-        "synonyms": [
-          "credential() [keripy]"
-        ],
-        "definition": "Module-level function that builds an ACDC credential dict (SAD) from: schema SAID, issuer AID, data dict, optional recipient, status registry, optional edges, optional rules, optional private flag. Computes SAIDs for each section via saidify().",
-        "invariants": [
-          "Computes SAIDs depth-first for each section (attributes, edges, rules) before the top-level SAID",
-          "When private flag is set, generates UUID nonce fields for blinding",
-          "Output is a complete ACDC SAD dict ready for serialization and signing",
-          "Field insertion order follows the canonical ACDC order: [v, t, d, u, i, rd, s, a, A, e, r]"
-        ],
-        "examples": [
-          "credential(schema=schema_said, issuer=issuer_aid, data={'score': 96}, recipient=issuee_aid, status=registry_said)"
-        ],
-        "related_terms": [
-          "ACDC",
-          "SAID",
-          "Schema",
-          "Attribute Section",
-          "Edge Section",
-          "Rule Section"
         ]
       },
       {
@@ -1052,16 +1029,31 @@ const RDOD_DATA = {
       },
       {
         "term": "Credential Construction",
+        "synonyms": [
+          "credential() [keripy]"
+        ],
         "definition": "The domain-driven assembly of an ACDC through its type dimensions. Implementations SHOULD provide typed construction interfaces (Builder pattern, fluent API, factory methods) that make each dimension explicit rather than exposing raw field map manipulation. The builder enforces dimension constraints (e.g., mutual exclusivity of a/A), handles SAID computation, and ensures canonical field ordering.",
         "invariants": [
           "Construction MUST set all required fields: v (version), d (SAID), i (issuer), s (schema)",
           "Construction MUST enforce mutual exclusivity of a and A fields",
+          "Computes SAIDs depth-first for each section (attributes, edges, rules) before the top-level SAID",
+          "When private flag is set, generates UUID nonce fields for blinding",
           "SAID computation happens at build time — d field is a placeholder until finalized",
           "Field ordering follows canonical spec order: [v, t, d, u, i, rd, s, a|A, e, r]"
         ],
         "examples": [
           "Builder pattern: Credential.builder().private().targeted(issuee).governed(rules).build()",
-          "Factory method: Credential.publicUntargeted(issuer, schema, attributes)"
+          "Factory method: Credential.publicUntargeted(issuer, schema, attributes)",
+          "credential(schema=schema_said, issuer=issuer_aid, data={'score': 96}, recipient=issuee_aid, status=registry_said)"
+        ],
+        "related_terms": [
+          "ACDC",
+          "SAID",
+          "Schema",
+          "Attribute Section",
+          "Edge Section",
+          "Rule Section",
+          "Credential Type Dimensions"
         ]
       }
     ],
@@ -1581,6 +1573,7 @@ const RDOD_DATA = {
         "synonyms": [
           "Exchanger [keripy]"
         ],
+        "specializes": "domain://keri",
         "definition": "Generic exchange message (EXN) processor that routes messages by their route field to registered handlers. IPEX handlers are registered under '/ipex/*' routes. The Exchanger validates signatures, dispatches to the appropriate handler, and manages exchange escrows for partially-complete exchanges.",
         "invariants": [
           "Routes incoming EXN messages to the handler registered for the message's route field",
@@ -1862,27 +1855,6 @@ const RDOD_DATA = {
           "Proof of Disclosure",
           "Transaction Event Seal",
           "TEL"
-        ]
-      },
-      {
-        "term": "KRAM",
-        "synonyms": [
-          "KERI Request Authentication Method"
-        ],
-        "definition": "The authentication mechanism for KERI exchange messages, providing secure attribution of over-the-wire messages to the controller of the signing AID, with replay attack protection via timeliness-ordered authentication.",
-        "invariants": [
-          "Messages are signed by the source AID's current signing keys",
-          "Signature validity depends on the key state not having changed since signing",
-          "Provides ephemeral authentication suitable for over-the-wire messages",
-          "Timeliness-ordered authentication provides replay attack protection for asynchronous channels"
-        ],
-        "examples": [
-          "An IPEX grant message signed by the issuer's current key for authenticated attribution"
-        ],
-        "related_terms": [
-          "Proof of Issuance",
-          "Key State",
-          "Secure Attribution"
         ]
       },
       {
@@ -8454,6 +8426,7 @@ const RDOD_DATA = {
       {
         "term": "Version String",
         "synonyms": [],
+        "specializes": "domain://cesr",
         "definition": "Protocol version metadata in the v field of every event: protocol, version, serialization kind, size.",
         "invariants": [
           "Format: PPPPVVVKKKKSSSS_ (protocol, version, kind, size, terminator)",
@@ -10854,6 +10827,7 @@ const RDOD_DATA = {
           "Self-Addressing Identifier",
           "d field"
         ],
+        "specializes": "domain://cesr/primitives",
         "definition": "A self-referential content digest computed over the serialized event body using the SAID protocol. Appears in the d field of every event.",
         "invariants": [
           "Computed by replacing the d field with dummy '#' characters, serializing, hashing, then inserting the digest",

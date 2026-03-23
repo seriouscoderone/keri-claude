@@ -134,6 +134,7 @@ terms:
 
   - term: "Version String"
     synonyms: []
+    specializes: "domain://cesr"
     definition: "The v field value providing protocol type, version, CESR genus version, serialization kind, size, and terminator in a regexable format for stream parsing."
     invariants:
       - "Must be the first field in any top-level ACDC field map"
@@ -263,18 +264,6 @@ terms:
       - "Deserializing a CESR-encoded credential packet and accessing creder.issuer to get the issuer AID"
       - "Constructing a Creder from a credential dict, then verifying creder.said matches the d field"
     related_terms: ["ACDC", "SAD", "SAID", "Version String"]
-
-  - term: "Credential Construction"
-    synonyms: ["credential() [keripy]"]
-    definition: "Module-level function that builds an ACDC credential dict (SAD) from: schema SAID, issuer AID, data dict, optional recipient, status registry, optional edges, optional rules, optional private flag. Computes SAIDs for each section via saidify()."
-    invariants:
-      - "Computes SAIDs depth-first for each section (attributes, edges, rules) before the top-level SAID"
-      - "When private flag is set, generates UUID nonce fields for blinding"
-      - "Output is a complete ACDC SAD dict ready for serialization and signing"
-      - "Field insertion order follows the canonical ACDC order: [v, t, d, u, i, rd, s, a, A, e, r]"
-    examples:
-      - "credential(schema=schema_said, issuer=issuer_aid, data={'score': 96}, recipient=issuee_aid, status=registry_said)"
-    related_terms: ["ACDC", "SAID", "Schema", "Attribute Section", "Edge Section", "Rule Section"]
 
   - term: "Schema Validator"
     synonyms: ["Schemer [keripy]", "CacheResolver [keripy]"]
@@ -430,15 +419,20 @@ terms:
     related_terms: ["Credential Type Dimensions", "Credential Lifecycle"]
 
   - term: "Credential Construction"
+    synonyms: ["credential() [keripy]"]
     definition: "The domain-driven assembly of an ACDC through its type dimensions. Implementations SHOULD provide typed construction interfaces (Builder pattern, fluent API, factory methods) that make each dimension explicit rather than exposing raw field map manipulation. The builder enforces dimension constraints (e.g., mutual exclusivity of a/A), handles SAID computation, and ensures canonical field ordering."
     invariants:
       - "Construction MUST set all required fields: v (version), d (SAID), i (issuer), s (schema)"
       - "Construction MUST enforce mutual exclusivity of a and A fields"
+      - "Computes SAIDs depth-first for each section (attributes, edges, rules) before the top-level SAID"
+      - "When private flag is set, generates UUID nonce fields for blinding"
       - "SAID computation happens at build time — d field is a placeholder until finalized"
       - "Field ordering follows canonical spec order: [v, t, d, u, i, rd, s, a|A, e, r]"
     examples:
       - "Builder pattern: Credential.builder().private().targeted(issuee).governed(rules).build()"
       - "Factory method: Credential.publicUntargeted(issuer, schema, attributes)"
+      - "credential(schema=schema_said, issuer=issuer_aid, data={'score': 96}, recipient=issuee_aid, status=registry_said)"
+    related_terms: ["ACDC", "SAID", "Schema", "Attribute Section", "Edge Section", "Rule Section", "Credential Type Dimensions"]
 
 events:
   - name: "CredentialIssued"
