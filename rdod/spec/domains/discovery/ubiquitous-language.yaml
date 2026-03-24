@@ -87,6 +87,55 @@ terms:
       - "Default timeout: 3600 seconds"
     related_terms: ["OOBI Resolution", "BADA"]
 
+  - term: "Percolated Discovery"
+    synonyms: ["PID", "Percolated Information Discovery"]
+    definition: "The design principle that anyone who has verified KERI data can re-serve it via their own OOBI endpoint. Discovery percolates through the network — each resolver can become a new source. This works because all KERI data is end-verifiable: signatures, digest chains, and BADA policy ensure integrity regardless of the serving intermediary."
+    invariants:
+      - "Re-served data is indistinguishable from original — same signatures, same digests"
+      - "No trust required in intermediaries — verification traces back to the controller's keys"
+      - "An OOBI endpoint can be a witness, watcher, agent, or ANY standalone HTTP service with KEL data"
+      - "The percolation model enables CDN-like caching of KERI data without trust delegation"
+    examples:
+      - "Alice resolves Bob's OOBI from a witness, caches Bob's KEL locally, then re-serves it to Carol via Alice's own OOBI endpoint"
+      - "A KERI CDN service polls witnesses periodically, caches verified KELs, and serves them at high availability"
+    related_terms: ["OOBI", "End-Verifiability", "BADA"]
+
+  - term: "Blind OOBI"
+    synonyms: ["Self-Introduction", "Bootstrap OOBI"]
+    definition: "An OOBI URL with no identifier — just the bare endpoint path /oobi. Used for bootstrapping when you know a service's URL but not what AID it serves. The service responds with its own AID (self-introduction), enabling the resolver to then construct role-specific OOBI queries."
+    invariants:
+      - "URL has no AID or SAID component — just scheme://host:port/oobi"
+      - "Service returns its default AID if configured, or HTTP 404 if no default"
+      - "Optional ?name=X query parameter provides a human-friendly alias hint"
+      - "The returned AID is NOT trusted — it must be verified via KEL validation like any OOBI"
+    examples:
+      - "QR code at a conference booth: http://demo.keri.one/oobi — scanning initiates self-introduction"
+      - "Private network bootstrapping: curl http://192.168.1.100:8080/oobi — discover the service's AID"
+    related_terms: ["OOBI", "Percolated Discovery"]
+
+  - term: "Data OOBI"
+    synonyms: ["DOOBI", "Content-Addressed OOBI"]
+    definition: "An OOBI that discovers content-addressed data identified by a SAID rather than an AID. Used to find schemas, well-known credentials, and other immutable content. Verification is simple: compute the SAID of the returned content and compare to the requested SAID."
+    invariants:
+      - "URL pattern: /oobi/{SAID} — the SAID identifies the content, not a controller"
+      - "Returned content is immutable — SAIDs are content-addressed digests"
+      - "Verification: SAID(returned_content) == requested_SAID"
+      - "Common use: ACDC schema discovery (JSON Schema documents identified by SAID)"
+    examples:
+      - "Schema discovery: http://schemas.vlei.org/oobi/EBfdlu8R27Fbx... — returns the JSON Schema"
+      - "Well-known credential: http://registry.vlei.org/oobi/SAID-of-QVI-credential"
+    related_terms: ["OOBI", "SAID"]
+
+  - term: "OOBI Endpoint Independence"
+    definition: "The architectural property that any service with stored KEL data can serve OOBIs, independent of any specific KERI infrastructure role. An OOBI endpoint only needs read access to KEL data — it does not need signing keys, witness status, or agent registration. This enables standalone OOBI services, caching proxies, and percolated re-serving."
+    invariants:
+      - "Minimum requirement: an identifier repository (Habery/equivalent) with KEL data"
+      - "No private keys required — serving is read-only"
+      - "No witness/watcher/agent status required — any HTTP service can mount OOBI endpoints"
+      - "The serving endpoint only responds for AIDs it has data for (own AIDs or AIDs it witnessed)"
+      - "Blind OOBI requires a configured default AID"
+    related_terms: ["Percolated Discovery", "OOBI"]
+
 events:
   - name: "OOBIResolved"
     payload: "aid: AID, endpoint: URL, role: Role, kel_verified: bool"

@@ -26,10 +26,11 @@ terms:
 
   - term: "OOBI Resolution"
     synonyms: ["Well-Known OOBI Endpoint"]
-    definition: "The HTTP endpoint at /.well-known/keri/oobi/{aid}/{role}/{eid} enabling bootstrap discovery of the witness."
+    definition: "The HTTP endpoint at /.well-known/keri/oobi/{aid}/{role}/{eid} enabling bootstrap discovery of the witness. Implements the discovery domain's OOBI serving capability — the witness is one possible OOBI source, not the owner of the OOBI concept."
     invariants:
       - "Follows RFC 8615 .well-known URI convention"
       - "Returns endpoint information for the requested AID/role/eid combination"
+      - "Implements discovery protocol's OOBI serving — see domain://discovery for the full OOBI model"
     examples:
       - "GET /.well-known/keri/oobi/EDP1.../witness/BDg3... — resolves witness OOBI"
     related_terms: ["Event Submission", "KERL Query"]
