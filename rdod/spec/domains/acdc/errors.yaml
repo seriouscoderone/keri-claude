@@ -1,0 +1,69 @@
+# errors.yaml
+domain_ref: "acdc"
+
+# Error catalog for the ACDC parent domain.
+# These are credential-level errors that occur during ACDC construction
+# or top-level structural validation, BEFORE subdomain-specific processing
+# (credential-lifecycle, credential-exchange, privacy) handles the data.
+# Subdomains define their own errors for domain-specific failures (e.g.,
+# TEL verification in credential-lifecycle, IPEX routing in
+# credential-exchange, disclosure form violations in privacy).
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action
+#   fatal      — unrecoverable; credential is permanently rejected
+
+errors:
+  - name: "SchemaResolutionError"
+    description: "Cannot resolve the credential's schema SAID to an actual JSON Schema document"
+    cause: "The s field references a schema SAID that is not available in the local schema cache or resolvable via OOBI"
+    recovery: "retry"
+    severity: "transient"
+    context:
+      - field: "schema_said"
+        type: "string"
+        description: "The unresolvable schema SAID"
+      - field: "credential_said"
+        type: "string"
+        description: "The credential that references this schema"
+    related_port: "port://acdc/inbound/schema-management"
+
+  - name: "MutualExclusionError"
+    description: "ACDC contains both attribute section (a) and aggregate section (A)"
+    cause: "Direct disclosure (a field) and selective disclosure (A field) are mutually exclusive — the credential has both, which is structurally invalid"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "credential_said"
+        type: "string"
+        description: "The invalid credential's SAID"
+    related_port: "port://acdc/inbound/credential-lifecycle"
+
+  - name: "IssuerKeyStateError"
+    description: "Cannot verify the issuer's key state for credential validation"
+    cause: "The issuer's AID (i field) does not have resolvable key state — the issuer's KEL has not been received or is incomplete"
+    recovery: "escrow"
+    severity: "transient"
+    context:
+      - field: "issuer_aid"
+        type: "string"
+        description: "The issuer's AID"
+      - field: "credential_said"
+        type: "string"
+        description: "The credential being validated"
+    related_port: "port://acdc/inbound/credential-lifecycle"
+
+  - name: "CredentialSAIDError"
+    description: "Credential SAID (d field) does not match the computed digest"
+    cause: "The d field value does not equal the SAID computed over the credential body — the credential has been tampered with"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "claimed_said"
+        type: "string"
+        description: "The d field value"
+      - field: "computed_said"
+        type: "string"
+        description: "The computed SAID"
+    related_port: "port://acdc/inbound/credential-verification"

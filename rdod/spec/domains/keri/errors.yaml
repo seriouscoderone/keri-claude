@@ -1,0 +1,87 @@
+# errors.yaml
+domain_ref: "keri"
+
+# Error catalog for the KERI parent domain.
+# These are protocol-level errors that occur during initial message parsing
+# and dispatch, BEFORE any subdomain (identity, integrity, accountability,
+# delegation) processes the message. Subdomains define their own errors
+# for domain-specific validation (e.g., threshold checks, delegation seals).
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action
+#   fatal      — unrecoverable; message is permanently rejected
+
+errors:
+  - name: "ProtocolVersionMismatchError"
+    description: "Message version string indicates an unsupported protocol version"
+    cause: "The v field's protocol version (Mmm segment) does not match any version supported by this implementation"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "received_version"
+        type: "string"
+        description: "The version string from the message"
+      - field: "supported_versions"
+        type: "array[string]"
+        description: "List of protocol versions this implementation supports"
+    related_port: "port://keri/inbound/event-verification"
+
+  - name: "UnsupportedEventTypeError"
+    description: "Message type (ilk) is not recognized by the KERI protocol"
+    cause: "The t field contains an ilk that is not in the set of known KERI message types (icp, rot, ixn, dip, drt, rct, qry, rpy, exn, xip, pro, bar)"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "ilk"
+        type: "string"
+        description: "The unrecognized message type"
+      - field: "known_ilks"
+        type: "array[string]"
+        description: "List of recognized ilks"
+    related_port: "port://keri/inbound/event-verification"
+
+  - name: "InvalidPrefixError"
+    description: "AID prefix in the message is malformed or uses an unsupported CESR code"
+    cause: "The i field does not parse as a valid CESR-qualified identifier prefix"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "prefix"
+        type: "string"
+        description: "The invalid prefix value"
+      - field: "reason"
+        type: "string"
+        description: "Why it's invalid (unsupported code, wrong length, not Base64url)"
+    related_port: "port://keri/inbound/event-verification"
+
+  - name: "SAIDVerificationError"
+    description: "Message SAID (d field) does not match the computed digest of the message body"
+    cause: "The d field value does not equal the SAID computed over the message with d as placeholder — the message has been tampered with or incorrectly constructed"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "claimed_said"
+        type: "string"
+        description: "The d field value in the message"
+      - field: "computed_said"
+        type: "string"
+        description: "The SAID computed from the message body"
+    related_port: "port://keri/inbound/event-verification"
+
+  - name: "FieldOrderingError"
+    description: "Message fields are not in canonical insertion order"
+    cause: "The serialized field map has fields in an order that does not match the canonical order defined for this message type — SAID computation would produce a different result"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "ilk"
+        type: "string"
+        description: "The message type"
+      - field: "expected_order"
+        type: "array[string]"
+        description: "The canonical field order for this ilk"
+      - field: "received_order"
+        type: "array[string]"
+        description: "The actual field order received"
+    related_port: "port://keri/inbound/event-verification"

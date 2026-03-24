@@ -1,0 +1,97 @@
+# errors.yaml
+domain_ref: "cesr"
+
+# Error catalog for the CESR parent domain.
+# These are encoding-level errors that occur during top-level CESR
+# encode/decode operations, BEFORE subdomain-specific processing
+# (primitives or composition) handles the data. Subdomains define their
+# own errors for domain-specific failures (e.g., signature verification
+# in primitives, stream parsing in composition).
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action
+#   fatal      — unrecoverable; operation is permanently rejected
+
+errors:
+  - name: "EncodingError"
+    description: "Cannot encode a value into CESR format"
+    cause: "The (code, raw) pair is invalid — code is not in the master code table, or raw length does not match the expected size for the code"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "code"
+        type: "string"
+        description: "The CESR type code"
+      - field: "raw_length"
+        type: "integer"
+        description: "Length of the raw bytes provided"
+      - field: "expected_length"
+        type: "integer"
+        description: "Expected raw length for this code"
+    related_port: "port://cesr/inbound/encoding"
+
+  - name: "DecodingError"
+    description: "Cannot decode a CESR-encoded value"
+    cause: "The qb64 or qb2 input is malformed — not valid Base64url, truncated, or the leading code is not recognized"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "input_prefix"
+        type: "string"
+        description: "First few characters of the input (for diagnostics)"
+      - field: "reason"
+        type: "string"
+        description: "Specific decoding failure (invalid Base64, unknown code, truncated)"
+    related_port: "port://cesr/inbound/encoding"
+
+  - name: "DomainConversionError"
+    description: "Cannot convert between CESR encoding domains (T, B, R)"
+    cause: "Text-to-binary or binary-to-text conversion failed — the input is not properly aligned or contains invalid characters for the source domain"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "source_domain"
+        type: "string"
+        description: "The domain being converted from (T, B, or R)"
+      - field: "target_domain"
+        type: "string"
+        description: "The domain being converted to"
+      - field: "reason"
+        type: "string"
+        description: "Specific conversion failure"
+    related_port: "port://cesr/inbound/encoding"
+
+  - name: "UnknownCodeError"
+    description: "CESR type code is not in the master code table for the active protocol genus"
+    cause: "The leading characters of a CESR primitive do not match any entry in the code table — either an unsupported algorithm or a future code not yet registered"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "code"
+        type: "string"
+        description: "The unrecognized code"
+      - field: "code_length"
+        type: "integer"
+        description: "Number of characters in the code"
+      - field: "genus"
+        type: "string"
+        description: "The active protocol genus version"
+    related_port: "port://cesr/inbound/code-lookup"
+
+  - name: "AlignmentError"
+    description: "CESR primitive is not properly aligned on 24-bit boundary"
+    cause: "qb64 length is not a multiple of 4 characters, or qb2 length is not a multiple of 3 bytes"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "domain"
+        type: "string"
+        description: "T (text) or B (binary)"
+      - field: "actual_length"
+        type: "integer"
+        description: "The actual length"
+      - field: "nearest_aligned"
+        type: "integer"
+        description: "The nearest valid aligned length"
+    related_port: "port://cesr/inbound/encoding"
