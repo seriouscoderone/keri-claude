@@ -20,7 +20,7 @@ ports:
   - id: "port://acdc/credential-exchange/negotiation/inbound/construct-message"
     type: inbound
     name: "Message Construction"
-    contract: "build_apply(hab: Hab, recipient: AID, schema: SAID, attributes: [Label]?) -> ExchangeMessage; build_offer(hab: Hab, recipient: AID, metadata_acdc: ACDC, terms: RuleSection) -> ExchangeMessage; build_agree(hab: Hab, recipient: AID, offer_said: SAID) -> ExchangeMessage; build_grant(hab: Hab, recipient: AID, acdc: ACDC, tel_event: TELEvent, kel_seal: EventSeal) -> ExchangeMessage; build_admit(hab: Hab, recipient: AID, grant_said: SAID) -> ExchangeMessage; build_spurn(hab: Hab, recipient: AID, rejected_said: SAID, reason: string?) -> ExchangeMessage"
+    contract: "build_apply(identifier: AID, recipient: AID, schema: SAID, attributes: map?) -> ExchangeMessage; build_offer(identifier: AID, recipient: AID, metadata_acdc: ACDC, terms: map) -> ExchangeMessage; build_agree(identifier: AID, recipient: AID, offer_said: SAID) -> ExchangeMessage; build_grant(identifier: AID, recipient: AID, acdc: ACDC, tel_event: TELEvent, kel_seal: EventSeal) -> ExchangeMessage; build_admit(identifier: AID, recipient: AID, grant_said: SAID) -> ExchangeMessage; build_spurn(identifier: AID, recipient: AID, rejected_said: SAID, reason: string?) -> ExchangeMessage"
     protocol: "method-call"
     refs: ["domain://acdc/credential-exchange"]
 

@@ -85,6 +85,17 @@ events:
       - "Delegated inception (dip) arrives before the delegator's approving ixn -> PDE. Delegator's ixn with seal arrives and is accepted -> dip reprocessed -> delegation validated -> accept (or -> PWE if witnesses insufficient)."
     related_terms: ["Escrow Cascade", "Delegation Validation", "Delegation Seal", "Escrow Timeout"]
 
+  - term: "Missing Delegable Escrow"
+    synonyms: ["MDE"]
+    definition: "Holds events awaiting delegable approval -- the delegate has submitted an event with a delegation source seal attachment, but the seal cannot yet be verified against the delegator's KEL. Unlike PDE where no seal has arrived, MDE has the seal but it has not been validated."
+    invariants:
+      - "Distinct from PDE: PDE waits for the seal to arrive; MDE has the seal but it has not been validated"
+      - "Distinct from Delegable Event Escrow: delegables are locally-originated events awaiting external approval; MDE holds events where verification of the attached seal failed"
+      - "Reprocessed when the delegator's KEL is updated (new events may allow seal verification)"
+    examples:
+      - "Delegated inception with source seal attachment arrives but the delegator's anchoring event is not yet confirmed -> MDE. Delegator's event is confirmed -> reprocessed -> delegation validated."
+    related_terms: ["Partially-Delegated Escrow", "Delegable Event Escrow", "Delegation Validation"]
+
   - term: "Delegable Event Escrow"
     synonyms: [".delegables [keripy]"]
     definition: "Holds locally-originated delegated events (dip/drt created by this node's delegatee) that are awaiting the delegator's approval. Unlike PDE which holds remote delegated events, this escrow holds the local controller's own delegated events before the delegator has anchored its approving seal."

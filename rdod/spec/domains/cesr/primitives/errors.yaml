@@ -11,9 +11,9 @@ domain_ref: "cesr/primitives"
 #   fatal      — unrecoverable; event is permanently rejected
 
 errors:
-  - name: "UnknownCodeError"
-    description: "CESR type code not found in the master code table"
-    cause: "The leading characters of a primitive do not match any registered code in the active protocol genus/version"
+  - name: "InvalidPrimitiveCodeError"
+    description: "CESR type code is not valid for the requested primitive type"
+    cause: "The code exists in the master code table but does not correspond to a valid primitive of the requested kind (e.g., using a digest code to construct a Verfer), or the code is not registered for the active protocol genus/version during primitive construction"
     recovery: "abort"
     severity: "fatal"
     context:

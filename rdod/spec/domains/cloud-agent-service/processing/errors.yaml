@@ -20,9 +20,9 @@ errors:
         type: "integer"
         description: "The configured timeout"
 
-  - name: "OperationNotFoundError"
-    description: "Requested long-running operation does not exist"
-    cause: "GET /operations/{name} for an operation that was never submitted or has been cleaned up"
+  - name: "OperationLookupError"
+    description: "Internal operation registry has no entry for the requested operation"
+    cause: "The processing layer attempted to look up an operation that was never submitted, has already completed and been cleaned up, or belongs to a different agent"
     recovery: "abort"
     severity: "fatal"
     context:

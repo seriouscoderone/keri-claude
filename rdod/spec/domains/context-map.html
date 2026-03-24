@@ -1744,7 +1744,7 @@ const RDOD_DATA = {
         "id": "port://acdc/credential-exchange/negotiation/inbound/construct-message",
         "type": "inbound",
         "name": "Message Construction",
-        "contract": "build_apply(hab: Hab, recipient: AID, schema: SAID, attributes: [Label]?) -> ExchangeMessage; build_offer(hab: Hab, recipient: AID, metadata_acdc: ACDC, terms: RuleSection) -> ExchangeMessage; build_agree(hab: Hab, recipient: AID, offer_said: SAID) -> ExchangeMessage; build_grant(hab: Hab, recipient: AID, acdc: ACDC, tel_event: TELEvent, kel_seal: EventSeal) -> ExchangeMessage; build_admit(hab: Hab, recipient: AID, grant_said: SAID) -> ExchangeMessage; build_spurn(hab: Hab, recipient: AID, rejected_said: SAID, reason: string?) -> ExchangeMessage",
+        "contract": "build_apply(identifier: AID, recipient: AID, schema: SAID, attributes: map?) -> ExchangeMessage; build_offer(identifier: AID, recipient: AID, metadata_acdc: ACDC, terms: map) -> ExchangeMessage; build_agree(identifier: AID, recipient: AID, offer_said: SAID) -> ExchangeMessage; build_grant(identifier: AID, recipient: AID, acdc: ACDC, tel_event: TELEvent, kel_seal: EventSeal) -> ExchangeMessage; build_admit(identifier: AID, recipient: AID, grant_said: SAID) -> ExchangeMessage; build_spurn(identifier: AID, recipient: AID, rejected_said: SAID, reason: string?) -> ExchangeMessage",
         "protocol": "method-call",
         "refs": [
           "domain://acdc/credential-exchange"
@@ -6900,7 +6900,7 @@ const RDOD_DATA = {
         "id": "port://cesr/primitives/inbound/code-resolution",
         "type": "inbound",
         "name": "Code Resolution",
-        "contract": "resolve(code) -> CodeEntry{algorithm, raw_size, code_size, pad_size, lead_bytes, full_size}; resolve_indexed(code) -> IndexedCodeEntry{algorithm, index_size, ondex_size}",
+        "contract": "resolve(code) -> Sizage{hs, ss, fs, ls}; resolve_indexed(code) -> IndexedSizage{hs, ss, os, fs, ls}",
         "protocol": "method-call",
         "refs": [
           "domain://cesr"
@@ -9972,6 +9972,26 @@ const RDOD_DATA = {
           "Delegation Validation",
           "Delegation Seal",
           "Escrow Timeout"
+        ]
+      },
+      {
+        "term": "Missing Delegable Escrow",
+        "synonyms": [
+          "MDE"
+        ],
+        "definition": "Holds events awaiting delegable approval -- the delegate has submitted an event with a delegation source seal attachment, but the seal cannot yet be verified against the delegator's KEL. Unlike PDE where no seal has arrived, MDE has the seal but it has not been validated.",
+        "invariants": [
+          "Distinct from PDE: PDE waits for the seal to arrive; MDE has the seal but it has not been validated",
+          "Distinct from Delegable Event Escrow: delegables are locally-originated events awaiting external approval; MDE holds events where verification of the attached seal failed",
+          "Reprocessed when the delegator's KEL is updated (new events may allow seal verification)"
+        ],
+        "examples": [
+          "Delegated inception with source seal attachment arrives but the delegator's anchoring event is not yet confirmed -> MDE. Delegator's event is confirmed -> reprocessed -> delegation validated."
+        ],
+        "related_terms": [
+          "Partially-Delegated Escrow",
+          "Delegable Event Escrow",
+          "Delegation Validation"
         ]
       },
       {
