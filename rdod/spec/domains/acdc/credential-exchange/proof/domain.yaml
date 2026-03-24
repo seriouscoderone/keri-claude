@@ -39,7 +39,11 @@ kernels:
     source: "Ed25519/ECDSA signature verification for PoI/PoD, Blake3-256 digest comparison for SAID matching"
     relationship: "Signature verification and digest comparison are kernel operations invoked at every verification step"
 
-adjacents: []
+adjacents:
+  - ref: "domain://acdc/credential-lifecycle/verification"
+    relationship: "Conformist — proof delegates TEL chain validation (ACDC → TEL → KEL anchor) to lifecycle/verification. Proof checks artifact bundle completeness; verification checks chain integrity."
+    pattern: "Conformist"
+    via_port: "port://acdc/credential-lifecycle/verification/inbound/validate-tel-event"
 
 externals: []
 
