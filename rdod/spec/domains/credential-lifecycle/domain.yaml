@@ -74,7 +74,17 @@ subdomains:
 
 kernels: []
 
-adjacents: []
+adjacents:
+  - ref: "domain://credential-exchange"
+    relationship: "Partnership — credential-lifecycle issues credentials that credential-exchange shares with verifiers"
+    pattern: "Partnership"
+  - ref: "domain://privacy"
+    relationship: "Partnership — credential-lifecycle creates credentials with privacy properties that privacy domain governs during disclosure"
+    pattern: "Partnership"
+  - ref: "domain://identity"
+    relationship: "Conformist — credential TEL events are anchored to issuer's KEL via identity/anchoring"
+    pattern: "Conformist"
+    via_port: "port://identity/anchoring/inbound/data-anchoring"
 
 externals: []
 

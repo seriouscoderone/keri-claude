@@ -85,7 +85,21 @@ kernels:
     source: "Ed25519 (event signing), Blake3-256/SHA-256 (SAID computation, prior event digest, seal digests, next key commitments)"
     relationship: "Cryptographic algorithm types appear directly in event fields and key state structures — signatures, digests, public keys, and threshold expressions are kernel types"
 
-adjacents: []
+adjacents:
+  - ref: "domain://accountability"
+    relationship: "Customer-Supplier — identity protocols require witness receipts from accountability for event acceptance"
+    pattern: "Customer-Supplier"
+    via_port: "port://accountability/receipting/inbound/receipt-submission"
+  - ref: "domain://delegation"
+    relationship: "Customer-Supplier — delegated identity events require authorization from delegation domain"
+    pattern: "Customer-Supplier"
+    via_port: "port://delegation/authorization/inbound/delegation-approval"
+  - ref: "domain://integrity"
+    relationship: "Customer-Supplier — identity provides KEL data that integrity monitors for duplicity"
+    pattern: "Customer-Supplier"
+  - ref: "domain://discovery"
+    relationship: "Partnership — identity and discovery collaborate on endpoint publishing and OOBI resolution"
+    pattern: "Partnership"
 
 externals:
   - name: "Event Persistence"

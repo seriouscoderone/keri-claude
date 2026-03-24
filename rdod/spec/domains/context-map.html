@@ -13347,7 +13347,24 @@ const RDOD_DATA = {
       }
     ],
     "kernels": [],
-    "adjacents": [],
+    "adjacents": [
+      {
+        "ref": "domain://credential-exchange",
+        "relationship": "Partnership — credential-lifecycle issues credentials that credential-exchange shares with verifiers",
+        "pattern": "Partnership"
+      },
+      {
+        "ref": "domain://privacy",
+        "relationship": "Partnership — credential-lifecycle creates credentials with privacy properties that privacy domain governs during disclosure",
+        "pattern": "Partnership"
+      },
+      {
+        "ref": "domain://identity",
+        "relationship": "Conformist — credential TEL events are anchored to issuer's KEL via identity/anchoring",
+        "pattern": "Conformist",
+        "via_port": "port://identity/anchoring/inbound/data-anchoring"
+      }
+    ],
     "externals": [],
     "implementation_guidance": {
       "suggested_type": "module",
@@ -21724,7 +21741,30 @@ const RDOD_DATA = {
         "relationship": "Cryptographic algorithm types appear directly in event fields and key state structures — signatures, digests, public keys, and threshold expressions are kernel types"
       }
     ],
-    "adjacents": [],
+    "adjacents": [
+      {
+        "ref": "domain://accountability",
+        "relationship": "Customer-Supplier — identity protocols require witness receipts from accountability for event acceptance",
+        "pattern": "Customer-Supplier",
+        "via_port": "port://accountability/receipting/inbound/receipt-submission"
+      },
+      {
+        "ref": "domain://delegation",
+        "relationship": "Customer-Supplier — delegated identity events require authorization from delegation domain",
+        "pattern": "Customer-Supplier",
+        "via_port": "port://delegation/authorization/inbound/delegation-approval"
+      },
+      {
+        "ref": "domain://integrity",
+        "relationship": "Customer-Supplier — identity provides KEL data that integrity monitors for duplicity",
+        "pattern": "Customer-Supplier"
+      },
+      {
+        "ref": "domain://discovery",
+        "relationship": "Partnership — identity and discovery collaborate on endpoint publishing and OOBI resolution",
+        "pattern": "Partnership"
+      }
+    ],
     "externals": [
       {
         "name": "Event Persistence",
