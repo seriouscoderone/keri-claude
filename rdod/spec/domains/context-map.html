@@ -5899,6 +5899,73 @@ const RDOD_DATA = {
           "CesrGroup",
           "Concrete Group Types"
         ]
+      },
+      {
+        "term": "Sadder",
+        "synonyms": [
+          "SAD Serializer"
+        ],
+        "definition": "Base trait for Self-Addressing Data (SAD) serialization. Provides inhale (raw → ked) and exhale (ked → raw) operations, plus SAID computation. Extended by Serder and Creder.",
+        "invariants": [
+          "Holds both raw bytes and KED (Key Event Dictionary) representations",
+          "Provides code(), raw(), ked(), ident(), kind(), size(), version(), saider()",
+          "inhale: parse raw bytes into structured KED",
+          "exhale: serialize KED into raw bytes"
+        ],
+        "examples": [
+          "Sadder.new_with_raw(raw_bytes) → parse version string, extract KED",
+          "Sadder.new_with_ked(ked_value) → serialize, compute SAID"
+        ],
+        "related_terms": [
+          "Serder",
+          "Creder",
+          "Saider (cesr/primitives)",
+          "Version String"
+        ]
+      },
+      {
+        "term": "Serder",
+        "synonyms": [
+          "Event Serializer"
+        ],
+        "definition": "KERI event serializer extending Sadder. Validates ident=='KERI'. Provides accessors for event-specific fields: verfers, digers, werfers.",
+        "invariants": [
+          "ident must equal 'KERI' — rejects non-KERI SADs",
+          "verfers(): extracts signing public keys from 'k' field as [Verfer]",
+          "digers(): extracts next key digests from 'n' field as [Diger]",
+          "werfers(): extracts witness public keys from 'b' field as [Verfer]"
+        ],
+        "examples": [
+          "Serder.new_with_raw(icp_bytes) → parsed inception event with accessible verfers"
+        ],
+        "related_terms": [
+          "Sadder",
+          "Creder",
+          "Verfer (cesr/primitives)",
+          "Diger (cesr/primitives)"
+        ]
+      },
+      {
+        "term": "Creder",
+        "synonyms": [
+          "Credential Serializer"
+        ],
+        "definition": "ACDC credential serializer extending Sadder. Validates ident=='ACDC'. Provides accessors for credential-specific fields: issuer, schema, subject, status, chains.",
+        "invariants": [
+          "ident must equal 'ACDC' — rejects non-ACDC SADs",
+          "issuer(): extracts 'i' field (issuer AID)",
+          "schema(): extracts 's' field (schema SAID)",
+          "subject(): extracts 'a' field (attribute section)",
+          "status(): extracts 'ri' field (registry identifier)"
+        ],
+        "examples": [
+          "Creder.new_with_raw(acdc_bytes) → parsed credential with accessible issuer/schema"
+        ],
+        "related_terms": [
+          "Sadder",
+          "Serder",
+          "SAID (cesr/primitives)"
+        ]
       }
     ],
     "domain_clients": [
@@ -6296,9 +6363,9 @@ const RDOD_DATA = {
         "related_terms": [
           "Saider",
           "Saidify",
-          "Sadder",
-          "Serder",
-          "Creder"
+          "Sadder (cesr/composition)",
+          "Serder (cesr/composition)",
+          "Creder (cesr/composition)"
         ]
       },
       {
@@ -6390,7 +6457,7 @@ const RDOD_DATA = {
           "Saider",
           "SAID",
           "Diger",
-          "Sadder"
+          "Sadder (cesr/composition)"
         ]
       },
       {
@@ -6645,73 +6712,6 @@ const RDOD_DATA = {
         ]
       },
       {
-        "term": "Sadder",
-        "synonyms": [
-          "SAD Serializer"
-        ],
-        "definition": "Base trait for Self-Addressing Data (SAD) serialization. Provides inhale (raw → ked) and exhale (ked → raw) operations, plus SAID computation. Extended by Serder and Creder.",
-        "invariants": [
-          "Holds both raw bytes and KED (Key Event Dictionary) representations",
-          "Provides code(), raw(), ked(), ident(), kind(), size(), version(), saider()",
-          "inhale: parse raw bytes into structured KED",
-          "exhale: serialize KED into raw bytes"
-        ],
-        "examples": [
-          "Sadder.new_with_raw(raw_bytes) → parse version string, extract KED",
-          "Sadder.new_with_ked(ked_value) → serialize, compute SAID"
-        ],
-        "related_terms": [
-          "Serder",
-          "Creder",
-          "Saider",
-          "Version String"
-        ]
-      },
-      {
-        "term": "Serder",
-        "synonyms": [
-          "Event Serializer"
-        ],
-        "definition": "KERI event serializer extending Sadder. Validates ident=='KERI'. Provides accessors for event-specific fields: verfers, digers, werfers.",
-        "invariants": [
-          "ident must equal 'KERI' — rejects non-KERI SADs",
-          "verfers(): extracts signing public keys from 'k' field as [Verfer]",
-          "digers(): extracts next key digests from 'n' field as [Diger]",
-          "werfers(): extracts witness public keys from 'b' field as [Verfer]"
-        ],
-        "examples": [
-          "Serder.new_with_raw(icp_bytes) → parsed inception event with accessible verfers"
-        ],
-        "related_terms": [
-          "Sadder",
-          "Creder",
-          "Verfer",
-          "Diger"
-        ]
-      },
-      {
-        "term": "Creder",
-        "synonyms": [
-          "Credential Serializer"
-        ],
-        "definition": "ACDC credential serializer extending Sadder. Validates ident=='ACDC'. Provides accessors for credential-specific fields: issuer, schema, subject, status, chains.",
-        "invariants": [
-          "ident must equal 'ACDC' — rejects non-ACDC SADs",
-          "issuer(): extracts 'i' field (issuer AID)",
-          "schema(): extracts 's' field (schema SAID)",
-          "subject(): extracts 'a' field (attribute section)",
-          "status(): extracts 'ri' field (registry identifier)"
-        ],
-        "examples": [
-          "Creder.new_with_raw(acdc_bytes) → parsed credential with accessible issuer/schema"
-        ],
-        "related_terms": [
-          "Sadder",
-          "Serder",
-          "SAID"
-        ]
-      },
-      {
         "term": "Tholder",
         "synonyms": [
           "Threshold Holder"
@@ -6812,7 +6812,7 @@ const RDOD_DATA = {
         ],
         "related_terms": [
           "Bexter",
-          "Sadder",
+          "Sadder (cesr/composition)",
           "Disclosure"
         ]
       },

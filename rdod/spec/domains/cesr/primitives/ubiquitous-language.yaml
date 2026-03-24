@@ -138,7 +138,7 @@ terms:
     examples:
       - "A KERI inception event is a SAD — its 'd' field is its Blake3-256 digest"
       - "An ACDC credential is a SAD — each section (attributes, edges, rules) is also independently a SAD"
-    related_terms: ["Saider", "Saidify", "Sadder", "Serder", "Creder"]
+    related_terms: ["Saider", "Saidify", "Sadder (cesr/composition)", "Serder (cesr/composition)", "Creder (cesr/composition)"]
 
   - term: "Seqner"
     synonyms: ["Sequence Number Primitive"]
@@ -191,7 +191,7 @@ terms:
       - "saidify(sad={'d': '', 'i': 'EAID...'}, code='E') → sad['d'] = 'ESAID...'"
       - "ACDC construction: saidify attributes section → saidify edges section → saidify top-level credential"
       - "Saider.saidify(sad, label='d') → (original_sad, sad_with_said)"
-    related_terms: ["Saider", "SAID", "Diger", "Sadder"]
+    related_terms: ["Saider", "SAID", "Diger", "Sadder (cesr/composition)"]
 
   - term: "Index"
     synonyms: ["Key Index"]
@@ -344,43 +344,7 @@ terms:
 
   # Inherits: "Sizage" from domain://cesr (identical definition — parent owns this term)
 
-  - term: "Sadder"
-    synonyms: ["SAD Serializer"]
-    definition: "Base trait for Self-Addressing Data (SAD) serialization. Provides inhale (raw → ked) and exhale (ked → raw) operations, plus SAID computation. Extended by Serder and Creder."
-    invariants:
-      - "Holds both raw bytes and KED (Key Event Dictionary) representations"
-      - "Provides code(), raw(), ked(), ident(), kind(), size(), version(), saider()"
-      - "inhale: parse raw bytes into structured KED"
-      - "exhale: serialize KED into raw bytes"
-    examples:
-      - "Sadder.new_with_raw(raw_bytes) → parse version string, extract KED"
-      - "Sadder.new_with_ked(ked_value) → serialize, compute SAID"
-    related_terms: ["Serder", "Creder", "Saider", "Version String"]
-
-  - term: "Serder"
-    synonyms: ["Event Serializer"]
-    definition: "KERI event serializer extending Sadder. Validates ident=='KERI'. Provides accessors for event-specific fields: verfers, digers, werfers."
-    invariants:
-      - "ident must equal 'KERI' — rejects non-KERI SADs"
-      - "verfers(): extracts signing public keys from 'k' field as [Verfer]"
-      - "digers(): extracts next key digests from 'n' field as [Diger]"
-      - "werfers(): extracts witness public keys from 'b' field as [Verfer]"
-    examples:
-      - "Serder.new_with_raw(icp_bytes) → parsed inception event with accessible verfers"
-    related_terms: ["Sadder", "Creder", "Verfer", "Diger"]
-
-  - term: "Creder"
-    synonyms: ["Credential Serializer"]
-    definition: "ACDC credential serializer extending Sadder. Validates ident=='ACDC'. Provides accessors for credential-specific fields: issuer, schema, subject, status, chains."
-    invariants:
-      - "ident must equal 'ACDC' — rejects non-ACDC SADs"
-      - "issuer(): extracts 'i' field (issuer AID)"
-      - "schema(): extracts 's' field (schema SAID)"
-      - "subject(): extracts 'a' field (attribute section)"
-      - "status(): extracts 'ri' field (registry identifier)"
-    examples:
-      - "Creder.new_with_raw(acdc_bytes) → parsed credential with accessible issuer/schema"
-    related_terms: ["Sadder", "Serder", "SAID"]
+  # Sadder, Serder, Creder moved to cesr/composition (message-level serializers, not atomic primitives)
 
   - term: "Tholder"
     synonyms: ["Threshold Holder"]
@@ -443,7 +407,7 @@ terms:
     examples:
       - "Pather(['a', 'i']) → path to the issuer field inside the attribute section"
       - "Pather(['e', 'qvi']) → path to the QVI edge"
-    related_terms: ["Bexter", "Sadder", "Disclosure"]
+    related_terms: ["Bexter", "Sadder (cesr/composition)", "Disclosure"]
 
   - term: "Encrypter"
     synonyms: []

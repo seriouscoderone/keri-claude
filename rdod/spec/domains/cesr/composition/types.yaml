@@ -85,3 +85,70 @@ types:
         invariants:
           - "Computed as: byte >> 5"
           - "0=whitespace, 1=CESR count code, 2=CESR op code, 3=JSON, 4=MGPK FixMap, 5=CBOR map, 6=MGPK Map16/32, 7=CESR binary"
+
+  - name: "VersionString"
+    description: "Self-describing header encoding protocol, version, serialization format, and message size."
+    variants:
+      - name: "v2"
+        fields:
+          - name: "protocol"
+            type: "string"
+            required: true
+            description: "4-char protocol identifier"
+            constraints:
+              enum: ["KERI", "ACDC"]
+          - name: "major"
+            type: "integer"
+            required: true
+            description: "Protocol major version"
+          - name: "minor"
+            type: "integer"
+            required: true
+            description: "Protocol minor version"
+          - name: "cesr_major"
+            type: "integer"
+            required: true
+            description: "CESR genus major version"
+          - name: "cesr_minor"
+            type: "integer"
+            required: true
+            description: "CESR genus minor version"
+          - name: "kind"
+            type: "string"
+            required: true
+            description: "Serialization format"
+            constraints:
+              enum: ["JSON", "CBOR", "MGPK", "CESR"]
+          - name: "size"
+            type: "integer"
+            required: true
+            description: "Total serialized message size in bytes"
+        invariants:
+          - "v2 format: PPPPMmmGggKKKKBBBB. (19 characters, period terminated)"
+          - "Size is Base64-encoded (max 16,777,216)"
+          - "Must be the FIRST field in any field map"
+      - name: "v1"
+        fields:
+          - name: "protocol"
+            type: "string"
+            required: true
+            description: "4-char protocol identifier"
+          - name: "major"
+            type: "integer"
+            required: true
+            description: "Major version (hex)"
+          - name: "minor"
+            type: "integer"
+            required: true
+            description: "Minor version (hex)"
+          - name: "kind"
+            type: "string"
+            required: true
+            description: "Serialization format"
+          - name: "size"
+            type: "integer"
+            required: true
+            description: "Total size"
+        invariants:
+          - "v1 format: PPPPvvKKKKllllll_ (17 characters, underscore terminated)"
+          - "Size is hex-encoded (max 16,777,215)"
