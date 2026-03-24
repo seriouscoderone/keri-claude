@@ -1,7 +1,11 @@
 # domain.yaml
+
 template_version: "1.0"
+
 id: "acdc"
+
 name: "ACDC Credential Protocol"
+
 description: >
   How you prove what's true about you — cryptographically authentic credentials
   with lifecycle management, secure exchange, and privacy-preserving disclosure.
@@ -9,6 +13,7 @@ description: >
   graph (DAG) of linked containers, graduated disclosure mechanisms, Ricardian
   contract rule sections, and schema-enforced structure. ACDCs leverage KERI
   identifiers for issuer authentication and CESR encoding for serialization.
+
 version: "0.1.0"
 
 source_material:
@@ -42,6 +47,16 @@ ubiquitous_language:
     invariants:
       - "Issuee AID must be provably controllable"
       - "Presence of issuee makes the ACDC targeted; absence makes it untargeted"
+
+published_language:
+  - term: "ACDC"
+    description: "Authentic Chained Data Container — the credential type used across exchange, lifecycle, and privacy domains"
+  - term: "Credential Type Dimensions"
+    description: "Six orthogonal credential classification dimensions — referenced by all ACDC subdomains"
+  - term: "Issuee"
+    description: "Credential recipient AID — referenced in exchange and privacy domains"
+  - term: "Issuer"
+    description: "Credential creator AID — referenced in lifecycle, exchange, and privacy domains"
 
 domain_clients: []
 
@@ -93,15 +108,5 @@ implementation_guidance:
     explicit rather than exposing raw field map manipulation.
 
 issues: []
-
-published_language:
-  - term: "ACDC"
-    description: "Authentic Chained Data Container — the credential type used across exchange, lifecycle, and privacy domains"
-  - term: "Credential Type Dimensions"
-    description: "Six orthogonal credential classification dimensions — referenced by all ACDC subdomains"
-  - term: "Issuee"
-    description: "Credential recipient AID — referenced in exchange and privacy domains"
-  - term: "Issuer"
-    description: "Credential creator AID — referenced in lifecycle, exchange, and privacy domains"
 
 tags: ["credential", "verifiable", "chained", "disclosure", "authentic-data"]

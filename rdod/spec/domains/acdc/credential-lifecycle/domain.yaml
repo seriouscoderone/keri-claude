@@ -1,13 +1,18 @@
 # domain.yaml
+
 template_version: "1.0"
+
 id: "acdc/credential-lifecycle"
+
 name: "Credential Lifecycle"
+
 description: >
   Issue, track, and revoke credentials — managing a credential from creation
   through revocation. Transaction Event Logs (TELs) provide hash-chained,
   KEL-sealed event structures that track dynamic ACDC state without requiring
   direct signatures on TEL events. TELs support both public (unblinded)
   and private (blinded) state registries.
+
 version: "0.1.0"
 
 source_material:
@@ -36,6 +41,18 @@ ubiquitous_language:
       - "Initialized by a registry inception (rip) event"
       - "SAID of the rip event serves as the registry's unique identifier (REGID)"
       - "Registry SAID appears as the rd field in associated ACDCs"
+
+published_language:
+  - term: "Registrar"
+    description: "TEL Registrar — maintains and publishes registry TEL state updates"
+  - term: "Credentialer"
+    description: "Issues and manages ACDC credentials — validates schemas, creates credential events"
+  - term: "Seeker"
+    description: "Credential search index — full-text search for credentials by schema, issuer, subject"
+  - term: "TEL"
+    description: "Transaction Event Log — hash-chained log tracking ACDC state"
+  - term: "Registry"
+    description: "Verifiable Container/Credential Registry — tracks issuance and revocation state"
 
 domain_clients:
   - ref: "domain://acdc"
@@ -67,17 +84,5 @@ implementation_guidance:
     issuer and discloser for hierarchically deterministic UUID derivation.
 
 issues: []
-
-published_language:
-  - term: "Registrar"
-    description: "TEL Registrar — maintains and publishes registry TEL state updates"
-  - term: "Credentialer"
-    description: "Issues and manages ACDC credentials — validates schemas, creates credential events"
-  - term: "Seeker"
-    description: "Credential search index — full-text search for credentials by schema, issuer, subject"
-  - term: "TEL"
-    description: "Transaction Event Log — hash-chained log tracking ACDC state"
-  - term: "Registry"
-    description: "Verifiable Container/Credential Registry — tracks issuance and revocation state"
 
 tags: ["state", "registry", "revocation", "issuance", "credential-lifecycle"]

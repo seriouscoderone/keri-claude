@@ -2313,9 +2313,9 @@ const RDOD_DATA = {
           "TEL event store [.tvts in keripy]: serialized TEL event bytes indexed by dgKey (registry_said + event_digest) -- the primary event store",
           "TEL sequence index [.tels in keripy]: mapping snKey (registry_said + sn) to event digest -- ordered access by sequence number",
           "Backer signature store [.tibs in keripy]: backer indexed signatures (Siger) per event, indexed by dgKey -- IoSet (insertion-ordered, append-only)",
-          ".baks: backer AID lists per registry, indexed by registry SAID -- current set of designated backer witnesses",
-          ".ancs: anchor seals per event, indexed by dgKey -- the KEL seal that anchors each TEL event",
-          ".tets: event datetime timestamps per event, indexed by dgKey -- recorded at first acceptance"
+          "Backer AID list store [.baks in keripy]: backer AID lists per registry, indexed by registry SAID -- current set of designated backer witnesses",
+          "Anchor seal store [.ancs in keripy]: anchor seals per event, indexed by dgKey -- the KEL seal that anchors each TEL event",
+          "Event timestamp store [.tets in keripy]: event datetime timestamps per event, indexed by dgKey -- recorded at first acceptance"
         ],
         "examples": [
           "Looking up event at sn=3 for registry R: TEL sequence index[snKey(R,3)] -> digest D, then TEL event store[dgKey(R,D)] -> event bytes",
@@ -9725,16 +9725,16 @@ const RDOD_DATA = {
         "synonyms": [],
         "definition": "Typed escrow queues for receipts that cannot yet be verified because the corresponding key event has not been processed.",
         "invariants": [
-          "Unverified Witness Receipts (.uwes): witness receipts for events not yet in the KEL",
-          "Unverified Non-transferable Receipts (.ures): non-transferable receipts for unknown events",
-          "Unverified Transferable Receipts (.vres): transferable receipts for unknown events",
+          "Unverified Witness Receipts [.uwes in keripy]: witness receipts for events not yet in the KEL",
+          "Unverified Non-transferable Receipts [.ures in keripy]: non-transferable receipts for unknown events",
+          "Unverified Transferable Receipts [.vres in keripy]: transferable receipts for unknown events",
           "Default timeout: 3600 seconds — escrowed receipts are pruned after expiry",
           "Drained by Kevery.processEscrowUnverWitness(), processEscrowUnverNonTrans(), processEscrowUnverTrans() in keripy",
           "When the missing event arrives, matching escrowed receipts are promoted to verified storage"
         ],
         "examples": [
-          "A witness receipt for sn=5 arrives before the event at sn=5 — escrowed in .uwes until the event is processed",
-          "After event at sn=5 is accepted, .uwes is drained and matching receipts are attached to the event"
+          "A witness receipt for sn=5 arrives before the event at sn=5 — escrowed in the unverified witness receipt escrow [.uwes in keripy] until the event is processed",
+          "After event at sn=5 is accepted, the unverified witness receipt escrow [.uwes in keripy] is drained and matching receipts are attached to the event"
         ],
         "related_terms": [
           "Receipt",
@@ -9882,7 +9882,7 @@ const RDOD_DATA = {
       {
         "name": "ReceiptEscrowed",
         "payload": "aid: AID, sn: int, event_said: SAID, witness_aid: WitnessAID, escrow_type: EscrowType",
-        "triggers": "A receipt arrives for an event not yet in the KEL — placed in typed escrow (.uwes, .ures, or .vres)"
+        "triggers": "A receipt arrives for an event not yet in the KEL — placed in typed escrow ([.uwes in keripy], [.ures in keripy], or [.vres in keripy])"
       },
       {
         "name": "EscrowDrained",
@@ -14009,7 +14009,7 @@ const RDOD_DATA = {
           "Events are placed here when a conflicting event at the same (prefix, sn) is detected",
           "Timeout: 3600 seconds — escrowed events are pruned after expiry",
           "Events may be promoted to the confirmed Duplicitous Event Log (DEL store [.dels in keripy]) after investigation",
-          "In keripy: stored in the likely duplicitous escrow database [.ldes], processed by the Event Processor (Kevery in keripy).processEscrowLikelyDuplicitous()",
+          "In keripy: stored in the likely duplicitous escrow database [.ldes in keripy], processed by the Event Processor (Kevery in keripy).processEscrowLikelyDuplicitous()",
           "Distinguished from the DEL — LDE holds suspected duplicity, DEL holds confirmed duplicity"
         ],
         "examples": [
@@ -14034,13 +14034,13 @@ const RDOD_DATA = {
           "Contains confirmed duplicitous events — events verified as forks at the same (prefix, sn)",
           "Entries are never automatically pruned or timed out — they are permanent evidence",
           "Stored separately from the KEL — the DEL is a forensic log, not an event history",
-          "In keripy: DEL store [.dels], distinct from the likely duplicitous escrow [.ldes]",
+          "In keripy: DEL store [.dels in keripy], distinct from the likely duplicitous escrow [.ldes in keripy]",
           "In keriox: DuplicitousEvents escrow in the event processor",
           "Used by judges and watchers to make trust decisions"
         ],
         "examples": [
-          "Two confirmed conflicting rotation events at sn=3, both with valid signatures — stored permanently in .dels",
-          "A judge queries .dels for an AID and finds confirmed duplicity evidence — revokes trust"
+          "Two confirmed conflicting rotation events at sn=3, both with valid signatures — stored permanently in the DEL store [.dels in keripy]",
+          "A judge queries the DEL store [.dels in keripy] for an AID and finds confirmed duplicity evidence — revokes trust"
         ],
         "related_terms": [
           "Likely Duplicitous Escrow",
@@ -14415,8 +14415,8 @@ const RDOD_DATA = {
           "Each Habitat maps to exactly one AID",
           "An Identifier Repository (Habery in keripy) provides a shared Event Database (Baser in keripy), key manager (Manager), and Event Processor (Kevery in keripy) to all its Habitats",
           "A Habitat combines key state verification (Key State Tracker / Kever in keripy) with the ability to sign events using the controller's private keys",
-          "Hab.pre is the AID prefix; Hab.kever is the key state; Hab.mgr is the key manager",
-          "Identifier Repository (Habery in keripy).habs is the collection keyed by name/prefix; its .db is the shared Event Database (Baser in keripy)",
+          "Habitat (Hab in keripy) [.pre in keripy] is the AID prefix; [.kever in keripy] is the key state; [.mgr in keripy] is the key manager",
+          "Identifier Repository (Habery in keripy) [.habs in keripy] is the collection keyed by name/prefix; [.db in keripy] is the shared Event Database (Baser in keripy)",
           "Creating a Hab via Habery automatically wires the shared database, key manager, and event processor"
         ],
         "examples": [

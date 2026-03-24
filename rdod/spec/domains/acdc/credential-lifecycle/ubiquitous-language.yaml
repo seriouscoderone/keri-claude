@@ -200,9 +200,9 @@ terms:
       - "TEL event store [.tvts in keripy]: serialized TEL event bytes indexed by dgKey (registry_said + event_digest) -- the primary event store"
       - "TEL sequence index [.tels in keripy]: mapping snKey (registry_said + sn) to event digest -- ordered access by sequence number"
       - "Backer signature store [.tibs in keripy]: backer indexed signatures (Siger) per event, indexed by dgKey -- IoSet (insertion-ordered, append-only)"
-      - ".baks: backer AID lists per registry, indexed by registry SAID -- current set of designated backer witnesses"
-      - ".ancs: anchor seals per event, indexed by dgKey -- the KEL seal that anchors each TEL event"
-      - ".tets: event datetime timestamps per event, indexed by dgKey -- recorded at first acceptance"
+      - "Backer AID list store [.baks in keripy]: backer AID lists per registry, indexed by registry SAID -- current set of designated backer witnesses"
+      - "Anchor seal store [.ancs in keripy]: anchor seals per event, indexed by dgKey -- the KEL seal that anchors each TEL event"
+      - "Event timestamp store [.tets in keripy]: event datetime timestamps per event, indexed by dgKey -- recorded at first acceptance"
     examples:
       - "Looking up event at sn=3 for registry R: TEL sequence index[snKey(R,3)] -> digest D, then TEL event store[dgKey(R,D)] -> event bytes"
       - "Accumulating backer signatures: backer signature store[dgKey(R,D)].add(siger) -- appends to set, idempotent if already present"

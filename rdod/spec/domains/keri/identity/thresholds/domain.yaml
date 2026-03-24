@@ -1,7 +1,11 @@
 # domain.yaml
+
 template_version: "1.0"
+
 id: "keri/identity/thresholds"
+
 name: "Signing Thresholds"
+
 description: >
   Multi-signature requirements and threshold satisfaction. Signing, rotation, dual, and weighted
   threshold mechanics. Determines when a set of signatures
@@ -11,6 +15,7 @@ description: >
   KERI key state: signing threshold (kt), rotation threshold (nt), and witness threshold (bt/TOAD).
   It also owns the witness configuration — the witness list paired with the witness threshold —
   and the dual threshold requirement that rotation events must satisfy both kt and nt.
+
 version: "0.1.0"
 
 source_material:
@@ -37,6 +42,16 @@ ubiquitous_language:
     invariants:
       - "Must be an integer no greater than the number of witnesses"
       - "Determines the M in M-of-N witness accountability"
+
+published_language:
+  - term: "Threshold Satisfaction"
+    description: "The condition under which a set of signatures meets a threshold expression"
+  - term: "Counselor"
+    description: "Tracks multi-sig group event approval progress — queried by Monitor for operation completion"
+  - term: "Signing Threshold"
+    description: "Threshold expression for minimum satisficing subset of signing keys"
+  - term: "Witness Threshold"
+    description: "Minimum number of witness receipts required for accountability"
 
 domain_clients:
   - ref: "domain://keri/identity"
@@ -67,15 +82,5 @@ implementation_guidance:
     the witness list with the toad threshold.
 
 issues: []
-
-published_language:
-  - term: "Threshold Satisfaction"
-    description: "The condition under which a set of signatures meets a threshold expression"
-  - term: "Counselor"
-    description: "Tracks multi-sig group event approval progress — queried by Monitor for operation completion"
-  - term: "Signing Threshold"
-    description: "Threshold expression for minimum satisficing subset of signing keys"
-  - term: "Witness Threshold"
-    description: "Minimum number of witness receipts required for accountability"
 
 tags: ["threshold", "signing-threshold", "rotation-threshold", "witness-threshold", "weighted-threshold", "dual-threshold"]

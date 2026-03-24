@@ -1,7 +1,11 @@
 # domain.yaml
+
 template_version: "1.0"
+
 id: "keri/accountability"
+
 name: "KERI Accountability"
+
 description: >
   Others can verify your identity claims through witness receipting, consensus, and dissemination.
   KERI's Algorithm for Witness Agreement (KAWA) — a Byzantine Fault Tolerant agreement
@@ -12,6 +16,7 @@ description: >
   The controller designates a threshold M of N witnesses for accountability, ensuring that
   at most one sufficient agreement exists despite faulty witnesses. The resulting Key Event
   Receipt Log (KERL) is the receipted form of the KEL used in indirect mode.
+
 version: "0.1.0"
 
 source_material:
@@ -46,6 +51,10 @@ ubiquitous_language:
     invariants:
       - "Set in the bt field of establishment events"
       - "Must be at least ample(witness_count), the BFT minimum"
+
+published_language:
+  - term: "Witness Threshold Check"
+    description: "Validation step checking if witness receipt count meets TOAD"
 
 domain_clients:
   - ref: "domain://keri"
@@ -86,9 +95,5 @@ implementation_guidance:
     receipting counts against, and dissemination targets.
 
 issues: []
-
-published_language:
-  - term: "Witness Threshold Check"
-    description: "Validation step checking if witness receipt count meets TOAD"
 
 tags: ["witness", "consensus", "bft", "receipt", "availability", "indirect-mode"]

@@ -35,7 +35,7 @@ terms:
       - "Events are placed here when a conflicting event at the same (prefix, sn) is detected"
       - "Timeout: 3600 seconds — escrowed events are pruned after expiry"
       - "Events may be promoted to the confirmed Duplicitous Event Log (DEL store [.dels in keripy]) after investigation"
-      - "In keripy: stored in the likely duplicitous escrow database [.ldes], processed by the Event Processor (Kevery in keripy).processEscrowLikelyDuplicitous()"
+      - "In keripy: stored in the likely duplicitous escrow database [.ldes in keripy], processed by the Event Processor (Kevery in keripy).processEscrowLikelyDuplicitous()"
       - "Distinguished from the DEL — LDE holds suspected duplicity, DEL holds confirmed duplicity"
     examples:
       - "An event at sn=5 arrives that conflicts with the accepted event at sn=5 — placed in likely duplicitous escrow [.ldes in keripy] for investigation"
@@ -49,12 +49,12 @@ terms:
       - "Contains confirmed duplicitous events — events verified as forks at the same (prefix, sn)"
       - "Entries are never automatically pruned or timed out — they are permanent evidence"
       - "Stored separately from the KEL — the DEL is a forensic log, not an event history"
-      - "In keripy: DEL store [.dels], distinct from the likely duplicitous escrow [.ldes]"
+      - "In keripy: DEL store [.dels in keripy], distinct from the likely duplicitous escrow [.ldes in keripy]"
       - "In keriox: DuplicitousEvents escrow in the event processor"
       - "Used by judges and watchers to make trust decisions"
     examples:
-      - "Two confirmed conflicting rotation events at sn=3, both with valid signatures — stored permanently in .dels"
-      - "A judge queries .dels for an AID and finds confirmed duplicity evidence — revokes trust"
+      - "Two confirmed conflicting rotation events at sn=3, both with valid signatures — stored permanently in the DEL store [.dels in keripy]"
+      - "A judge queries the DEL store [.dels in keripy] for an AID and finds confirmed duplicity evidence — revokes trust"
     related_terms: ["Likely Duplicitous Escrow", "Fork Detection", "Duplicity Evidence"]
 
   - term: "Notification Bus"

@@ -1,7 +1,11 @@
 # domain.yaml
+
 template_version: "1.0"
+
 id: "keri/accountability/consensus"
+
 name: "Witness Consensus"
+
 description: >
   The mathematical and algorithmic foundations of witness agreement — the first-seen rule,
   the immune constraint, accountability thresholds, proper KERL properties, and BFT quorum
@@ -9,6 +13,7 @@ description: >
   agreement suffices, what threshold guarantees uniqueness of agreement, and what "proper"
   means for a receipted log. It does not handle receipt creation, storage, or network
   propagation — only the rules and computations that govern correctness.
+
 version: "0.1.0"
 
 source_material:
@@ -41,6 +46,10 @@ ubiquitous_language:
       - "M must be no greater than N (the number of witnesses)"
       - "Can be changed at rotation along with the witness set"
 
+published_language:
+  - term: "Quorum Calculation"
+    description: "BFT quorum floor computation for witness agreement (KAWA)"
+
 domain_clients:
   - ref: "domain://keri/accountability"
     relationship: "Parent orchestrates witness agreement; consensus provides the mathematical rules, quorum calculation, and proper-KERL invariants"
@@ -68,9 +77,5 @@ implementation_guidance:
     every event has been verified against controller signatures and prior state.
 
 issues: []
-
-published_language:
-  - term: "Quorum Calculation"
-    description: "BFT quorum floor computation for witness agreement (KAWA)"
 
 tags: ["consensus", "bft", "quorum", "first-seen", "immunity", "proper-kerl", "accountability"]

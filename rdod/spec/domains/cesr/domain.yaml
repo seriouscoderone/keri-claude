@@ -1,7 +1,11 @@
 # domain.yaml
+
 template_version: "1.0"
+
 id: "cesr"
+
 name: "CESR Encoding"
+
 description: >
   Composable Event Streaming Representation — a dual text-binary encoding
   format with the unique property of text-binary concatenation composability.
@@ -10,6 +14,7 @@ description: >
   qualified type-length-value encoding for cryptographic primitives, general
   data types, and hierarchically composed groups with count codes for
   stream pipelining. Independent encoding layer with no protocol semantics.
+
 version: "0.1.0"
 
 source_material:
@@ -57,6 +62,14 @@ ubiquitous_language:
       - "Each kind has unique start bits enabling cold-start detection"
       - "Non-native serializations MUST have a Version String as their first field"
 
+published_language:
+  # Primitive terms are published by cesr/primitives (the authoritative subdomain).
+  # Parent cesr/ publishes only concepts that span both subdomains.
+  - term: "Composability"
+    description: "The core CESR property — text-binary concatenation composability"
+  - term: "Version String"
+    description: "Self-describing message header — used by all KERI/ACDC messages"
+
 domain_clients:
   - ref: "domain://keri"
     relationship: "KERI events are encoded in CESR format; CESR defines the encoding contract for key events, signatures, and receipts"
@@ -98,13 +111,5 @@ implementation_guidance:
     (MtrDex, NumDex), -ify suffix for transforms (versify, sizeify, saidify).
 
 issues: []
-
-published_language:
-  # Primitive terms are published by cesr/primitives (the authoritative subdomain).
-  # Parent cesr/ publishes only concepts that span both subdomains.
-  - term: "Composability"
-    description: "The core CESR property — text-binary concatenation composability"
-  - term: "Version String"
-    description: "Self-describing message header — used by all KERI/ACDC messages"
 
 tags: ["encoding", "serialization", "composability", "cryptographic-primitives", "streaming"]

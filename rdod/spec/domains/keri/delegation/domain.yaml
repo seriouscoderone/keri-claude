@@ -1,7 +1,11 @@
 # domain.yaml
+
 template_version: "1.0"
+
 id: "keri/delegation"
+
 name: "Delegation"
+
 description: >
   Cooperative delegation of identifier authority — a mechanism where a delegator AID approves
   the establishment operations (inception and rotation) of a delegated AID (delegatee). Delegation
@@ -10,6 +14,7 @@ description: >
   anchoring the delegated event. This two-way cryptographic binding requires cooperation from both
   parties. Delegation enables horizontal scaling of signing authority, hierarchical key management,
   and enhanced recovery from key compromise via the delegator's additional layer of control.
+
 version: "0.1.0"
 
 source_material:
@@ -49,6 +54,14 @@ ubiquitous_language:
       - "Set in the c field of an establishment event"
       - "Enables transparent delegation for authorization purposes"
 
+published_language:
+  - term: "Boatswain"
+    description: "Tracks delegation approval progress — queried by Monitor for operation completion"
+  - term: "Delegated Inception"
+    description: "Inception event for a delegated AID — type 'dip' with di field"
+  - term: "Delegated Rotation"
+    description: "Rotation event for a delegated AID — type 'drt'"
+
 domain_clients:
   - ref: "domain://keri"
     relationship: "Parent domain drives the delegated identifier lifecycle — creation, rotation, and recovery of delegated AIDs"
@@ -85,13 +98,5 @@ implementation_guidance:
     verification up to the root non-delegated KEL.
 
 issues: []
-
-published_language:
-  - term: "Boatswain"
-    description: "Tracks delegation approval progress — queried by Monitor for operation completion"
-  - term: "Delegated Inception"
-    description: "Inception event for a delegated AID — type 'dip' with di field"
-  - term: "Delegated Rotation"
-    description: "Rotation event for a delegated AID — type 'drt'"
 
 tags: ["delegation", "hierarchical", "cooperative", "key-management", "recovery"]

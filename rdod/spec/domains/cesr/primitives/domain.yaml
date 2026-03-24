@@ -1,7 +1,11 @@
 # domain.yaml
+
 template_version: "1.0"
+
 id: "cesr/primitives"
+
 name: "CESR Primitives"
+
 description: >
   The subdomain responsible for qualifying raw cryptographic material and data
   values as self-framing CESR primitives. Defines the Matter base type and its
@@ -9,6 +13,7 @@ description: >
   entries that map type codes to cryptographic algorithms and raw sizes, and the
   three-domain (T, B, R) representation transforms (qb64, qb2, raw). Follows
   the KERI naming convention: gerund-module, agent-noun class, -Dex code table.
+
 version: "0.1.0"
 
 source_material:
@@ -38,6 +43,36 @@ ubiquitous_language:
     invariants:
       - "Code determines the hash algorithm (E=Blake3-256, F=Blake2b-256, H=SHA3-256, I=SHA2-256)"
       - "Can compute digest from serialized data or wrap an existing digest"
+
+published_language:
+  - term: "SAID"
+    description: "Self-Addressing Identifier — content-addressable digest used by all domains for field maps"
+  - term: "Matter"
+    description: "Base type for all non-indexed CESR primitives — (code, raw) pair with domain transforms"
+  - term: "Verfer"
+    description: "Public key primitive — signature verification"
+  - term: "Diger"
+    description: "Digest primitive — hash computation and comparison"
+  - term: "Siger"
+    description: "Indexed signature primitive — threshold multi-signature schemes"
+  - term: "Cigar"
+    description: "Unindexed signature primitive — witness receipts"
+  - term: "Salter"
+    description: "Salt/seed primitive — deterministic key derivation"
+  - term: "Saider"
+    description: "SAID primitive — self-addressing identifier computation"
+  - term: "Prefixer"
+    description: "AID prefix primitive — identifier representation"
+  - term: "Seqner"
+    description: "Sequence number primitive — ordinal encoding"
+  - term: "Serder"
+    description: "KERI event serializer — event parsing and field access"
+  - term: "Creder"
+    description: "ACDC credential serializer — credential parsing and field access"
+  - term: "Sadder"
+    description: "SAD serializer base — inhale/exhale operations"
+  - term: "Tholder"
+    description: "Threshold holder — signing/rotation threshold representation and satisfaction"
 
 domain_clients:
   - ref: "domain://cesr"
@@ -70,35 +105,5 @@ implementation_guidance:
     e.g., MtrDex, DigDex).
 
 issues: []
-
-published_language:
-  - term: "SAID"
-    description: "Self-Addressing Identifier — content-addressable digest used by all domains for field maps"
-  - term: "Matter"
-    description: "Base type for all non-indexed CESR primitives — (code, raw) pair with domain transforms"
-  - term: "Verfer"
-    description: "Public key primitive — signature verification"
-  - term: "Diger"
-    description: "Digest primitive — hash computation and comparison"
-  - term: "Siger"
-    description: "Indexed signature primitive — threshold multi-signature schemes"
-  - term: "Cigar"
-    description: "Unindexed signature primitive — witness receipts"
-  - term: "Salter"
-    description: "Salt/seed primitive — deterministic key derivation"
-  - term: "Saider"
-    description: "SAID primitive — self-addressing identifier computation"
-  - term: "Prefixer"
-    description: "AID prefix primitive — identifier representation"
-  - term: "Seqner"
-    description: "Sequence number primitive — ordinal encoding"
-  - term: "Serder"
-    description: "KERI event serializer — event parsing and field access"
-  - term: "Creder"
-    description: "ACDC credential serializer — credential parsing and field access"
-  - term: "Sadder"
-    description: "SAD serializer base — inhale/exhale operations"
-  - term: "Tholder"
-    description: "Threshold holder — signing/rotation threshold representation and satisfaction"
 
 tags: ["primitives", "cryptographic-material", "encoding", "qualification"]

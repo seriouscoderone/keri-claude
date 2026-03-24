@@ -34,15 +34,15 @@ terms:
     synonyms: []
     definition: "Typed escrow queues for receipts that cannot yet be verified because the corresponding key event has not been processed."
     invariants:
-      - "Unverified Witness Receipts (.uwes): witness receipts for events not yet in the KEL"
-      - "Unverified Non-transferable Receipts (.ures): non-transferable receipts for unknown events"
-      - "Unverified Transferable Receipts (.vres): transferable receipts for unknown events"
+      - "Unverified Witness Receipts [.uwes in keripy]: witness receipts for events not yet in the KEL"
+      - "Unverified Non-transferable Receipts [.ures in keripy]: non-transferable receipts for unknown events"
+      - "Unverified Transferable Receipts [.vres in keripy]: transferable receipts for unknown events"
       - "Default timeout: 3600 seconds — escrowed receipts are pruned after expiry"
       - "Drained by Kevery.processEscrowUnverWitness(), processEscrowUnverNonTrans(), processEscrowUnverTrans() in keripy"
       - "When the missing event arrives, matching escrowed receipts are promoted to verified storage"
     examples:
-      - "A witness receipt for sn=5 arrives before the event at sn=5 — escrowed in .uwes until the event is processed"
-      - "After event at sn=5 is accepted, .uwes is drained and matching receipts are attached to the event"
+      - "A witness receipt for sn=5 arrives before the event at sn=5 — escrowed in the unverified witness receipt escrow [.uwes in keripy] until the event is processed"
+      - "After event at sn=5 is accepted, the unverified witness receipt escrow [.uwes in keripy] is drained and matching receipts are attached to the event"
     related_terms: ["Receipt", "Receipt Types", "Unverified Receipt Escrow", "Unverified Witness Receipt Escrow", "Unverified Transferable Receipt Escrow"]
 
   - term: "Unverified Receipt Escrow"
@@ -106,7 +106,7 @@ events:
 
   - name: "ReceiptEscrowed"
     payload: "aid: AID, sn: int, event_said: SAID, witness_aid: WitnessAID, escrow_type: EscrowType"
-    triggers: "A receipt arrives for an event not yet in the KEL — placed in typed escrow (.uwes, .ures, or .vres)"
+    triggers: "A receipt arrives for an event not yet in the KEL — placed in typed escrow ([.uwes in keripy], [.ures in keripy], or [.vres in keripy])"
 
   - name: "EscrowDrained"
     payload: "aid: AID, sn: int, event_said: SAID, promoted_count: int, escrow_type: EscrowType"

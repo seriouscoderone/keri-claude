@@ -1,13 +1,18 @@
 # domain.yaml
+
 template_version: "1.0"
+
 id: "keri"
+
 name: "KERI Protocol"
+
 description: >
   How you prove who you are — decentralized key management providing cryptographic identity
   with delegation, accountability through witnesses, and integrity through watchers. Key Event
   Receipt Infrastructure provides self-certifying identifiers, append-only key event logs,
   witness-based consensus, pre-rotation for post-quantum key compromise recovery, and delegated
   hierarchical key management. The central orchestrating domain of the ecosystem.
+
 version: "0.1.0"
 
 source_material:
@@ -70,6 +75,26 @@ ubiquitous_language:
     invariants:
       - "The digest of next keys must appear in the previous establishment event"
       - "Provides post-quantum resistance — attacker must compromise both current and pre-committed keys"
+
+published_language:
+  - term: "AID"
+    description: "Autonomic Identifier — the core identity concept used across all domains"
+  - term: "KEL"
+    description: "Key Event Log — the append-only identity ledger referenced by credential and service domains"
+  - term: "Controller"
+    description: "Entity controlling an AID — referenced by all domains that authenticate"
+  - term: "Witness"
+    description: "Designated accountability node — referenced by service and accountability domains"
+  - term: "Watcher"
+    description: "Designated integrity monitor — referenced by service and integrity domains"
+  - term: "Exchange Message (exn)"
+    description: "Generic routed message envelope — used by IPEX, multisig coordination, discovery"
+  - term: "Exchanger"
+    description: "Generic message router — used by any domain registering route handlers"
+  - term: "KERI Field Map"
+    description: "Canonical ordered field structure — referenced by all message-processing domains"
+  - term: "KRAM"
+    description: "Replay protection mechanism — used by cloud-agent-service and any message-receiving service"
 
 domain_clients:
   - ref: "domain://local-agent"
@@ -138,25 +163,5 @@ implementation_guidance:
     must use CESR encoding and follow the KERI specification event processing rules.
 
 issues: []
-
-published_language:
-  - term: "AID"
-    description: "Autonomic Identifier — the core identity concept used across all domains"
-  - term: "KEL"
-    description: "Key Event Log — the append-only identity ledger referenced by credential and service domains"
-  - term: "Controller"
-    description: "Entity controlling an AID — referenced by all domains that authenticate"
-  - term: "Witness"
-    description: "Designated accountability node — referenced by service and accountability domains"
-  - term: "Watcher"
-    description: "Designated integrity monitor — referenced by service and integrity domains"
-  - term: "Exchange Message (exn)"
-    description: "Generic routed message envelope — used by IPEX, multisig coordination, discovery"
-  - term: "Exchanger"
-    description: "Generic message router — used by any domain registering route handlers"
-  - term: "KERI Field Map"
-    description: "Canonical ordered field structure — referenced by all message-processing domains"
-  - term: "KRAM"
-    description: "Replay protection mechanism — used by cloud-agent-service and any message-receiving service"
 
 tags: ["protocol", "identity", "decentralized", "key-management"]
