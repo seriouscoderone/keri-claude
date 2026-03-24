@@ -8,17 +8,39 @@ domain_ref: "cesr/primitives"
 # Formalized invariants from ubiquitous_language terms
 properties:
   # --- CESR Primitive Pattern ---
-  - invariant: "Every primitive extends Matter (non-indexed) or Indexer (indexed signatures)"
+  - invariant: "Every CESR primitive type MUST implement the following interface contract: constructor(code: string, raw: bytes) for R-domain construction; constructor(qb64: string) for T-domain construction; constructor(qb2: bytes) for B-domain construction. Properties: .code (string), .raw (bytes), .qb64 (string), .qb2 (bytes). Indexed primitives (Siger) additionally require: .index (integer), .ondex (integer|None)."
     term: "CESR Primitive Pattern"
     technique: "property-based"
     formal:
       language: "python"
       expression: |
         @given(cesr_primitive_instance())
-        def test_primitive_base_type(prim):
+        def test_primitive_interface_contract(prim):
+            # Base type check
             assert isinstance(prim, Matter) or isinstance(prim, Indexer)
+            # R-domain construction: (code, raw) -> primitive
+            from_raw = type(prim)(raw=prim.raw, code=prim.code)
+            assert from_raw.code == prim.code
+            assert from_raw.raw == prim.raw
+            # T-domain construction: qb64 -> primitive
+            from_qb64 = type(prim)(qb64=prim.qb64)
+            assert from_qb64.code == prim.code
+            assert from_qb64.raw == prim.raw
+            # B-domain construction: qb2 -> primitive
+            from_qb2 = type(prim)(qb2=prim.qb2)
+            assert from_qb2.code == prim.code
+            assert from_qb2.raw == prim.raw
+            # Required properties
+            assert isinstance(prim.code, str)
+            assert isinstance(prim.raw, bytes)
+            assert isinstance(prim.qb64, str)
+            assert isinstance(prim.qb2, bytes)
+            # Indexed primitives require index/ondex
+            if isinstance(prim, Indexer):
+                assert isinstance(prim.index, int)
+                assert prim.ondex is None or isinstance(prim.ondex, int)
     strategy: "cesr_primitive_instance() — generates Verfer, Diger, Siger, Cigar, Salter, Signer, etc."
-    notes: "All CESR primitives must be rooted in one of the two base types."
+    notes: "All CESR primitives MUST support three construction paths (R-domain, T-domain, B-domain) and expose .code, .raw, .qb64, .qb2 properties."
 
   - invariant: "The code determines the algorithm -- there is no separate algorithm parameter"
     term: "CESR Primitive Pattern"
@@ -352,20 +374,29 @@ properties:
     strategy: "ed25519_unindexed_signature()"
     notes: "Unindexed Ed25519: code '0B' (2 chars) + 86-char value = 88 total."
 
-  - invariant: "Carries a .verfer property linking to the public key that produced the signature"
+  - invariant: "Signer-Verfer binding postcondition: for any Signer s and any data d, s.verfer.verify(s.sign(d).raw, d) MUST return True. The .verfer property on a Siger/Cigar links back to the public key that can verify the signature."
     term: "Cigar"
     technique: "property-based"
     formal:
       language: "python"
       expression: |
         @given(ed25519_keypair(), st.binary(min_size=1, max_size=256))
-        def test_cigar_verfer_link(keypair, message):
+        def test_signer_verfer_binding(keypair, message):
             signer = Signer(raw=keypair.private, code='A')
             cigar = signer.sign(message)
+            # .verfer links to the public key
             assert isinstance(cigar.verfer, Verfer)
             assert cigar.verfer.qb64 == signer.verfer.qb64
+            # Binding postcondition: sign-then-verify MUST succeed
+            assert signer.verfer.verify(cigar.raw, message) == True, (
+                "Signer-Verfer binding violated: s.verfer.verify(s.sign(d).raw, d) MUST return True"
+            )
+            # Indexed variant (Siger) also carries .verfer
+            siger = signer.sign(message, index=0)
+            assert isinstance(siger, Siger)
+            assert signer.verfer.verify(siger.raw, message) == True
     strategy: "ed25519_keypair() x binary()"
-    notes: "Cigar retains a reference to the public key for standalone verification."
+    notes: "Signer-Verfer binding: for any Signer s and data d, s.verfer.verify(s.sign(d).raw, d) MUST return True."
 
   # --- Salter ---
   - invariant: "Code 0A for 128-bit (16-byte) random salt -- 24 chars qb64"
@@ -400,7 +431,7 @@ properties:
     strategy: "salt x path"
     notes: "Salter derives deterministic Signers via argon2 key stretching."
 
-  - invariant: "Salter derivation is deterministic: same salt + path = same key"
+  - invariant: "Deterministic encoding guarantee: for any primitive p, encoding is idempotent — identical (code, raw) pairs MUST produce byte-identical qb64 and byte-identical qb2. Conversely, identical qb64 MUST decode to identical (code, raw). This is the round-trip guarantee: decode(encode(p)) == p for all valid primitives."
     term: "Salter"
     technique: "property-based"
     formal:
@@ -408,13 +439,23 @@ properties:
       expression: |
         @given(st.binary(min_size=16, max_size=16),
                st.text(min_size=1, max_size=3, alphabet='0123456789'))
-        def test_salter_deterministic(salt, path):
+        def test_deterministic_encoding_guarantee(salt, path):
             s1 = Salter(raw=salt).signer(path=path, code='A')
             s2 = Salter(raw=salt).signer(path=path, code='A')
+            # Identical (code, raw) MUST produce byte-identical qb64
             assert s1.raw == s2.raw
+            assert s1.qb64 == s2.qb64
+            assert s1.qb2 == s2.qb2
             assert s1.verfer.qb64 == s2.verfer.qb64
+            # Round-trip guarantee: decode(encode(p)) == p
+            from_qb64 = Signer(qb64=s1.qb64)
+            assert from_qb64.raw == s1.raw
+            assert from_qb64.code == s1.code
+            from_qb2 = Signer(qb2=s1.qb2)
+            assert from_qb2.raw == s1.raw
+            assert from_qb2.code == s1.code
     strategy: "salt x path"
-    notes: "Determinism is critical for key recovery from salt."
+    notes: "Round-trip guarantee: decode(encode(p)) == p. Identical inputs MUST produce identical outputs across all three domains."
 
   # --- Prefixer ---
   - invariant: "Non-transferable basic prefix uses code B; Transferable basic prefix uses code D"
@@ -635,7 +676,7 @@ properties:
     notes: "Every MtrDex constant must correspond to a valid code table entry."
 
   # --- One/Two/Four-Character Codes ---
-  - invariant: "1-char codes: 52 possible codes (letters only), pad size 1"
+  - invariant: "1-character master codes: exactly 52 entries (A-Z = 26, a-z = 26). Each has hard_size=1, soft_size=0, lead_size=1. The code character IS the first character of the qb64 representation. Examples: A=RandomSeed128, B=Ed25519NT, D=Ed25519, E=Blake3-256, M=Short2ByteSeqNum."
     term: "One-Character Code"
     technique: "smt"
     formal:
@@ -643,6 +684,9 @@ properties:
       expression: |
         code_char = Int('code_char')
         is_letter = Function('is_letter', IntSort(), BoolSort())
+        hs = Int('hs')  # hard_size
+        ss = Int('ss')  # soft_size
+        ls = Int('ls')  # lead_size
         s = Solver()
         # A-Z: 65-90, a-z: 97-122
         s.add(ForAll([code_char],
@@ -653,8 +697,12 @@ properties:
         # Count letters: 26 + 26 = 52
         count = Int('count')
         s.add(count == 52)
+        # 1-char code sizage invariants
+        s.add(hs == 1)  # hard_size = 1
+        s.add(ss == 0)  # soft_size = 0
+        s.add(ls == 1)  # lead_size = 1
         assert s.check() == sat
-    notes: "Exactly 52 one-character codes available (A-Z, a-z)."
+    notes: "Exactly 52 one-character codes (A-Z, a-z). Each: hs=1, ss=0, ls=1. Code char is qb64[0]."
 
   - invariant: "2-char codes: selector '0', pad size 2"
     term: "Two-Character Code"
@@ -761,23 +809,31 @@ properties:
     strategy: "st.datetimes()"
     notes: "Dater is always code 1AAG, 36 chars qb64."
 
-  - invariant: "Character substitution: colon->c, dot->d, plus->p for Base64 safety"
+  - invariant: "Base64url character substitution: standard Base64 characters + and / are replaced with - and _ respectively for URL safety. Substitution is applied AFTER Base64 encoding and reversed BEFORE Base64 decoding. Round-trip: url_safe(base64_encode(bytes)) -> base64_decode(url_unsafe(text)) MUST produce original bytes."
     term: "Dater"
     technique: "property-based"
     formal:
       language: "python"
       expression: |
         @given(st.datetimes())
-        def test_dater_char_substitution(dt):
+        def test_base64url_char_substitution(dt):
             dater = Dater(dt=dt)
             dts = dater.dts  # date-time string
+            # Dater-specific substitutions (colon->c, dot->d, plus->p)
             assert ':' not in dts
             assert '.' not in dts
             assert '+' not in dts
-            # But the canonical chars are present
-            assert 'c' in dts or 'T' in dts  # colons replaced with 'c'
+            # Base64url substitution: no + or / in qb64
+            assert '+' not in dater.qb64, "qb64 MUST NOT contain '+' — use '-' instead"
+            assert '/' not in dater.qb64, "qb64 MUST NOT contain '/' — use '_' instead"
+            # Round-trip: url_safe(base64_encode(raw)) -> base64_decode(url_unsafe(qb64)) == raw
+            from_qb64 = Dater(qb64=dater.qb64)
+            assert from_qb64.raw == dater.raw, (
+                "Round-trip violated: url_safe(base64_encode(bytes)) -> "
+                "base64_decode(url_unsafe(text)) MUST produce original bytes"
+            )
     strategy: "st.datetimes()"
-    notes: "Non-Base64-safe characters are substituted for CESR compatibility."
+    notes: "Base64url substitution: + -> -, / -> _. Applied after encoding, reversed before decoding. Round-trip guaranteed."
 
   # --- ZeroizeOnDrop ---
   - invariant: "All bytes of raw key material are zeroed on object destruction"

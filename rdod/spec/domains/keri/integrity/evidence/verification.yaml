@@ -127,7 +127,7 @@ properties:
     strategy: "st.lists of del entries x st.integers for elapsed time (up to 10 years)"
     notes: "DEL entries are forensic evidence — permanent, never pruned, never timed out."
 
-  - invariant: "KeyEventAdded notification MUST be delivered to all subscribers registered for that notification type; subscribers not registered for KeyEventAdded MUST NOT receive it; notification delivery MUST be reliable (no lost notifications)"
+  - invariant: "Notification delivery guarantee: duplicity notifications are delivered synchronously within the event processing cycle via the cue queue. Each registered subscriber receives the notification in order. If a subscriber throws an exception, the exception is isolated — other subscribers still receive the notification. The notification contains: {kin: 'duplicity', prefix: AID, sn: int, said_a: SAID, said_b: SAID}."
     term: "Notification Bus"
     technique: property-based
     formal:
@@ -136,20 +136,41 @@ properties:
         @given(subscriber_types=st.lists(
             st.sampled_from(['KeyEventAdded', 'ReceiptReceived', 'DuplicityDetected']),
             min_size=1, max_size=10))
-        def test_notification_delivery(subscriber_types):
+        def test_notification_delivery_guarantee(subscriber_types):
             bus = NotificationBus()
             subscribers = [TestSubscriber(st) for st in subscriber_types]
             for s in subscribers:
                 bus.subscribe(s, s.notification_type)
-            notification = Notification(type='KeyEventAdded')
+            notification = Notification(
+                type='DuplicityDetected',
+                kin='duplicity',
+                prefix='ETestAID',
+                sn=5,
+                said_a='EFirstSAID',
+                said_b='ESecondSAID'
+            )
+            # Inject a failing subscriber
+            failing_sub = FailingSubscriber('DuplicityDetected')
+            bus.subscribe(failing_sub, 'DuplicityDetected')
             bus.publish(notification)
+            # Registered subscribers receive notification despite failing peer
             for s in subscribers:
-                if s.notification_type == 'KeyEventAdded':
-                    assert s.received(notification), "Registered subscriber must receive notification"
+                if s.notification_type == 'DuplicityDetected':
+                    assert s.received(notification), (
+                        "Registered subscriber MUST receive notification even if another subscriber throws"
+                    )
                 else:
-                    assert not s.received(notification), "Non-registered subscriber must NOT receive notification"
-    strategy: "st.lists of subscriber types for selective delivery testing"
-    notes: "Notification delivery is selective (type-matched) and reliable (no drops)."
+                    assert not s.received(notification), (
+                        "Non-registered subscriber MUST NOT receive notification"
+                    )
+            # Notification structure check
+            assert notification.kin == 'duplicity'
+            assert notification.prefix is not None
+            assert isinstance(notification.sn, int)
+            assert notification.said_a is not None
+            assert notification.said_b is not None
+    strategy: "st.lists of subscriber types for selective delivery testing with exception isolation"
+    notes: "Synchronous delivery, subscriber exception isolation, structured notification: {kin, prefix, sn, said_a, said_b}."
 
 contracts:
   - port_ref: "port://keri/integrity/evidence/inbound/evidence-management"

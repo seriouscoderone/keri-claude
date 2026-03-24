@@ -7,20 +7,34 @@ domain_ref: "keri/identity"
 
 properties:
   # KEL invariants
-  - invariant: "Append-only — events cannot be modified or deleted (excepting superseding recovery)"
+  - invariant: "KEL immutability with recovery exception: the KEL is append-only — events MUST NOT be modified or deleted once accepted. Exception: superseding recovery (Rule A0) replaces events on the forked branch by designating the recovery rotation's branch as the new trunk. Replaced events are preserved (queryable by fn) but removed from the active KEL sequence."
     term: "KEL"
     technique: property-based
     formal:
       language: python
       expression: |
         @given(kel=kel_strategy(), new_event=key_event_strategy())
-        def test_kel_append_only(kel, new_event):
+        def test_kel_immutability_with_recovery_exception(kel, new_event):
             snapshot = [e.said for e in kel.events]
             kel.append(new_event)
+            # Append-only: all prior events unchanged
             for i, said in enumerate(snapshot):
-                assert kel.events[i].said == said
+                assert kel.events[i].said == said, (
+                    f"Event at index {i} MUST NOT be modified after acceptance"
+                )
+            # Recovery exception: superseding rotation replaces trunk
+            if hasattr(kel, 'apply_superseding'):
+                recovery_rot = build_recovery_rotation(kel.aid, sn=new_event.sn)
+                kel.apply_superseding(recovery_rot, new_event)
+                # Replaced event is off trunk but still queryable by fn
+                assert new_event not in [e for e in kel.active_events], (
+                    "Superseded event removed from active KEL sequence"
+                )
+                assert kel.get_by_fn(new_event.fn) is not None, (
+                    "Superseded event MUST be preserved and queryable by fn"
+                )
     strategy: "kel_strategy(), key_event_strategy()"
-    notes: "Prior events are immutable after acceptance."
+    notes: "Append-only with one exception: Rule A0 superseding recovery replaces trunk events. Replaced events preserved queryable by fn."
 
   - invariant: "Hash-chained — each event includes digest of prior event in p field"
     term: "KEL"
@@ -149,21 +163,41 @@ contracts:
         description: "KEL always starts with inception"
 
   # Escrow Type Pattern invariants
-  - invariant: "On reprocessing: the event is fully re-validated — not assumed valid. It may be accepted, remain escrowed, or cascade to a different escrow type."
+  - invariant: "Escrow reprocessing outcomes: when an escrowed event is reprocessed, exactly one of four outcomes MUST occur: (1) ACCEPTED — blocking condition resolved, event moves to KEL; (2) SAME-ESCROW — blocking condition still unresolved, event stays in current escrow; (3) CASCADE — one blocking condition resolved but another discovered, event moves to a different escrow type; (4) PRUNED — timeout exceeded, event discarded permanently."
     term: "Escrow Type Pattern"
     technique: property-based
     formal:
       language: python
       expression: |
         @given(escrowed_event=escrowed_event_strategy())
-        def test_reprocessing_full_validation(escrowed_event):
+        def test_escrow_reprocessing_outcomes(escrowed_event):
             result = reprocess(escrowed_event)
-            assert result in ('accepted', 'escrowed', 'cascaded', 'timed_out')
+            VALID_OUTCOMES = ('accepted', 'same_escrow', 'cascaded', 'pruned')
+            assert result.outcome in VALID_OUTCOMES, (
+                f"Escrow reprocessing MUST produce one of {VALID_OUTCOMES}, "
+                f"got '{result.outcome}'"
+            )
+            if result.outcome == 'accepted':
+                assert result.event in get_kel(escrowed_event.aid).events, (
+                    "ACCEPTED: event MUST be in KEL"
+                )
+            elif result.outcome == 'same_escrow':
+                assert result.escrow_type == escrowed_event.escrow_type, (
+                    "SAME-ESCROW: event stays in current escrow type"
+                )
+            elif result.outcome == 'cascaded':
+                assert result.escrow_type != escrowed_event.escrow_type, (
+                    "CASCADE: event MUST move to a different escrow type"
+                )
+            elif result.outcome == 'pruned':
+                assert result.event not in get_all_escrows(), (
+                    "PRUNED: event MUST be permanently discarded from all escrows"
+                )
     strategy: "escrowed_event_strategy()"
-    notes: "Reprocessing re-validates from scratch."
+    notes: "Exactly four outcomes: ACCEPTED (to KEL), SAME-ESCROW (stay), CASCADE (different escrow), PRUNED (discarded)."
 
   # Escrow Cascade invariants
-  - invariant: "Escrow processing order matters: OOE first, then receipt escrows, then PSE, then PWE, then PDE"
+  - invariant: "Escrow processing order MUST be: OOE first (resolves sequence gaps), then PSE (resolves signature deficiency), then PWE (resolves witness deficiency), then PDE (resolves delegation deficiency). This order matters because: OOE resolution may produce events that satisfy PSE conditions; PSE resolution may produce fully-signed events that enter PWE; PWE resolution may produce fully-witnessed events that enter PDE."
     term: "Escrow Cascade"
     technique: property-based
     formal:
@@ -173,11 +207,24 @@ contracts:
         def test_escrow_processing_order(data):
             processor = EventProcessor()
             order = processor.get_escrow_processing_order()
-            assert order.index('OOE') < order.index('PSE')
-            assert order.index('PSE') < order.index('PWE')
-            assert order.index('PWE') < order.index('PDE')
+            assert order.index('OOE') < order.index('PSE'), (
+                "OOE MUST be processed before PSE — OOE resolution may produce "
+                "events that satisfy PSE conditions"
+            )
+            assert order.index('PSE') < order.index('PWE'), (
+                "PSE MUST be processed before PWE — PSE resolution may produce "
+                "fully-signed events that enter PWE"
+            )
+            assert order.index('PWE') < order.index('PDE'), (
+                "PWE MUST be processed before PDE — PWE resolution may produce "
+                "fully-witnessed events that enter PDE"
+            )
+            # Verify the complete order
+            assert order == ['OOE', 'PSE', 'PWE', 'PDE'], (
+                f"Complete escrow processing order MUST be [OOE, PSE, PWE, PDE], got {order}"
+            )
     strategy: "Fixed order verification"
-    notes: "OOE < receipt < PSE < PWE < PDE."
+    notes: "OOE -> PSE -> PWE -> PDE. Each stage may produce events that satisfy the next stage's conditions."
 
   # Out-of-Order Escrow invariants
   - invariant: "Triggered when sn > expected_sn for a known prefix, or when the prefix is unknown and the event is not an inception"
@@ -210,7 +257,7 @@ contracts:
     notes: "Default OOE timeout is 1200s (20 minutes)."
 
   # Escrow Timeout invariants
-  - invariant: "Timeout is checked during each processing sweep: if (now - escrowed_datetime) > timeout, the entry is pruned"
+  - invariant: "Escrow timeout semantics: an escrowed item with age A and configured timeout T is active when A < T and MUST be pruned when A >= T. Timeout is checked during each processing cycle. Pruned items are permanently discarded — they cannot re-enter any escrow. Default timeouts: OOE=1200s, PSE=3600s, PWE=3600s, PDE=86400s."
     term: "Escrow Timeout"
     technique: property-based
     formal:
@@ -218,12 +265,38 @@ contracts:
       expression: |
         @given(timeout=st.integers(min_value=1, max_value=86400),
                elapsed=st.integers(min_value=0, max_value=172800))
-        def test_timeout_pruning(timeout, elapsed):
-            is_expired = elapsed > timeout
+        def test_escrow_timeout_semantics(timeout, elapsed):
+            is_expired = elapsed >= timeout
             result = check_timeout(elapsed, timeout)
-            assert result.is_pruned == is_expired
-    strategy: "st.integers for timeout and elapsed"
-    notes: "Simple duration comparison: elapsed > timeout = prune."
+            assert result.is_pruned == is_expired, (
+                f"age={elapsed}, timeout={timeout}: "
+                f"is_pruned MUST be {is_expired} (A >= T), got {result.is_pruned}"
+            )
+            # Boundary: exactly at timeout MUST be pruned
+            boundary = check_timeout(timeout, timeout)
+            assert boundary.is_pruned == True, (
+                f"At exact timeout boundary (A == T == {timeout}): MUST be pruned"
+            )
+            # One tick before timeout MUST be active
+            if timeout > 0:
+                before = check_timeout(timeout - 1, timeout)
+                assert before.is_pruned == False, (
+                    f"One tick before timeout (A={timeout-1}, T={timeout}): MUST be active"
+                )
+            # Pruned items cannot re-enter escrow
+            if result.is_pruned:
+                assert not result.can_re_escrow, (
+                    "Pruned items MUST NOT re-enter any escrow"
+                )
+
+        def test_default_timeouts():
+            """Default timeout values for each escrow type."""
+            assert OOE_TIMEOUT == 1200, "OOE default timeout MUST be 1200s"
+            assert PSE_TIMEOUT == 3600, "PSE default timeout MUST be 3600s"
+            assert PWE_TIMEOUT == 3600, "PWE default timeout MUST be 3600s"
+            assert PDE_TIMEOUT == 86400, "PDE default timeout MUST be 86400s"
+    strategy: "st.integers for timeout and elapsed, plus boundary and default checks"
+    notes: "Active when A < T, pruned when A >= T. Pruned = permanent discard. Defaults: OOE=1200s, PSE=3600s, PWE=3600s, PDE=86400s."
 
   # Misfit Event Escrow invariants
   - invariant: "Events are not automatically reprocessed -- they must be re-submitted from a local source"

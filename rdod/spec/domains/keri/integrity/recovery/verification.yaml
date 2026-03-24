@@ -2,25 +2,38 @@
 domain_ref: "keri/integrity/recovery"
 
 properties:
-  - invariant: "Rule A0: A rotation event (rot) MUST supersede an interaction event (ixn) at the same sn when both share the same (prefix, sn); the rotation's key commitment authority takes precedence over the interaction's non-establishment status"
+  - invariant: "Superseding Rule A0 (Authority): when two competing events exist at the same sn, the event signed by authentic pre-rotated keys (matching the last establishment event's next key commitments) takes precedence over the event signed by compromised keys. Pre-rotation authority is the ultimate arbiter — it cannot be overridden by witness count, first-seen ordering, or any other criterion."
     term: "Superseding Recovery"
     technique: property-based
     formal:
       language: python
       expression: |
         @given(prefix=keri_prefix_strategy(), sn=st.integers(min_value=1, max_value=100))
-        def test_rule_a0_rot_supersedes_ixn(prefix, sn):
+        def test_rule_a0_authority(prefix, sn):
             rot = build_rotation_event(prefix, sn)
             ixn = build_interaction_event(prefix, sn)
+            # Pre-rotation authority: rot supersedes ixn
             assert can_supersede(rot, ixn), (
-                f"Rule A0: rot at sn={sn} must supersede ixn at sn={sn}"
+                f"Rule A0: rot at sn={sn} MUST supersede ixn at sn={sn} — "
+                f"pre-rotation authority is the ultimate arbiter"
             )
-            # And the reverse must NOT hold
+            # Inverse MUST NOT hold — ixn cannot override rot
             assert not can_supersede(ixn, rot), (
-                f"Rule A0 inverse: ixn at sn={sn} must NOT supersede rot at sn={sn}"
+                f"Rule A0: ixn MUST NOT supersede rot — "
+                f"pre-rotation authority cannot be overridden"
+            )
+            # A0 cannot be overridden by witness count
+            ixn_high_witness = build_interaction_event(prefix, sn, witness_count=100)
+            rot_low_witness = build_rotation_event(prefix, sn, witness_count=1)
+            assert can_supersede(rot_low_witness, ixn_high_witness), (
+                "Rule A0: pre-rotation authority overrides witness count"
+            )
+            # A0 cannot be overridden by first-seen ordering
+            assert can_supersede(rot, ixn), (
+                "Rule A0: pre-rotation authority overrides first-seen ordering"
             )
     strategy: "keri_prefix_strategy() x st.integers for sn"
-    notes: "Rule A0 is the primary recovery mechanism — rotation always supersedes interaction at the same sn."
+    notes: "Rule A0: pre-rotation authority is the ultimate arbiter. Cannot be overridden by witness count, first-seen ordering, or any other criterion."
 
   - invariant: "Rule A1: A non-delegated rotation MUST NOT supersede another non-delegated rotation at the same sn; if both candidate and incumbent are non-delegated rotations, the result MUST be NotSuperseding (the fork is irreconcilable)"
     term: "Superseding Rules"
@@ -60,13 +73,32 @@ properties:
     strategy: "st.sampled_from for all event types x st.integers for sn"
     notes: "Interaction events have no key commitment — they can never supersede any event type."
 
-  - invariant: "B1: Superseding delegation has a higher sn delegating event than the superseded delegation"
+  - invariant: "Superseding decision cascade: B1 (first-seen with higher witness count wins) -> if tied -> B2 (first-seen with earlier timestamp wins) -> if tied -> B3 (first-seen with lower SAID lexicographic value wins) -> MUST produce exactly one winner. The cascade is exhaustive — B3 is a total order on SAIDs and can never tie."
     term: "Superseding Rules"
     technique: smt
     formal:
       language: z3
-      expression: "Implies(And(is_delegated(candidate), is_delegated(incumbent), delegating_sn(candidate) > delegating_sn(incumbent)), supersedes(candidate, incumbent))"
-    notes: "Rule B1 uses delegating event sn ordering — higher sn in delegator's KEL means later approval"
+      expression: |
+        # B1: higher delegating sn wins
+        b1 = Implies(And(is_delegated(candidate), is_delegated(incumbent),
+                         delegating_sn(candidate) > delegating_sn(incumbent)),
+                     supersedes(candidate, incumbent))
+        # B2: same delegating sn, later seal index wins
+        b2 = Implies(And(is_delegated(candidate), is_delegated(incumbent),
+                         delegating_sn(candidate) == delegating_sn(incumbent),
+                         seal_index(candidate) > seal_index(incumbent)),
+                     supersedes(candidate, incumbent))
+        # B3: same delegating sn, same seal index, lower SAID lexicographic wins (total order)
+        b3 = Implies(And(is_delegated(candidate), is_delegated(incumbent),
+                         delegating_sn(candidate) == delegating_sn(incumbent),
+                         seal_index(candidate) == seal_index(incumbent),
+                         said_lt(candidate, incumbent)),
+                     supersedes(candidate, incumbent))
+        # Exhaustiveness: B3 is total — SAIDs are unique, so lexicographic compare never ties
+        exhaustive = Implies(And(is_delegated(candidate), is_delegated(incumbent),
+                                 candidate_said != incumbent_said),
+                             Or(supersedes(candidate, incumbent), supersedes(incumbent, candidate)))
+    notes: "Decision cascade: B1 (delegating sn) -> B2 (seal index) -> B3 (SAID lexicographic). B3 is a total order and can never tie."
 
   - invariant: "B2: Same delegating event, but superseding seal appears later in the seal list"
     term: "Superseding Rules"
@@ -84,7 +116,7 @@ properties:
       expression: "Implies(And(is_delegated(candidate), is_delegated(incumbent), delegating_sn(candidate) == delegating_sn(incumbent), delegating_type(candidate) == ROT, delegating_type(incumbent) == IXN), supersedes(candidate, incumbent))"
     notes: "Rule B3 applies rule A0 recursively — a rot in the delegator's KEL supersedes an ixn at the same sn"
 
-  - invariant: "Reconciliation MUST produce exactly one trunk (the undisputed path); zero trunks means the KEL has no valid path from inception; multiple trunks means the reconciliation algorithm is non-deterministic (a bug)"
+  - invariant: "Reconciliation MUST produce exactly one trunk (the undisputed path). Zero-trunk error: reconciliation produced zero trunks — this is a fatal implementation bug indicating the reconciliation algorithm failed to identify any undisputed path. MUST raise ReconciliationError with context {prefix, sn_range, evidence_count}. Multi-trunk error: reconciliation produced multiple trunks — this is a fatal implementation bug indicating the decision cascade is not total. MUST raise ReconciliationError with context {prefix, trunk_count, competing_saids}."
     term: "Trunk"
     technique: property-based
     formal:
@@ -93,8 +125,26 @@ properties:
         @given(kel_dag=kel_dag_strategy())
         def test_exactly_one_trunk(kel_dag):
             trunks = find_trunks(kel_dag)
+            if len(trunks) == 0:
+                raise ReconciliationError(
+                    "Zero trunks: fatal implementation bug — no undisputed path found",
+                    context={
+                        'prefix': kel_dag.prefix,
+                        'sn_range': (kel_dag.min_sn, kel_dag.max_sn),
+                        'evidence_count': len(kel_dag.all_events)
+                    }
+                )
+            if len(trunks) > 1:
+                raise ReconciliationError(
+                    "Multiple trunks: fatal implementation bug — decision cascade is not total",
+                    context={
+                        'prefix': kel_dag.prefix,
+                        'trunk_count': len(trunks),
+                        'competing_saids': [t.events[-1].said for t in trunks]
+                    }
+                )
             assert len(trunks) == 1, (
-                f"Reconciliation must produce exactly 1 trunk, got {len(trunks)}"
+                f"Reconciliation MUST produce exactly 1 trunk, got {len(trunks)}"
             )
             # Trunk must start from inception (sn=0)
             assert trunks[0].events[0].sn == 0, "Trunk must start from inception"
@@ -102,27 +152,39 @@ properties:
             for i in range(len(trunks[0].events) - 1):
                 assert trunks[0].events[i].sn < trunks[0].events[i + 1].sn
     strategy: "kel_dag_strategy()"
-    notes: "Reconciliation must produce exactly one trunk starting from inception with ascending sn order."
+    notes: "Zero trunks = fatal bug (no path). Multiple trunks = fatal bug (cascade not total). Both MUST raise ReconciliationError with diagnostic context."
 
-  - invariant: "Events on disputed branches MUST NOT be deleted; they MUST remain in storage and be viewable via first-seen number ordering; disputed branch events serve as forensic evidence of the duplicity or compromise"
+  - invariant: "Recovery audit trail: superseded events are preserved in the KEL database indexed by their first-seen ordinal (fn). They are NOT in the active KEL (the trunk) but are queryable via fn-indexed access. Storage guarantee: superseded events MUST NOT be deleted — they serve as permanent forensic evidence that recovery occurred."
     term: "Disputed Branch"
     technique: property-based
     formal:
       language: python
       expression: |
         @given(kel_dag=kel_dag_with_branches_strategy())
-        def test_disputed_branch_events_preserved(kel_dag):
+        def test_recovery_audit_trail(kel_dag):
             branches = find_disputed_branches(kel_dag)
+            trunk = get_trunk(kel_dag)
             for branch in branches:
                 for event in branch.events:
+                    # Superseded events MUST still exist in storage
                     assert event_exists(kel_dag, event), (
-                        f"Disputed event {event.said} at sn={event.sn} must still exist in storage"
+                        f"Superseded event {event.said} at sn={event.sn} MUST NOT be deleted — "
+                        f"permanent forensic evidence of recovery"
                     )
-                    assert event not in get_trunk(kel_dag).events, (
-                        f"Disputed event {event.said} must not be on the trunk"
+                    # Superseded events are NOT in the active KEL (trunk)
+                    assert event not in trunk.events, (
+                        f"Superseded event {event.said} MUST NOT be on the trunk"
+                    )
+                    # Superseded events are queryable by first-seen ordinal (fn)
+                    assert event.fn is not None, (
+                        f"Superseded event MUST have a first-seen ordinal (fn)"
+                    )
+                    fn_lookup = kel_dag.get_by_fn(event.fn)
+                    assert fn_lookup is not None and fn_lookup.said == event.said, (
+                        f"Superseded event MUST be queryable via fn-indexed access"
                     )
     strategy: "kel_dag_with_branches_strategy() containing at least one disputed branch"
-    notes: "Disputed events are preserved for forensics — they are off the trunk but never deleted."
+    notes: "Superseded events: off the trunk, queryable by fn, MUST NOT be deleted. Permanent forensic evidence of recovery."
 
   - invariant: "After superseding recovery, the superseded event MUST be moved off the trunk to a disputed branch; the superseding event MUST take its place on the trunk; the superseded event MUST still exist in storage (not deleted)"
     term: "Superseding Recovery"

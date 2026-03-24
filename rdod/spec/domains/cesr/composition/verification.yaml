@@ -197,7 +197,7 @@ properties:
         assert s.check() == sat
     notes: "Count codes themselves are 24-bit aligned — composable as standalone elements."
 
-  - invariant: "Count code groups MAY be recursively composed (groups of groups); a group containing sub-groups MUST serialize and re-parse to identical bytes"
+  - invariant: "Group nesting rules: AttachmentGroup (-C##) MUST contain only primitive groups (signature couples, triples, quadruples). MessageGroup (-B##) MUST contain one message body + one AttachmentGroup. PipelineGroup MUST contain a sequence of MessageGroups. Count-code groups (-K##, -L##, etc.) MUST NOT be nested — they contain only raw primitives."
     term: "Count Code"
     technique: "property-based"
     formal:
@@ -209,8 +209,20 @@ properties:
             parsed, remaining = parse_group(serialized)
             assert remaining == '', f"Unexpected remaining bytes: {len(remaining)}"
             assert parsed.qb64 == serialized
+            # Enforce nesting rules by group type
+            code = parsed.counter.code
+            if code.startswith('-C'):  # AttachmentGroup
+                for item in parsed.items:
+                    assert isinstance(item, (SigGroup, CoupleGroup, TripleGroup, QuadrupleGroup)), \
+                        f"AttachmentGroup MUST contain only primitive groups, got {type(item)}"
+            elif code.startswith('-B'):  # MessageGroup
+                assert len(parsed.items) == 2, "MessageGroup MUST contain body + AttachmentGroup"
+            elif code.startswith(('-K', '-L', '-M', '-N', '-Q', '-T')):
+                for item in parsed.items:
+                    assert not hasattr(item, 'counter'), \
+                        "Count-code groups MUST NOT be nested — they contain only raw primitives"
     strategy: "nested_cesr_group(max_depth=3) — generates groups containing other groups"
-    notes: "Recursive composition is the foundation of CESR's extensibility."
+    notes: "AttachmentGroup contains primitive groups; MessageGroup contains body + attachment; count-code groups are flat (no nesting)."
 
   # --- Group ---
   - invariant: "Every element within a group MUST be aligned on a 24-bit boundary: len(item.qb64) % 4 == 0 AND len(item.qb2) % 3 == 0 for each item"
@@ -244,31 +256,47 @@ properties:
     strategy: "cesr_group() x cesr_primitive_qb64() for trailing data"
     notes: "Self-framing enables skip-ahead parsing without understanding group contents."
 
-  - invariant: "Group nesting rules: AttachedMaterialQuadlets (-V) MAY contain any group type; ControllerIdxSigs (-A) MUST contain only Siger primitives; TransReceiptQuadruples (-D) MUST contain (Prefixer, Seqner, Saider, Siger) tuples"
+  - invariant: "Allowed group contents: -K## (TransIndexedControllerSigs) contains only Siger primitives. -L## (TransLastIdxSigs) contains only Siger primitives. -M## (NonTransReceiptCouples) contains (Prefixer, Cigar) couples. -N## (TransReceiptQuadruples) contains (Prefixer, Seqner, Diger, Siger) quadruples. -Q## (SealDigest) contains (Diger) singles. -T## (SealEventSeal) contains (Prefixer, Seqner, Diger) triples."
     term: "Group"
     technique: "property-based"
     formal:
       language: "python"
       expression: |
         @given(cesr_group())
-        def test_group_nesting_rules(group):
+        def test_group_content_rules(group):
             code = group.counter.code
-            if code.endswith('V'):  # AttachedMaterialQuadlets
-                pass  # Any group type allowed
-            elif code.endswith('A'):  # ControllerIdxSigs
+            if code.startswith('-K'):  # TransIndexedControllerSigs
                 for item in group.items:
                     assert isinstance(item, Siger), \
-                        f"ControllerIdxSigs must contain only Sigers, got {type(item)}"
-            elif code.endswith('D'):  # TransReceiptQuadruples
+                        f"-K## MUST contain only Siger primitives, got {type(item)}"
+            elif code.startswith('-L'):  # TransLastIdxSigs
                 for item in group.items:
-                    assert len(item) == 4, \
-                        f"TransReceiptQuadruples must have 4-tuples, got {len(item)}"
+                    assert isinstance(item, Siger), \
+                        f"-L## MUST contain only Siger primitives, got {type(item)}"
+            elif code.startswith('-M'):  # NonTransReceiptCouples
+                for item in group.items:
+                    assert len(item) == 2, f"-M## MUST contain couples, got {len(item)}-tuple"
+                    assert isinstance(item[0], Prefixer)
+                    assert isinstance(item[1], Cigar)
+            elif code.startswith('-N'):  # TransReceiptQuadruples
+                for item in group.items:
+                    assert len(item) == 4, f"-N## MUST contain quadruples, got {len(item)}-tuple"
                     assert isinstance(item[0], Prefixer)
                     assert isinstance(item[1], Seqner)
-                    assert isinstance(item[2], Saider)
+                    assert isinstance(item[2], Diger)
                     assert isinstance(item[3], Siger)
+            elif code.startswith('-Q'):  # SealDigest
+                for item in group.items:
+                    assert isinstance(item, Diger), \
+                        f"-Q## MUST contain only Diger singles, got {type(item)}"
+            elif code.startswith('-T'):  # SealEventSeal
+                for item in group.items:
+                    assert len(item) == 3, f"-T## MUST contain triples, got {len(item)}-tuple"
+                    assert isinstance(item[0], Prefixer)
+                    assert isinstance(item[1], Seqner)
+                    assert isinstance(item[2], Diger)
     strategy: "cesr_group()"
-    notes: "Each group type constrains what it may contain."
+    notes: "Each group code strictly constrains its allowed content types and tuple widths."
 
   # --- Frame ---
   - invariant: "Each frame MUST begin with a byte whose first tritet (byte >> 5) identifies the frame type; the tritet MUST be deterministic for the frame type"
@@ -375,7 +403,7 @@ properties:
         assert s.check() == unsat
     notes: "Tritet-to-frame-type mapping is bijective over 3 bits: 8 tritets, 8 types."
 
-  - invariant: "Cold start requires only 3 bits to classify the next frame — no scanning, lookahead, or backtracking required; same byte MUST always produce same tritet"
+  - invariant: "Cold start classification MUST use O(1) dispatch: tritet = first_byte >> 5; dispatch by tritet value (0=whitespace, 1=count-code, 2=op-code, 3=JSON, 4=MGPK-fixmap, 5=CBOR, 6=MGPK-map16/32, 7=binary). No scanning, lookahead, or backtracking permitted — single byte read determines frame type."
     term: "Cold Start"
     technique: "smt"
     formal:
@@ -383,12 +411,23 @@ properties:
       expression: |
         from z3 import *
         b1, b2 = BitVecs('b1 b2', 8)
-        # Same byte -> same tritet (functional)
+        # Same byte -> same tritet (functional, O(1) dispatch)
         s = Solver()
         s.add(b1 == b2)
         s.add(Extract(7, 5, b1) != Extract(7, 5, b2))
         assert s.check() == unsat
-    notes: "3 bits is sufficient and deterministic for frame type classification."
+        # Tritet dispatch is a total function over all 256 byte values
+        byte_val = BitVec('byte_val', 8)
+        tritet = Extract(7, 5, byte_val)
+        s2 = Solver()
+        # Every byte maps to exactly one tritet in [0,7]
+        s2.add(ULE(tritet, BitVecVal(7, 3)))
+        assert s2.check() == sat
+        # No byte maps to a tritet outside [0,7] (impossible for 3 bits)
+        s3 = Solver()
+        s3.add(UGT(tritet, BitVecVal(7, 3)))
+        assert s3.check() == unsat
+    notes: "O(1) dispatch: single byte read, tritet extraction, direct jump. No scanning, lookahead, or backtracking."
 
   - invariant: "Tritet value 0b000 (0): Annotated T-domain. Tritet 0b001 (1): Count code ('-' = 0x2D). Tritet 0b010 (2): Op code ('_' = 0x5F). Tritet 0b011 (3): JSON ('{' = 0x7B)"
     term: "Cold Start"

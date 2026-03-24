@@ -157,7 +157,7 @@ properties:
     notes: "Anchor list: ordered, may be empty, order affects SAID."
 
   # EO (Establishment Only) Constraint invariants
-  - invariant: "If an identifier's inception event has 'EO' (Establishment Only) in its c (config) field, then that identifier MUST NOT produce interaction events. Validators MUST reject any ixn event from an EO-configured identifier. Only establishment events (rot, drt) are permitted after inception."
+  - invariant: "EO enforcement: when an identifier has the EO (Establishment Only) configuration trait, validators MUST reject interaction events (ixn) with error EstablishmentOnlyViolation (ref: errors://keri/identity/anchoring#EstablishmentOnlyViolation). The rejection is immediate — the event is NOT escrowed, it is discarded. The EO trait is checked before any signature verification."
     term: "Interaction Event"
     technique: property-based
     formal:
@@ -165,24 +165,33 @@ properties:
       expression: |
         @given(aid=aid_with_config_strategy(),
                ixn=interaction_event_strategy())
-        def test_eo_constraint(aid, ixn):
+        def test_eo_enforcement(aid, ixn):
             ixn_for_aid = set_aid(ixn, aid.prefix)
             if 'EO' in aid.config:
                 result = validate_event(ixn_for_aid, aid.key_state)
+                # Rejection is immediate
                 assert result.is_rejected(), (
                     f"Identifier {aid.prefix} has EO trait — "
-                    f"MUST reject ixn events"
+                    f"MUST reject ixn events immediately"
                 )
-                assert result.error_type == 'eo_violation', (
-                    "Rejection reason MUST be eo_violation"
+                assert result.error_type == 'EstablishmentOnlyViolation', (
+                    "Rejection error MUST be EstablishmentOnlyViolation"
+                )
+                # Event is NOT escrowed — it is discarded
+                assert not result.is_escrowed, (
+                    "EO-rejected event MUST NOT be escrowed — it is discarded"
+                )
+                # EO trait is checked before signature verification
+                assert result.checked_before_sig_verify, (
+                    "EO trait MUST be checked before any signature verification"
                 )
             else:
                 # Without EO, ixn events are permitted
                 pass
     strategy: "aid_with_config_strategy() (with/without EO), interaction_event_strategy()"
-    notes: "EO = Establishment Only. No ixn events allowed. Anchoring must use rot/drt anchor lists instead."
+    notes: "EO enforcement: immediate rejection (not escrowed), EstablishmentOnlyViolation error, checked before sig verification."
 
-  - invariant: "An EO-configured identifier that needs to anchor data MUST use the a (anchor) field of a rotation event instead of an interaction event. The rotation event's anchor list has the same semantics as the interaction event's anchor list."
+  - invariant: "Interaction event anchoring uses identical seal types as establishment event anchoring: DigestSeal (d field only), EventSeal (i, s, d fields), EventLocationSeal (i, s, t, p fields). The only difference is operational context — establishment events advance key state while interaction events do not. Seal verification (digest comparison, referenced event lookup) is identical in both cases."
     term: "Interaction Event"
     technique: property-based
     formal:
@@ -190,22 +199,38 @@ properties:
       expression: |
         @given(aid=eo_aid_strategy(),
                data=st.binary(min_size=1, max_size=4096))
-        def test_eo_anchoring_via_rotation(aid, data):
-            assert 'EO' in aid.config
-            seal = SealDigest(d=digest(data))
-            # Cannot use ixn
-            ixn = create_interaction(aid.prefix, aid.expected_sn, seals=[seal])
-            assert not is_valid_for_aid(ixn, aid), (
-                "EO identifier MUST NOT produce ixn"
+        def test_seal_type_parity(aid, data):
+            seal_digest = SealDigest(d=digest(data))
+            seal_event = SealEvent(i=aid.prefix, s=0, d=digest(data))
+            seal_location = SealEventLocation(i=aid.prefix, s=0, t='ixn', p=digest(data))
+            # All three seal types work in interaction events
+            ixn = create_interaction(aid.prefix, aid.expected_sn,
+                                     seals=[seal_digest, seal_event, seal_location])
+            assert len(ixn.ked['a']) == 3
+            # All three seal types work in establishment events
+            rot = create_rotation(aid.prefix, aid.expected_sn,
+                                   seals=[seal_digest, seal_event, seal_location])
+            assert len(rot.ked['a']) == 3
+            # Seal verification is identical in both contexts
+            for ixn_seal, rot_seal in zip(ixn.ked['a'], rot.ked['a']):
+                assert type(ixn_seal) == type(rot_seal), (
+                    "Seal types MUST be identical between ixn and rot anchoring"
+                )
+                assert ixn_seal.d == rot_seal.d, (
+                    "Seal digest comparison is identical in both contexts"
+                )
+            # Key state difference: rot advances, ixn does not
+            state_before = compute_key_state_before(aid)
+            state_after_ixn = compute_key_state_after(aid, ixn)
+            state_after_rot = compute_key_state_after(aid, rot)
+            assert state_before.k == state_after_ixn.k, (
+                "ixn MUST NOT advance key state"
             )
-            # Must use rotation with anchor
-            rot = create_rotation(aid.prefix, aid.expected_sn, seals=[seal])
-            assert rot.t == 'rot'
-            assert seal in rot.ked['a'], (
-                "EO identifier anchors data via rotation event's a field"
+            assert state_before.k != state_after_rot.k, (
+                "rot MUST advance key state"
             )
     strategy: "eo_aid_strategy(), st.binary(1..4096)"
-    notes: "EO identifiers anchor data in rotation events, not interaction events."
+    notes: "Identical seal types (DigestSeal, EventSeal, EventLocationSeal) in both ixn and rot. Only operational context differs: rot advances key state, ixn does not."
 
   # Interaction Event Superseding invariants
   - invariant: "An interaction event at sequence number sn can be superseded by a rotation event at the same sequence number during recovery. The superseding rotation MUST satisfy all rotation validation rules AND MUST have sn equal to the ixn being superseded."
