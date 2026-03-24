@@ -6729,6 +6729,10 @@ const RDOD_DATA = {
         "description": "SAID primitive — self-addressing identifier computation"
       },
       {
+        "term": "AID",
+        "description": "Autonomic Identifier — CESR-qualified self-certifying identifier prefix"
+      },
+      {
         "term": "Prefixer",
         "description": "AID prefix primitive — identifier representation"
       },
@@ -21746,13 +21750,13 @@ const RDOD_DATA = {
         "ref": "domain://accountability",
         "relationship": "Customer-Supplier — identity protocols require witness receipts from accountability for event acceptance",
         "pattern": "Customer-Supplier",
-        "via_port": "port://accountability/receipting/inbound/receipt-submission"
+        "via_port": "port://accountability/receipting/inbound/receipt-lifecycle"
       },
       {
         "ref": "domain://delegation",
         "relationship": "Customer-Supplier — delegated identity events require authorization from delegation domain",
         "pattern": "Customer-Supplier",
-        "via_port": "port://delegation/authorization/inbound/delegation-approval"
+        "via_port": "port://delegation/authorization/inbound/binding-lifecycle"
       },
       {
         "ref": "domain://integrity",
@@ -29875,6 +29879,12 @@ const RDOD_DATA = {
       "notes": "This is an orchestrating domain decomposed into three subdomains: evidence (fork detection, escrow lifecycle, notification bus), recovery (superseding rules, reconciliation, trunk/branch model), and monitoring (watcher/juror/judge roles, ambient verifiability). The parent domain owns the threat model overview — duplicity vs internal inconsistency, live vs dead attacks — and coordinates the subdomains. Implementation-specific details live in the subdomains.\n"
     },
     "issues": [],
+    "published_language": [
+      {
+        "term": "Watcher",
+        "description": "Observer that monitors KEL integrity by cross-checking witness copies for duplicity"
+      }
+    ],
     "tags": [
       "duplicity",
       "security",
