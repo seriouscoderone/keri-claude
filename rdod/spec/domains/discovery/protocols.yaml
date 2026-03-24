@@ -94,13 +94,13 @@ protocols:
       success: "Remote AID's key state and service endpoints available locally — can now communicate"
       failure: "OOBI unresolvable or KEL invalid — remote AID not trusted"
 
-  - name: "EndRoleAuthorization"
-    description: "Authorize a service endpoint for an identifier. The controller signs a reply message declaring an endpoint URL for a specific role (witness, agent, watcher, etc.), which is then discoverable via OOBI resolution."
+  - name: "EndpointPublishing"
+    description: "Publish a service endpoint so others can discover it. The controller signs reply messages declaring which AIDs serve which roles at which URLs — making the endpoints discoverable and verifiable via OOBI resolution."
     participants:
       - domain: "domain://keri/identity/anchoring"
-        role: "Anchors the endpoint authorization seal in the controller's KEL"
+        role: "Controller signs the endpoint declaration (end-role reply) using their current keys"
       - domain: "domain://discovery"
-        role: "Processes the signed reply and stores the endpoint mapping"
+        role: "Processes the signed replies, applies BADA acceptance policy, stores the endpoint mapping for OOBI resolution"
       - domain: "domain://keri/identity/state"
         role: "Provides the controller's current key state for reply signature verification"
     trigger: "Controller wants to declare a service endpoint for their AID"
