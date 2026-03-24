@@ -1,13 +1,13 @@
 # keri-claude
 
-A Claude Code **plugin** and **domain-driven design specification** for the KERI (Key Event Receipt Infrastructure) ecosystem. Provides 16 skills for protocol implementation and a complete 48-domain DDD spec designed for AI-driven development.
+A Claude Code **plugin** and **domain-driven design specification** for the KERI (Key Event Receipt Infrastructure) ecosystem. Provides 16 skills for protocol implementation and a complete 48-domain DDD spec designed for AI-driven development in any language.
 
 ## What's Here
 
 **Two things in one repo:**
 
 1. **Skills Plugin** — 16 Claude Code skills covering protocol specs, implementation APIs, coding conventions, and architecture planning
-2. **DDD Specification** — A complete domain-driven design specification of the KERI ecosystem (48 domains, 400+ UL terms, 188 typed errors, 50 formal types, 13 cross-domain protocols, 9 state machines, 625 verification properties) — designed to be the input for AI-assisted implementation in any language
+2. **DDD Specification** — A complete domain-driven design specification of the KERI ecosystem (48 domains, 560 UL terms, 202 typed errors, 61 formal types with 433 fields, 17 cross-domain protocols with 216 typed references, 21 state machines, 619 verification properties) — designed to be the input for AI-assisted implementation in any language
 
 ## DDD Specification
 
@@ -24,6 +24,102 @@ The `rdod/spec/domains/` directory contains a complete DDD decomposition of the 
 > **Discovery** bootstraps it all — finding other identifiers' endpoints so you can start communicating.
 >
 > You deploy this via **services** (cloud agents, witnesses, watchers) and interact through **applications** (thin wallets that keep keys safe at the edge, or fat wallets that run everything locally).
+
+### Architecture
+
+```mermaid
+graph TB
+    subgraph Protocol["Protocol Layer"]
+        CESR["cesr/<br/>Encoding"]
+        KERI["keri/<br/>Identity"]
+        ACDC["acdc/<br/>Credentials"]
+        DISC["discovery/<br/>Bootstrap"]
+    end
+
+    subgraph Service["Service Layer"]
+        CAS["cloud-agent-service/<br/>Hosted Identity"]
+        WIT["witness-service/<br/>Accountability"]
+        WAT["watcher-service/<br/>Integrity"]
+    end
+
+    subgraph App["Application Layer"]
+        SIG["signify-client/<br/>Thin Wallet"]
+        LOC["local-agent/<br/>Fat Wallet"]
+    end
+
+    KERI -->|"kernel"| CESR
+    ACDC -->|"kernel"| CESR
+    ACDC -->|"partnership"| KERI
+    KERI -->|"partnership"| DISC
+
+    CAS -->|"conformist"| KERI
+    CAS -->|"conformist"| ACDC
+    WIT -->|"conformist"| KERI
+    WAT -->|"conformist"| KERI
+
+    SIG -->|"customer-supplier"| CAS
+    LOC -->|"conformist"| KERI
+    LOC -->|"conformist"| ACDC
+```
+
+### KERI Identity Subdomains
+
+```mermaid
+graph LR
+    subgraph identity["keri/identity/"]
+        EST["establishment<br/>inception, rotation"]
+        KC["key-commitment<br/>pre-rotation"]
+        TH["thresholds<br/>multi-sig"]
+        ST["state<br/>key config"]
+        AN["anchoring<br/>data seals"]
+    end
+
+    subgraph delegation["keri/delegation/"]
+        AUTH["authorization"]
+        LIF["lifecycle"]
+        REC1["recovery"]
+    end
+
+    subgraph accountability["keri/accountability/"]
+        RCPT["receipting"]
+        CON["consensus"]
+        DIS["dissemination"]
+    end
+
+    subgraph integrity["keri/integrity/"]
+        DET["detection"]
+        EVI["evidence"]
+        REC2["recovery"]
+    end
+
+    EST --> KC
+    EST --> TH
+    EST --> ST
+    EST --> AN
+    AUTH --> LIF
+    RCPT --> CON
+    DET --> EVI
+    EVI --> REC2
+```
+
+### IPEX Credential Exchange Flow
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Applied: apply (disclosee)
+    Idle --> Granted: direct grant (discloser)
+    Applied --> Offered: offer (discloser)
+    Applied --> Spurned: spurn
+    Offered --> Agreed: agree (disclosee)
+    Offered --> Spurned: spurn
+    Agreed --> Granted: grant (discloser)
+    Agreed --> Spurned: spurn
+    Granted --> Admitted: admit (disclosee)
+    Granted --> Spurned: spurn
+    Admitted --> [*]
+    Spurned --> [*]
+```
 
 ### Domain Map
 
@@ -99,9 +195,9 @@ Each domain directory contains up to 8 spec files:
 | `ubiquitous-language.yaml` | Detailed terms with invariants, examples, imports, specializes | 48/48 |
 | `ports.yaml` | Inbound/outbound interfaces with contracts | 48/48 |
 | `verification.yaml` | Formal properties, port contracts, state machines | 48/48 |
-| `errors.yaml` | Typed error taxonomy with cause, recovery, context | 39/48 |
-| `types.yaml` | Formal data structures with field constraints and variants | 12/48 |
-| `protocols.yaml` | Cross-domain orchestration flows with failure paths | 7/48 |
+| `errors.yaml` | Typed error taxonomy with cause, recovery, context | 42/48 |
+| `types.yaml` | Formal data structures with field constraints and variants | 24/48 |
+| `protocols.yaml` | Cross-domain orchestration flows with typed references | 7/48 |
 | `context-map.html` | Interactive Cytoscape visualization of all 48 domains | 1 |
 
 ### Key Design Decisions
@@ -139,13 +235,13 @@ Proposals for enhancing the [domain-design-toolkit](https://github.com/SeriousCo
 | Proposal | What it addresses |
 |----------|-------------------|
 | `ai-implementability-proposal.md` | errors.yaml, types.yaml, protocols.yaml templates |
-| `published-language-proposal.md` | Term ownership, imports, specializes mechanism |
 | `linter-proposal.md` | 8-category validation script spec |
 | `relationship-semantics-proposal.md` | Kernel consumption, conformist pattern, intent markers |
 | `linter-conformist-aware.md` | Linter should read pattern: field on adjacents |
-| `linter-specializes-bug.md` | Linter reads specializes from wrong file |
+| `linter-specializes-bug.md` | Linter reads specializes from wrong file (fixed in plugin) |
 | `linter-false-positives.md` | Verification regex, vocabulary bracket/method exclusions |
 | `linter-single-ul-source.md` | Single source of truth for ubiquitous language |
+| `protocols-typed-refs.md` | Typed input/output/error/precondition references in protocols |
 
 ## Skills Plugin
 
