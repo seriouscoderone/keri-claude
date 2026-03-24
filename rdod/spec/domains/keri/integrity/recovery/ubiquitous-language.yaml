@@ -68,6 +68,15 @@ terms:
       - "After rot supersedes ixn at sn=5: the ixn and all events following it form the disputed branch"
     related_terms: ["Trunk", "Superseding Recovery"]
 
+  - term: "Irreconcilable KEL"
+    definition: "A KEL state where validators cannot universally agree on a single undisputed path (trunk) through the event history. This occurs when superseding rules cannot definitively resolve competing event versions — the identifier has lost integrity beyond recovery."
+    invariants:
+      - "Terminal state — an irreconcilable KEL cannot be recovered"
+      - "The identifier loses value to all validators who detect the irreconcilability"
+      - "Caused by successful attacks that superseding recovery cannot resolve"
+      - "Different from reconcilable duplicity where superseding rules produce a clear trunk"
+    related_terms: ["Superseding Recovery", "Reconciliation", "Duplicity Evidence"]
+
 events:
   - name: "SupersedingRecoveryApplied"
     payload: "aid: AID, sn: int, superseding_event: RotationEvent, superseded_event: KeyEvent, rule_applied: SupersedingRule"

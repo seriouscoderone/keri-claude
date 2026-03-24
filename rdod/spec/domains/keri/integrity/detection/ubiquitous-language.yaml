@@ -67,6 +67,39 @@ terms:
       - "An attacker controlling the network around a validator, preventing contact with any watcher that has the original KERL"
     related_terms: ["Ambient Duplicity Detection", "Watcher"]
 
+  - term: "Live Duplicity"
+    synonyms: ["Live Attack", "Live Exploit"]
+    specializes: "domain://keri/integrity"
+    definition: "Duplicity created in real-time using current signing keys — the controller (or an attacker with current keys) creates alternate event versions simultaneously, presenting different versions to different validators. Detected when observers compare notes and find conflicting events at the same sequence number."
+    invariants:
+      - "Uses CURRENT signing keys — the attacker has access to the active key material"
+      - "Creates real-time forks — different validators see different event versions"
+      - "Detection requires diverse observation — watchers must cross-check witness KELs"
+      - "Defense: a diverse set of watchers makes it difficult to prevent detection"
+      - "Consequence: detected live duplicity destroys the identifier's value to detecting validators"
+    related_terms: ["Dead Duplicity", "Duplicity Evidence", "Watcher"]
+
+  - term: "Dead Duplicity"
+    synonyms: ["Dead Attack", "Dead Exploit"]
+    specializes: "domain://keri/integrity"
+    definition: "Duplicity exploiting previously exposed or compromised keys that are no longer current — the attacker uses old keys to forge an alternate historical KEL. Detected by comparing the forged history against copies of the proper KEL held by watchers and other validators."
+    invariants:
+      - "Uses STALE signing keys — keys that have been rotated away"
+      - "Creates a historical fork — attempts to rewrite past events"
+      - "Detection relies on ambient verifiability — proper KELs distributed among many watchers"
+      - "Defense: pre-rotation means the attacker cannot create valid future events"
+      - "Superseding recovery via pre-rotated keys restores the honest controller's authority"
+    related_terms: ["Live Duplicity", "Superseding Recovery", "Ambient Verifiability"]
+
+  - term: "Ambient Verifiability"
+    definition: "The property that proper KEL copies are widely distributed among watchers and validators, making historical forgery (dead duplicity) detectable. The more copies exist, the harder it is for an attacker to isolate a validator from the truth."
+    invariants:
+      - "Proper KELs can be distributed to any number of watchers"
+      - "Each watcher independently verifies and stores KEL data"
+      - "An attacker performing a dead attack must isolate the target from ALL ambient sources"
+      - "More watchers = stronger ambient verifiability = harder dead attacks"
+    related_terms: ["Dead Duplicity", "Watcher", "Percolated Discovery"]
+
 events:
   - name: "DuplicityDetected"
     payload: "aid: AID, sn: int, first_seen_event: KeyEvent, conflicting_event: KeyEvent, detected_by: WatcherAID"

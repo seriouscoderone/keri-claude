@@ -33,14 +33,19 @@ terms:
 
   - term: "Nested Partial Disclosure"
     synonyms: []
-    definition: "Partial disclosure applied to a hierarchical tree of blocks, where each nested block embeds its own SAID and UUID, allowing disclosure at different levels of nesting independently."
+    definition: "A disclosure form where nested blocks within an ACDC are independently partially disclosed. Each section (attributes, edges, rules) can be at a different disclosure level — one section might be fully expanded while another remains compact. This enables tree-structured progressive revelation."
     invariants:
+      - "Each nested block can independently be compact, partial, or full"
+      - "A credential can have expanded attributes but compact edges"
+      - "Verification follows the SAID tree — each block verifiable against its parent's SAID"
+      - "Nested partial is between partial (one level) and full (all levels)"
       - "Each nested block must have its own d and u fields"
       - "oneOf composition at each nesting level validates both compact and expanded forms"
       - "Disclosure of a parent block does not require disclosure of nested child blocks"
     examples:
+      - "Credential with full attributes, compact edges, partial rules — reveals what you do but not who vouched for you or the contractual terms"
       - "Attribute section with a grades sub-block: top-level attributes disclosed while grades remain compacted to their SAID"
-    related_terms: ["Partial Disclosure", "SAID", "UUID"]
+    related_terms: ["Partial Disclosure", "Full Disclosure", "Compact Disclosure", "SAID", "UUID"]
 
   # Inherits: "Full Disclosure" from domain://acdc/privacy
   - term: "Full Disclosure"
@@ -82,6 +87,28 @@ terms:
       - "Anti-assimilation clause preventing data aggregation across presentations"
       - "Metadata ACDC presented first, then full ACDC after agreement to terms of use"
     related_terms: ["Rule Section", "Ricardian Contract", "Metadata ACDC", "Graduated Disclosure"]
+
+  - term: "Most Compact Form"
+    synonyms: ["Compact Variant"]
+    definition: "The variant of an ACDC where every section is in its most compact representation — SAIDs replace expanded content at every level. The issuer MUST sign the SAID of the most compact form, which serves as the root commitment for all other disclosure forms. Determined by JSON Schema: the first entry in each oneOf composition is the compact variant."
+    invariants:
+      - "The issuer signs the SAID of the most compact form — this is the Proof of Issuance commitment"
+      - "When schema uses oneOf for a section, the FIRST entry is the compact variant"
+      - "When schema has only one variant per section, that variant IS the most compact"
+      - "All other disclosure forms are expansions verifiable against this root SAID"
+      - "Signature on the most compact SAID covers ALL schema-authorized variants"
+    examples:
+      - "Schema defines oneOf: [compact_attributes, full_attributes] — first entry (compact) is the most compact form"
+    related_terms: ["Compact Disclosure", "Proof of Issuance", "SAID"]
+
+  - term: "Bulk-Issued Instance Disclosure"
+    definition: "A privacy pattern where each credential in a bulk issuance set is disclosed independently using its unique blinded SAID. The issuer signs blinded SAIDs (not the SADs themselves) enabling proof of set membership without cross-credential correlation. The discloser unblinds their specific credential's SAID to prove inclusion."
+    invariants:
+      - "Issuer signs blinded SAIDs — minimizes computation for large issuance sets"
+      - "Each instance has a unique SAID and UUID — unlinkable across presentations"
+      - "Proof of inclusion: discloser unblinds their SAID, verifier checks against bulk commitment"
+      - "Distinct from Bulk-Issued pattern: this is specifically about the DISCLOSURE mechanics, not the issuance mechanics"
+    related_terms: ["Bulk-Issued Disclosure", "Credential Privacy Model", "SAID"]
 
 events:
   - name: "DisclosureModeSelected"

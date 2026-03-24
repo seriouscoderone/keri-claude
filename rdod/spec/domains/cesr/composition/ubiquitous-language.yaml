@@ -187,14 +187,17 @@ terms:
     related_terms: ["Selector", "Count Code", "Stream"]
 
   - term: "ESSR Wrapper"
-    synonyms: ["ESSR"]
-    definition: "An End-to-end Signed Streaming Representation wrapper — a count code group (-E##) that encloses signable content for authenticated streaming."
+    synonyms: ["ESSR", "Encrypted-Signed-Signed-Routed", "-E count code"]
+    definition: "A signable wrapper structure (-E##) that encloses content for signing without including the signatures themselves in the count. The count value measures quadlets/triplets up to but not including the attached signature group (-C##). Enables end-to-end encryption with authenticated routing."
     invariants:
       - "Uses count code -E## or --E##### (non-overrideable universal code)"
-      - "Content within the wrapper is the signable portion"
+      - "Count includes wrapped content but EXCLUDES the -C attachment group with signatures"
+      - "The wrapped content is what gets signed — the -C group carries the signatures over it"
+      - "Non-overrideable — same semantics in all genera"
+      - "Used extensively in SPAC protocol for encrypted messaging"
     examples:
       - "An ESSR wrapper enclosing a TSP payload with signatures attached outside the wrapper"
-    related_terms: ["Count Code", "Universal Count Code", "Message"]
+    related_terms: ["Count Code Classification", "Attachment Group", "Signable Count Code", "Universal Count Code"]
 
   - term: "ColdCode"
     synonyms: ["Cold Start Code"]
@@ -343,6 +346,38 @@ terms:
     examples:
       - "Creder.new_with_raw(acdc_bytes) → parsed credential with accessible issuer/schema"
     related_terms: ["Sadder", "Serder", "SAID (cesr/primitives)"]
+
+  - term: "Count Code Classification"
+    definition: "CESR count codes are classified along two dimensions: universality (universal vs genus-specific) and overrideability (overrideable vs non-overrideable). Universal codes work across all CESR genera. Genus-specific codes are defined per protocol (KERI/ACDC). Overrideable universal codes can have their meaning changed by a genus/version context code."
+    invariants:
+      - "Universal overrideable: -A (pipeline group), -B (message+attachments), -C (attachments only) — meaning can be overridden by genus context"
+      - "Universal non-overrideable: -D (datagram), -E (ESSR wrapper), -F (fixed field signable), -G (field map signable), -H (non-native message), -I (generic field map), -J (generic list)"
+      - "Genus-specific (KERI/ACDC): -K through -T (signature groups, receipt couples, seal triples, etc.)"
+      - "Signable codes (-E, -F, -G): count includes content to be signed but NOT the attached signatures"
+      - "Non-signable codes (-A, -B, -C, -I, -J): count includes all enclosed content"
+    related_terms: ["Count Code", "ESSR Wrapper", "Attachment Group"]
+
+  - term: "Signable Count Code"
+    definition: "A count code whose count value measures content that is intended to be signed. The count explicitly excludes the attached signature group, so the signer knows exactly what bytes to sign. The signable codes are -E (ESSR wrapper), -F (fixed field), and -G (field map)."
+    invariants:
+      - "Signable codes: -E, -F, -G"
+      - "Non-signable codes: all others (-A, -B, -C, -D, -H, -I, -J, genus-specific)"
+      - "The boundary between signed content and signatures is defined by the count value"
+      - "Enables deterministic signature computation — signer and verifier agree on exactly which bytes are signed"
+    related_terms: ["Count Code Classification", "ESSR Wrapper"]
+
+  - term: "Fixed Field vs Field Map Encoding"
+    definition: "Two CESR-native encoding strategies for message bodies. Fixed Field (-F##) encodes values WITHOUT labels in a required order — maximum compactness when schema is known. Field Map (-G##) encodes labeled key-value pairs in required order — self-describing and human-debuggable. Both are signable."
+    invariants:
+      - "Fixed Field (-F): no labels, all fields must appear (empty = null primitive), order is canonical"
+      - "Field Map (-G): labeled fields, optional fields can be omitted, order is canonical"
+      - "Both enable deterministic SAID computation due to required ordering"
+      - "Fixed Field is more compact; Field Map is more readable"
+      - "-I (generic field map) is the non-signable, unordered variant for ad-hoc structures"
+    examples:
+      - "ACDC as fixed field: [-F##][v][t][d][u][i][rd][s][a][A][e][r] — no labels, maximum density"
+      - "ACDC as field map: [-G##]{v:..., t:..., d:..., i:..., s:..., a:...} — labeled, debuggable"
+    related_terms: ["Signable Count Code", "Count Code Classification", "CESR Native Encoding"]
 
 events:
   - name: "StreamStarted"

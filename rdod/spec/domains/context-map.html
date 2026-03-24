@@ -4507,17 +4507,24 @@ const RDOD_DATA = {
       {
         "term": "Nested Partial Disclosure",
         "synonyms": [],
-        "definition": "Partial disclosure applied to a hierarchical tree of blocks, where each nested block embeds its own SAID and UUID, allowing disclosure at different levels of nesting independently.",
+        "definition": "A disclosure form where nested blocks within an ACDC are independently partially disclosed. Each section (attributes, edges, rules) can be at a different disclosure level — one section might be fully expanded while another remains compact. This enables tree-structured progressive revelation.",
         "invariants": [
+          "Each nested block can independently be compact, partial, or full",
+          "A credential can have expanded attributes but compact edges",
+          "Verification follows the SAID tree — each block verifiable against its parent's SAID",
+          "Nested partial is between partial (one level) and full (all levels)",
           "Each nested block must have its own d and u fields",
           "oneOf composition at each nesting level validates both compact and expanded forms",
           "Disclosure of a parent block does not require disclosure of nested child blocks"
         ],
         "examples": [
+          "Credential with full attributes, compact edges, partial rules — reveals what you do but not who vouched for you or the contractual terms",
           "Attribute section with a grades sub-block: top-level attributes disclosed while grades remain compacted to their SAID"
         ],
         "related_terms": [
           "Partial Disclosure",
+          "Full Disclosure",
+          "Compact Disclosure",
           "SAID",
           "UUID"
         ]
@@ -4584,6 +4591,43 @@ const RDOD_DATA = {
           "Ricardian Contract",
           "Metadata ACDC",
           "Graduated Disclosure"
+        ]
+      },
+      {
+        "term": "Most Compact Form",
+        "synonyms": [
+          "Compact Variant"
+        ],
+        "definition": "The variant of an ACDC where every section is in its most compact representation — SAIDs replace expanded content at every level. The issuer MUST sign the SAID of the most compact form, which serves as the root commitment for all other disclosure forms. Determined by JSON Schema: the first entry in each oneOf composition is the compact variant.",
+        "invariants": [
+          "The issuer signs the SAID of the most compact form — this is the Proof of Issuance commitment",
+          "When schema uses oneOf for a section, the FIRST entry is the compact variant",
+          "When schema has only one variant per section, that variant IS the most compact",
+          "All other disclosure forms are expansions verifiable against this root SAID",
+          "Signature on the most compact SAID covers ALL schema-authorized variants"
+        ],
+        "examples": [
+          "Schema defines oneOf: [compact_attributes, full_attributes] — first entry (compact) is the most compact form"
+        ],
+        "related_terms": [
+          "Compact Disclosure",
+          "Proof of Issuance",
+          "SAID"
+        ]
+      },
+      {
+        "term": "Bulk-Issued Instance Disclosure",
+        "definition": "A privacy pattern where each credential in a bulk issuance set is disclosed independently using its unique blinded SAID. The issuer signs blinded SAIDs (not the SADs themselves) enabling proof of set membership without cross-credential correlation. The discloser unblinds their specific credential's SAID to prove inclusion.",
+        "invariants": [
+          "Issuer signs blinded SAIDs — minimizes computation for large issuance sets",
+          "Each instance has a unique SAID and UUID — unlinkable across presentations",
+          "Proof of inclusion: discloser unblinds their SAID, verifier checks against bulk commitment",
+          "Distinct from Bulk-Issued pattern: this is specifically about the DISCLOSURE mechanics, not the issuance mechanics"
+        ],
+        "related_terms": [
+          "Bulk-Issued Disclosure",
+          "Credential Privacy Model",
+          "SAID"
         ]
       },
       {
@@ -5716,20 +5760,26 @@ const RDOD_DATA = {
       {
         "term": "ESSR Wrapper",
         "synonyms": [
-          "ESSR"
+          "ESSR",
+          "Encrypted-Signed-Signed-Routed",
+          "-E count code"
         ],
-        "definition": "An End-to-end Signed Streaming Representation wrapper — a count code group (-E##) that encloses signable content for authenticated streaming.",
+        "definition": "A signable wrapper structure (-E##) that encloses content for signing without including the signatures themselves in the count. The count value measures quadlets/triplets up to but not including the attached signature group (-C##). Enables end-to-end encryption with authenticated routing.",
         "invariants": [
           "Uses count code -E## or --E##### (non-overrideable universal code)",
-          "Content within the wrapper is the signable portion"
+          "Count includes wrapped content but EXCLUDES the -C attachment group with signatures",
+          "The wrapped content is what gets signed — the -C group carries the signatures over it",
+          "Non-overrideable — same semantics in all genera",
+          "Used extensively in SPAC protocol for encrypted messaging"
         ],
         "examples": [
           "An ESSR wrapper enclosing a TSP payload with signatures attached outside the wrapper"
         ],
         "related_terms": [
-          "Count Code",
-          "Universal Count Code",
-          "Message"
+          "Count Code Classification",
+          "Attachment Group",
+          "Signable Count Code",
+          "Universal Count Code"
         ]
       },
       {
@@ -5982,6 +6032,56 @@ const RDOD_DATA = {
           "Sadder",
           "Serder",
           "SAID (cesr/primitives)"
+        ]
+      },
+      {
+        "term": "Count Code Classification",
+        "definition": "CESR count codes are classified along two dimensions: universality (universal vs genus-specific) and overrideability (overrideable vs non-overrideable). Universal codes work across all CESR genera. Genus-specific codes are defined per protocol (KERI/ACDC). Overrideable universal codes can have their meaning changed by a genus/version context code.",
+        "invariants": [
+          "Universal overrideable: -A (pipeline group), -B (message+attachments), -C (attachments only) — meaning can be overridden by genus context",
+          "Universal non-overrideable: -D (datagram), -E (ESSR wrapper), -F (fixed field signable), -G (field map signable), -H (non-native message), -I (generic field map), -J (generic list)",
+          "Genus-specific (KERI/ACDC): -K through -T (signature groups, receipt couples, seal triples, etc.)",
+          "Signable codes (-E, -F, -G): count includes content to be signed but NOT the attached signatures",
+          "Non-signable codes (-A, -B, -C, -I, -J): count includes all enclosed content"
+        ],
+        "related_terms": [
+          "Count Code",
+          "ESSR Wrapper",
+          "Attachment Group"
+        ]
+      },
+      {
+        "term": "Signable Count Code",
+        "definition": "A count code whose count value measures content that is intended to be signed. The count explicitly excludes the attached signature group, so the signer knows exactly what bytes to sign. The signable codes are -E (ESSR wrapper), -F (fixed field), and -G (field map).",
+        "invariants": [
+          "Signable codes: -E, -F, -G",
+          "Non-signable codes: all others (-A, -B, -C, -D, -H, -I, -J, genus-specific)",
+          "The boundary between signed content and signatures is defined by the count value",
+          "Enables deterministic signature computation — signer and verifier agree on exactly which bytes are signed"
+        ],
+        "related_terms": [
+          "Count Code Classification",
+          "ESSR Wrapper"
+        ]
+      },
+      {
+        "term": "Fixed Field vs Field Map Encoding",
+        "definition": "Two CESR-native encoding strategies for message bodies. Fixed Field (-F##) encodes values WITHOUT labels in a required order — maximum compactness when schema is known. Field Map (-G##) encodes labeled key-value pairs in required order — self-describing and human-debuggable. Both are signable.",
+        "invariants": [
+          "Fixed Field (-F): no labels, all fields must appear (empty = null primitive), order is canonical",
+          "Field Map (-G): labeled fields, optional fields can be omitted, order is canonical",
+          "Both enable deterministic SAID computation due to required ordering",
+          "Fixed Field is more compact; Field Map is more readable",
+          "-I (generic field map) is the non-signable, unordered variant for ad-hoc structures"
+        ],
+        "examples": [
+          "ACDC as fixed field: [-F##][v][t][d][u][i][rd][s][a][A][e][r] — no labels, maximum density",
+          "ACDC as field map: [-G##]{v:..., t:..., d:..., i:..., s:..., a:...} — labeled, debuggable"
+        ],
+        "related_terms": [
+          "Signable Count Code",
+          "Count Code Classification",
+          "CESR Native Encoding"
         ]
       }
     ],
@@ -9445,6 +9545,39 @@ const RDOD_DATA = {
           "BFT Quorum",
           "Accountability Threshold",
           "Immune Constraint"
+        ]
+      },
+      {
+        "term": "Zero-Witness Edge Case",
+        "definition": "When an identifier has zero witnesses (bt='0', b=[]), KAWA consensus is trivially satisfied — no receipts are required. The controller's own signatures are sufficient for event acceptance. This is valid for simple, low-security identifiers but provides no accountability guarantees.",
+        "invariants": [
+          "bt='0' and b=[] means TOAD=0 — zero receipts needed",
+          "Events are accepted immediately after signature verification — no witness round-trip",
+          "No duplicity detection via witnesses — the controller has sole accountability",
+          "Upgrading from 0 to N witnesses requires a rotation event adding witnesses to b field"
+        ],
+        "examples": [
+          "Development/testing identifier: {bt: '0', b: []} — instant acceptance, no witnesses",
+          "Transitioning to witnessed: rotation with {bt: '2', b: [wit1, wit2, wit3], ba: [wit1, wit2, wit3]}"
+        ],
+        "related_terms": [
+          "TOAD",
+          "KAWA Quorum"
+        ]
+      },
+      {
+        "term": "Single-Witness Behavior",
+        "definition": "With exactly one witness (bt='1', b=[wit]), the witness provides first-seen ordering but no Byzantine fault tolerance. A single compromised witness can withhold receipts (liveness attack) but cannot forge events (safety preserved by controller signatures).",
+        "invariants": [
+          "Minimum meaningful witness configuration — provides first-seen ordering",
+          "No BFT guarantees — witness is a single point of failure for liveness",
+          "Safety is preserved — witness cannot forge controller's signatures",
+          "F=0 (zero faulty witnesses tolerated) — any witness failure blocks event acceptance"
+        ],
+        "related_terms": [
+          "Zero-Witness Edge Case",
+          "KAWA Quorum",
+          "TOAD"
         ]
       }
     ],
@@ -13630,6 +13763,7 @@ const RDOD_DATA = {
           "Live Attack"
         ],
         "definition": "Duplicity that occurs against the current key state — the attacker compromises the currently authoritative signing or pre-rotated keys and produces conflicting events before the controller can rotate.",
+        "note": "Detailed detection-focused definition with expanded invariants available in domain://keri/integrity/detection",
         "invariants": [
           "Involves compromise of current (live) keys, not stale keys",
           "The attacker races against the controller to propagate the compromised event",
@@ -13651,6 +13785,7 @@ const RDOD_DATA = {
           "Dead Attack"
         ],
         "definition": "Duplicity that occurs against stale key state — the attacker compromises keys from a past establishment event whose key state has already been rotated away.",
+        "note": "Detailed detection-focused definition with expanded invariants available in domain://keri/integrity/detection",
         "invariants": [
           "Involves compromise of stale (already rotated) keys",
           "Two subtypes: non-establishment dead-attack (stale signing keys) and establishment dead-attack (stale pre-rotated keys)",
@@ -13937,6 +14072,63 @@ const RDOD_DATA = {
         "related_terms": [
           "Ambient Duplicity Detection",
           "Watcher"
+        ]
+      },
+      {
+        "term": "Live Duplicity",
+        "synonyms": [
+          "Live Attack",
+          "Live Exploit"
+        ],
+        "specializes": "domain://keri/integrity",
+        "definition": "Duplicity created in real-time using current signing keys — the controller (or an attacker with current keys) creates alternate event versions simultaneously, presenting different versions to different validators. Detected when observers compare notes and find conflicting events at the same sequence number.",
+        "invariants": [
+          "Uses CURRENT signing keys — the attacker has access to the active key material",
+          "Creates real-time forks — different validators see different event versions",
+          "Detection requires diverse observation — watchers must cross-check witness KELs",
+          "Defense: a diverse set of watchers makes it difficult to prevent detection",
+          "Consequence: detected live duplicity destroys the identifier's value to detecting validators"
+        ],
+        "related_terms": [
+          "Dead Duplicity",
+          "Duplicity Evidence",
+          "Watcher"
+        ]
+      },
+      {
+        "term": "Dead Duplicity",
+        "synonyms": [
+          "Dead Attack",
+          "Dead Exploit"
+        ],
+        "specializes": "domain://keri/integrity",
+        "definition": "Duplicity exploiting previously exposed or compromised keys that are no longer current — the attacker uses old keys to forge an alternate historical KEL. Detected by comparing the forged history against copies of the proper KEL held by watchers and other validators.",
+        "invariants": [
+          "Uses STALE signing keys — keys that have been rotated away",
+          "Creates a historical fork — attempts to rewrite past events",
+          "Detection relies on ambient verifiability — proper KELs distributed among many watchers",
+          "Defense: pre-rotation means the attacker cannot create valid future events",
+          "Superseding recovery via pre-rotated keys restores the honest controller's authority"
+        ],
+        "related_terms": [
+          "Live Duplicity",
+          "Superseding Recovery",
+          "Ambient Verifiability"
+        ]
+      },
+      {
+        "term": "Ambient Verifiability",
+        "definition": "The property that proper KEL copies are widely distributed among watchers and validators, making historical forgery (dead duplicity) detectable. The more copies exist, the harder it is for an attacker to isolate a validator from the truth.",
+        "invariants": [
+          "Proper KELs can be distributed to any number of watchers",
+          "Each watcher independently verifies and stores KEL data",
+          "An attacker performing a dead attack must isolate the target from ALL ambient sources",
+          "More watchers = stronger ambient verifiability = harder dead attacks"
+        ],
+        "related_terms": [
+          "Dead Duplicity",
+          "Watcher",
+          "Percolated Discovery"
         ]
       }
     ],
@@ -14399,6 +14591,21 @@ const RDOD_DATA = {
         "related_terms": [
           "Trunk",
           "Superseding Recovery"
+        ]
+      },
+      {
+        "term": "Irreconcilable KEL",
+        "definition": "A KEL state where validators cannot universally agree on a single undisputed path (trunk) through the event history. This occurs when superseding rules cannot definitively resolve competing event versions — the identifier has lost integrity beyond recovery.",
+        "invariants": [
+          "Terminal state — an irreconcilable KEL cannot be recovered",
+          "The identifier loses value to all validators who detect the irreconcilability",
+          "Caused by successful attacks that superseding recovery cannot resolve",
+          "Different from reconcilable duplicity where superseding rules produce a clear trunk"
+        ],
+        "related_terms": [
+          "Superseding Recovery",
+          "Reconciliation",
+          "Duplicity Evidence"
         ]
       }
     ],

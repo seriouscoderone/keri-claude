@@ -81,6 +81,27 @@ terms:
       - "ample(7) = 5 — with 7 witnesses, f = floor(6/3) = 2, need 5 to tolerate 2 faulty"
     related_terms: ["BFT Quorum", "Accountability Threshold", "Immune Constraint"]
 
+  - term: "Zero-Witness Edge Case"
+    definition: "When an identifier has zero witnesses (bt='0', b=[]), KAWA consensus is trivially satisfied — no receipts are required. The controller's own signatures are sufficient for event acceptance. This is valid for simple, low-security identifiers but provides no accountability guarantees."
+    invariants:
+      - "bt='0' and b=[] means TOAD=0 — zero receipts needed"
+      - "Events are accepted immediately after signature verification — no witness round-trip"
+      - "No duplicity detection via witnesses — the controller has sole accountability"
+      - "Upgrading from 0 to N witnesses requires a rotation event adding witnesses to b field"
+    examples:
+      - "Development/testing identifier: {bt: '0', b: []} — instant acceptance, no witnesses"
+      - "Transitioning to witnessed: rotation with {bt: '2', b: [wit1, wit2, wit3], ba: [wit1, wit2, wit3]}"
+    related_terms: ["TOAD", "KAWA Quorum"]
+
+  - term: "Single-Witness Behavior"
+    definition: "With exactly one witness (bt='1', b=[wit]), the witness provides first-seen ordering but no Byzantine fault tolerance. A single compromised witness can withhold receipts (liveness attack) but cannot forge events (safety preserved by controller signatures)."
+    invariants:
+      - "Minimum meaningful witness configuration — provides first-seen ordering"
+      - "No BFT guarantees — witness is a single point of failure for liveness"
+      - "Safety is preserved — witness cannot forge controller's signatures"
+      - "F=0 (zero faulty witnesses tolerated) — any witness failure blocks event acceptance"
+    related_terms: ["Zero-Witness Edge Case", "KAWA Quorum", "TOAD"]
+
 events:
   - name: "AccountabilityThresholdMet"
     payload: "aid: AID, sn: int, event_said: SAID, receipt_count: int, threshold: int"
