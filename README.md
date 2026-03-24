@@ -228,21 +228,6 @@ python3 rdod/generate_context_map.py
 python3 <plugin-path>/skills/ddd-spec/scripts/validate_spec.py rdod/spec/domains/
 ```
 
-### RDOD Proposals
-
-Proposals for enhancing the [domain-design-toolkit](https://github.com/SeriousCoderOne/rdod) plugin, filed as markdown in `rdod/`:
-
-| Proposal | What it addresses |
-|----------|-------------------|
-| `ai-implementability-proposal.md` | errors.yaml, types.yaml, protocols.yaml templates |
-| `linter-proposal.md` | 8-category validation script spec |
-| `relationship-semantics-proposal.md` | Kernel consumption, conformist pattern, intent markers |
-| `linter-conformist-aware.md` | Linter should read pattern: field on adjacents |
-| `linter-specializes-bug.md` | Linter reads specializes from wrong file (fixed in plugin) |
-| `linter-false-positives.md` | Verification regex, vocabulary bracket/method exclusions |
-| `linter-single-ul-source.md` | Single source of truth for ubiquitous language |
-| `protocols-typed-refs.md` | Typed input/output/error/precondition references in protocols |
-
 ## Skills Plugin
 
 ### Installation
