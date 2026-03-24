@@ -221,8 +221,8 @@ python3 rdod/extract_keripy.py /path/to/keripy/src/keri
 # Map keria symbols to domains (0 unmapped across 90 symbols)
 python3 rdod/extract_keria.py /path/to/keria/src/keria
 
-# Regenerate context map from YAML sources
-python3 rdod/generate_context_map.py
+# Regenerate context map (requires domain-design-toolkit plugin)
+python3 <plugin-path>/skills/ddd-spec/scripts/generate_context_map.py rdod/spec/domains/ --output rdod/spec/domains/context-map.html
 
 # Validate spec (requires domain-design-toolkit plugin)
 python3 <plugin-path>/skills/ddd-spec/scripts/validate_spec.py rdod/spec/domains/
