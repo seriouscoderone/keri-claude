@@ -113,6 +113,31 @@ terms:
       - "In keriox: TelState reconstructed by iterating get_events() for a credential SAID"
     related_terms: ["Credential State Snapshot", "Registry State Snapshot", "TEL Event Verifier", "State Transition Rules"]
 
+  - term: "Missing Anchor Escrow"
+    synonyms: ["MAE", ".taes [keripy]"]
+    definition: "Holds TEL events whose anchor seal in the issuer's KEL has not yet been verified. The issuer's KEL does not yet contain the seal binding the TEL event. Reprocessed when the issuer's KEL is updated with a potential anchoring event."
+    invariants:
+      - "Triggered when no matching seal is found in the issuer's KEL at the expected position"
+      - "Distinct from MIE: MAE has the issuer's KEL but the seal is missing; MIE does not have the issuer's KEL event at all"
+    related_terms: ["TEL Event Verifier", "State Transition Rules"]
+
+  - term: "Missing Issuer Escrow"
+    synonyms: ["MRI"]
+    definition: "Holds credentials whose issuer AID is not found in the local Kevers. The issuer's KEL has not been received, so credential issuance cannot be verified. Reprocessed when the issuer's KEL becomes available."
+    invariants:
+      - "Triggered when the issuer AID referenced in a credential is not in the local Kevers"
+      - "Reprocessed when the issuer's KEL is fetched (typically via OOBI resolution)"
+      - "Default timeout: 3600 seconds (TimeoutMRI in keripy)"
+    related_terms: ["TEL Event Verifier", "Credential State"]
+
+  - term: "Missing Chain Escrow"
+    synonyms: ["MCE", ".mce [keripy]"]
+    definition: "Holds credentials whose edge section references chained credentials that have not yet been received or verified. The credential chain cannot be validated until all referenced credentials are available."
+    invariants:
+      - "Triggered when a credential in the edge (e) section has not been received or its status cannot be confirmed"
+      - "Reprocessed when chained credentials arrive and are processed"
+    related_terms: ["TEL Event Verifier", "Credential State"]
+
 events:
   - name: "CredentialStateChanged"
     payload: "regid: REGID, acdc_said: SAID, old_state: CredentialState, new_state: CredentialState, event_sn: int, event_said: SAID"

@@ -78,6 +78,15 @@ terms:
       - "agent role: endpoint manages AID on behalf of controller"
     related_terms: ["Endpoint Authorization", "OOBI"]
 
+  - term: "Reply Escrow"
+    synonyms: ["RPE", ".rpes [keripy]"]
+    definition: "Holds OOBI reply messages whose signatures cannot yet be verified because the signer's key state is not available. Replies are reprocessed when the signer's KEL is resolved."
+    invariants:
+      - "Triggered when an rpy message signature cannot be verified against the signer's current key state"
+      - "Reprocessed when the signer's KEL becomes available via OOBI resolution or direct fetch"
+      - "Default timeout: 3600 seconds"
+    related_terms: ["OOBI Resolution", "BADA"]
+
 events:
   - name: "OOBIResolved"
     payload: "aid: AID, endpoint: URL, role: Role, kel_verified: bool"

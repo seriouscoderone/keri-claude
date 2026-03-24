@@ -43,7 +43,34 @@ terms:
     examples:
       - "A witness receipt for sn=5 arrives before the event at sn=5 — escrowed in .uwes until the event is processed"
       - "After event at sn=5 is accepted, .uwes is drained and matching receipts are attached to the event"
-    related_terms: ["Receipt", "Receipt Types"]
+    related_terms: ["Receipt", "Receipt Types", "Unverified Receipt Escrow", "Unverified Witness Receipt Escrow", "Unverified Transferable Receipt Escrow"]
+
+  - term: "Unverified Receipt Escrow"
+    synonyms: ["URE", ".ures [keripy]"]
+    definition: "Holds non-transferable witness receipts (Couples) for events that have not yet been accepted into the KEL. When the corresponding event is accepted, escrowed receipts are promoted to verified storage."
+    invariants:
+      - "Stores non-transferable receipt couples (Prefixer + Cigar) indexed by event digest key"
+      - "Drained by Kevery.processEscrowUnverNonTrans() in keripy"
+      - "Default timeout: 3600 seconds"
+    related_terms: ["Receipt Escrows", "Receipt Types"]
+
+  - term: "Unverified Witness Receipt Escrow"
+    synonyms: ["UWE", ".uwes [keripy]"]
+    definition: "Holds indexed witness receipts (Sigers) for events that have not yet been accepted into the KEL. When the corresponding event is accepted, escrowed witness receipts are promoted to the witness signature store."
+    invariants:
+      - "Stores indexed witness signatures (Siger) indexed by event digest key"
+      - "Drained by Kevery.processEscrowUnverWitness() in keripy"
+      - "Default timeout: 3600 seconds"
+    related_terms: ["Receipt Escrows", "Receipt Types"]
+
+  - term: "Unverified Transferable Receipt Escrow"
+    synonyms: ["VRE", ".vres [keripy]"]
+    definition: "Holds transferable receipt quadruples (Prefixer + Seqner + Saider + Siger) for events that have not yet been accepted into the KEL. When the corresponding event is accepted, escrowed transferable receipts are promoted to verified storage."
+    invariants:
+      - "Stores transferable receipt quadruples indexed by event digest key"
+      - "Drained by Kevery.processEscrowUnverTrans() in keripy"
+      - "Default timeout: 3600 seconds"
+    related_terms: ["Receipt Escrows", "Receipt Types"]
 
   - term: "Witness Receipt Generator"
     synonyms: ["WitnessReceiptGenerator [keriox]", "Receiptor [keripy]"]

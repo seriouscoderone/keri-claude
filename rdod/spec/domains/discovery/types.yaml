@@ -13,7 +13,7 @@ types:
             constraints:
               pattern: "^https?://.+/oobi/.+"
           - name: "aid"
-            type: "AID"
+            type: "TypeRef:cesr/primitives#AID"
             required: true
             description: "The AID being introduced"
           - name: "role"
@@ -23,7 +23,7 @@ types:
             constraints:
               enum: ["witness", "watcher", "agent", "controller", "mailbox"]
           - name: "eid"
-            type: "AID"
+            type: "TypeRef:cesr/primitives#AID"
             required: false
             description: "Endpoint identifier — the specific witness/watcher AID serving this OOBI"
         invariants:
@@ -47,7 +47,7 @@ types:
       - name: "default"
         fields:
           - name: "cid"
-            type: "AID"
+            type: "TypeRef:cesr/primitives#AID"
             required: true
             description: "Controller AID — who authorized this endpoint"
           - name: "role"
@@ -57,7 +57,7 @@ types:
             constraints:
               enum: ["witness", "watcher", "agent", "controller", "mailbox"]
           - name: "eid"
-            type: "AID"
+            type: "TypeRef:cesr/primitives#AID"
             required: true
             description: "Endpoint AID — the service's identifier"
         invariants:
@@ -71,7 +71,7 @@ types:
       - name: "default"
         fields:
           - name: "eid"
-            type: "AID"
+            type: "TypeRef:cesr/primitives#AID"
             required: true
             description: "Service endpoint AID"
           - name: "scheme"

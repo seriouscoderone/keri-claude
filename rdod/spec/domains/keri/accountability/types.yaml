@@ -11,9 +11,9 @@ types:
             required: true
             description: "Non-transferable AID of the witness (public key IS the identifier)"
           - name: "cigar"
-            type: "Cigar"
+            type: "TypeRef:cesr/primitives#Matter"
             required: true
-            description: "Unindexed signature — the witness's signature over the receipted event's raw bytes"
+            description: "Unindexed signature (Cigar — Matter subtype) — the witness's signature over the receipted event's raw bytes"
           - name: "event_said"
             type: "string"
             required: true
@@ -37,13 +37,13 @@ types:
             required: true
             description: "Transferable AID of the witness"
           - name: "seal"
-            type: "Seal"
+            type: "TypeRef:cesr/primitives#Seal"
             required: true
             description: "Event seal referencing the witness's latest establishment event"
           - name: "sigers"
-            type: "array[Siger]"
+            type: "array[TypeRef:cesr/primitives#Matter]"
             required: true
-            description: "Indexed signatures from the witness's current key set"
+            description: "Indexed signatures (Siger — Matter subtype) from the witness's current key set"
           - name: "event_said"
             type: "string"
             required: true

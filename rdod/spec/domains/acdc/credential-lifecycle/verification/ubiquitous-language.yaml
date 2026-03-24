@@ -70,7 +70,32 @@ terms:
       - "An iss event escrowed in missing issuer escrow [.taes in keripy] because the issuer's ixn event containing the anchor seal is not yet received"
       - "A bis event in partial witness escrow [.twes in keripy] with 1 of 3 required backer signatures -- waiting for 2 more"
       - "After a VCP event arrives, MissingRegistryEscrow entries for that REGID are reprocessed"
-    related_terms: ["TEL Validation Pipeline", "TEL Notification Bus", "Verifiable Event"]
+    related_terms: ["TEL Validation Pipeline", "TEL Notification Bus", "Verifiable Event", "Out-of-Order TEL Escrow", "Missing Registry Escrow", "Missing Issuer Escrow"]
+
+  - term: "Out-of-Order TEL Escrow"
+    synonyms: ["OOT", ".oots [keripy]", "OutOfOrderEscrow [keriox]"]
+    definition: "Holds TEL events whose sequence number does not match the expected next sequence number -- a preceding TEL event is missing. Reprocessed when the missing prior TEL event arrives."
+    invariants:
+      - "Triggered when received_sn > expected_sn for the registry or credential TEL"
+      - "Indexed by registry SAID + sn in the out-of-order TEL escrow subdatabase [.oots in keripy]"
+      - "Reprocessed when a TelEventAdded notification fires for the same registry (keriox) or during processEscrows sweep (keripy)"
+    related_terms: ["TEL Escrows", "TEL Validation Pipeline"]
+
+  - term: "Missing Registry Escrow"
+    synonyms: ["MRE", ".mre [keripy]", "MissingRegistryEscrow [keriox]"]
+    definition: "Holds TEL events and credentials whose registry inception (VCP/rip) has not yet been received. Cannot determine registry state without the management TEL. Reprocessed when the registry VCP arrives."
+    invariants:
+      - "Triggered when the REGID referenced by a TEL event or credential is not in the local Tevers"
+      - "Reprocessed when a RegistryUpdated notification fires for the REGID (keriox) or during processEscrows sweep (keripy)"
+    related_terms: ["TEL Escrows", "TEL Validation Pipeline"]
+
+  - term: "Missing Issuer Escrow"
+    synonyms: ["MIE", ".taes [keripy]", "MissingIssuerEscrow [keriox]"]
+    definition: "Holds TEL events whose issuer's KEL event at the anchor seal point has not yet been received. Cannot verify KEL binding without the anchoring event. Reprocessed when the issuer's KEL is updated."
+    invariants:
+      - "Triggered when the issuer's KEL event at the sequence number stated in the attached seal is not available"
+      - "Reprocessed when an IssuerUpdated notification fires for the issuer AID (keriox) or during processEscrows sweep (keripy)"
+    related_terms: ["TEL Escrows", "TEL Validation Pipeline", "KEL Anchor Verification"]
 
   - term: "KEL Anchor Verification"
     synonyms: ["check_kel_event [keriox]", "verify_tel_seal [keripy]"]

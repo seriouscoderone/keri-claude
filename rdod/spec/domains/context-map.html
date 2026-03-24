@@ -2925,6 +2925,54 @@ const RDOD_DATA = {
           "TEL Event Verifier",
           "State Transition Rules"
         ]
+      },
+      {
+        "term": "Missing Anchor Escrow",
+        "synonyms": [
+          "MAE",
+          ".taes [keripy]"
+        ],
+        "definition": "Holds TEL events whose anchor seal in the issuer's KEL has not yet been verified. The issuer's KEL does not yet contain the seal binding the TEL event. Reprocessed when the issuer's KEL is updated with a potential anchoring event.",
+        "invariants": [
+          "Triggered when no matching seal is found in the issuer's KEL at the expected position",
+          "Distinct from MIE: MAE has the issuer's KEL but the seal is missing; MIE does not have the issuer's KEL event at all"
+        ],
+        "related_terms": [
+          "TEL Event Verifier",
+          "State Transition Rules"
+        ]
+      },
+      {
+        "term": "Missing Issuer Escrow",
+        "synonyms": [
+          "MRI"
+        ],
+        "definition": "Holds credentials whose issuer AID is not found in the local Kevers. The issuer's KEL has not been received, so credential issuance cannot be verified. Reprocessed when the issuer's KEL becomes available.",
+        "invariants": [
+          "Triggered when the issuer AID referenced in a credential is not in the local Kevers",
+          "Reprocessed when the issuer's KEL is fetched (typically via OOBI resolution)",
+          "Default timeout: 3600 seconds (TimeoutMRI in keripy)"
+        ],
+        "related_terms": [
+          "TEL Event Verifier",
+          "Credential State"
+        ]
+      },
+      {
+        "term": "Missing Chain Escrow",
+        "synonyms": [
+          "MCE",
+          ".mce [keripy]"
+        ],
+        "definition": "Holds credentials whose edge section references chained credentials that have not yet been received or verified. The credential chain cannot be validated until all referenced credentials are available.",
+        "invariants": [
+          "Triggered when a credential in the edge (e) section has not been received or its status cannot be confirmed",
+          "Reprocessed when chained credentials arrive and are processed"
+        ],
+        "related_terms": [
+          "TEL Event Verifier",
+          "Credential State"
+        ]
       }
     ],
     "domain_clients": [
@@ -3161,7 +3209,63 @@ const RDOD_DATA = {
         "related_terms": [
           "TEL Validation Pipeline",
           "TEL Notification Bus",
-          "Verifiable Event"
+          "Verifiable Event",
+          "Out-of-Order TEL Escrow",
+          "Missing Registry Escrow",
+          "Missing Issuer Escrow"
+        ]
+      },
+      {
+        "term": "Out-of-Order TEL Escrow",
+        "synonyms": [
+          "OOT",
+          ".oots [keripy]",
+          "OutOfOrderEscrow [keriox]"
+        ],
+        "definition": "Holds TEL events whose sequence number does not match the expected next sequence number -- a preceding TEL event is missing. Reprocessed when the missing prior TEL event arrives.",
+        "invariants": [
+          "Triggered when received_sn > expected_sn for the registry or credential TEL",
+          "Indexed by registry SAID + sn in the out-of-order TEL escrow subdatabase [.oots in keripy]",
+          "Reprocessed when a TelEventAdded notification fires for the same registry (keriox) or during processEscrows sweep (keripy)"
+        ],
+        "related_terms": [
+          "TEL Escrows",
+          "TEL Validation Pipeline"
+        ]
+      },
+      {
+        "term": "Missing Registry Escrow",
+        "synonyms": [
+          "MRE",
+          ".mre [keripy]",
+          "MissingRegistryEscrow [keriox]"
+        ],
+        "definition": "Holds TEL events and credentials whose registry inception (VCP/rip) has not yet been received. Cannot determine registry state without the management TEL. Reprocessed when the registry VCP arrives.",
+        "invariants": [
+          "Triggered when the REGID referenced by a TEL event or credential is not in the local Tevers",
+          "Reprocessed when a RegistryUpdated notification fires for the REGID (keriox) or during processEscrows sweep (keripy)"
+        ],
+        "related_terms": [
+          "TEL Escrows",
+          "TEL Validation Pipeline"
+        ]
+      },
+      {
+        "term": "Missing Issuer Escrow",
+        "synonyms": [
+          "MIE",
+          ".taes [keripy]",
+          "MissingIssuerEscrow [keriox]"
+        ],
+        "definition": "Holds TEL events whose issuer's KEL event at the anchor seal point has not yet been received. Cannot verify KEL binding without the anchoring event. Reprocessed when the issuer's KEL is updated.",
+        "invariants": [
+          "Triggered when the issuer's KEL event at the sequence number stated in the attached seal is not available",
+          "Reprocessed when an IssuerUpdated notification fires for the issuer AID (keriox) or during processEscrows sweep (keripy)"
+        ],
+        "related_terms": [
+          "TEL Escrows",
+          "TEL Validation Pipeline",
+          "KEL Anchor Verification"
         ]
       },
       {
@@ -8036,6 +8140,23 @@ const RDOD_DATA = {
           "Endpoint Authorization",
           "OOBI"
         ]
+      },
+      {
+        "term": "Reply Escrow",
+        "synonyms": [
+          "RPE",
+          ".rpes [keripy]"
+        ],
+        "definition": "Holds OOBI reply messages whose signatures cannot yet be verified because the signer's key state is not available. Replies are reprocessed when the signer's KEL is resolved.",
+        "invariants": [
+          "Triggered when an rpy message signature cannot be verified against the signer's current key state",
+          "Reprocessed when the signer's KEL becomes available via OOBI resolution or direct fetch",
+          "Default timeout: 3600 seconds"
+        ],
+        "related_terms": [
+          "OOBI Resolution",
+          "BADA"
+        ]
       }
     ],
     "domain_clients": [
@@ -9617,6 +9738,60 @@ const RDOD_DATA = {
         ],
         "related_terms": [
           "Receipt",
+          "Receipt Types",
+          "Unverified Receipt Escrow",
+          "Unverified Witness Receipt Escrow",
+          "Unverified Transferable Receipt Escrow"
+        ]
+      },
+      {
+        "term": "Unverified Receipt Escrow",
+        "synonyms": [
+          "URE",
+          ".ures [keripy]"
+        ],
+        "definition": "Holds non-transferable witness receipts (Couples) for events that have not yet been accepted into the KEL. When the corresponding event is accepted, escrowed receipts are promoted to verified storage.",
+        "invariants": [
+          "Stores non-transferable receipt couples (Prefixer + Cigar) indexed by event digest key",
+          "Drained by Kevery.processEscrowUnverNonTrans() in keripy",
+          "Default timeout: 3600 seconds"
+        ],
+        "related_terms": [
+          "Receipt Escrows",
+          "Receipt Types"
+        ]
+      },
+      {
+        "term": "Unverified Witness Receipt Escrow",
+        "synonyms": [
+          "UWE",
+          ".uwes [keripy]"
+        ],
+        "definition": "Holds indexed witness receipts (Sigers) for events that have not yet been accepted into the KEL. When the corresponding event is accepted, escrowed witness receipts are promoted to the witness signature store.",
+        "invariants": [
+          "Stores indexed witness signatures (Siger) indexed by event digest key",
+          "Drained by Kevery.processEscrowUnverWitness() in keripy",
+          "Default timeout: 3600 seconds"
+        ],
+        "related_terms": [
+          "Receipt Escrows",
+          "Receipt Types"
+        ]
+      },
+      {
+        "term": "Unverified Transferable Receipt Escrow",
+        "synonyms": [
+          "VRE",
+          ".vres [keripy]"
+        ],
+        "definition": "Holds transferable receipt quadruples (Prefixer + Seqner + Saider + Siger) for events that have not yet been accepted into the KEL. When the corresponding event is accepted, escrowed transferable receipts are promoted to verified storage.",
+        "invariants": [
+          "Stores transferable receipt quadruples indexed by event digest key",
+          "Drained by Kevery.processEscrowUnverTrans() in keripy",
+          "Default timeout: 3600 seconds"
+        ],
+        "related_terms": [
+          "Receipt Escrows",
           "Receipt Types"
         ]
       },
@@ -9977,7 +10152,8 @@ const RDOD_DATA = {
       {
         "term": "Missing Delegable Escrow",
         "synonyms": [
-          "MDE"
+          "MDE",
+          "Missing Delegation Escrow"
         ],
         "definition": "Holds events awaiting delegable approval -- the delegate has submitted an event with a delegation source seal attachment, but the seal cannot yet be verified against the delegator's KEL. Unlike PDE where no seal has arrived, MDE has the seal but it has not been validated.",
         "invariants": [
@@ -11432,6 +11608,7 @@ const RDOD_DATA = {
       {
         "term": "Misfit Event Escrow",
         "synonyms": [
+          "MFE",
           ".misfits [keripy]"
         ],
         "definition": "Holds events received from remote sources that target locally-owned, locally-witnessed, or locally-delegated identifiers. These events are not rejected but held, requiring re-sourcing through a local protected channel before acceptance.",
