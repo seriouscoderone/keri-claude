@@ -1,0 +1,664 @@
+# verification.yaml
+domain_ref: "identity/thresholds"
+
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
+properties:
+  # Signing Threshold invariants
+  - invariant: "Simple threshold M MUST satisfy 1 <= M <= len(keys); M == 0 MUST be rejected (no-op threshold); M > len(keys) MUST be rejected (unsatisfiable threshold)"
+    term: "Signing Threshold"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        M, N = Ints('M N')
+        valid = Bool('valid')
+        s = Solver()
+        s.add(valid == And(M >= 1, M <= N, N >= 1))
+        # Prove: M == 0 is always invalid
+        s.add(M == 0, valid)
+        assert s.check() == unsat
+        # Prove: M > N is always invalid
+        s2 = Solver()
+        s2.add(valid == And(M >= 1, M <= N, N >= 1))
+        s2.add(M > N, N >= 1, valid)
+        assert s2.check() == unsat
+    notes: "Boundary: M=0 invalid (trivially satisfied), M > N invalid (never satisfiable)."
+
+  - invariant: "Empty key list (len(keys) == 0) MUST be rejected for any threshold value; there is no valid threshold for zero keys"
+    term: "Signing Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(threshold=st.one_of(
+            st.integers(min_value=0, max_value=10),
+            st.lists(st.text(min_size=3, max_size=5), min_size=0, max_size=5)))
+        def test_empty_key_list_rejected(threshold):
+            keys = []  # empty
+            with pytest.raises(ValidationError, match='empty key list'):
+                validate_threshold_against_keys(threshold, keys)
+    strategy: "Various threshold values with empty key list"
+    notes: "No keys = no valid threshold configuration. Must be caught at construction time."
+
+  - invariant: "Signing threshold can be a simple integer M (M-of-N) or a fractionally weighted threshold (list of fractions); parse_threshold MUST accept both forms and return a Tholder with satisfy() method"
+    term: "Signing Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(sith=st.one_of(
+            st.integers(min_value=1, max_value=10),
+            st.lists(st.fractions(min_value=Fraction(0), max_value=Fraction(1)),
+                     min_size=1, max_size=10)))
+        def test_threshold_types(sith):
+            tholder = parse_threshold(sith)
+            assert hasattr(tholder, 'satisfy')
+            if isinstance(sith, int):
+                assert not tholder.weighted
+                assert tholder.num == sith
+            else:
+                assert tholder.weighted
+                assert len(tholder.weights) == len(sith)
+    strategy: "st.one_of(integer, list of fractions)"
+    notes: "Two representation forms with the same satisfaction interface."
+
+  - invariant: "Simple threshold satisfaction: tholder.satisfy(indices) MUST return True iff len(indices) >= M; formally: satisfy(indices) == (len(set(indices)) >= M)"
+    term: "Signing Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(threshold=st.integers(min_value=1, max_value=5),
+               n_keys=st.integers(min_value=1, max_value=10),
+               n_sigs=st.integers(min_value=0, max_value=10))
+        def test_simple_threshold_satisfaction(threshold, n_keys, n_sigs):
+            assume(threshold <= n_keys)
+            indices = list(range(min(n_sigs, n_keys)))
+            tholder = parse_threshold(threshold)
+            result = tholder.satisfy(indices)
+            assert result == (len(indices) >= threshold)
+            # Boundary: exactly M-1 sigs must fail
+            if threshold > 0:
+                short_indices = list(range(threshold - 1))
+                assert not tholder.satisfy(short_indices)
+            # Boundary: exactly M sigs must pass
+            exact_indices = list(range(threshold))
+            assert tholder.satisfy(exact_indices)
+    strategy: "st.integers for threshold, key count, sig count"
+    notes: "Satisfaction is a deterministic count comparison with explicit boundary checks."
+
+  - invariant: "For rotations, signatures MUST satisfy both the new signing threshold (kt) AND the prior next threshold (nt) independently; if either fails, the rotation MUST be rejected"
+    term: "Signing Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kt=st.integers(min_value=1, max_value=5),
+               nt=st.integers(min_value=1, max_value=5),
+               indices=st.lists(st.integers(min_value=0, max_value=9),
+                                min_size=0, max_size=10, unique=True),
+               ondices=st.lists(st.integers(min_value=0, max_value=9),
+                                min_size=0, max_size=10, unique=True))
+        def test_dual_threshold_both_required(kt, nt, indices, ondices):
+            tholder = parse_threshold(kt)
+            ntholder = parse_threshold(nt)
+            kt_satisfied = tholder.satisfy(indices)
+            nt_satisfied = ntholder.satisfy(ondices)
+            rotation_valid = kt_satisfied and nt_satisfied
+            # If either threshold fails, rotation must fail
+            if not kt_satisfied:
+                assert not rotation_valid
+            if not nt_satisfied:
+                assert not rotation_valid
+            # Both must independently pass
+            if kt_satisfied and nt_satisfied:
+                assert rotation_valid
+    strategy: "Independent threshold values and unique index lists"
+    notes: "Dual threshold: AND of two independent satisfaction checks."
+
+  - invariant: "Multi-sig coordination: all participants MUST sign the same event SAID; if any participant signs a different SAID for the same (prefix, sn), the signatures MUST NOT be merged — they are for different events"
+    term: "Signing Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(said1=said_strategy(), said2=said_strategy(),
+               index=st.integers(min_value=0, max_value=9))
+        def test_multisig_said_divergence(said1, said2, index):
+            assume(said1 != said2)
+            store = SigStore()
+            sig1 = generate_sig(index=0, said=said1)
+            sig2 = generate_sig(index=1, said=said2)
+            store.add(said1, sig1)
+            store.add(said2, sig2)
+            # Signatures for different SAIDs must not be merged
+            sigs_for_said1 = store.get_sigs(said1)
+            assert len(sigs_for_said1) == 1
+            assert sig2 not in sigs_for_said1
+    strategy: "said_strategy() x2, st.integers for index"
+    notes: "SAID divergence in multi-sig means participants disagree on event content."
+
+  # Rotation Threshold invariants
+  - invariant: "Simple rotation threshold nt MUST satisfy 1 <= nt <= len(next_digests); nt == 0 MUST be rejected; nt > len(next_digests) MUST be rejected"
+    term: "Rotation Threshold"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        nt, n_digests = Ints('nt n_digests')
+        valid = Bool('valid')
+        s = Solver()
+        s.add(valid == And(nt >= 1, nt <= n_digests, n_digests >= 1))
+        # nt == 0 is invalid
+        s.add(nt == 0, valid)
+        assert s.check() == unsat
+        # nt > n_digests is invalid
+        s2 = Solver()
+        s2.add(valid == And(nt >= 1, nt <= n_digests, n_digests >= 1))
+        s2.add(nt > n_digests, n_digests >= 1, valid)
+        assert s2.check() == unsat
+    notes: "Same boundary rules as signing threshold, applied to next key digests."
+
+  - invariant: "The nt from the PRIOR establishment event constrains the current rotation; the nt declared in the current rotation constrains the NEXT rotation — nt is a forward commitment"
+    term: "Rotation Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_rotation_strategy())
+        def test_nt_from_prior_establishment(kel):
+            for event in kel.events:
+                if event.t in ('rot', 'drt'):
+                    prior_est = kel.prior_establishment(event)
+                    # The nt used for validation comes from the prior establishment
+                    ntholder = parse_threshold(prior_est.nt)
+                    ondices = compute_ondices(event, prior_est)
+                    assert ntholder.satisfy(ondices), \
+                        f"Rotation at sn={event.sn} must satisfy prior nt={prior_est.nt}"
+    strategy: "kel_with_rotation_strategy()"
+    notes: "nt is a forward commitment — declared in one event, enforced at the next."
+
+  # Dual Threshold invariants
+  - invariant: "Both thresholds MUST be independently satisfied for a valid rotation; SMT proof: rotation_valid implies kt_satisfied AND nt_satisfied — neither can be bypassed"
+    term: "Dual Threshold"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        kt_satisfied = Bool('kt_satisfied')
+        nt_satisfied = Bool('nt_satisfied')
+        rotation_valid = Bool('rotation_valid')
+        s = Solver()
+        s.add(rotation_valid == And(kt_satisfied, nt_satisfied))
+        # Prove: rotation valid implies kt satisfied
+        s.add(rotation_valid, Not(kt_satisfied))
+        assert s.check() == unsat
+        # Prove: rotation valid implies nt satisfied
+        s2 = Solver()
+        s2.add(rotation_valid == And(kt_satisfied, nt_satisfied))
+        s2.add(rotation_valid, Not(nt_satisfied))
+        assert s2.check() == unsat
+    notes: "SMT proves neither threshold can be bypassed in a valid rotation."
+
+  - invariant: "An inception event (icp, dip) has only a signing threshold check — no prior nt exists yet; attempting to check dual threshold on inception MUST be a logic error"
+    term: "Dual Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(icp=inception_event_strategy())
+        def test_inception_no_prior_nt(icp):
+            assert icp.t in ('icp', 'dip')
+            assert icp.kt is not None
+            # Only kt is checked for inception
+            tholder = parse_threshold(icp.kt)
+            assert tholder is not None
+            # There is no prior establishment event — no nt to check
+            prior_est = None
+            assert prior_est is None
+    strategy: "inception_event_strategy()"
+    notes: "Inception has kt but no prior nt to check against."
+
+  # Fractionally Weighted Threshold invariants
+  - invariant: "Weight list length MUST equal key list length; if len(weights) != len(keys), the threshold configuration MUST be rejected"
+    term: "Fractionally Weighted Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(n_keys=st.integers(min_value=1, max_value=10),
+               n_weights=st.integers(min_value=1, max_value=10))
+        def test_weighted_threshold_length_match(n_keys, n_weights):
+            keys = generate_keypairs(n_keys)
+            weights = [Fraction(1, n_weights) for _ in range(n_weights)]
+            if n_weights != n_keys:
+                with pytest.raises(ValidationError, match='weight count mismatch'):
+                    validate_weighted_threshold(weights, keys)
+            else:
+                validate_weighted_threshold(weights, keys)
+    strategy: "st.integers for key count and weight count"
+    notes: "One weight per key — positional correspondence is mandatory."
+
+  - invariant: "Weighted threshold satisfaction: tholder.satisfy(indices) MUST return True iff sum(weights[i] for i in indices) >= 1; formally: satisfy(indices) == (sum_of_weights >= Fraction(1))"
+    term: "Fractionally Weighted Threshold"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        w1, w2, w3 = Reals('w1 w2 w3')
+        sum_weights = Real('sum_weights')
+        satisfied = Bool('satisfied')
+        s = Solver()
+        s.add(w1 >= 0, w2 >= 0, w3 >= 0)
+        s.add(w1 <= 1, w2 <= 1, w3 <= 1)
+        s.add(sum_weights == w1 + w2 + w3)
+        s.add(satisfied == (sum_weights >= 1))
+        # Example: ['1/2', '1/2', '1/2'] — any 2 sum to 1
+        s.add(w1 == RealVal('1/2'), w2 == RealVal('1/2'), w3 == RealVal('1/2'))
+        s.add(satisfied)
+        assert s.check() == sat
+        # Prove: if sum < 1, not satisfied
+        s2 = Solver()
+        s2.add(satisfied == (sum_weights >= 1))
+        s2.add(sum_weights < 1, satisfied)
+        assert s2.check() == unsat
+    notes: "Weighted threshold sum >= 1 is the satisfaction criterion."
+
+  - invariant: "All weights MUST be non-negative fractions (>= 0); negative weights MUST be rejected at construction time"
+    term: "Fractionally Weighted Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(weights=st.lists(
+            st.fractions(min_value=Fraction(-1), max_value=Fraction(2)),
+            min_size=1, max_size=10))
+        def test_negative_weights_rejected(weights):
+            has_negative = any(w < 0 for w in weights)
+            if has_negative:
+                with pytest.raises(ValidationError, match='negative weight'):
+                    parse_threshold(weights)
+            else:
+                tholder = parse_threshold(weights)
+                assert tholder.weighted
+    strategy: "st.lists of fractions including negative values"
+    notes: "Negative weights are nonsensical and MUST be caught at parse time."
+
+  - invariant: "A weighted threshold where all weights are 0 MUST be rejected (unsatisfiable — no subset can sum to >= 1)"
+    term: "Fractionally Weighted Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(n_keys=st.integers(min_value=1, max_value=10))
+        def test_all_zero_weights_rejected(n_keys):
+            weights = [Fraction(0)] * n_keys
+            with pytest.raises(ValidationError, match='unsatisfiable'):
+                validate_weighted_threshold(weights, generate_keypairs(n_keys))
+    strategy: "st.integers(1..10) for key count, all weights 0"
+    notes: "All-zero weights means no combination of keys can reach sum >= 1."
+
+  - invariant: "Unequal key authority: a key with weight >= 1 alone satisfies the threshold; a key with weight < 1 requires cooperation with other keys"
+    term: "Fractionally Weighted Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(st.data())
+        def test_unequal_authority(data):
+            # High-weight key alone suffices
+            weights = [Fraction(1, 1), Fraction(1, 2), Fraction(1, 2)]
+            tholder = parse_threshold(weights)
+            assert tholder.satisfy([0])  # Key 0 alone (weight 1) suffices
+            assert not tholder.satisfy([1])  # Key 1 alone (weight 1/2) insufficient
+            assert not tholder.satisfy([2])  # Key 2 alone (weight 1/2) insufficient
+            assert tholder.satisfy([1, 2])  # Keys 1+2 (1/2 + 1/2 = 1) suffices
+            assert tholder.satisfy([0, 1])  # Key 0 + Key 1 (1 + 1/2 = 3/2 >= 1) suffices
+    strategy: "Fixed example demonstrating unequal authority"
+    notes: "Unequal weights create asymmetric signing power — key design intent."
+
+  - invariant: "A weighted threshold MUST be satisfiable: at least one subset of keys must have total weight >= 1; if max possible sum (all keys) < 1, reject"
+    term: "Fractionally Weighted Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(weights=st.lists(
+            st.fractions(min_value=Fraction(0), max_value=Fraction(1, 3)),
+            min_size=1, max_size=2))
+        def test_unsatisfiable_weighted_rejected(weights):
+            total = sum(weights)
+            if total < 1:
+                with pytest.raises(ValidationError, match='unsatisfiable'):
+                    validate_weighted_threshold(weights, generate_keypairs(len(weights)))
+    strategy: "st.lists of small fractions that may not sum to >= 1"
+    notes: "Catch unsatisfiable configurations at construction time."
+
+  # Witness Threshold invariants
+  - invariant: "Witness threshold (bt) MUST be a non-negative integer: 0 <= bt <= len(witnesses); bt < 0 MUST be rejected; bt > len(witnesses) MUST be rejected"
+    term: "Witness Threshold"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        bt, n_witnesses = Ints('bt n_witnesses')
+        valid = Bool('valid')
+        s = Solver()
+        s.add(valid == And(bt >= 0, bt <= n_witnesses, n_witnesses >= 0))
+        # bt < 0 is invalid
+        s.add(bt < 0, valid)
+        assert s.check() == unsat
+        # bt > n_witnesses is invalid
+        s2 = Solver()
+        s2.add(valid == And(bt >= 0, bt <= n_witnesses, n_witnesses >= 0))
+        s2.add(bt > n_witnesses, n_witnesses >= 0, valid)
+        assert s2.check() == unsat
+    notes: "Witness threshold is bounded by [0, N]. bt=0 is valid (no witnesses)."
+
+  - invariant: "Witness threshold MUST always be a simple integer — fractionally weighted witness thresholds are NOT supported and MUST be rejected"
+    term: "Witness Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(weighted_bt=st.lists(st.fractions(min_value=Fraction(0), max_value=Fraction(1)),
+                                     min_size=1, max_size=5))
+        def test_weighted_witness_threshold_rejected(weighted_bt):
+            with pytest.raises(ValidationError, match='witness threshold must be integer'):
+                build_witness_config(witnesses=['BGKV...', 'BJfu...'], toad=weighted_bt)
+    strategy: "st.lists of fractions for invalid weighted witness threshold"
+    notes: "Unlike signing/rotation thresholds, witness threshold is always a simple count."
+
+  - invariant: "Higher witness threshold MUST be strictly more restrictive: for bt1 < bt2, if bt1 receipts are available and bt1 is satisfied, bt2 MUST NOT be satisfied with the same receipts"
+    term: "Witness Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(bt1=st.integers(min_value=1, max_value=5),
+               bt2=st.integers(min_value=1, max_value=5),
+               n_witnesses=st.integers(min_value=5, max_value=10))
+        def test_higher_threshold_more_strict(bt1, bt2, n_witnesses):
+            assume(bt1 < bt2 <= n_witnesses)
+            receipts = list(range(bt1))  # exactly bt1 receipts
+            assert satisfy_witness(bt1, receipts)
+            assert not satisfy_witness(bt2, receipts)
+    strategy: "st.integers for two thresholds and witness count"
+    notes: "Monotonic strictness: more receipts required = harder to satisfy."
+
+  # Witness Configuration invariants
+  - invariant: "Witness list MUST be an ordered set of unique non-transferable AIDs; duplicate witness AIDs MUST be rejected"
+    term: "Witness Configuration"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(witnesses=st.lists(witness_aid_strategy(), min_size=1, max_size=10))
+        def test_witness_list_unique_ordered(witnesses):
+            if len(witnesses) != len(set(witnesses)):
+                with pytest.raises(ValidationError, match='duplicate witness'):
+                    build_witness_config(witnesses, toad=0)
+            else:
+                config = build_witness_config(witnesses, toad=0)
+                assert config.witnesses == witnesses  # order preserved
+                assert len(config.witnesses) == len(set(config.witnesses))  # unique
+    strategy: "st.lists(witness_aid_strategy()) — may include duplicates"
+    notes: "Witnesses are ordered and unique. Duplicates are caught at construction."
+
+  - invariant: "TOAD (bt) MUST be satisfiable given the witness count: 0 <= bt <= len(witnesses); configuring bt > len(witnesses) MUST be rejected"
+    term: "Witness Configuration"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(n_witnesses=st.integers(min_value=0, max_value=10),
+               bt=st.integers(min_value=0, max_value=15))
+        def test_toad_bounds(n_witnesses, bt):
+            witnesses = [generate_witness_aid() for _ in range(n_witnesses)]
+            if bt > n_witnesses:
+                with pytest.raises(ValidationError, match='bt exceeds witness count'):
+                    build_witness_config(witnesses, toad=bt)
+            else:
+                config = build_witness_config(witnesses, toad=bt)
+                assert config.toad == bt
+    strategy: "st.integers for witness count and bt value"
+    notes: "bt bound is enforced at configuration time."
+
+  - invariant: "Witness changes at rotation: removals (br) MUST be applied before additions (ba); removing then re-adding the same AID MUST be valid"
+    term: "Witness Configuration"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(initial=st.lists(witness_aid_strategy(), min_size=3, max_size=6, unique=True))
+        def test_witness_changes_order(initial):
+            removed = initial[0]
+            config = build_witness_config(initial, toad=1)
+            # Remove then re-add same AID — valid because removal happens first
+            new_config = apply_witness_changes(config, removals=[removed], additions=[removed])
+            assert removed in new_config.witnesses
+            # Verify removal happened: the AID's position may have changed
+            assert len(new_config.witnesses) == len(initial)
+    strategy: "st.lists(witness_aid_strategy(), 3..6, unique=True)"
+    notes: "Order matters: br applied first, then ba. Same AID can be removed and re-added."
+
+  - invariant: "Removals (br) MUST only reference AIDs currently in the witness list; removing an AID not in the list MUST be rejected"
+    term: "Witness Configuration"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(initial=st.lists(witness_aid_strategy(), min_size=2, max_size=6, unique=True))
+        def test_removal_must_be_current_witness(initial):
+            config = build_witness_config(initial, toad=1)
+            non_witness = generate_witness_aid()
+            assume(non_witness not in initial)
+            with pytest.raises(ValidationError, match='not in witness list'):
+                apply_witness_changes(config, removals=[non_witness], additions=[])
+    strategy: "st.lists(witness_aid_strategy(), 2..6, unique=True)"
+    notes: "Cannot remove what is not there."
+
+  - invariant: "Additions (ba) MUST NOT reference AIDs already in the witness list (after removals are applied); adding a duplicate MUST be rejected"
+    term: "Witness Configuration"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(initial=st.lists(witness_aid_strategy(), min_size=2, max_size=6, unique=True))
+        def test_addition_must_not_duplicate(initial):
+            config = build_witness_config(initial, toad=1)
+            # Try to add a witness already in the list (not in removals)
+            existing = initial[1]
+            with pytest.raises(ValidationError, match='already in witness list'):
+                apply_witness_changes(config, removals=[], additions=[existing])
+    strategy: "st.lists(witness_aid_strategy(), 2..6, unique=True)"
+    notes: "After removals, additions must not create duplicates."
+
+  # Partially-Signed Escrow invariants
+  - invariant: "PSE is triggered when: at least one valid signature exists AND tholder.satisfy(indices) returns False; zero valid sigs routes to rejection, not PSE"
+    term: "Partially-Signed Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(threshold=st.integers(min_value=2, max_value=5),
+               n_valid=st.integers(min_value=0, max_value=5))
+        def test_pse_trigger(threshold, n_valid):
+            assume(threshold > n_valid)
+            indices = list(range(n_valid))
+            tholder = parse_threshold(threshold)
+            if n_valid >= 1:
+                # At least one valid sig, but below threshold -> PSE
+                assert not tholder.satisfy(indices)
+                result = route_after_sig_check(tholder, indices)
+                assert result.escrow_type == 'PSE'
+            else:
+                # Zero valid sigs -> rejection
+                result = route_after_sig_check(tholder, indices)
+                assert result.is_rejected()
+    strategy: "st.integers for threshold and valid sig count"
+    notes: "PSE requires at least one valid sig. Zero sigs is rejection."
+
+  - invariant: "Signature accumulation: new signatures for the same event (same SAID) MUST be merged into the existing escrow entry; signatures for different SAIDs MUST NOT be merged"
+    term: "Partially-Signed Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(said1=said_strategy(), said2=said_strategy())
+        def test_pse_signature_accumulation(said1, said2):
+            assume(said1 != said2)
+            escrow = PSEscrow()
+            sig_a = generate_sig(index=0)
+            sig_b = generate_sig(index=1)
+            sig_c = generate_sig(index=0)  # different event
+            # Accumulate for said1
+            escrow.add(said1, sig_a)
+            assert escrow.sig_count(said1) == 1
+            escrow.add(said1, sig_b)
+            assert escrow.sig_count(said1) == 2
+            # said2 is independent
+            escrow.add(said2, sig_c)
+            assert escrow.sig_count(said2) == 1
+            assert escrow.sig_count(said1) == 2  # unchanged
+    strategy: "said_strategy() x2"
+    notes: "Signatures are partitioned by SAID — no cross-event contamination."
+
+  - invariant: "Signature accumulation MUST be idempotent: re-submitting the same signature (same index, same SAID) MUST NOT increase the count"
+    term: "Signature Accumulation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(said=said_strategy(), index=st.integers(min_value=0, max_value=9))
+        def test_sig_accumulation_idempotent(said, index):
+            store = SigStore()
+            sig = generate_sig(index=index)
+            store.add(said, sig)
+            count_after_first = store.sig_count(said)
+            store.add(said, sig)  # duplicate
+            count_after_second = store.sig_count(said)
+            assert count_after_first == count_after_second
+    strategy: "said_strategy(), st.integers(0..9)"
+    notes: "Duplicate signature at same index is silently ignored."
+
+  - invariant: "PSE timeout: escrowed events MUST be discarded after 3600 seconds (default); after timeout, further signatures for that event MUST NOT be accepted"
+    term: "Partially-Signed Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(timeout=st.just(3600))
+        def test_pse_timeout(timeout):
+            escrow = PSEscrow(timeout=timeout)
+            said = generate_said()
+            escrow.add(said, generate_sig(index=0), timestamp=0)
+            assert escrow.is_active(said, current_time=3599)
+            assert not escrow.is_active(said, current_time=3600)
+            assert not escrow.is_active(said, current_time=3601)
+    strategy: "Fixed timeout of 3600 seconds"
+    notes: "Timeout is at exactly 3600s. At 3600s the entry is expired."
+
+contracts:
+  - port_ref: "port://identity/thresholds/inbound/threshold-satisfaction"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda threshold, indices: (
+                threshold is not None
+                and isinstance(indices, list)
+                and all(isinstance(i, int) and i >= 0 for i in indices)
+            )
+        description: "Threshold must be provided, indices must be a list of non-negative integers"
+      - formal:
+          language: python
+          expression: |
+            lambda sith: (
+                sith is not None
+                and (isinstance(sith, (int, str)) or isinstance(sith, list))
+                and (not isinstance(sith, int) or sith >= 1)
+            )
+        description: "parse_threshold accepts int >= 1, str, or list of fraction strings"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda threshold, indices, result: (
+                isinstance(result, bool) and (
+                    (not threshold.weighted and result == (len(indices) >= threshold.num)) or
+                    (threshold.weighted and result == (sum(threshold.weights[i] for i in indices if i < len(threshold.weights)) >= 1))
+                )
+            )
+        description: "satisfy returns True iff indices meet the threshold criterion (count for simple, sum >= 1 for weighted)"
+
+  - port_ref: "port://identity/thresholds/inbound/dual-threshold"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda signing_threshold, rotation_threshold, indices, ondices: (
+                signing_threshold is not None
+                and rotation_threshold is not None
+                and isinstance(indices, list)
+                and isinstance(ondices, list)
+            )
+        description: "Both thresholds and both index lists must be provided"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda st, rt, indices, ondices, result: (
+                result.is_ok() == (st.satisfy(indices) and rt.satisfy(ondices))
+            )
+        description: "Dual threshold passes iff both independently satisfied"
+
+  - port_ref: "port://identity/thresholds/inbound/witness-configuration"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda witnesses, toad: (
+                isinstance(toad, int)
+                and toad >= 0
+                and toad <= len(witnesses)
+                and len(witnesses) == len(set(witnesses))
+            )
+        description: "TOAD must be int in range [0, len(witnesses)], witnesses must be unique"
+      - formal:
+          language: python
+          expression: |
+            lambda current, removals, additions: (
+                all(r in current.witnesses for r in removals)
+                and len(set(removals)) == len(removals)
+            )
+        description: "All removals must be in current witness list and unique"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda witnesses, toad, config: (
+                config.witnesses == witnesses
+                and config.toad == toad
+                and len(config.witnesses) == len(set(config.witnesses))
+            )
+        description: "build_witness_config returns config with provided witnesses, toad, and no duplicates"
+      - formal:
+          language: python
+          expression: |
+            lambda current, removals, additions, new_toad, result: (
+                all(r not in result.witnesses for r in removals)
+                and all(a in result.witnesses for a in additions)
+                and len(result.witnesses) == len(set(result.witnesses))
+            )
+        description: "apply_witness_changes removes br, adds ba, maintains uniqueness"
+
+state_machines: []

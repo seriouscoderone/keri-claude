@@ -1,0 +1,619 @@
+# verification.yaml
+domain_ref: "credential-exchange/negotiation"
+
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
+properties:
+  # IPEX Message Format invariants
+  - invariant: "Every IPEX message MUST use KERI exchange (exn) format with type field t='exn' and route matching '/ipex/{apply|offer|agree|grant|admit|spurn}'; any other route prefix MUST be rejected"
+    term: "IPEX Message Type Pattern"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(msg=ipex_message_strategy())
+        def test_ipex_message_format(msg):
+            assert msg.t == 'exn', f"IPEX message type must be 'exn', got '{msg.t}'"
+            assert msg.r.startswith('/ipex/'), f"IPEX route must start with '/ipex/', got '{msg.r}'"
+            valid_routes = {'/ipex/apply', '/ipex/offer', '/ipex/agree',
+                           '/ipex/grant', '/ipex/admit', '/ipex/spurn'}
+            assert msg.r in valid_routes, f"Invalid IPEX route: {msg.r}"
+    strategy: "ipex_message_strategy() — generates all IPEX message types"
+    notes: "Exactly 6 valid IPEX routes. Any other route is not an IPEX message."
+
+  - invariant: "Valid response constraints are exhaustive and exclusive: apply->{offer,spurn}, offer->{agree,spurn}, agree->{grant,spurn}, grant->{admit}; no other response type is valid for any message type"
+    term: "IPEX Message Type Pattern"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(msg_type=st.sampled_from(['apply', 'offer', 'agree', 'grant']),
+               response_type=st.sampled_from(['apply', 'offer', 'agree', 'grant', 'admit', 'spurn']))
+        def test_response_constraints(msg_type, response_type):
+            valid_responses = {
+                'apply': {'offer', 'spurn'},
+                'offer': {'agree', 'spurn'},
+                'agree': {'grant', 'spurn'},
+                'grant': {'admit'},
+            }
+            is_valid = response_type in valid_responses[msg_type]
+            result = validate_response(msg_type, response_type)
+            assert result.is_valid == is_valid, \
+                f"Response {response_type} to {msg_type}: expected valid={is_valid}"
+    strategy: "st.sampled_from for message type x response type"
+    notes: "Response graph is fully specified. No ambiguity."
+
+  - invariant: "All IPEX messages MUST be signed by the sender via KRAM; an unsigned message MUST be rejected; a message whose signature does not match the sender AID MUST be rejected"
+    term: "IPEX Message Type Pattern"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(msg=ipex_message_strategy(), tamper=st.booleans())
+        def test_message_signature_required(msg, tamper):
+            if tamper:
+                msg.signature = None  # Remove signature
+                with pytest.raises(ValidationError, match='missing signature'):
+                    validate_ipex_message(msg)
+            else:
+                assert has_valid_signature(msg)
+                assert msg.signature.signer == msg.sender_aid
+                validate_ipex_message(msg)  # Should not raise
+    strategy: "ipex_message_strategy() x st.booleans() for tampering"
+    notes: "Non-repudiable sender attribution. Every message must be signed."
+
+  # IPEX State Machine invariants
+  - invariant: "IPEX state machine transitions: idle->applied (via apply), idle->offered (via unsolicited offer), idle->granted (via direct grant), applied->offered (via offer), applied->spurned (via spurn), offered->agreed (via agree), offered->spurned (via spurn), agreed->granted (via grant), agreed->spurned (via spurn), granted->admitted (via admit)"
+    term: "Full Negotiation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        VALID_TRANSITIONS = {
+            ('idle', 'apply'): 'applied',
+            ('idle', 'offer'): 'offered',
+            ('idle', 'grant'): 'granted',
+            ('applied', 'offer'): 'offered',
+            ('applied', 'spurn'): 'spurned',
+            ('offered', 'agree'): 'agreed',
+            ('offered', 'spurn'): 'spurned',
+            ('agreed', 'grant'): 'granted',
+            ('agreed', 'spurn'): 'spurned',
+            ('granted', 'admit'): 'admitted',
+        }
+        @given(state=st.sampled_from(['idle', 'applied', 'offered', 'agreed', 'granted', 'admitted', 'spurned']),
+               action=st.sampled_from(['apply', 'offer', 'agree', 'grant', 'admit', 'spurn']))
+        def test_state_machine_transitions(state, action):
+            key = (state, action)
+            if key in VALID_TRANSITIONS:
+                next_state = transition(state, action)
+                assert next_state == VALID_TRANSITIONS[key]
+            else:
+                with pytest.raises(InvalidTransition):
+                    transition(state, action)
+    strategy: "All state x action combinations"
+    notes: "Complete transition table. Invalid transitions raise errors."
+
+  - invariant: "Message threading: every response message MUST reference the SAID of the message it responds to via the p field; formally: admit.p == grant.d, agree.p == offer.d, offer.p == apply.d (when responding to apply), spurn.p == spurned_message.d"
+    term: "IPEX Message Type Pattern"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(exchange=ipex_exchange_strategy())
+        def test_message_threading(exchange):
+            for i in range(1, len(exchange.messages)):
+                msg = exchange.messages[i]
+                prior = exchange.messages[i - 1]
+                if msg.r == '/ipex/admit':
+                    assert msg.p == prior.d, \
+                        f"admit.p must reference grant.d: {msg.p} != {prior.d}"
+                elif msg.r == '/ipex/agree':
+                    assert msg.p == prior.d, \
+                        f"agree.p must reference offer.d: {msg.p} != {prior.d}"
+                elif msg.r == '/ipex/offer' and prior.r == '/ipex/apply':
+                    assert msg.p == prior.d, \
+                        f"offer.p must reference apply.d: {msg.p} != {prior.d}"
+                elif msg.r == '/ipex/grant' and prior.r == '/ipex/agree':
+                    assert msg.p == prior.d, \
+                        f"grant.p must reference agree.d: {msg.p} != {prior.d}"
+                elif msg.r == '/ipex/spurn':
+                    assert msg.p == prior.d, \
+                        f"spurn.p must reference spurned message.d: {msg.p} != {prior.d}"
+    strategy: "ipex_exchange_strategy() — generates complete exchange sequences"
+    notes: "Threading via SAID references creates a verifiable message chain."
+
+  - invariant: "Spurn MUST be terminal from any state: once a spurn is received for a step, that step is complete; spurn.p MUST reference the SAID of the spurned message"
+    term: "Spurn"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(spurned_type=st.sampled_from(['apply', 'offer', 'agree']))
+        def test_spurn_terminal_and_referenced(spurned_type):
+            # Create an exchange and spurn it
+            exchange = create_exchange_at_state(spurned_type)
+            spurned_msg = exchange.last_message
+            spurn = create_spurn(spurned_msg)
+            assert spurn.r == '/ipex/spurn'
+            assert spurn.p == spurned_msg.d
+            # After spurn, the step is terminal
+            result = apply_message(exchange, spurn)
+            assert result.state == 'spurned'
+    strategy: "st.sampled_from for spurnable message types"
+    notes: "Spurn can reject apply, offer, or agree. Cannot reject grant or admit."
+
+  - invariant: "Spurn MUST NOT be valid against grant or admit messages; attempting to spurn a grant MUST be rejected; attempting to spurn an admit MUST be rejected"
+    term: "Spurn"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(msg_type=st.sampled_from(['grant', 'admit']))
+        def test_spurn_not_valid_against_grant_admit(msg_type):
+            exchange = create_exchange_at_state(msg_type)
+            msg = exchange.last_message
+            spurn = create_spurn(msg)
+            with pytest.raises(ValidationError, match='cannot spurn'):
+                validate_spurn(spurn, msg)
+    strategy: "st.sampled_from(['grant', 'admit'])"
+    notes: "Grant must be admitted. Admit is already terminal."
+
+  - invariant: "Spurn does NOT terminate the entire exchange — after a spurn, parties MAY restart negotiation with a new apply or offer (new message, not referencing the spurned exchange)"
+    term: "Spurn"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(spurned_type=st.sampled_from(['apply', 'offer', 'agree']))
+        def test_spurn_allows_restart(spurned_type):
+            exchange = create_exchange_at_state(spurned_type)
+            spurn = create_spurn(exchange.last_message)
+            apply_message(exchange, spurn)
+            assert exchange.state == 'spurned'
+            # New apply or offer can restart
+            new_apply = create_apply(exchange.disclosee, exchange.discloser)
+            result = apply_message(exchange, new_apply)
+            assert result.state in ('applied', 'offered')
+    strategy: "st.sampled_from for spurnable states"
+    notes: "Spurn terminates a step, not the entire exchange."
+
+  - invariant: "Direct grant shortcut: a grant message MAY be sent from idle state without prior apply/offer/agree; the resulting exchange has exactly 2 messages: grant -> admit"
+    term: "Direct Issuance"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(issuer=aid_strategy(), issuee=aid_strategy(), acdc=valid_acdc_strategy())
+        def test_direct_grant_shortcut(issuer, issuee, acdc):
+            exchange = IPEXExchange()
+            assert exchange.state == 'idle'
+            grant = create_grant(issuer, issuee, acdc)
+            result = apply_message(exchange, grant)
+            assert result.state == 'granted'
+            admit = create_admit(issuee, grant)
+            assert admit.p == grant.d
+            result = apply_message(exchange, admit)
+            assert result.state == 'admitted'
+            assert len(exchange.messages) == 2
+            assert exchange.messages[0].r == '/ipex/grant'
+            assert exchange.messages[1].r == '/ipex/admit'
+    strategy: "aid_strategy() x2 x valid_acdc_strategy()"
+    notes: "Direct issuance skips negotiation — grant then admit."
+
+  - invariant: "Full negotiation flow: exactly 5 messages in strict order apply -> offer -> agree -> grant -> admit; each message.p references the prior message.d"
+    term: "Full Negotiation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(exchange=full_negotiation_strategy())
+        def test_full_negotiation_flow(exchange):
+            assert len(exchange.messages) == 5
+            expected_routes = ['/ipex/apply', '/ipex/offer', '/ipex/agree',
+                              '/ipex/grant', '/ipex/admit']
+            actual_routes = [m.r for m in exchange.messages]
+            assert actual_routes == expected_routes
+            # Verify threading
+            for i in range(1, 5):
+                assert exchange.messages[i].p == exchange.messages[i - 1].d
+    strategy: "full_negotiation_strategy() — generates complete 5-message exchanges"
+    notes: "Full negotiation is exactly five messages with verified threading."
+
+  # Role constraints
+  - invariant: "Apply MUST be initiated by the Disclosee (the party requesting information); if sender_role != 'disclosee', the apply MUST be rejected"
+    term: "Apply"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(sender_role=st.sampled_from(['disclosee', 'discloser']))
+        def test_apply_sender_role(sender_role):
+            msg = build_ipex_message(route='/ipex/apply', sender_role=sender_role)
+            if sender_role == 'disclosee':
+                validate_apply(msg)  # Should not raise
+            else:
+                with pytest.raises(ValidationError, match='apply must come from disclosee'):
+                    validate_apply(msg)
+    strategy: "st.sampled_from for sender roles"
+    notes: "Apply is disclosee-initiated. Discloser cannot apply."
+
+  - invariant: "Offer MUST be initiated by the Discloser (the party proposing to share information); if sender_role != 'discloser', the offer MUST be rejected"
+    term: "Offer"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(sender_role=st.sampled_from(['disclosee', 'discloser']))
+        def test_offer_sender_role(sender_role):
+            msg = build_ipex_message(route='/ipex/offer', sender_role=sender_role)
+            if sender_role == 'discloser':
+                validate_offer(msg)  # Should not raise
+            else:
+                with pytest.raises(ValidationError, match='offer must come from discloser'):
+                    validate_offer(msg)
+    strategy: "st.sampled_from for sender roles"
+    notes: "Offer is discloser-initiated. Disclosee cannot offer."
+
+  - invariant: "Agree constitutes non-repudiable acceptance of the contractual terms in the offer; agree.p MUST reference the offer.d, and agree MUST be signed by the disclosee"
+    term: "Agree"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(offer=offer_message_strategy())
+        def test_agree_non_repudiable(offer):
+            agree = create_agree(offer)
+            assert agree.p == offer.d, "Agree must reference the offer SAID"
+            assert has_valid_signature(agree), "Agree must be signed"
+            assert agree.sender_role == 'disclosee', "Agree must come from disclosee"
+    strategy: "offer_message_strategy()"
+    notes: "Agree is contractual acceptance — signed, non-repudiable, references the offer."
+
+  - invariant: "Grant MUST have exactly one valid response: admit; no other response type is valid"
+    term: "Grant"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(response_type=st.sampled_from(['apply', 'offer', 'agree', 'grant', 'admit', 'spurn']))
+        def test_grant_only_admit(response_type):
+            grant = create_grant_message()
+            if response_type == 'admit':
+                result = validate_response('grant', response_type)
+                assert result.is_valid
+            else:
+                result = validate_response('grant', response_type)
+                assert not result.is_valid
+    strategy: "st.sampled_from for all response types"
+    notes: "Grant -> admit is the only valid transition from granted state."
+
+  # IPEX Handler invariants
+  - invariant: "Each IPEX message type MUST have exactly one registered handler; the set of handled routes MUST equal {/ipex/apply, /ipex/offer, /ipex/agree, /ipex/grant, /ipex/admit, /ipex/spurn}"
+    term: "IPEX Handler"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        def test_handler_coverage():
+            handlers = get_registered_handlers()
+            routes = {h.route for h in handlers}
+            expected = {'/ipex/apply', '/ipex/offer', '/ipex/agree',
+                       '/ipex/grant', '/ipex/admit', '/ipex/spurn'}
+            assert routes == expected, f"Missing handlers: {expected - routes}, extra: {routes - expected}"
+            # Exactly one handler per route
+            route_counts = {}
+            for h in handlers:
+                route_counts[h.route] = route_counts.get(h.route, 0) + 1
+            for route, count in route_counts.items():
+                assert count == 1, f"Route {route} has {count} handlers, expected 1"
+    strategy: "Exhaustive enumeration of registered handlers"
+    notes: "One handler per route, complete coverage, no duplicates."
+
+  # IPEX Message Construction invariants
+  - invariant: "Grant message MUST bundle three artifacts: (1) the ACDC credential, (2) the TEL issuance event (iss or bis), (3) the KEL anchor seal; if any is missing, the grant MUST be rejected"
+    term: "IPEX Message Construction"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(missing=st.sampled_from(['acdc', 'tel_event', 'kel_seal', 'none']))
+        def test_grant_bundles_three_artifacts(missing):
+            grant = build_grant_message()
+            if missing == 'acdc':
+                grant.acdc = None
+                with pytest.raises(ValidationError, match='missing ACDC'):
+                    validate_grant(grant)
+            elif missing == 'tel_event':
+                grant.tel_event = None
+                with pytest.raises(ValidationError, match='missing TEL event'):
+                    validate_grant(grant)
+            elif missing == 'kel_seal':
+                grant.kel_seal = None
+                with pytest.raises(ValidationError, match='missing KEL seal'):
+                    validate_grant(grant)
+            else:
+                assert grant.acdc is not None
+                assert grant.tel_event is not None
+                assert grant.tel_event.t in ('iss', 'bis')
+                assert grant.kel_seal is not None
+                validate_grant(grant)
+    strategy: "st.sampled_from for which artifact to remove"
+    notes: "Grant is the only message type bundling all three verification artifacts."
+
+  - invariant: "Admit message MUST reference the grant message by its SAID: admit.p == grant.d; if admit.p does not match any known grant SAID, the admit MUST be escrowed (not rejected)"
+    term: "IPEX Message Construction"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(grant=grant_message_strategy())
+        def test_admit_references_grant(grant):
+            admit = create_admit(grant)
+            assert admit.p == grant.d
+            # Verify: wrong reference is escrowed
+            admit_wrong = create_admit_with_wrong_ref(grant)
+            result = process_admit(admit_wrong)
+            assert result.is_escrowed(), "Admit with unknown grant SAID must be escrowed"
+    strategy: "grant_message_strategy()"
+    notes: "Admit references grant via SAID. Missing grant triggers escrow."
+
+  # Exchanger invariants
+  - invariant: "Exchanger MUST validate message signatures before dispatching to handlers; unsigned or invalid-signature messages MUST be rejected at the exchanger level, never reaching a handler"
+    term: "Exchanger"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(msg=ipex_message_strategy(), valid_sig=st.booleans())
+        def test_signature_before_dispatch(msg, valid_sig):
+            if not valid_sig:
+                msg.signature = None
+            exchanger = IPEXExchanger()
+            result = exchanger.process(msg)
+            if not valid_sig:
+                assert result.is_rejected()
+                assert result.handler_invoked == False
+            else:
+                assert result.handler_invoked == True
+    strategy: "ipex_message_strategy() x st.booleans() for signature validity"
+    notes: "Signature validation is a prerequisite for handler dispatch."
+
+  - invariant: "Messages awaiting prerequisites (e.g., missing KEL, missing TEL, missing schema) MUST be escrowed, not rejected; escrowed messages MUST be reprocessed when the prerequisite arrives"
+    term: "Exchanger"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(missing=st.sampled_from(['kel', 'tel', 'schema']))
+        def test_escrow_not_reject_policy(missing):
+            msg = build_valid_ipex_message()
+            exchanger = IPEXExchanger()
+            if missing == 'kel':
+                exchanger.kel_store = empty_store()
+            elif missing == 'tel':
+                exchanger.tel_store = empty_store()
+            elif missing == 'schema':
+                exchanger.schema_cache = empty_cache()
+            result = exchanger.process(msg)
+            assert result.is_escrowed(), f"Missing {missing} should escrow, not reject"
+            assert not result.is_rejected()
+    strategy: "st.sampled_from for missing prerequisite types"
+    notes: "Escrow-not-reject policy for exchange messages with missing dependencies."
+
+  # Boundary condition invariants
+  - invariant: "Admitted is the only successful terminal state; an exchange MUST NOT be considered complete until the admit message is received and validated"
+    term: "Full Negotiation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(state=st.sampled_from(['idle', 'applied', 'offered', 'agreed', 'granted', 'admitted', 'spurned']))
+        def test_admitted_only_successful_terminal(state):
+            exchange = create_exchange_at_state(state)
+            if state == 'admitted':
+                assert exchange.is_successfully_complete()
+            else:
+                assert not exchange.is_successfully_complete()
+    strategy: "st.sampled_from for all states"
+    notes: "Only 'admitted' means the credential was successfully exchanged."
+
+  - invariant: "An exchange in 'admitted' state MUST NOT accept any further messages; any message sent to an admitted exchange MUST be rejected"
+    term: "Full Negotiation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(action=st.sampled_from(['apply', 'offer', 'agree', 'grant', 'admit', 'spurn']))
+        def test_admitted_is_terminal(action):
+            exchange = create_exchange_at_state('admitted')
+            msg = build_ipex_message(route=f'/ipex/{action}')
+            with pytest.raises(InvalidTransition, match='exchange is complete'):
+                apply_message(exchange, msg)
+    strategy: "st.sampled_from for all possible actions"
+    notes: "Admitted is truly terminal — no further transitions possible."
+
+contracts:
+  - port_ref: "port://credential-exchange/negotiation/inbound/negotiate"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda issuer_aid, issuee_aid, acdc: (
+                is_valid_aid(issuer_aid)
+                and is_valid_aid(issuee_aid)
+                and is_valid_acdc(acdc)
+                and acdc['i'] == issuer_aid
+            )
+        description: "Both AIDs must be valid, ACDC must be valid and its issuer must match issuer_aid"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda result: (
+                result.r == '/ipex/grant'
+                and result.t == 'exn'
+                and has_valid_signature(result)
+                and result.acdc is not None
+                and result.tel_event is not None
+                and result.kel_seal is not None
+            )
+        description: "initiate_issuance returns a signed grant with all three artifacts"
+
+  - port_ref: "port://credential-exchange/negotiation/inbound/negotiate"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda apply_msg: (
+                apply_msg.r == '/ipex/apply'
+                and apply_msg.t == 'exn'
+                and has_valid_signature(apply_msg)
+            )
+        description: "process_apply requires a valid signed apply message"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda result: (
+                result.r in ('/ipex/offer', '/ipex/spurn')
+                and result.t == 'exn'
+                and has_valid_signature(result)
+            )
+        description: "process_apply returns either an offer or a spurn, both signed exn messages"
+
+  - port_ref: "port://credential-exchange/negotiation/inbound/direct-issuance"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda issuer_aid, issuee_aid, acdc, signature: (
+                is_valid_aid(issuer_aid)
+                and is_valid_aid(issuee_aid)
+                and is_valid_acdc(acdc)
+                and is_valid_signature(signature)
+                and acdc['i'] == issuer_aid
+            )
+        description: "Valid AIDs, ACDC with matching issuer, and valid signature"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda result: (
+                result.r == '/ipex/grant'
+                and result.acdc.d == acdc.d
+                and result.acdc is not None
+                and result.tel_event is not None
+                and result.kel_seal is not None
+            )
+        description: "Direct grant contains the correct ACDC and all three artifacts"
+
+  - port_ref: "port://credential-exchange/negotiation/inbound/exchange-processing"
+    preconditions:
+      - description: "Exchange message must be a valid exn with IPEX route"
+        formal:
+          language: "pseudocode"
+          expression: "message.t == 'exn' AND message.r.startswith('/ipex/')"
+      - description: "Message must be signed by sender's current keys"
+        formal:
+          language: "pseudocode"
+          expression: "verify_signatures(message, sender_key_state) == true"
+      - description: "SAID threading must be valid — prior reference matches previous message"
+        formal:
+          language: "pseudocode"
+          expression: "message.p == '' OR db.get_exchange(message.p) != null"
+    postconditions:
+      - description: "On grant: recipient has verified credential bundle (ACDC + TEL + KEL seal)"
+        formal:
+          language: "pseudocode"
+          expression: "message.r == '/ipex/grant' AND success implies credential_stored(grant.acdc_said)"
+      - description: "On admit: exchange thread is complete, both parties have the credential"
+        formal:
+          language: "pseudocode"
+          expression: "message.r == '/ipex/admit' implies exchange_state(thread_id) == Admitted"
+      - description: "On spurn: exchange thread is terminated"
+        formal:
+          language: "pseudocode"
+          expression: "message.r == '/ipex/spurn' implies exchange_state(thread_id) == Spurned"
+
+state_machines:
+  - name: "IPEXNegotiation"
+    term: "Exchange State"
+    states: ["Idle", "Applied", "Offered", "Agreed", "Granted", "Admitted", "Spurned"]
+    initial_state: "Idle"
+    terminal_states: ["Admitted", "Spurned"]
+    transitions:
+      - from: "Idle"
+        to: "Applied"
+        trigger: "apply message received"
+        guard: "Valid exn with route=/ipex/apply, signed by disclosee"
+      - from: "Applied"
+        to: "Offered"
+        trigger: "offer message received"
+        guard: "Valid exn with route=/ipex/offer, offer.p == apply.d, signed by discloser"
+      - from: "Offered"
+        to: "Agreed"
+        trigger: "agree message received"
+        guard: "Valid exn with route=/ipex/agree, agree.p == offer.d, signed by disclosee"
+      - from: "Agreed"
+        to: "Granted"
+        trigger: "grant message received"
+        guard: "Valid exn with route=/ipex/grant, embeds ACDC+TEL+seal, signed by discloser"
+      - from: "Granted"
+        to: "Admitted"
+        trigger: "admit message received"
+        guard: "Valid exn with route=/ipex/admit, admit.p == grant.d, signed by disclosee"
+      - from: "Idle"
+        to: "Granted"
+        trigger: "grant message received (direct grant shortcut)"
+        guard: "Valid exn with route=/ipex/grant, no prior apply/offer/agree required"
+      - from: "Idle"
+        to: "Offered"
+        trigger: "offer message received (unsolicited offer)"
+        guard: "Valid exn with route=/ipex/offer, signed by discloser"
+      - from: "Applied"
+        to: "Spurned"
+        trigger: "spurn message from discloser"
+        guard: "spurn.p == apply.d"
+      - from: "Offered"
+        to: "Spurned"
+        trigger: "spurn message from disclosee"
+        guard: "spurn.p == offer.d"
+      - from: "Agreed"
+        to: "Spurned"
+        trigger: "spurn message from either party"
+        guard: "spurn.p == agree.d"
+      - from: "Granted"
+        to: "Spurned"
+        trigger: "spurn message from disclosee"
+        guard: "spurn.p == grant.d"
+    invariants:
+      - "Admitted is the ONLY successful terminal state"
+      - "Spurned is terminal — no further messages accepted in this thread"
+      - "SAID threading: every non-initial message's p field must equal the prior message's d field"
+      - "Role alternation: apply/agree/admit from disclosee; offer/grant from discloser"
+      - "Direct grant shortcut: Idle->Granted is valid, exactly 2 messages total (grant+admit)"
+      - "Every message MUST be signed by the sender — unsigned messages MUST be rejected before state transition"
+      - "Spurn is NOT valid from 'Admitted' state — admitted is already terminal"
+
+  - name: "IPEXMessageThread"
+    term: "Exchange Message Thread"
+    states: ["Open", "Complete", "Terminated"]
+    initial_state: "Open"
+    terminal_states: ["Complete", "Terminated"]
+    transitions:
+      - from: "Open"
+        to: "Complete"
+        trigger: "admit message accepted"
+        guard: "Full SAID chain verified from grant back to initial message"
+      - from: "Open"
+        to: "Terminated"
+        trigger: "spurn message or timeout"
+        guard: "spurn references a message in this thread"
+    invariants:
+      - "A thread is identified by the initial message's SAID"
+      - "All messages in a thread are linked via p fields forming a chain"
+      - "Complete thread: both parties have the credential"
+      - "Terminated thread: no credential transferred"

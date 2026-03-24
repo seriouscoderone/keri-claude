@@ -1,0 +1,11 @@
+# ports.yaml
+domain_ref: "privacy/disclosure"
+
+ports:
+  # Inbound -- what the parent privacy domain calls
+  - id: "port://privacy/disclosure/inbound/mode-definitions"
+    type: inbound
+    name: "Disclosure Mode Definitions"
+    contract: "classify_mode(acdc_variant) -> DisclosureMode; is_compact(block) -> bool; is_partial(block) -> bool; is_full(block) -> bool; is_selective(acdc) -> bool; requires_chain_link(acdc) -> bool"
+    protocol: "method-call"
+    refs: ["domain://privacy"]

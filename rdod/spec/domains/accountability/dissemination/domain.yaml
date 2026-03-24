@@ -1,0 +1,68 @@
+# domain.yaml
+template_version: "1.0"
+id: "accountability/dissemination"
+name: "Witness Dissemination"
+description: >
+  How events and receipts propagate through the witness network — round-robin and gossip
+  protocols, witness designation mechanics, witnessing policy, and the direct/indirect
+  operational modes. This subdomain owns the network-facing propagation logic: how the
+  controller distributes events to witnesses, how witnesses exchange receipts among
+  themselves, and how the choice of direct vs. indirect mode determines the dissemination
+  strategy. It does not own the consensus rules or receipt creation — only the movement
+  of events and receipts through the witness network.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Witness Designation, Witnessing Policy, Direct Mode, Indirect Mode, Receipt Dissemination"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: Witnesses, Direct Mode, Indirect Mode, Dissemination"
+  - type: implementation
+    reference: "keripy — src/keri/core/eventing.py (witness designation via b/br/ba fields), src/keri/app/habbing.py (witness management)"
+  - type: implementation
+    reference: "keriox — components/witness/src/ (witness node implementation), keriox_core/src/event/event_data/inception.rs (witness_config)"
+
+ubiquitous_language:
+  - term: "Round-robin Dissemination"
+    definition: "An efficient receipt dissemination protocol where the controller exchanges events and receipts with each witness in turn, requiring at most 2*N acknowledged exchanges"
+    invariants:
+      - "Network load scales linearly with N"
+      - "At most two passes through all N witnesses for full dissemination"
+
+  - term: "Witness Designation"
+    definition: "The act of a controller specifying its witness set and accountability threshold in establishment events"
+    invariants:
+      - "Witnesses are designated by the controller — not self-selected"
+      - "Initial witness set in inception (b and bt fields); modifications at rotation (br, ba)"
+
+domain_clients:
+  - ref: "domain://accountability"
+    relationship: "Parent orchestrates witness agreement; dissemination provides the propagation protocols, witness designation mechanics, and operational mode selection"
+    via_port: "port://accountability/dissemination/inbound/event-propagation"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals:
+  - name: "Transport"
+    abstraction: "Adapter"
+    ref: "port://accountability/dissemination/outbound/transport"
+    implementation_notes: "HTTP/TCP/WebSocket for receipt delivery between controller, witnesses, and validators. Implementations vary: direct HTTP in keripy, async messaging in keriox"
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    Dissemination strategy is chosen by the controller. Round-robin (2*N exchanges) is
+    simpler and used in most implementations. Gossip (N*log(N) bandwidth, lower latency)
+    is an alternative for large witness sets. Witness designation is embedded in
+    establishment events: b field for initial set, br/ba for pruning/grafting at rotation.
+    Direct mode bypasses witnesses entirely — the controller sends events directly to the
+    validator who acts as an implicit witness. Indirect mode uses the full witness pool.
+
+issues: []
+
+tags: ["dissemination", "round-robin", "gossip", "witness-designation", "direct-mode", "indirect-mode"]

@@ -1,0 +1,127 @@
+# ubiquitous-language.yaml
+domain_ref: "privacy/disclosure"
+
+terms:
+  # Inherits: "Compact Disclosure" from domain://privacy
+  - term: "Compact Disclosure"
+    synonyms: []
+    specializes: "Compact Disclosure"
+    definition: "In the context of the disclosure subdomain, compact disclosure is the replacement of a block with its SAID only, requiring oneOf schema composition for validation. Specializes the parent definition with the schema enforcement mechanism (oneOf composition validating both compact string and expanded object forms)."
+    invariants:
+      - "The schema must include a oneOf composition validating both compact (string) and expanded (object) forms"
+      - "The compact value is the SAID of the block in its most compact form"
+      - "Top-level compact ACDC has s, a/A, e, r fields replaced by their SAIDs"
+    examples:
+      - "Compact attribute section: \"a\": \"EIMMcLl1w2KW2J3AD3twaESJO4u_fDFCdlMHjouojU8C\""
+      - "Compact edge section: \"e\": \"EerzwLIr9Bf7V_NHwY1lkFrn9y2PgveY4-9XgOcLxUdY\""
+    related_terms: ["SAID", "oneOf Composition", "Most Compact Form"]
+
+  # Inherits: "Partial Disclosure" from domain://privacy
+  - term: "Partial Disclosure"
+    synonyms: ["Blinded Disclosure"]
+    specializes: "Partial Disclosure"
+    definition: "In the context of the disclosure subdomain, partial disclosure reveals a block's SAID and schema while the UUID salty nonce prevents content discovery. Specializes the parent definition with the UUID-based blinding mechanism that protects against rainbow table attacks on schema-constrained values."
+    invariants:
+      - "Requires both d (SAID) and u (UUID) fields in the block"
+      - "Knowledge of schema + SAID is insufficient to discover content when UUID is present"
+      - "Content remains blinded until the UUID is disclosed"
+      - "The schema includes a oneOf composition for compact and expanded variants"
+    examples:
+      - "A private-attribute ACDC in compact form: attribute block hidden behind its SAID, protected by UUID"
+      - "Metadata ACDC disclosing schema and rules but not attribute values"
+    related_terms: ["UUID", "Blinding", "Compact Disclosure", "Private ACDC"]
+
+  - term: "Nested Partial Disclosure"
+    synonyms: []
+    definition: "A disclosure form where nested blocks within an ACDC are independently partially disclosed. Each section (attributes, edges, rules) can be at a different disclosure level — one section might be fully expanded while another remains compact. This enables tree-structured progressive revelation."
+    invariants:
+      - "Each nested block can independently be compact, partial, or full"
+      - "A credential can have expanded attributes but compact edges"
+      - "Verification follows the SAID tree — each block verifiable against its parent's SAID"
+      - "Nested partial is between partial (one level) and full (all levels)"
+      - "Each nested block must have its own d and u fields"
+      - "oneOf composition at each nesting level validates both compact and expanded forms"
+      - "Disclosure of a parent block does not require disclosure of nested child blocks"
+    examples:
+      - "Credential with full attributes, compact edges, partial rules — reveals what you do but not who vouched for you or the contractual terms"
+      - "Attribute section with a grades sub-block: top-level attributes disclosed while grades remain compacted to their SAID"
+    related_terms: ["Partial Disclosure", "Full Disclosure", "Compact Disclosure", "SAID", "UUID"]
+
+  # Inherits: "Full Disclosure" from domain://privacy
+  - term: "Full Disclosure"
+    synonyms: []
+    specializes: "Full Disclosure"
+    definition: "In the context of the disclosure subdomain, full disclosure reveals all fields of a block. Specializes the parent definition with the contractual gating detail: full disclosure may follow acceptance of chain-link confidentiality terms from the rule section."
+    invariants:
+      - "All fields in the block are expanded (not compacted)"
+      - "May follow a contractual acceptance of terms from the rule section"
+    examples:
+      - "All attribute fields revealed: name, score, issuee AID, datetime"
+    related_terms: ["Compact Disclosure", "Partial Disclosure", "Graduated Disclosure"]
+
+  # Inherits: "Selective Disclosure" from domain://privacy
+  - term: "Selective Disclosure"
+    synonyms: []
+    specializes: "Selective Disclosure"
+    definition: "In the context of the disclosure subdomain, selective disclosure enables individual attribute disclosure via AGID inclusion proofs. Specializes the parent definition with the schema composition detail: anyOf composition at set level with oneOf per element for compact/expanded forms, and the requirement that anyOf order must not correlate to actual array order."
+    invariants:
+      - "Uses the A field (aggregate section), not the a field (attribute section)"
+      - "Each selectively disclosable block has its own d (SAID) and u (UUID) fields"
+      - "Field labels within blinded blocks are also blinded — preventing label-based inference"
+      - "anyOf composition at set level, oneOf per element for compact/expanded"
+      - "Order of anyOf subschema elements is not correlated to actual array order"
+    examples:
+      - "Disclosing issuee block and score block from an aggregate without revealing the name block"
+      - "Compact aggregate: \"A\": \"EN5d44fTNM0M4kmMMVrsH0HwMLRLyb6SoJEV0ogkLdXx\""
+    related_terms: ["Aggregate Section", "AGID", "Blinded Attribute Block", "anyOf Composition"]
+
+  - term: "Chain-Link Confidentiality"
+    synonyms: ["Contractually Protected Disclosure"]
+    definition: "A disclosure mechanism where contractual terms (in the rule section) are agreed to before full data disclosure, creating a chain of contractual protection that propagates through successive disclosures."
+    invariants:
+      - "Discloser first offers metadata including schema and rules via partial disclosure"
+      - "Disclosee must agree to contractual terms before receiving full disclosure"
+      - "Full disclosure after contract acceptance is permissioned disclosure"
+      - "Contractual obligations propagate through the disclosure chain"
+    examples:
+      - "Anti-assimilation clause preventing data aggregation across presentations"
+      - "Metadata ACDC presented first, then full ACDC after agreement to terms of use"
+    related_terms: ["Rule Section", "Ricardian Contract", "Metadata ACDC", "Graduated Disclosure"]
+
+  - term: "Most Compact Form"
+    synonyms: ["Compact Variant"]
+    definition: "The variant of an ACDC where every section is in its most compact representation — SAIDs replace expanded content at every level. The issuer MUST sign the SAID of the most compact form, which serves as the root commitment for all other disclosure forms. Determined by JSON Schema: the first entry in each oneOf composition is the compact variant."
+    invariants:
+      - "The issuer signs the SAID of the most compact form — this is the Proof of Issuance commitment"
+      - "When schema uses oneOf for a section, the FIRST entry is the compact variant"
+      - "When schema has only one variant per section, that variant IS the most compact"
+      - "All other disclosure forms are expansions verifiable against this root SAID"
+      - "Signature on the most compact SAID covers ALL schema-authorized variants"
+    examples:
+      - "Schema defines oneOf: [compact_attributes, full_attributes] — first entry (compact) is the most compact form"
+    related_terms: ["Compact Disclosure", "Proof of Issuance", "SAID"]
+
+  - term: "Bulk-Issued Instance Disclosure"
+    definition: "A privacy pattern where each credential in a bulk issuance set is disclosed independently using its unique blinded SAID. The issuer signs blinded SAIDs (not the SADs themselves) enabling proof of set membership without cross-credential correlation. The discloser unblinds their specific credential's SAID to prove inclusion."
+    invariants:
+      - "Issuer signs blinded SAIDs — minimizes computation for large issuance sets"
+      - "Each instance has a unique SAID and UUID — unlinkable across presentations"
+      - "Proof of inclusion: discloser unblinds their SAID, verifier checks against bulk commitment"
+      - "Distinct from Bulk-Issued pattern: this is specifically about the DISCLOSURE mechanics, not the issuance mechanics"
+    related_terms: ["Bulk-Issued Disclosure", "Credential Privacy Model", "SAID"]
+
+events:
+  - name: "DisclosureModeSelected"
+    payload: "acdc_said: SAID, mode: DisclosureMode, disclosed_sections: [SectionLabel]"
+    triggers: "A disclosure mode is selected for a specific ACDC presentation context"
+
+  - name: "ChainLinkTermsProposed"
+    payload: "acdc_said: SAID, rule_said: SAID, discloser: AID, disclosee: AID"
+    triggers: "Discloser offers contractual terms via metadata or partial disclosure before full disclosure"
+
+rules:
+  - "Disclosure modes are ordered from most private to most revealing: compact < partial < nested partial < full"
+  - "Selective disclosure is orthogonal to the privacy ordering — it selects which attributes to disclose at any mode level"
+  - "Chain-link confidentiality gates the transition from partial to full disclosure via contractual acceptance"
+  - "oneOf composition must list the compact (SAID) variant first in the schema"
+  - "anyOf composition order must not correlate to actual array order — preventing positional inference"

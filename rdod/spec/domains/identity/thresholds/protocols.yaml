@@ -1,0 +1,252 @@
+domain_ref: "identity/thresholds"
+
+protocols:
+  - name: "MultisigInception"
+    description: "Create a multi-signature identifier requiring coordination between N group members. Each member contributes their key and signature via exchange messages."
+    participants:
+      - domain: "domain://identity/thresholds"
+        role: "Coordinates signature collection and threshold satisfaction"
+      - domain: "domain://identity/establishment"
+        role: "Validates and accepts the group inception event"
+      - domain: "domain://accountability/receipting"
+        role: "Witnesses receipt the group inception"
+      - domain: "domain://cloud-agent-service/api"
+        role: "Routes exchange messages between group members"
+    trigger: "Lead member proposes a group inception with member list and threshold"
+    steps:
+      - seq: 1
+        domain: "domain://identity/thresholds"
+        action: "propose_group_inception"
+        port: "port://identity/thresholds/inbound/threshold-satisfaction"
+        input:
+          description: "Member AIDs, signing threshold, key list, next key digests, witnesses"
+          types:
+            - ref: "types://identity#InceptionEvent/non-delegated"
+              fields: ["kt", "k", "nt", "n", "b", "bt"]
+        output:
+          description: "Unsigned inception event (icp) + exn proposal message to all members"
+      - seq: 2
+        domain: "domain://cloud-agent-service/api"
+        action: "distribute_proposal"
+        port: "port://cloud-agent-service/api/inbound/message-router"
+        input:
+          description: "exn with route=/multisig/icp containing the inception parameters"
+        output:
+          description: "Each member receives the proposal"
+        depends_on: [1]
+      - seq: 3
+        domain: "domain://identity/thresholds"
+        action: "accumulate_signatures"
+        port: "port://identity/thresholds/inbound/threshold-satisfaction"
+        input:
+          description: "Each member signs the inception event and returns their signature via exn"
+        output:
+          description: "Signatures accumulated in Partially-Signed Escrow (PSE)"
+        depends_on: [2]
+        preconditions:
+          - "verification://identity/thresholds#Signing Threshold"
+        on_failure:
+          - error: "GroupCoordinationTimeoutError"
+            ref: "errors://identity/thresholds#GroupCoordinationTimeoutError"
+            action: "abort"
+            compensation: "Signatures pruned from PSE after timeout"
+      - seq: 4
+        domain: "domain://identity/establishment"
+        action: "validate_and_accept"
+        port: "port://identity/establishment/inbound/validate-event"
+        input:
+          description: "Inception event with accumulated signatures meeting threshold"
+          types:
+            - ref: "types://identity#InceptionEvent"
+        output:
+          description: "Group AID created with key state"
+          type: "types://identity#KeyState"
+        depends_on: [3]
+        on_failure:
+          - error: "ThresholdNotSatisfiedError"
+            ref: "errors://identity/thresholds#ThresholdNotSatisfiedError"
+            action: "escrow"
+            compensation: "Remain in PSE — await more signatures"
+      - seq: 5
+        domain: "domain://accountability/receipting"
+        action: "collect_witness_receipts"
+        port: "port://accountability/receipting/inbound/receipt-lifecycle"
+        input:
+          description: "Accepted group inception event"
+        output:
+          description: "Witness receipts"
+        depends_on: [4]
+    timeout: "3600s for signature collection, 3600s for witness receipts"
+    compensation: "If threshold never met, all accumulated signatures pruned from PSE"
+    terminal_states:
+      success: "Group AID exists with all member keys, threshold met, witnesses receipted"
+      failure: "Coordination timeout — no group AID created"
+
+  - name: "MultisigRotation"
+    description: "Rotate keys for a multi-signature identifier. All group members must coordinate to produce a rotation event meeting the signing threshold. Similar to MultisigInception but modifies existing key state."
+    participants:
+      - domain: "domain://identity/thresholds"
+        role: "Coordinates signature collection across group members"
+      - domain: "domain://identity/establishment"
+        role: "Validates rotation event with pre-rotation binding"
+      - domain: "domain://identity/key-commitment"
+        role: "Verifies new keys match prior next commitments"
+      - domain: "domain://accountability/receipting"
+        role: "Witnesses receipt the rotation"
+      - domain: "domain://cloud-agent-service/api"
+        role: "Routes coordination messages between members"
+    trigger: "Lead member proposes group rotation with new keys"
+    steps:
+      - seq: 1
+        domain: "domain://identity/thresholds"
+        action: "propose_group_rotation"
+        port: "port://identity/thresholds/inbound/threshold-satisfaction"
+        input:
+          description: "New keys (matching prior next commitments), new next digests, new thresholds, witness changes"
+          types:
+            - ref: "types://identity#RotationEvent/non-delegated"
+              fields: ["k", "n", "kt", "nt", "br", "ba"]
+        output:
+          description: "Unsigned rotation event (rot) + exn proposal (route=/multisig/rot)"
+      - seq: 2
+        domain: "domain://cloud-agent-service/api"
+        action: "distribute_rotation_proposal"
+        port: "port://cloud-agent-service/api/inbound/message-router"
+        input:
+          description: "exn with route=/multisig/rot"
+        output:
+          description: "Each member receives the rotation proposal"
+        depends_on: [1]
+      - seq: 3
+        domain: "domain://identity/key-commitment"
+        action: "verify_pre_rotation_binding"
+        port: "port://identity/key-commitment/inbound/key-commitment"
+        input:
+          description: "Each member verifies new keys match prior next key digests"
+        output:
+          description: "Pre-rotation binding confirmed"
+        depends_on: [2]
+        preconditions:
+          - "verification://identity/key-commitment#Pre-rotation Commitment"
+        on_failure:
+          - error: "ValidationError"
+            ref: "errors://identity/key-commitment#PreRotationBindingError"
+            action: "abort"
+            compensation: "Members reject rotation — prior key state unchanged"
+      - seq: 4
+        domain: "domain://identity/thresholds"
+        action: "accumulate_rotation_signatures"
+        port: "port://identity/thresholds/inbound/dual-threshold"
+        input:
+          description: "Each member signs the rotation event, returns via exn"
+        output:
+          description: "Signatures accumulated in PSE until threshold met"
+        depends_on: [3]
+        preconditions:
+          - "verification://identity/thresholds#Dual Threshold"
+        on_failure:
+          - error: "GroupCoordinationTimeoutError"
+            ref: "errors://identity/thresholds#GroupCoordinationTimeoutError"
+            action: "abort"
+            compensation: "Signatures pruned after timeout"
+      - seq: 5
+        domain: "domain://identity/establishment"
+        action: "validate_and_accept_rotation"
+        port: "port://identity/establishment/inbound/validate-rotation"
+        input:
+          description: "Rotation event with threshold-satisfying signatures"
+          types:
+            - ref: "types://identity#RotationEvent"
+        output:
+          description: "Key state updated"
+          type: "types://identity#KeyState"
+        depends_on: [4]
+      - seq: 6
+        domain: "domain://accountability/receipting"
+        action: "collect_witness_receipts"
+        port: "port://accountability/receipting/inbound/receipt-lifecycle"
+        input:
+          description: "Accepted rotation event"
+        output:
+          description: "Witness receipts meeting TOAD"
+        depends_on: [5]
+    timeout: "3600s for signatures, 3600s for witness receipts"
+    terminal_states:
+      success: "Group AID rotated — new keys active, old keys invalid for new events"
+      failure: "Rotation timeout — prior key state remains active"
+
+  - name: "MultisigInteraction"
+    description: "Create a multi-signature interaction event (ixn) for anchoring data. All group members must coordinate to produce an interaction event meeting the signing threshold."
+    participants:
+      - domain: "domain://identity/thresholds"
+        role: "Coordinates signature collection across group members"
+      - domain: "domain://identity/anchoring"
+        role: "Validates and accepts the interaction event with its seals"
+      - domain: "domain://accountability/receipting"
+        role: "Witnesses receipt the interaction event"
+      - domain: "domain://cloud-agent-service/api"
+        role: "Routes coordination messages between group members"
+    trigger: "Lead member proposes a group interaction event with anchor seals"
+    steps:
+      - seq: 1
+        domain: "domain://identity/thresholds"
+        action: "propose_group_interaction"
+        port: "port://identity/thresholds/inbound/threshold-satisfaction"
+        input:
+          description: "Anchor seals (digest seals, event seals), prior event SAID"
+          types:
+            - ref: "types://identity#InteractionEvent"
+              fields: ["a", "p"]
+        output:
+          description: "Unsigned interaction event (ixn) + exn proposal (route=/multisig/ixn)"
+      - seq: 2
+        domain: "domain://cloud-agent-service/api"
+        action: "distribute_proposal"
+        port: "port://cloud-agent-service/api/inbound/message-router"
+        input:
+          description: "exn with route=/multisig/ixn"
+        output:
+          description: "Each member receives the interaction proposal"
+        depends_on: [1]
+      - seq: 3
+        domain: "domain://identity/thresholds"
+        action: "accumulate_signatures"
+        port: "port://identity/thresholds/inbound/threshold-satisfaction"
+        input:
+          description: "Each member signs the interaction event, returns via exn"
+        output:
+          description: "Signatures accumulated in PSE until threshold met"
+        depends_on: [2]
+        preconditions:
+          - "verification://identity/thresholds#Signing Threshold"
+        on_failure:
+          - error: "GroupCoordinationTimeoutError"
+            ref: "errors://identity/thresholds#GroupCoordinationTimeoutError"
+            action: "abort"
+            compensation: "Signatures pruned from PSE after timeout"
+      - seq: 4
+        domain: "domain://identity/anchoring"
+        action: "validate_and_accept"
+        port: "port://identity/anchoring/inbound/data-anchoring"
+        input:
+          description: "Interaction event with threshold-satisfying signatures"
+          types:
+            - ref: "types://identity#InteractionEvent"
+        output:
+          description: "Event accepted, seals anchored to KEL"
+        depends_on: [3]
+        preconditions:
+          - "verification://identity/anchoring#Seal"
+      - seq: 5
+        domain: "domain://accountability/receipting"
+        action: "collect_witness_receipts"
+        port: "port://accountability/receipting/inbound/receipt-lifecycle"
+        input:
+          description: "Accepted interaction event"
+        output:
+          description: "Witness receipts meeting TOAD"
+        depends_on: [4]
+    timeout: "3600s for signatures, 3600s for witness receipts"
+    terminal_states:
+      success: "Group interaction event accepted with anchored seals, witnesses receipted"
+      failure: "Coordination timeout — no interaction event created"

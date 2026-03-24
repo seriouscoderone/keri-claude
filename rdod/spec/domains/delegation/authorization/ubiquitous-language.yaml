@@ -1,0 +1,123 @@
+# ubiquitous-language.yaml
+domain_ref: "delegation/authorization"
+
+terms:
+  - term: "Cooperative Delegation"
+    synonyms: ["Delegation"]
+    definition: "A delegation mechanism requiring cooperation between a delegator and delegatee — implemented as a pair of cryptographically bound events: a delegated event in the delegatee's KEL and a delegating event with a seal in the delegator's KEL."
+    invariants:
+      - "Both parties must participate — neither can act unilaterally"
+      - "Delegatee's inception event references delegator's AID via di field"
+      - "Delegator must anchor a seal in its own KEL approving the delegated event"
+      - "The two-way binding provides cryptographically verifiable proof of mutual agreement"
+      - "A single delegating event may contain multiple delegation seals (batch delegation)"
+    examples:
+      - "Ean (delegator) anchors a seal in its ixn event referencing Fay's (delegatee) dip event. Fay's dip includes di=Ean's AID."
+      - "A corporate root AID delegating departmental AIDs, each requiring mutual approval"
+    related_terms: ["Delegator", "Delegatee", "Delegation Seal", "Two-way Binding"]
+
+  - term: "Delegator"
+    synonyms: []
+    definition: "The controller of the AID that approves delegation by anchoring seals in its own KEL for delegated establishment events. The delegator retains establishment control authority over the delegated identifier."
+    invariants:
+      - "Retains establishment control authority over the delegated AID"
+      - "Must anchor delegation seals in its KEL for each delegated establishment event"
+      - "Can revoke delegation by refusing to approve (seal) subsequent establishment events"
+      - "The delegator's KEL must be verified to validate any delegated event"
+    examples:
+      - "Ean's AID as delegator — Ean's KEL contains interaction events with seals referencing Fay's delegated events"
+      - "A root organizational AID delegating signing authority to operational AIDs"
+    related_terms: ["Delegatee", "Cooperative Delegation", "Delegation Seal"]
+
+  - term: "Delegatee"
+    synonyms: ["Delegated Identifier", "Delegate"]
+    definition: "The controller of a delegated AID whose establishment events (dip, drt) require approval from the delegator. The delegatee can independently authorize non-establishment events (ixn)."
+    invariants:
+      - "The delegatee's inception event (dip) must include the delegator's AID in the di field"
+      - "The delegatee's AID is a SAID that includes the delegator reference — cryptographically bound"
+      - "May only authorize non-establishment events (ixn) independently"
+      - "All establishment events (dip, drt) require delegator seal approval"
+    examples:
+      - "Fay's delegated AID with di='Ean's AID' — Fay can sign interaction events independently but needs Ean's approval for rotations"
+    related_terms: ["Delegator", "di Field", "Delegation Seal"]
+
+  - term: "Delegation Seal"
+    synonyms: ["Delegating Event Seal", "Anchor Seal"]
+    definition: "An event seal embedded in a delegating event in the delegator's KEL that cryptographically anchors a delegated establishment event. Contains the delegatee's AID, sequence number, and SAID of the delegated event."
+    invariants:
+      - "Contains: i (delegatee AID), s (delegated event sn), d (delegated event SAID)"
+      - "The seal digest (d field) commits to the entire content of the delegated event"
+      - "Must appear in the delegator's KEL before the delegated event is accepted by validators"
+      - "A delegating event may contain multiple seals, one for each delegation operation"
+      - "The combination of seal in delegator's KEL and di in delegatee's inception creates a two-way peg"
+    examples:
+      - "Seal: {i:'EHqSsH1Im...', s:'0', d:'EHqSsH1Im...'} in Ean's ixn event — approves Fay's inception"
+      - "Seal in a rotation event: Ean's rot anchoring Fay's drt — both are establishment events"
+    related_terms: ["Cooperative Delegation", "Two-way Binding", "Delegating Event"]
+
+  - term: "Delegating Event"
+    synonyms: []
+    definition: "An event in the delegator's KEL that contains one or more delegation seals approving delegated establishment events. Can be either an interaction event (ixn) or a rotation event (rot)."
+    invariants:
+      - "Contains delegation seal(s) in its data payload (a field)"
+      - "Can be an interaction event or any event with a seal list"
+      - "A single delegating event may perform multiple delegation operations via multiple seals"
+      - "The ordering of seals within the event is significant for superseding recovery (rule B2)"
+    examples:
+      - "Ean's ixn at sn=1 with a=[{i:Fay_AID, s:'0', d:Fay_inception_SAID}] — approves Fay's inception"
+      - "Ean's rot at sn=2 with a=[{i:Fay_AID, s:'1', d:Fay_rotation_SAID}] — approves Fay's rotation"
+    related_terms: ["Delegation Seal", "Delegator"]
+
+  - term: "di Field"
+    synonyms: ["Delegator Identifier Field"]
+    definition: "The field in a delegated inception event (dip) that contains the AID of the delegator. This field binds the delegated AID to a specific delegator and is incorporated into the delegatee's AID derivation."
+    invariants:
+      - "Only present in delegated inception events (dip), NOT in delegated rotation events (drt)"
+      - "The value is the delegator's AID (qualified CESR prefix)"
+      - "Incorporated into the delegatee's AID — changing the delegator changes the AID"
+      - "Establishes the delegatee-to-delegator binding of the cooperative delegation"
+    examples:
+      - "di:'EPR7FWsN3tOM8PqfMap2FRfF4MFQ4v3ZXjBUcMVtvhmB' — Ean's AID as delegator"
+    related_terms: ["Delegatee", "Cooperative Delegation", "Two-way Binding"]
+
+  - term: "Two-way Binding"
+    synonyms: ["Two-way Peg"]
+    definition: "The pair of cryptographic references that together prove cooperative delegation: (1) the delegation seal in the delegator's KEL referencing the delegated event, and (2) the di field in the delegatee's inception referencing the delegator's AID."
+    invariants:
+      - "Both references must exist for a valid delegation"
+      - "The seal in the delegator's KEL includes a digest of the delegated event — the delegator commits to the event's exact content"
+      - "The di field in the delegatee's inception is incorporated into the delegatee's AID — cannot be changed without changing the AID"
+      - "Neither party can forge the other's binding"
+    examples:
+      - "Ean's KEL has seal {i:Fay_AID, s:'0', d:Fay_inception_SAID}; Fay's dip has di:Ean_AID — two-way binding established"
+    related_terms: ["Delegation Seal", "di Field", "Cooperative Delegation"]
+
+  - term: "Delegation Seal Source"
+    synonyms: ["SourceSeal [keriox]", "deSourceCouple [keripy]"]
+    definition: "A (sequence_number, digest) couple that links a delegated event to the delegator's anchoring event. The delegator must include a seal in their own KEL (via interaction or rotation event) that commits to the delegated event's digest. This couple allows validators to locate the specific approval event."
+    invariants:
+      - "Contains a sequence number and SAID digest identifying the delegator's anchoring event"
+      - "In keriox: SourceSeal struct with sn and digest fields"
+      - "In keripy: deSourceCouple is a (Seqner, Saider) couple attached to delegated events"
+      - "The couple allows validators to locate the specific event in the delegator's KEL that approves the delegation"
+      - "Without the source seal, validators cannot verify the delegator's approval"
+    examples:
+      - "deSourceCouple(Seqner(sn=1), Saider(said='E...')) — references delegator's ixn at sn=1 that contains the approval seal"
+      - "SourceSeal { sn: 1, digest: SelfAddressing::Blake3_256(...) } in keriox"
+    related_terms: ["Delegation Seal", "Two-way Binding", "Delegating Event"]
+
+events:
+  - name: "DelegationSealAnchored"
+    payload: "delegator_aid: AID, delegatee_aid: AID, delegated_event_sn: int, delegated_event_said: SAID, delegating_event_sn: int"
+    triggers: "A delegator anchors a delegation seal in its own KEL approving a delegated establishment event"
+
+  - name: "TwoWayBindingEstablished"
+    payload: "delegatee_aid: AID, delegator_aid: AID, seal: DelegationSeal, di_field: AID"
+    triggers: "Both the di field in the delegatee's dip and the corresponding delegation seal in the delegator's KEL have been verified — mutual commitment confirmed"
+
+rules:
+  - "Delegation requires cooperation — both the delegator seal and the delegatee's di field must exist"
+  - "The delegatee's AID is a SAID that incorporates the delegator reference — changing the delegator changes the AID"
+  - "Only establishment events (dip, drt) require delegator approval — interaction events are independent"
+  - "A delegating event may contain multiple delegation seals for batch delegation"
+  - "The ordering of seals within a delegating event is significant for superseding recovery"

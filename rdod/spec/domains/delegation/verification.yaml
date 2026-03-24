@@ -1,0 +1,407 @@
+# verification.yaml
+domain_ref: "delegation"
+
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
+properties:
+  # Two-Event Binding invariants
+  - invariant: "A delegated event MUST be anchored in the delegator's KEL via a seal containing the delegate event's SAID. Specifically: the delegator's KEL MUST contain an event (ixn or rot) whose anchor list includes a seal with {i: delegate_prefix, s: delegate_sn, d: delegate_said}. If no such seal exists, the delegated event MUST NOT be accepted — it MUST be escrowed to PDE."
+    term: "Delegated Inception"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(dip=delegated_inception_strategy(),
+               delegator_kel=kel_strategy())
+        def test_two_event_binding(dip, delegator_kel):
+            seal = find_delegation_seal(
+                delegator_kel, dip.i, dip.sn, dip.said
+            )
+            if seal is not None:
+                assert seal.i == dip.i, "Seal prefix MUST match delegate prefix"
+                assert seal.s == dip.sn, "Seal sn MUST match delegate sn"
+                assert seal.d == dip.said, "Seal digest MUST match delegate SAID"
+                result = validate_delegation(dip, delegator_kel)
+                assert result.is_verified()
+            else:
+                result = validate_delegation(dip, delegator_kel)
+                assert result.escrow_type == 'PDE', (
+                    "Missing delegation seal MUST route to PDE escrow"
+                )
+    strategy: "delegated_inception_strategy(), kel_strategy()"
+    notes: "Two-way binding: delegate event references delegator via di, delegator seals delegate via anchor."
+
+  # Cooperative Delegation invariants
+  - invariant: "BOTH delegate and delegator MUST agree for any delegated establishment event to be valid. Neither party can unilaterally establish or rotate the delegated identifier. If the delegator does NOT anchor the delegate's event, the event remains in PDE escrow indefinitely. If the delegate does NOT produce the event, the delegator's seal is inert."
+    term: "Delegated Inception"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(dip=delegated_inception_strategy())
+        def test_cooperative_delegation_required(dip):
+            # Case 1: Delegate produces event, delegator has not anchored
+            empty_delegator_kel = KEL()
+            result = validate_delegation(dip, empty_delegator_kel)
+            assert not result.is_verified(), (
+                "Delegate event without delegator seal MUST NOT be accepted"
+            )
+            assert result.escrow_type == 'PDE'
+
+            # Case 2: Delegator anchors seal, but delegate event does not exist
+            delegator_kel_with_seal = build_kel_with_seal(dip.di, dip.i, dip.sn, dip.said)
+            # Without the delegate event, there is nothing to validate
+            assert find_delegation_seal(delegator_kel_with_seal, dip.i, dip.sn, dip.said) is not None
+            # The seal alone does not create the delegated identifier
+    strategy: "delegated_inception_strategy()"
+    notes: "Cooperative = both parties required. Unilateral action by either side is insufficient."
+
+  # Delegation Scope invariants
+  - invariant: "A delegated identifier MUST NOT produce establishment events (dip, drt) without a corresponding delegator seal anchoring each event. Non-establishment events (ixn) do NOT require delegator approval — only the delegated identifier's own signing keys are needed."
+    term: "Delegated Rotation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=delegated_event_strategy())
+        def test_delegation_scope(event):
+            if event.t in ('dip', 'drt'):
+                # Establishment events require delegator approval
+                assert requires_delegator_seal(event), (
+                    f"Delegated {event.t} MUST require delegator seal"
+                )
+            elif event.t == 'ixn':
+                # Interaction events do NOT require delegator approval
+                assert not requires_delegator_seal(event), (
+                    "Delegated ixn MUST NOT require delegator seal"
+                )
+    strategy: "delegated_event_strategy() — dip, drt, and ixn events"
+    notes: "Delegation scope: establishment events gated by delegator, interaction events autonomous."
+
+  # DND (Do Not Delegate) Enforcement invariants
+  - invariant: "If the delegator's inception event has 'DND' in its c (config) field, then the delegator MUST NOT accept any delegation request. Validators MUST reject any dip event naming a DND-configured identifier as delegator. Specifically: if delegator_icp.c contains 'DND', reject dip where dip.di == delegator_aid."
+    term: "DID Configuration Trait"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(delegator=aid_with_config_strategy(),
+               dip=delegated_inception_strategy())
+        def test_dnd_enforcement(delegator, dip):
+            dip_with_delegator = set_delegator(dip, delegator.aid)
+            if 'DND' in delegator.config:
+                result = validate_delegation(dip_with_delegator, delegator.kel)
+                assert result.is_rejected(), (
+                    f"Delegator {delegator.aid} has DND trait — "
+                    f"MUST reject dip naming it as delegator"
+                )
+                assert result.error_type == 'dnd_violation'
+            else:
+                # Without DND, delegation proceeds normally (may still need seal)
+                pass
+    strategy: "aid_with_config_strategy() (with/without DND), delegated_inception_strategy()"
+    notes: "DND = Do Not Delegate. Blocks all inbound delegation requests at the delegator."
+
+  # Delegated Inception Structure invariants
+  - invariant: "A dip event MUST include the di field with the delegator's AID. The di field MUST be non-empty and MUST reference a valid, existing AID. The delegate's AID (i field) is a SAID computed over the full event content including di — changing di changes the AID."
+    term: "Delegated Inception"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(dip=delegated_inception_strategy())
+        def test_dip_structure(dip):
+            assert dip.t == 'dip'
+            assert hasattr(dip, 'di') and dip.di is not None, (
+                "dip MUST have di field"
+            )
+            assert len(dip.di) > 0, "di field MUST be non-empty"
+            # AID incorporates di
+            assert dip.i == compute_said(dip.ked), (
+                "Delegate AID MUST be SAID of full event content including di"
+            )
+            # Changing di changes the AID
+            modified = copy(dip.ked)
+            modified['di'] = generate_different_aid(dip.di)
+            assert compute_said(modified) != dip.i, (
+                "Changing di MUST change the delegate's AID"
+            )
+    strategy: "delegated_inception_strategy()"
+    notes: "di is the defining structural difference between dip and icp. It cryptographically binds delegatee to delegator."
+
+  - invariant: "There MUST be exactly one dip event per delegated KEL — it MUST be at sn=0. All subsequent establishment events in a delegated KEL MUST be drt (not dip). A second dip in the same KEL MUST be rejected."
+    term: "Delegated Inception"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=delegated_kel_strategy())
+        def test_single_dip_per_kel(kel):
+            dip_events = [e for e in kel.events if e.t == 'dip']
+            assert len(dip_events) == 1, (
+                f"Delegated KEL MUST have exactly one dip, found {len(dip_events)}"
+            )
+            assert dip_events[0].sn == 0, (
+                "dip MUST be at sn=0"
+            )
+            for event in kel.events[1:]:
+                if event.t in ('dip',):
+                    assert False, "Second dip in delegated KEL MUST be rejected"
+                if event.is_establishment():
+                    assert event.t == 'drt', (
+                        f"Post-inception establishment in delegated KEL MUST be drt, got {event.t}"
+                    )
+    strategy: "delegated_kel_strategy()"
+    notes: "At most one dip, always at sn=0. Subsequent establishment = drt."
+
+  # Delegated Rotation Structure invariants
+  - invariant: "A drt event MUST NOT include the di field — it inherits the delegator relationship from the delegated inception. The drt type signals validators to verify both delegatee signatures AND delegator seal."
+    term: "Delegated Rotation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(drt=delegated_rotation_strategy())
+        def test_drt_structure(drt):
+            assert drt.t == 'drt'
+            assert 'di' not in drt.ked, (
+                "drt MUST NOT contain di field — inherits delegator from dip"
+            )
+            assert requires_delegator_approval(drt), (
+                "drt MUST trigger delegator seal verification"
+            )
+    strategy: "delegated_rotation_strategy()"
+    notes: "di is inception-only. drt inherits the delegator relationship implicitly."
+
+  # Delegation Chain invariants
+  - invariant: "The root of any delegation chain MUST be a non-delegated (self-certifying) AID. For a chain of length N: chain[0].is_delegated == False, and for all i in 1..N-1: chain[i].is_delegated == True and chain[i].delegator == chain[i-1].aid. Infinite delegation chains are structurally impossible because the root must be non-delegated."
+    term: "Delegation Chain"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(chain=delegation_chain_strategy())
+        def test_delegation_chain_structure(chain):
+            assert len(chain) >= 1, "Chain must have at least one element"
+            assert not chain[0].is_delegated, (
+                "Root of delegation chain MUST be non-delegated (self-certifying)"
+            )
+            for i in range(1, len(chain)):
+                assert chain[i].is_delegated, (
+                    f"Non-root element {i} MUST be delegated"
+                )
+                assert chain[i].delegator == chain[i - 1].aid, (
+                    f"Element {i} delegator MUST be element {i-1}'s AID"
+                )
+    strategy: "delegation_chain_strategy()"
+    notes: "Every chain terminates at a self-certifying root. No cycles, no infinite chains."
+
+  - invariant: "Verification of any delegated event at chain level L requires recursive verification up to the root at level 0. Specifically: verify(chain[L]) requires verify(chain[L-1]) ... requires verify(chain[0]). If any level fails verification, all levels below it MUST also fail."
+    term: "Delegation Chain"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(chain=delegation_chain_strategy(),
+               compromised_level=st.integers(min_value=0, max_value=10))
+        def test_chain_recursive_verification(chain, compromised_level):
+            assume(compromised_level < len(chain))
+            # If level L is compromised, all levels > L must fail
+            for level in range(compromised_level + 1, len(chain)):
+                result = verify_delegation_at_level(chain, level)
+                assert not result.is_verified(), (
+                    f"Level {level} MUST fail when level {compromised_level} is compromised"
+                )
+    strategy: "delegation_chain_strategy(), st.integers for compromised level"
+    notes: "Chain verification is recursive — a broken link invalidates everything below."
+
+  # Superseding Recovery in Delegation invariants
+  - invariant: "A delegator can effectively revoke a delegation by NOT anchoring subsequent establishment events for the delegate. Without a new delegator seal, the delegate MUST NOT produce new establishment events — the delegated identifier becomes frozen at its current key state."
+    term: "Delegation Chain"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(delegate=delegated_kel_strategy(),
+               delegator=kel_strategy())
+        def test_delegation_revocation_by_omission(delegate, delegator):
+            # Build a drt without delegator seal
+            drt = build_delegated_rotation(delegate.aid)
+            # Delegator does not anchor it
+            seal = find_delegation_seal(delegator, drt.i, drt.sn, drt.said)
+            assert seal is None
+            result = validate_delegation(drt, delegator)
+            assert result.escrow_type == 'PDE', (
+                "Without delegator seal, drt MUST remain in PDE escrow"
+            )
+            # The delegate is frozen — cannot rotate or establish new keys
+    strategy: "delegated_kel_strategy(), kel_strategy()"
+    notes: "Revocation by omission: delegator simply does not anchor new establishment events."
+
+  # Partially-Delegated Escrow invariants
+  - invariant: "If the delegator's KEL does not contain a seal committing to the delegated event, the event MUST be escrowed to PDE (Partially-Delegated Escrow). On reprocessing, if the delegator's seal is found, the event advances to the next validation step (may cascade to PWE if witness receipts are insufficient)."
+    term: "Partially-Delegated Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(dip=delegated_inception_strategy())
+        def test_pde_lifecycle(dip):
+            # Initially no seal — goes to PDE
+            empty_delegator_kel = KEL()
+            result = validate_delegation(dip, empty_delegator_kel)
+            assert result.escrow_type == 'PDE'
+
+            # Delegator anchors seal — reprocess
+            delegator_kel = build_kel_with_seal(dip.di, dip.i, dip.sn, dip.said)
+            result = reprocess_from_pde(dip, delegator_kel)
+            assert result.escrow_type in ('accepted', 'PWE'), (
+                f"After seal found, event advances from PDE to accepted or PWE, "
+                f"got {result.escrow_type}"
+            )
+    strategy: "delegated_inception_strategy()"
+    notes: "PDE -> seal found -> advance. May cascade to PWE if witnesses insufficient."
+
+  - invariant: "Delegable Event Escrow (for local events) is distinct from PDE (for remote events). If source is local, a delegated event awaiting external approval goes to DELEGABLE escrow. If source is remote, it goes to PDE. The escrow queue MUST be determined by source, not by event content."
+    term: "Delegable Event Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=delegated_event_strategy(),
+               source=st.sampled_from(['local', 'remote']))
+        def test_delegable_vs_pde_routing(event, source):
+            result = route_to_escrow(event, source)
+            if source == 'local':
+                assert result.escrow_type == 'DELEGABLE', (
+                    "Local delegated event MUST go to DELEGABLE escrow"
+                )
+            else:
+                assert result.escrow_type == 'PDE', (
+                    "Remote delegated event MUST go to PDE escrow"
+                )
+    strategy: "delegated_event_strategy(), st.sampled_from(['local', 'remote'])"
+    notes: "Source determines escrow type: local = DELEGABLE (awaiting external approval), remote = PDE (awaiting external evidence)."
+
+  # DID Configuration Trait
+  - invariant: "The DID configuration trait is set in the c field of an establishment event. If 'DID' is in event.c, the delegated identifier is treated as equivalent to the delegator for authorization purposes."
+    term: "DID Configuration Trait"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=establishment_event_strategy())
+        def test_did_trait_check(event):
+            has_did = 'DID' in event.c
+            assert has_did == is_did_configured(event), (
+                "DID trait is a simple membership check on the c field array"
+            )
+    strategy: "establishment_event_strategy() — with and without DID in c"
+    notes: "DID trait is a boolean flag in the config array."
+
+contracts:
+  - port_ref: "port://delegation/inbound/delegation-lifecycle"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda config, delegator_aid: (
+                config.valid()
+                and delegator_aid is not None
+                and len(delegator_aid) > 0
+            )
+        description: "Config must be valid and delegator AID must be non-empty"
+      - formal:
+          language: python
+          expression: |
+            lambda delegator_aid: (
+                not has_dnd_trait(delegator_aid)
+            )
+        description: "Delegator MUST NOT have DND trait — delegation to DND identifiers is rejected"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda result: (
+                result.t == 'dip'
+                and result.di is not None
+                and len(result.di) > 0
+                and result.i is not None
+                and result.i == compute_said(result.ked)
+            )
+        description: "create_delegated_inception returns a dip with di, i (SAID of full content), and valid structure"
+      - formal:
+          language: python
+          expression: |
+            lambda seal: (
+                seal.i is not None
+                and isinstance(seal.s, int)
+                and seal.s >= 0
+                and seal.d is not None
+            )
+        description: "approve_delegation returns a seal with delegatee AID, non-negative sn, and SAID"
+
+  - port_ref: "port://delegation/inbound/delegation-verification"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda event: (
+                event.t in ('dip', 'drt')
+                and event.signatures_verified()
+            )
+        description: "Only delegated establishment events (dip, drt) with valid signatures can be verified"
+      - formal:
+          language: python
+          expression: |
+            lambda event: (
+                event.t != 'dip' or (hasattr(event, 'di') and len(event.di) > 0)
+            )
+        description: "dip events MUST have non-empty di field; drt events inherit delegator"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda result: (
+                result.is_verified() implies (
+                    result.seal_found
+                    and result.seal.d == result.event.said
+                    and result.chain_valid
+                )
+            )
+        description: "Verified result means delegation seal was found with matching SAID and the chain is valid up to root"
+      - formal:
+          language: python
+          expression: |
+            lambda result: (
+                result.is_error() implies
+                result.error_type in ('seal_not_found', 'chain_invalid', 'signature_invalid', 'dnd_violation')
+            )
+        description: "Verification errors are one of the four recognized failure types"
+
+  - port_ref: "port://delegation/inbound/delegation-query"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None and len(aid) > 0"
+        description: "AID must be a valid non-empty identifier"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, chain: (
+                len(chain) >= 1
+                and chain[-1] == aid
+                and not is_delegated(chain[0])
+                and all(
+                    is_delegated(chain[i]) and get_delegator(chain[i]) == chain[i-1]
+                    for i in range(1, len(chain))
+                )
+            )
+        description: "get_delegation_chain returns a chain ending at the queried AID with non-delegated root and valid parent links at every level"
+      - formal:
+          language: python
+          expression: "lambda aid, result: result == (get_delegator(aid) is not None)"
+        description: "is_delegated returns true iff a delegator exists for the AID"

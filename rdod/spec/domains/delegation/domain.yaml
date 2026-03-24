@@ -1,0 +1,102 @@
+# domain.yaml
+
+template_version: "1.0"
+
+id: "delegation"
+
+name: "Delegation"
+
+description: >
+  Cooperative delegation of identifier authority — a mechanism where a delegator AID approves
+  the establishment operations (inception and rotation) of a delegated AID (delegatee). Delegation
+  is implemented as a pair of events: a delegated event (dip or drt) in the delegatee's KEL that
+  references the delegator's AID, and a delegating event in the delegator's KEL containing a seal
+  anchoring the delegated event. This two-way cryptographic binding requires cooperation from both
+  parties. Delegation enables horizontal scaling of signing authority, hierarchical key management,
+  and enhanced recovery from key compromise via the delegator's additional layer of control.
+
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Cooperative Delegation, Delegated Inception Event Message Body, Delegated Rotation Event Message Body, Delegated Event Live-attacks, Superseding Rules B1-B3 and C"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: Delegation, Cooperative Delegation, Custodial Delegation"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — sections: Combined Arms, Delegation Security"
+  - type: implementation
+    reference: "keripy — src/keri/core/eventing.py (Kevery.processEscrowPartialDels, valSigsWigsDel), src/keri/app/storing.py (.pdes, .aess, .delegables, .udes), src/keri/core/coring.py (deSourceCouple — Seqner + Saider couple)"
+  - type: implementation
+    reference: "keriox — keriox_core/src/event/event_data/delegated.rs (SourceSeal), keriox_core/src/processor/escrow.rs (DelegationEscrow), keriox_core/src/processor/validator.rs (validate_event with delegator verification)"
+
+ubiquitous_language:
+  - term: "Delegated Inception"
+    definition: "The inception event for a delegated AID — type 'dip' with di field referencing the delegator"
+    invariants:
+      - "Must include di field with the delegator's AID"
+      - "Requires a corresponding delegation seal in the delegator's KEL to be valid"
+
+  - term: "Delegated Rotation"
+    definition: "A rotation event for a delegated AID — type 'drt', inherits delegator from inception"
+    invariants:
+      - "Does NOT include di field — inherits delegator from the delegated inception"
+      - "Requires a corresponding delegation seal in the delegator's KEL to be valid"
+
+  - term: "Delegation Chain"
+    definition: "A chain of delegation where a delegated AID itself acts as a delegator, forming a hierarchical tree of authority"
+    invariants:
+      - "Verification requires walking up to the root non-delegated AID"
+      - "Superseding recovery rules apply recursively up the chain"
+
+  - term: "DID Configuration Trait"
+    definition: "A configuration trait (c field value 'DID') that instructs validators to treat delegates as equivalent to the delegator"
+    invariants:
+      - "Set in the c field of an establishment event"
+      - "Enables transparent delegation for authorization purposes"
+
+published_language:
+  - term: "Boatswain"
+    description: "Tracks delegation approval progress — queried by Monitor for operation completion"
+  - term: "Delegated Inception"
+    description: "Inception event for a delegated AID — type 'dip' with di field"
+  - term: "Delegated Rotation"
+    description: "Rotation event for a delegated AID — type 'drt'"
+
+domain_clients:
+  - ref: "domain://identity"
+    relationship: "Parent domain drives the delegated identifier lifecycle — creation, rotation, and recovery of delegated AIDs"
+    via_port: "port://delegation/inbound/delegation-lifecycle"
+
+subdomains:
+  - ref: "domain://delegation/authorization"
+    name: "Delegation Authorization"
+    relationship: "Owns cooperative binding mechanics — delegator approves or denies via seals, di field, source seal couples, two-way peg"
+  - ref: "domain://delegation/recovery"
+    name: "Delegation Recovery"
+    relationship: "Owns recovery logic — superseding rules B1-B3-C, joint compromise requirement, custodial delegation"
+  - ref: "domain://delegation/lifecycle"
+    name: "Delegation Lifecycle"
+    relationship: "Owns delegated inception and rotation event lifecycle — validation pipeline and escrow queues"
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519 (signing both delegator and delegatee events), Blake3-256/SHA-256 (delegation seal digests, delegatee AID derivation)"
+    relationship: "Delegation verification requires cryptographic verification of both delegator and delegatee signatures and digest verification of the delegation seal — kernel types appear directly"
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    Delegation is implemented as part of event processing. In keripy, delegation logic is in
+    the Kevery class, with delegated events processed by verifying the delegator seal. The
+    delegator's KEL must be accessible to validate any delegated event. In keriox, delegation
+    is handled in the event processing pipeline. Multi-level delegation chains require recursive
+    verification up to the root non-delegated KEL.
+
+issues: []
+
+tags: ["delegation", "hierarchical", "cooperative", "key-management", "recovery"]

@@ -1,0 +1,150 @@
+# verification.yaml
+domain_ref: "credential-lifecycle/verification"
+
+properties:
+  - invariant: "Every TEL event must be accompanied by its KEL anchor seal (VerifiableEvent) to be validated"
+    term: "Verifiable Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda ve: (
+          ve.event is not None
+          and ve.attached_seal is not None
+          and ve.attached_seal.s is not None
+          and ve.attached_seal.d is not None
+        )
+    strategy: "Generate VerifiableEvents with missing components; verify only complete bundles accepted"
+    notes: "Both TEL event and seal are required"
+
+  - invariant: "The seal contains the sequence number (s) and digest (d) of the anchoring KEL event"
+    term: "Transaction Event Seal"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda seal: (
+          isinstance(seal.s, int) and seal.s >= 0
+          and is_valid_said(seal.d)
+        )
+    strategy: "Generate seals with valid and invalid fields"
+    notes: ""
+
+  - invariant: "The KEL event's anchor (a) field must contain a seal matching the TEL event's sn and SAID"
+    term: "KEL Anchor Verification"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        ForAll([tel_event, kel_event, attached_seal],
+          Implies(
+            And(
+              kel_event.sn == attached_seal.s,
+              anchor_verified(tel_event, kel_event)
+            ),
+            Exists([seal_in_anchor],
+              And(
+                seal_in_anchor.s == tel_event.sn,
+                seal_in_anchor.d == said_compute(tel_event),
+                seal_in_anchor in kel_event.a
+              )
+            )
+          )
+        )
+    notes: "Core cryptographic binding — TEL event SAID must appear in KEL anchor"
+
+  - invariant: "The pipeline is re-entrant: escrowed events are reprocessed through the same five steps"
+    term: "TEL Validation Pipeline"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda event, initial_result, reprocess_result: (
+          initial_result.escrow_type is not None
+          and reprocess_result == validate_event(event)  # same pipeline
+        )
+    strategy: "Escrow events, then resolve blocking condition and reprocess; verify same pipeline used"
+    notes: "No shortcut path for escrowed events"
+
+  - invariant: "Events in escrow retain their full VerifiableEvent bundle (TEL event + seal) for reprocessing"
+    term: "TEL Escrows"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda original_ve, escrowed_ve: (
+          original_ve.event == escrowed_ve.event
+          and original_ve.attached_seal == escrowed_ve.attached_seal
+        )
+    strategy: "Escrow a VerifiableEvent; retrieve it; verify no data loss"
+    notes: "Full bundle preservation in escrow"
+
+  - invariant: "Escrow queues have configurable time-to-live — stale entries are pruned"
+    term: "TEL Escrows"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda escrow, ttl, current_time: (
+          (current_time - escrow.created_at > ttl) == escrow.is_expired
+        )
+    strategy: "Generate escrow entries with various ages relative to TTL; verify expiry classification"
+    notes: "Time-based pruning prevents unbounded growth"
+
+  - invariant: "Notifications trigger reprocessing through the same TEL Validation Pipeline"
+    term: "TEL Notification Bus"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda notification, escrow_queue: (
+          reprocessed := [e for e in escrow_queue if matches_notification(e, notification)],
+          all(validate_event(e) is not None for e in reprocessed)
+        )[-1]
+    strategy: "Emit notifications; verify matching escrowed events are reprocessed through pipeline"
+    notes: "Event-driven reprocessing, not polling"
+
+contracts:
+  - port_ref: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            is_valid_verifiable_event(verifiable_event)
+            and (registry_state is not None or credential_state is not None)
+        description: "VerifiableEvent must be complete; at least one state context must be provided"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            (isinstance(result, TelValidationPassed) and result.event_said == said_compute(verifiable_event.event))
+            or isinstance(result, TelValidationEscrowed)
+            or isinstance(result, InvalidTransitionError)
+        description: "Result is either acceptance (with correct SAID), escrow, or rejection"
+
+  - port_ref: "port://credential-lifecycle/verification/inbound/process-escrows"
+    preconditions:
+      - formal:
+          language: python
+          expression: "escrow_type in ('oot', 'twe', 'tae', 'mre', 'mce', 'mse', 'cmse')"
+        description: "Escrow type must be one of the recognized escrow queue types"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            all(r.result in ('Accept', 'Reject', 'ReEscrow') for r in results)
+        description: "Each reprocessed event is either accepted, rejected, or re-escrowed"
+
+  - port_ref: "port://credential-lifecycle/verification/outbound/kel-and-state-lookup"
+    preconditions:
+      - formal:
+          language: python
+          expression: "is_valid_aid(issuer_aid) and isinstance(sn, int) and sn >= 0"
+        description: "Valid AID and non-negative sequence number for KEL lookup"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            (result is not None and result.sn == sn and result.aid == issuer_aid)
+            or result is None  # NotFound
+        description: "Returned KEL event matches the requested AID and sequence number, or NotFound"

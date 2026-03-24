@@ -1,0 +1,70 @@
+# domain.yaml
+template_version: "1.0"
+id: "privacy/blinding"
+name: "Status Blinding"
+description: >
+  Hidden credential status — privacy-preserving blinded state management so
+  observers cannot determine credential state changes. Hides credential state
+  behind blinded attribute blocks using shared secret salts and hierarchical key
+  derivation. Observers cannot determine which update events correspond to actual
+  state changes versus periodic decorrelation updates. Only entities holding the
+  shared secret salt can derive the blinding UUID for each event and discover the
+  current credential state by trying the finite set of possible state values
+  against the BLID.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "acdc-specification.md -- Blinded State Management, Blindable Update Events, Blinded Attribute Blocks sections"
+  - type: document
+    reference: "acdc-specification.md -- Shared Secret Salt and Hierarchically Deterministic UUID Derivation section"
+  - type: implementation
+    reference: "keripy -- src/keri/vdr/viring.py (Reger: blinding-related subdatabases), src/keri/vdr/eventing.py (bup event processing, blind state computation)"
+  - type: implementation
+    reference: "keriox/teliox -- src/event/verifiable_event.rs (blinded event handling), src/state.rs (blinded state transitions)"
+
+ubiquitous_language:
+  - term: "BLID"
+    definition: "Blinding SAID -- a cryptographic digest of the concatenated CESR serialization of a blinded attribute block's field values"
+    invariants:
+      - "Computed on text domain (qb64) CESR concatenation of field values"
+      - "Uses Blake3-256 digest (E code, 44 characters)"
+
+  - term: "Blinded Attribute Block"
+    definition: "Fixed-field CESR concatenation (d, u, td, ts) whose digest serves as the b field in a blindable update event"
+    invariants:
+      - "UUID is derived from shared secret salt and event sequence number"
+      - "Only holders of the shared secret salt can reconstruct and verify"
+
+domain_clients:
+  - ref: "domain://privacy"
+    relationship: "Parent privacy domain delegates blinded state operations -- bup event construction, BLID computation, and state discovery"
+    via_port: "port://privacy/blinding/inbound/blinded-state"
+
+subdomains: []
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Blake3-256 (BLID digest computation), argon2/HKDF (salt-based hierarchically deterministic UUID derivation)"
+    relationship: "Cryptographic algorithm types used for BLID computation and blinding UUID derivation from shared secret salt"
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    Blinding is a pure computation subdomain with no persistence of its own. The blinded
+    attribute block is never serialized as a standalone message -- it is a virtual construct
+    whose field values are concatenated and digested to produce the BLID. The bup event
+    carries only the BLID in its b field. State discovery is a brute-force search over the
+    finite state set (e.g., issued/revoked) combined with the derived UUID and candidate
+    ACDC SAIDs. Periodic blind updates with unchanged state are the mechanism for
+    decorrelation -- the observer cannot distinguish a state-changing update from a
+    decorrelation-only update.
+
+issues: []
+
+tags: ["blinding", "privacy", "blid", "shared-secret", "decorrelation", "uuid-derivation"]

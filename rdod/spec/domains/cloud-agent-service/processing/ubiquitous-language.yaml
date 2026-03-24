@@ -3,23 +3,23 @@ domain_ref: "cloud-agent-service/processing"
 
 imports:
   - term: "Counselor"
-    from: "domain://keri/identity/thresholds"
+    from: "domain://identity/thresholds"
     usage: "Monitor queries Counselor to detect multi-sig group operation completion; processes group queue work items"
 
   - term: "Boatswain"
-    from: "domain://keri/delegation"
+    from: "domain://delegation"
     usage: "Monitor queries Boatswain to detect delegation operation completion; processes delegation queue work items"
 
   - term: "Registrar"
-    from: "domain://acdc/credential-lifecycle"
+    from: "domain://credential-lifecycle"
     usage: "TEL Registrar manages registry TEL events; has processEscrows() called by Escrow Processing Worker; integrates with Monitor for registry/credential operations"
 
   - term: "Credentialer"
-    from: "domain://acdc/credential-lifecycle"
+    from: "domain://credential-lifecycle"
     usage: "Issues and manages ACDC credentials; Monitor queries Credentialer to detect credential operation completion"
 
   - term: "Seeker"
-    from: "domain://acdc/credential-lifecycle"
+    from: "domain://credential-lifecycle"
     usage: "Credential search index triggered by Verifier cues when credentials are saved; queried by API handlers"
 
 terms:

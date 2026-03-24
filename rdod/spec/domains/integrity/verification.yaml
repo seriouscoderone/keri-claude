@@ -1,0 +1,212 @@
+# verification.yaml
+domain_ref: "integrity"
+
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
+properties:
+  - invariant: "Duplicity evidence MUST consist of two or more independently verifiable events: each event's signatures MUST verify against its claimed key state AND each event's hash chain (prior event SAID linkage) MUST be intact; if either event fails cryptographic verification, it is internal inconsistency (rejected), not duplicity"
+    term: "Duplicity"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(evidence=duplicity_evidence_strategy())
+        def test_duplicity_events_independently_verifiable(evidence):
+            for event in evidence.events:
+                assert event.signatures_verified(), (
+                    f"Event at sn={event.sn} must have verifiable signatures"
+                )
+                assert event.hash_chain_valid(), (
+                    f"Event at sn={event.sn} must have valid hash chain"
+                )
+            # Minimum two events
+            assert len(evidence.events) >= 2
+    strategy: "duplicity_evidence_strategy()"
+    notes: "Both events must be independently cryptographically valid — unverifiable events are rejected, not classified as duplicity."
+
+  - invariant: "Duplicity is defined as: same AID (prefix), same sequence number (sn), different SAID (digest); all three conditions MUST hold simultaneously; same AID with different sn is NOT duplicity (it is normal event progression); different AID at same sn is NOT duplicity (different identifiers)"
+    term: "Duplicity"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event_a=key_event_strategy(), event_b=key_event_strategy())
+        def test_duplicity_definition(event_a, event_b):
+            is_dup = is_duplicity(event_a, event_b)
+            expected = (event_a.aid == event_b.aid
+                        and event_a.sn == event_b.sn
+                        and event_a.said != event_b.said)
+            assert is_dup == expected, (
+                f"Duplicity check failed: aid_match={event_a.aid == event_b.aid}, "
+                f"sn_match={event_a.sn == event_b.sn}, "
+                f"said_differ={event_a.said != event_b.said}, "
+                f"expected={expected}, got={is_dup}"
+            )
+    strategy: "key_event_strategy() x2"
+    notes: "Same AID + same sn + different SAID is the precise, testable definition of duplicity."
+
+  - invariant: "Duplicity detection is deterministic: given access to both conflicting events, detection MUST always succeed; detection is a pure function of (aid, sn, said) comparison requiring no external state"
+    term: "Duplicity"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event_a=key_event_strategy(), event_b=key_event_strategy())
+        def test_duplicity_detection_deterministic(event_a, event_b):
+            assume(event_a.aid == event_b.aid and event_a.sn == event_b.sn
+                   and event_a.said != event_b.said)
+            # Detection must always succeed given both events
+            assert is_duplicity(event_a, event_b)
+            # And is symmetric
+            assert is_duplicity(event_b, event_a)
+    strategy: "key_event_strategy() pairs with matching aid+sn but different said"
+    notes: "Duplicity detection is deterministic and symmetric — given both events, it always succeeds."
+
+  - invariant: "An event log where any event fails cryptographic verification (broken signature, broken hash chain, or tampered content) MUST be rejected outright; this is internal inconsistency, not duplicity, and does not require evidence collection"
+    term: "Internal Inconsistency"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(log=event_log_strategy(), tamper_index=st.integers(min_value=0, max_value=10))
+        def test_inconsistent_log_rejected(log, tamper_index):
+            assume(tamper_index < len(log.events))
+            tampered_log = tamper_event(log, tamper_index)
+            assert not tampered_log.crypto_valid(), "Tampered log must fail crypto verification"
+            assert tampered_log.rejected(), "Cryptographically invalid log must be rejected"
+    strategy: "event_log_strategy() x st.integers for tamper position"
+    notes: "Internal inconsistency is simpler than duplicity — no evidence collection needed, just rejection."
+
+  - invariant: "Every DEL entry MUST contain >= 2 verified events with the same AID and sn but different SAIDs; the SAID set size MUST equal the event count (no duplicates within an entry); a DEL entry with fewer than 2 events is structurally invalid"
+    term: "DEL"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(del_entry=del_entry_strategy())
+        def test_del_entry_structure(del_entry):
+            assert len(del_entry.events) >= 2, (
+                f"DEL entry must have >= 2 events, got {len(del_entry.events)}"
+            )
+            assert all(e.sn == del_entry.sn for e in del_entry.events), (
+                "All events in a DEL entry must share the same sn"
+            )
+            assert all(e.aid == del_entry.aid for e in del_entry.events), (
+                "All events in a DEL entry must share the same AID"
+            )
+            saids = {e.said for e in del_entry.events}
+            assert len(saids) == len(del_entry.events), (
+                "Every event in a DEL entry must have a unique SAID"
+            )
+    strategy: "del_entry_strategy()"
+    notes: "DEL entries are structured evidence: >= 2 events, same (aid, sn), all unique SAIDs."
+
+  - invariant: "Live duplicity involves compromise of the controller's current (live) signing keys or pre-rotated keys; the compromised keys MUST intersect with either current_key_state.signing_keys or current_key_state.pre_rotated_keys; if the compromised keys are all from prior key states, it is dead duplicity, not live"
+    term: "Live Duplicity"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(attack=duplicity_attack_strategy(), current_ks=key_state_strategy())
+        def test_live_duplicity_targets_current_keys(attack, current_ks):
+            is_live = (attack.compromised_keys.intersects(current_ks.signing_keys)
+                       or attack.compromised_keys.intersects(current_ks.pre_rotated_keys))
+            if is_live:
+                assert classify_attack(attack, current_ks) == 'live'
+            else:
+                assert classify_attack(attack, current_ks) != 'live'
+    strategy: "duplicity_attack_strategy() x key_state_strategy()"
+    notes: "Live attacks target the current key state — the attack is ongoing and requires immediate recovery."
+
+  - invariant: "Dead duplicity involves compromise of stale (already rotated away) keys; the compromised keys MUST intersect with a prior key state's signing keys AND MUST NOT intersect with the current key state's signing or pre-rotated keys; dead attacks are retrospective and cannot produce new valid events"
+    term: "Dead Duplicity"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(attack=duplicity_attack_strategy(),
+               current_ks=key_state_strategy(),
+               past_states=st.lists(key_state_strategy(), min_size=1, max_size=5))
+        def test_dead_duplicity_targets_stale_keys(attack, current_ks, past_states):
+            past_keys = set().union(*(ks.signing_keys for ks in past_states))
+            hits_past = attack.compromised_keys.intersects(past_keys)
+            hits_current = attack.compromised_keys.intersects(current_ks.signing_keys)
+            if hits_past and not hits_current:
+                assert classify_attack(attack, current_ks, past_states) == 'dead'
+            elif hits_current:
+                assert classify_attack(attack, current_ks, past_states) == 'live'
+    strategy: "duplicity_attack_strategy() x key_state_strategy() x st.lists(key_state_strategy())"
+    notes: "Dead attacks use stale keys — the further in the past, the more ambient copies provide protection."
+
+  # Likely Duplicitous Escrow invariants
+  - invariant: "Triggered when sn < expected_sn AND the event's SAID differs from the already-accepted event at that sn"
+    term: "Likely Duplicitous Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy(min_events=3))
+        def test_lde_trigger(kel):
+            target_sn = 1  # sn < expected
+            existing_said = kel.events[target_sn].said
+            different_event = build_event(kel.aid, sn=target_sn)
+            assume(different_event.said != existing_said)
+            result = check_duplicate(different_event, kel)
+            assert result == 'LDE'
+    strategy: "kel_strategy(min_events=3)"
+    notes: "Same sn, different SAID = likely duplicitous."
+
+  - invariant: "Events are NEVER automatically reprocessed or resolved"
+    term: "Likely Duplicitous Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(lde_event=lde_event_strategy())
+        def test_lde_never_resolved(lde_event):
+            processor = EventProcessor()
+            processor.escrow_lde(lde_event)
+            for _ in range(100):
+                resolved = processor.process_escrows()
+                assert lde_event.said not in [r.said for r in resolved]
+    strategy: "lde_event_strategy()"
+    notes: "LDE is permanent forensic evidence."
+
+contracts:
+  - port_ref: "port://integrity/inbound/monitoring"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sources: aid is not None and len(sources) >= 1"
+        description: "AID must be valid and at least one source endpoint must be provided for monitoring"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: result.is_no_duplicity() or (result.is_evidence() and len(result.evidence.events) >= 2)"
+        description: "check_duplicity returns either clean status or evidence with at least two conflicting events"
+
+  - port_ref: "port://integrity/inbound/recovery"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, event: event.type == 'rot' and event.aid == aid and event.signatures_verified()"
+        description: "Superseding event must be a verified rotation event for the specified AID"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: result.is_recovery_applied() implies result.trunk is not None and result.disputed_branch is not None"
+        description: "Successful recovery produces both a trunk and a disputed branch"
+
+  - port_ref: "port://integrity/inbound/evidence-query"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None"
+        description: "AID must be a valid identifier"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda evidence: all(e.events[0].aid == e.events[1].aid and e.events[0].sn == e.events[1].sn for e in evidence)"
+        description: "All returned evidence entries consist of events with matching AID and sn"

@@ -91,15 +91,15 @@ kernels:
     relationship: "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly for all encoding"
 
 adjacents:
-  - ref: "domain://keri"
+  - ref: "domain://identity"
     relationship: "Conformist — runs the full KERI protocol stack locally, using all event types, key state computation, and escrow processing directly"
     pattern: "Conformist"
-    via_port: "port://keri/inbound/identifier-lifecycle"
+    via_port: "port://identity/inbound/identity-management"
     is_cross_cutting: false
-  - ref: "domain://acdc"
+  - ref: "domain://credential-lifecycle"
     relationship: "Conformist — uses ACDC credential types, TEL events, and IPEX exchange protocol directly"
     pattern: "Conformist"
-    via_port: "port://acdc/inbound/credential-lifecycle"
+    via_port: "port://credential-lifecycle/inbound/state-management"
     is_cross_cutting: false
   - ref: "domain://discovery"
     relationship: "Customer-Supplier — resolves OOBIs directly over HTTP for endpoint and key state discovery"

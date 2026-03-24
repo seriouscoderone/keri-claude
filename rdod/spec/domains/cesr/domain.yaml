@@ -71,10 +71,10 @@ published_language:
     description: "Self-describing message header — used by all KERI/ACDC messages"
 
 domain_clients:
-  - ref: "domain://keri"
+  - ref: "domain://identity"
     relationship: "KERI events are encoded in CESR format; CESR defines the encoding contract for key events, signatures, and receipts"
     via_port: "port://cesr/inbound/encoding"
-  - ref: "domain://acdc"
+  - ref: "domain://credential-lifecycle"
     relationship: "ACDC credentials are encoded in CESR format; CESR defines the encoding contract for credential data structures"
     via_port: "port://cesr/inbound/encoding"
 
@@ -94,7 +94,7 @@ kernels:
 # Note: CESR's relationships with KERI and ACDC are fully captured in domain_clients above.
 # CESR is a pure encoding layer — it does not call into KERI or ACDC. Those domains call
 # into CESR via port://cesr/inbound/encoding. The adjacents list was previously incorrect
-# because it implied CESR calls port://keri/inbound/event-verification, which reverses the
+# because it implied CESR calls port://identity/inbound/event-verification, which reverses the
 # actual dependency direction.
 adjacents: []
 

@@ -1,0 +1,84 @@
+# ubiquitous-language.yaml
+domain_ref: "accountability"
+
+terms:
+  - term: "KAWA"
+    synonyms: ["KERI's Algorithm for Witness Agreement"]
+    definition: "A Byzantine Fault Tolerant agreement algorithm where a controller's designated set of N witnesses provides highly available, consistent promulgation of key events via single-phase agreement under the first-seen rule."
+    invariants:
+      - "Single-phase agreement — no multi-phase commit required because the controller is the sole source of truth for event ordering"
+      - "Scalability: receipt dissemination scales linearly (2*N round-robin) or N*log(N) (gossip)"
+      - "The controller designates both the witness set and the accountability threshold"
+      - "Provides availability and consistency guarantees comparable to multi-phase BFT but without their latency and cost"
+    examples:
+      - "A controller with 5 witnesses and threshold 3: each witness receipts the first-seen version of each event"
+      - "Round-robin dissemination: controller sends to each witness in turn, collecting and forwarding receipts"
+    related_terms: ["Witness", "TOAD"]
+
+  # Inherits: "Witness" from domain://identity
+  - term: "Witness"
+    synonyms: []
+    specializes: "Witness"
+    definition: "In the context of the accountability subdomain, a witness is an entity that enforces the first-seen rule and provides receipted copies of the KEL (KERL). Specializes the parent definition with accountability-specific behaviors: receipt generation, protected channel requirements, and the first-seen guarantee that constitutes the witness's accountability commitment."
+    invariants:
+      - "A witness's receipt constitutes a first-seen guarantee for that event"
+      - "Witnesses are accountable — duplicitous witnessing (signing conflicting events) is detectable"
+      - "A witness should only accept local events from the controller (protected channel)"
+      - "A witness should not accept remote (unprotected) events for its controlled AID"
+    examples:
+      - "A witness node running on dedicated infrastructure, receipting events via HTTP"
+      - "A pool of 4 witnesses with threshold 3: ['BGKV6v93...', 'BJfueFAY...', 'BAPv2Mno...', 'BA4PSatf...']"
+    related_terms: ["KAWA", "TOAD"]
+
+  - term: "TOAD"
+    synonyms: ["Threshold of Accountable Duplicity", "toader [keripy]", "tally [keriox]"]
+    definition: "The numeric threshold of witness receipts required before an event is considered fully witnessed. Set per AID in establishment events. Must satisfy: TOAD <= witness_count and TOAD >= ample(witness_count). The name emphasizes that this threshold determines when duplicity becomes accountable."
+    invariants:
+      - "Set in the bt field of establishment events, alongside the witness list"
+      - "Must be less than or equal to the total number of designated witnesses"
+      - "Must be at least ample(witness_count), the BFT minimum for the given witness count"
+      - "In keripy, the Toader class (coring module) wraps the TOAD value"
+      - "In keriox, the tally field on establishment events holds this value"
+    examples:
+      - "bt='3' with 5 witnesses: 3 receipts required before the event is fully witnessed"
+      - "Toader(toad=4) in keripy wrapping bt=4 for a 6-witness configuration"
+    related_terms: ["KAWA", "Witness"]
+
+  - term: "Witness Threshold Check"
+    synonyms: ["toader.satisfy() [keripy]", "WitnessConfig.enough_receipts() [keriox]"]
+    definition: "Verification that a sufficient number of designated witnesses have receipted an event, meeting or exceeding the witness threshold (TOAD). The check compares the count of verified witness receipt indices against the threshold."
+    invariants:
+      - "Each witness receipt is a signature (indexed or non-indexed) from a designated witness"
+      - "Witness receipts are verified against the witness's own public key"
+      - "toader.satisfy(windices) checks whether the count of valid witness signatures meets the TOAD"
+      - "Insufficient witness receipts route the event to the Partially-Witnessed Escrow (PWE)"
+      - "New witness receipts arriving later trigger reprocessing of PWE-escrowed events"
+    examples:
+      - "TOAD=3 with 5 witnesses: 3 valid witness receipts arrive -> toader.satisfy([0, 2, 4]) -> True -> pass"
+      - "TOAD=3 but only 2 receipts -> toader.satisfy([0, 2]) -> False -> escrow to PWE"
+    related_terms: ["KAWA", "TOAD", "Witness"]
+
+  - term: "Partially-Witnessed Escrow"
+    synonyms: ["PWE", ".pwes [keripy]", "PartiallyWitnessedEscrow [keriox]"]
+    definition: "Holds events that pass signature validation but whose witness receipt count does not yet satisfy the witness threshold (TOAD). Events are reprocessed when new witness receipts arrive."
+    invariants:
+      - "Triggered when toader.satisfy(windices) returns False -- insufficient witness receipts"
+      - "Indexed by prefix + sn in the partially-witnessed escrow subdatabase [.pwes in keripy]"
+      - "Witness receipts accumulate as they arrive from designated witnesses"
+      - "Default timeout: 3600 seconds (keripy TimeoutPWE), configurable via EscrowConfig.partially_witnessed_timeout (keriox)"
+      - "Reprocessed when PartiallyWitnessed or ReceiptOutOfOrder notifications fire (keriox) or during processEscrowPartialWigs sweep (keripy)"
+      - "On reprocessing, if witness threshold is now met, event is accepted to KEL"
+    examples:
+      - "TOAD=3 with 5 witnesses: event has 2 receipts -> PWE. Third receipt arrives -> 3 >= 3 -> accept to KEL."
+      - "Receipt for an event not yet in PWE arrives first -> stored; when event enters PWE, the pre-existing receipt counts toward threshold"
+    related_terms: ["Escrow Cascade", "Witness Threshold Check", "Escrow Timeout", "TOAD"]
+
+events:
+  - name: "WitnessAgreementComplete"
+    payload: "aid: AID, sn: int, event_said: SAID, witness_count: int, threshold: int"
+    triggers: "KAWA completes — sufficient witness receipts collected, event is fully witnessed"
+
+rules:
+  - "KAWA orchestrates consensus (first-seen, quorum), receipting (receipt lifecycle), and dissemination (propagation) via subdomains"
+  - "The controller designates both the witness set and the TOAD"
+  - "TOAD must be at least the BFT quorum floor (ample) for the given witness count"

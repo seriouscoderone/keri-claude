@@ -10,7 +10,7 @@ protocols:
         role: "Provides the boot endpoint for provisioning"
       - domain: "domain://signify-client/key-management"
         role: "Generates edge keys and inception event"
-      - domain: "domain://keri/identity/establishment"
+      - domain: "domain://identity/establishment"
         role: "Validates the agent's inception event"
     trigger: "Controller's Signify client sends POST /boot with inception event"
     steps:
@@ -24,7 +24,7 @@ protocols:
             - ref: "types://signify-client#KeyTier"
         output:
           description: "Agent inception event signed with edge keys"
-          type: "types://keri/identity#InceptionEvent"
+          type: "types://identity#InceptionEvent"
         preconditions:
           - "verification://signify-client/key-management#Passcode"
       - seq: 2
@@ -58,16 +58,16 @@ protocols:
             action: "abort"
             compensation: "Return existing agent reference"
       - seq: 4
-        domain: "domain://keri/identity/establishment"
+        domain: "domain://identity/establishment"
         action: "validate_agent_inception"
-        port: "port://keri/identity/establishment/inbound/validate-event"
+        port: "port://identity/establishment/inbound/validate-event"
         input:
           description: "Agent's inception event"
           types:
-            - ref: "types://keri/identity#InceptionEvent"
+            - ref: "types://identity#InceptionEvent"
         output:
           description: "Agent AID established with key state"
-          type: "types://keri/identity#KeyState"
+          type: "types://identity#KeyState"
         depends_on: [3]
       - seq: 5
         domain: "domain://cloud-agent-service/provisioning"

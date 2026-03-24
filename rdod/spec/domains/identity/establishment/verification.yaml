@@ -1,0 +1,727 @@
+# verification.yaml
+domain_ref: "identity/establishment"
+
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
+properties:
+  # Event Validation Pipeline invariants
+  - invariant: "Step 1: Check if prefix is known. If unknown and event is inception, create new Key Event Verifier. If unknown and not inception, escrow as out-of-order."
+    term: "Event Validation Pipeline"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy())
+        def test_unknown_prefix_handling(event):
+            processor = EventProcessor(kevers={})
+            result = processor.process(event)
+            if event.t in ('icp', 'dip'):
+                assert result.is_accepted() or result.is_escrowed()
+            else:
+                assert result.is_escrowed()  # out-of-order for unknown prefix
+                assert result.escrow_type == 'OOE'
+    strategy: "key_event_strategy()"
+    notes: "Unknown prefix + non-inception = OOE escrow."
+
+  - invariant: "Step 2: Check sequence number. If sn > expected, escrow as out-of-order. If sn < expected, check for duplicate or duplicity."
+    term: "Event Validation Pipeline"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy(max_sn=5),
+               sn_offset=st.integers(min_value=2, max_value=50))
+        def test_sn_check(kel, sn_offset):
+            processor = EventProcessor(kel)
+            expected_sn = len(kel.events)
+            future_event = build_event(kel.aid, sn=expected_sn + sn_offset)
+            result = processor.process(future_event)
+            assert result.escrow_type == 'OOE'
+    strategy: "kel_strategy(max_sn=5), st.integers(2..50)"
+    notes: "Future sn events are escrowed as out-of-order."
+
+  - invariant: "Step 3: If sn == expected, call full validation (valSigsWigsDel / validate_event)."
+    term: "Event Validation Pipeline"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy(), valid_event=next_valid_event_strategy())
+        def test_expected_sn_validates(kel, valid_event):
+            processor = EventProcessor(kel)
+            valid_event.sn = len(kel.events)
+            result = processor.process(valid_event)
+            # At expected sn, full validation is invoked
+            assert result.validation_attempted
+    strategy: "kel_strategy(), next_valid_event_strategy()"
+    notes: "Expected sn triggers full validation pipeline."
+
+  - invariant: "The pipeline is re-entrant: escrowed events are reprocessed through the same pipeline when their blocking condition resolves."
+    term: "Event Validation Pipeline"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy(), events=ordered_event_batch_strategy())
+        def test_reentrant_processing(kel, events):
+            processor = EventProcessor(kel)
+            # Submit events out of order
+            for e in reversed(events):
+                processor.process(e)
+            # Process escrows
+            resolved = processor.process_escrows()
+            # All events should eventually be accepted or timed out
+            for e in events:
+                status = processor.get_status(e.said)
+                assert status in ('accepted', 'escrowed', 'timed_out')
+    strategy: "kel_strategy(), ordered_event_batch_strategy()"
+    notes: "Escrow reprocessing uses the same validation path."
+
+  # Dual Threshold Verification invariants
+  - invariant: "Step 1: Verify signature count -- at least one valid signature required"
+    term: "Dual Threshold Verification"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        valid_sig_count = Int('valid_sig_count')
+        proceeds = Bool('proceeds')
+        s = Solver()
+        s.add(proceeds == (valid_sig_count >= 1))
+        s.add(valid_sig_count == 0, proceeds)
+        assert s.check() == unsat  # Cannot proceed with 0 valid sigs
+    notes: "Minimum one valid signature is a hard boundary."
+
+  - invariant: "Step 3: Check signing threshold satisfaction -- tholder.satisfy(indices) with verified signature indices"
+    term: "Dual Threshold Verification"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(threshold=st.integers(min_value=1, max_value=5),
+               n_valid=st.integers(min_value=0, max_value=10))
+        def test_signing_threshold_check(threshold, n_valid):
+            indices = list(range(n_valid))
+            tholder = parse_threshold(threshold)
+            result = tholder.satisfy(indices)
+            assert result == (n_valid >= threshold)
+    strategy: "st.integers for threshold and valid sig count"
+    notes: "Threshold satisfaction is deterministic."
+
+  - invariant: "Step 4 (rotation only): Check pre-rotation binding -- ntholder.satisfy(ondices) using exposed next-key indices"
+    term: "Dual Threshold Verification"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_rotation_strategy())
+        def test_pre_rotation_binding_check(kel):
+            for event in kel.events:
+                if event.t in ('rot', 'drt'):
+                    prior_est = kel.prior_establishment(event)
+                    ondices = compute_ondices(event, prior_est)
+                    ntholder = parse_threshold(prior_est.nt)
+                    assert ntholder.satisfy(ondices)
+    strategy: "kel_with_rotation_strategy()"
+    notes: "Pre-rotation binding is checked only for rotation events."
+
+  - invariant: "Failure at any step routes to the appropriate escrow queue (PSE for sigs, PWE for witnesses, PDE for delegation)"
+    term: "Dual Threshold Verification"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy(),
+               failure_step=st.sampled_from(['sigs', 'witnesses', 'delegation']))
+        def test_failure_routes_to_escrow(event, failure_step):
+            if failure_step == 'sigs':
+                result = validate_with_insufficient_sigs(event)
+                assert result.escrow_type == 'PSE'
+            elif failure_step == 'witnesses':
+                result = validate_with_insufficient_witnesses(event)
+                assert result.escrow_type == 'PWE'
+            elif failure_step == 'delegation':
+                result = validate_with_missing_delegation(event)
+                assert result.escrow_type == 'PDE'
+    strategy: "key_event_strategy(), st.sampled_from(['sigs', 'witnesses', 'delegation'])"
+    notes: "Each failure type routes to its specific escrow."
+
+  # Signature Verification invariants
+  - invariant: "Each Siger carries an index specifying its position in the signing key list"
+    term: "Signature Verification"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(siger=siger_strategy())
+        def test_siger_has_index(siger):
+            assert hasattr(siger, 'index')
+            assert siger.index >= 0
+    strategy: "siger_strategy()"
+    notes: "Every indexed signature must have a non-negative index."
+
+  - invariant: "For each Siger: verfer_at[siger.index].verify(siger.raw, event_raw) must return True"
+    term: "Signature Verification"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(key_pair=ed25519_keypair_strategy(),
+               event_raw=st.binary(min_size=64, max_size=2048))
+        def test_siger_verification(key_pair, event_raw):
+            privkey, pubkey = key_pair
+            sig = sign(privkey, event_raw)
+            verfer = Verfer(raw=pubkey)
+            assert verfer.verify(sig, event_raw)
+    strategy: "ed25519_keypair_strategy(), st.binary(64..2048)"
+    notes: "Cryptographic verification at each index."
+
+  - invariant: "Invalid signatures are silently dropped -- only valid indices are collected"
+    term: "Signature Verification"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(n_keys=st.integers(min_value=1, max_value=5),
+               bad_indices=st.lists(st.integers(min_value=0, max_value=4), min_size=0, max_size=3))
+        def test_invalid_sigs_dropped(n_keys, bad_indices):
+            keys = generate_keypairs(n_keys)
+            event_raw = b'test_event'
+            sigs = [sign(keys[i][0], event_raw) for i in range(n_keys)]
+            # Corrupt some signatures
+            for idx in bad_indices:
+                if idx < len(sigs):
+                    sigs[idx] = b'\x00' * len(sigs[idx])
+            valid_indices = verify_all_sigs(sigs, [k[1] for k in keys], event_raw)
+            for idx in bad_indices:
+                if idx < n_keys:
+                    assert idx not in valid_indices
+    strategy: "st.integers for key count, st.lists for bad indices"
+    notes: "Bad signatures are dropped, not errors."
+
+  - invariant: "At least one valid signature is required to proceed (otherwise immediate reject)"
+    term: "Signature Verification"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        valid_count = Int('valid_count')
+        proceeds = Bool('proceeds')
+        s = Solver()
+        s.add(proceeds == (valid_count >= 1))
+        s.add(valid_count == 0, proceeds)
+        assert s.check() == unsat
+    notes: "Zero valid signatures = immediate rejection."
+
+  # Threshold Satisfaction invariants
+  - invariant: "Simple threshold: len(valid_indices) >= M where threshold is M"
+    term: "Threshold Satisfaction"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        M, n_valid = Ints('M n_valid')
+        satisfied = Bool('satisfied')
+        s = Solver()
+        s.add(M >= 1, n_valid >= 0)
+        s.add(satisfied == (n_valid >= M))
+        # Prove: if satisfied, then n_valid >= M
+        s.add(satisfied, n_valid < M)
+        assert s.check() == unsat
+    notes: "Simple threshold is a direct count comparison."
+
+  - invariant: "Weighted threshold: sum of weights at valid_indices >= 1.0"
+    term: "Threshold Satisfaction"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        w0, w1, w2 = Reals('w0 w1 w2')
+        sum_weights = Real('sum_weights')
+        satisfied = Bool('satisfied')
+        s = Solver()
+        s.add(w0 >= 0, w1 >= 0, w2 >= 0)
+        s.add(sum_weights == w0 + w1 + w2)
+        s.add(satisfied == (sum_weights >= 1))
+        # With weights [1/2, 1/2, 1/2], selecting indices [0,1] -> sum=1 -> satisfied
+        s.add(w0 == RealVal('1/2'), w1 == RealVal('1/2'), w2 == RealVal(0))
+        s.add(satisfied)
+        assert s.check() == sat
+    notes: "Weighted threshold sum >= 1 criterion via SMT."
+
+  # Pre-rotation Binding invariants
+  - invariant: "Each Siger carries index (current key position) and ondex (next key position)"
+    term: "Pre-rotation Binding"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(siger=rotation_siger_strategy())
+        def test_siger_has_index_and_ondex(siger):
+            assert hasattr(siger, 'index') and siger.index >= 0
+            assert hasattr(siger, 'ondex') and siger.ondex >= 0
+    strategy: "rotation_siger_strategy()"
+    notes: "Rotation sigers carry both index and ondex."
+
+  - invariant: "For each siger: digest(new_key_at[index]) must equal prior_next_digest_at[ondex]"
+    term: "Pre-rotation Binding"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(key_pair=ed25519_keypair_strategy())
+        def test_pre_rotation_digest_match(key_pair):
+            privkey, pubkey = key_pair
+            expected_digest = compute_digest(pubkey)
+            actual_digest = compute_digest(pubkey)
+            assert expected_digest == actual_digest
+            # Wrong key should not match
+            other_pubkey = generate_keypair()[1]
+            assume(other_pubkey != pubkey)
+            assert compute_digest(other_pubkey) != expected_digest
+    strategy: "ed25519_keypair_strategy()"
+    notes: "Digest of new key must exactly match pre-committed digest."
+
+  - invariant: "This prevents an attacker from rotating to arbitrary keys -- they must use the pre-committed keys"
+    term: "Pre-rotation Binding"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(prior_digests=digest_list_strategy(min_size=1, max_size=5),
+               attacker_keys=key_list_strategy(min_size=1, max_size=5))
+        def test_attacker_cannot_rotate(prior_digests, attacker_keys):
+            # Attacker's random keys should not match pre-committed digests
+            assume(all(compute_digest(k) not in prior_digests for k in attacker_keys))
+            ondices = compute_ondices_for_keys(attacker_keys, prior_digests)
+            assert len(ondices) == 0  # No matches
+    strategy: "digest_list_strategy(), key_list_strategy()"
+    notes: "Random keys cannot match pre-committed digests (with overwhelming probability)."
+
+  # Witness Threshold Check invariants
+  - invariant: "toader.satisfy(windices) checks whether the count of valid witness signatures meets the TOAD"
+    term: "Witness Threshold Check"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        toad, n_receipts = Ints('toad n_receipts')
+        satisfied = Bool('satisfied')
+        s = Solver()
+        s.add(toad >= 0, n_receipts >= 0)
+        s.add(satisfied == (n_receipts >= toad))
+        # If satisfied, receipts >= toad
+        s.add(satisfied, n_receipts < toad)
+        assert s.check() == unsat
+    notes: "Witness threshold is a simple count comparison."
+
+  - invariant: "Insufficient witness receipts route the event to the Partially-Witnessed Escrow (PWE)"
+    term: "Witness Threshold Check"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(toad=st.integers(min_value=1, max_value=5),
+               n_receipts=st.integers(min_value=0, max_value=5))
+        def test_insufficient_witnesses_escrow(toad, n_receipts):
+            assume(n_receipts < toad)
+            result = check_witness_threshold(toad, list(range(n_receipts)))
+            assert result.escrow_type == 'PWE'
+    strategy: "st.integers for toad and receipt count"
+    notes: "Below TOAD = PWE escrow."
+
+  # Delegation Validation invariants
+  - invariant: "Only applies to delegated event types (dip and drt)"
+    term: "Delegation Validation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy())
+        def test_delegation_only_for_delegated(event):
+            needs_delegation = event.t in ('dip', 'drt')
+            if not needs_delegation:
+                assert not requires_delegation_check(event)
+    strategy: "key_event_strategy()"
+    notes: "Delegation check is skipped for non-delegated event types."
+
+  - invariant: "If the delegator's anchoring event is not yet known, the event is escrowed to PDE"
+    term: "Delegation Validation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(dip=delegated_inception_strategy())
+        def test_missing_delegation_seal_escrows(dip):
+            empty_delegator_kel = KEL()
+            result = validate_delegation(dip, empty_delegator_kel)
+            assert result.escrow_type == 'PDE'
+    strategy: "delegated_inception_strategy()"
+    notes: "Missing delegator seal = PDE escrow."
+
+  # Local Source Protection invariants
+  - invariant: "Applies when: event source is remote AND (AID is locally owned OR locally witnessed OR locally delegated)"
+    term: "Local Source Protection"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(is_remote=st.booleans(),
+               is_local_aid=st.booleans(),
+               is_local_witness=st.booleans())
+        def test_local_source_protection(is_remote, is_local_aid, is_local_witness):
+            triggers = is_remote and (is_local_aid or is_local_witness)
+            result = check_local_source_protection(is_remote, is_local_aid, is_local_witness)
+            assert result.is_misfit == triggers
+    strategy: "st.booleans() for each condition"
+    notes: "Boolean conjunction: remote AND (local_aid OR local_witness)."
+
+  - invariant: "Checked early in the validation pipeline, before signature verification"
+    term: "Local Source Protection"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy())
+        def test_local_source_before_sigs(event):
+            processor = EventProcessor()
+            steps = processor.get_validation_steps(event)
+            local_check_idx = steps.index('local_source_protection')
+            sig_check_idx = steps.index('signature_verification')
+            assert local_check_idx < sig_check_idx
+    strategy: "key_event_strategy()"
+    notes: "Local source protection runs before expensive signature verification."
+
+  # Event Field Structure invariants (from serialization domain)
+  - invariant: "Inception order: v, t, d, i, s, kt, k, nt, n, bt, b, c, a"
+    term: "Event Field Structure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(icp=inception_event_strategy())
+        def test_inception_field_order(icp):
+            keys = list(icp.ked.keys())
+            expected = ['v', 't', 'd', 'i', 's', 'kt', 'k', 'nt', 'n', 'bt', 'b', 'c', 'a']
+            assert keys == expected
+    strategy: "inception_event_strategy()"
+    notes: "Normative field order for icp."
+
+  - invariant: "Rotation order: v, t, d, i, s, p, kt, k, nt, n, bt, br, ba, c, a"
+    term: "Event Field Structure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(rot=rotation_event_strategy())
+        def test_rotation_field_order(rot):
+            keys = list(rot.ked.keys())
+            expected = ['v', 't', 'd', 'i', 's', 'p', 'kt', 'k', 'nt', 'n', 'bt', 'br', 'ba', 'c', 'a']
+            assert keys == expected
+    strategy: "rotation_event_strategy()"
+    notes: "Normative field order for rot."
+
+  - invariant: "Interaction order: v, t, d, i, s, p, a"
+    term: "Event Field Structure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(ixn=interaction_event_strategy())
+        def test_interaction_field_order(ixn):
+            keys = list(ixn.ked.keys())
+            expected = ['v', 't', 'd', 'i', 's', 'p', 'a']
+            assert keys == expected
+    strategy: "interaction_event_strategy()"
+    notes: "Normative field order for ixn."
+
+  # Field Ordering invariants
+  - invariant: "Reordering fields invalidates the SAID — the digest changes because the byte serialization changes"
+    term: "Field Ordering"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy())
+        def test_reorder_changes_said(event):
+            original_said = event.said
+            reordered = reorder_fields(event.ked)
+            assume(list(reordered.keys()) != list(event.ked.keys()))
+            reordered_said = compute_said_from_ked(reordered)
+            assert reordered_said != original_said
+    strategy: "key_event_strategy()"
+    notes: "Byte-level serialization means order matters for SAID."
+
+  # Quorum Calculation invariants
+  - invariant: "simple(n) = floor(n/2) + 1 — simple majority of n participants"
+    term: "Quorum Calculation"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        n = Int('n')
+        result = Int('result')
+        s = Solver()
+        s.add(n >= 1)
+        s.add(result == n / 2 + 1)
+        s.add(n == 5, result != 3)
+        assert s.check() == unsat  # simple(5) must be 3
+    notes: "Simple majority formula: floor(n/2) + 1."
+
+  # Seal Types invariants
+  - invariant: "Digest Seal (SealDigest): {d: SAID} — binds an arbitrary data digest to the KEL"
+    term: "Seal Types"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(said=said_strategy())
+        def test_digest_seal_structure(said):
+            seal = SealDigest(d=said)
+            assert hasattr(seal, 'd')
+            assert seal.d == said
+            assert not hasattr(seal, 'i')
+            assert not hasattr(seal, 's')
+    strategy: "said_strategy()"
+    notes: "Digest seal has exactly one field: d."
+
+  - invariant: "Event Seal (SealEvent): {i: prefix, s: sn, d: SAID} — binds a specific event"
+    term: "Seal Types"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(prefix=aid_strategy(), sn=st.integers(min_value=0, max_value=1000),
+               said=said_strategy())
+        def test_event_seal_structure(prefix, sn, said):
+            seal = SealEvent(i=prefix, s=sn, d=said)
+            assert seal.i == prefix
+            assert seal.s == sn
+            assert seal.d == said
+    strategy: "aid_strategy(), st.integers(0..1000), said_strategy()"
+    notes: "Event seal has three fields: i, s, d."
+
+contracts:
+  - port_ref: "port://identity/establishment/inbound/validate-event"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda event, key_state: event is not None and key_state is not None"
+        description: "Event and key state must be provided"
+      - formal:
+          language: python
+          expression: "lambda raw, sigers, verfers: len(sigers) >= 1 and len(verfers) >= 1"
+        description: "At least one signature and one public key for verification"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda event, key_state, result: (
+                isinstance(result, ValidationPassed) or isinstance(result, ValidationFailure)
+            )
+        description: "Returns pass or typed failure"
+      - formal:
+          language: python
+          expression: |
+            lambda raw, sigers, verfers, indices: all(
+                0 <= idx < len(verfers) for idx in indices
+            )
+        description: "validate_signatures returns indices within verfers bounds"
+
+  - port_ref: "port://identity/establishment/inbound/validate-rotation"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda sigers, new_keys, prior_next, ntholder: len(new_keys) >= 1 and len(prior_next) >= 1"
+        description: "Rotation validation requires keys and prior digests"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda sigers, new_keys, prior_next, ntholder, result: (
+                result.is_ok() and all(
+                    compute_digest(new_keys[s.index]) == prior_next[s.ondex]
+                    for s in sigers if s.ondex is not None
+                    for idx in result.value()
+                )
+            ) or result.is_err()
+        description: "On success, all matched ondices have valid digest bindings"
+
+  - port_ref: "port://identity/establishment/inbound/validate-delegation"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda event, delegator_aid: event.t in ('dip', 'drt') and delegator_aid is not None"
+        description: "Only delegated events and valid delegator AID"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda event, delegator_aid, result: (
+                result.is_ok() or result.is_err()
+            )
+        description: "Returns True if seal found, error otherwise"
+
+  - port_ref: "port://identity/establishment/outbound/state-lookup"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None"
+        description: "AID must be provided"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, state: state is None or state.k is not None"
+        description: "Key state is either absent or complete"
+
+  - port_ref: "port://identity/establishment/inbound/event-processing"
+    preconditions:
+      - description: "Event must be a valid KERI establishment event (icp, rot, dip, drt) or non-establishment event (ixn)"
+        formal:
+          language: "pseudocode"
+          expression: "event.t in ['icp', 'rot', 'ixn', 'dip', 'drt']"
+      - description: "Event must have at least one verified controller signature"
+        formal:
+          language: "pseudocode"
+          expression: "len(verified_signatures(event, sigers)) >= 1"
+      - description: "Event SAID must be self-consistent"
+        formal:
+          language: "pseudocode"
+          expression: "compute_said(event_body) == event.d"
+    postconditions:
+      - description: "On success: event accepted to KEL, key state updated if establishment event"
+        formal:
+          language: "pseudocode"
+          expression: "db.get_event(event.i, event.s) == event AND (is_establishment(event) implies key_state(event.i).sn == event.s)"
+      - description: "On escrow: event stored in appropriate escrow queue with timeout"
+        formal:
+          language: "pseudocode"
+          expression: "escrowed(event) implies escrow_queue(event) in [OOE, PSE, PWE, PDE, LDE, MFE]"
+      - description: "On rejection: no state change, error raised"
+        formal:
+          language: "pseudocode"
+          expression: "rejected(event) implies key_state(event.i) == key_state_before"
+
+state_machines:
+  - name: "Event Validation Pipeline"
+    term: "Event Validation Pipeline"
+    states:
+      - "received"
+      - "prefix_checked"
+      - "sn_checked"
+      - "local_source_checked"
+      - "sig_verified"
+      - "threshold_checked"
+      - "pre_rotation_checked"
+      - "witness_checked"
+      - "delegation_checked"
+      - "accepted"
+      - "escrowed_ooe"
+      - "escrowed_pse"
+      - "escrowed_pwe"
+      - "escrowed_pde"
+      - "escrowed_lde"
+      - "escrowed_misfit"
+      - "rejected"
+    transitions:
+      - from: "received"
+        to: "prefix_checked"
+        trigger: "event arrives at processor"
+        guard: "true"
+      - from: "prefix_checked"
+        to: "escrowed_ooe"
+        trigger: "prefix unknown and not inception"
+        guard: "prefix not in kevers and event.t not in ('icp', 'dip')"
+      - from: "prefix_checked"
+        to: "sn_checked"
+        trigger: "prefix known or inception"
+        guard: "prefix in kevers or event.t in ('icp', 'dip')"
+      - from: "sn_checked"
+        to: "escrowed_ooe"
+        trigger: "sn > expected"
+        guard: "event.sn > expected_sn"
+      - from: "sn_checked"
+        to: "escrowed_lde"
+        trigger: "sn < expected and different SAID"
+        guard: "event.sn < expected_sn and event.said != accepted_at[event.sn].said"
+      - from: "sn_checked"
+        to: "accepted"
+        trigger: "sn < expected and same SAID (idempotent duplicate)"
+        guard: "event.sn < expected_sn and event.said == accepted_at[event.sn].said"
+      - from: "sn_checked"
+        to: "local_source_checked"
+        trigger: "sn == expected"
+        guard: "event.sn == expected_sn"
+      - from: "local_source_checked"
+        to: "escrowed_misfit"
+        trigger: "remote source for local AID"
+        guard: "source == 'remote' and (is_local_aid or is_local_witness)"
+      - from: "local_source_checked"
+        to: "sig_verified"
+        trigger: "local source or non-local AID"
+        guard: "source == 'local' or (not is_local_aid and not is_local_witness)"
+      - from: "sig_verified"
+        to: "rejected"
+        trigger: "zero valid signatures"
+        guard: "len(valid_sig_indices) == 0"
+      - from: "sig_verified"
+        to: "threshold_checked"
+        trigger: "at least one valid signature"
+        guard: "len(valid_sig_indices) >= 1"
+      - from: "threshold_checked"
+        to: "escrowed_pse"
+        trigger: "signing threshold not satisfied"
+        guard: "not tholder.satisfy(valid_sig_indices)"
+      - from: "threshold_checked"
+        to: "pre_rotation_checked"
+        trigger: "signing threshold satisfied and event is rotation"
+        guard: "tholder.satisfy(valid_sig_indices) and event.t in ('rot', 'drt')"
+      - from: "threshold_checked"
+        to: "witness_checked"
+        trigger: "signing threshold satisfied and event is not rotation"
+        guard: "tholder.satisfy(valid_sig_indices) and event.t not in ('rot', 'drt')"
+      - from: "pre_rotation_checked"
+        to: "escrowed_pse"
+        trigger: "pre-rotation binding fails (next threshold not met)"
+        guard: "not ntholder.satisfy(valid_ondices)"
+      - from: "pre_rotation_checked"
+        to: "witness_checked"
+        trigger: "pre-rotation binding passes (dual threshold satisfied)"
+        guard: "ntholder.satisfy(valid_ondices)"
+      - from: "witness_checked"
+        to: "escrowed_pwe"
+        trigger: "witness threshold not satisfied"
+        guard: "not toader.satisfy(witness_indices)"
+      - from: "witness_checked"
+        to: "delegation_checked"
+        trigger: "witness threshold satisfied and event is delegated"
+        guard: "toader.satisfy(witness_indices) and event.t in ('dip', 'drt')"
+      - from: "witness_checked"
+        to: "accepted"
+        trigger: "witness threshold satisfied and event is non-delegated"
+        guard: "toader.satisfy(witness_indices) and event.t not in ('dip', 'drt')"
+      - from: "delegation_checked"
+        to: "escrowed_pde"
+        trigger: "delegator seal not found"
+        guard: "not delegation_seal_found(event)"
+      - from: "delegation_checked"
+        to: "accepted"
+        trigger: "delegator seal found"
+        guard: "delegation_seal_found(event)"
+    invariants:
+      - "Every event either reaches 'accepted', an escrow state, or 'rejected'"
+      - "No event bypasses signature verification to reach 'accepted'"
+      - "Rotation events must pass through 'pre_rotation_checked' before 'witness_checked'"
+      - "Delegated events must pass through 'delegation_checked' before 'accepted'"
+      - "Local source protection is checked before signature verification"
+      - "Escrowed events re-enter the pipeline at 'received' when their blocking condition resolves"
+    initial_state: "received"
+    terminal_states: ["accepted", "rejected", "escrowed_ooe", "escrowed_pse", "escrowed_pwe", "escrowed_pde", "escrowed_lde", "escrowed_misfit"]

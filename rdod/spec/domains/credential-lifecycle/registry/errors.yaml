@@ -1,0 +1,119 @@
+# errors.yaml
+domain_ref: "credential-lifecycle/registry"
+
+# Error catalog for the Registry Management domain.
+# Covers registry inception (rip/vcp), registry rotation (vrt),
+# and backer configuration validation.
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action
+#   fatal      — unrecoverable; event is permanently rejected
+
+errors:
+  - name: "RegistryAlreadyExistsError"
+    description: "Attempted to create a registry with a REGID that already exists"
+    cause: "A registry inception event (rip/vcp) was submitted but a registry with this REGID is already established"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "regid"
+        type: "string"
+        description: "The duplicate REGID"
+    related_port: "port://credential-lifecycle/registry/inbound/registry-management"
+
+  - name: "RegistryNotOwnedError"
+    description: "Issuer AID does not match the registry's owner"
+    cause: "Credential issuance or registry rotation attempted by an AID that is not the registry's designated issuer"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "regid"
+        type: "string"
+        description: "The registry REGID"
+      - field: "issuer_aid"
+        type: "string"
+        description: "The AID that attempted the operation"
+      - field: "owner_aid"
+        type: "string"
+        description: "The registry's actual owner"
+    related_port: "port://credential-lifecycle/registry/inbound/registry-management"
+
+  - name: "InvalidBackerConfigError"
+    description: "Registry backer configuration is invalid"
+    cause: "Backer threshold exceeds backer count, or backers specified for a backerless registry"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "regid"
+        type: "string"
+        description: "The registry REGID"
+      - field: "backer_count"
+        type: "integer"
+        description: "Number of backers"
+      - field: "backer_threshold"
+        type: "integer"
+        description: "Configured threshold"
+    related_port: "port://credential-lifecycle/registry/inbound/registry-management"
+
+  - name: "NoBackersRotationError"
+    description: "Attempted to rotate a registry that has the NoBackers config trait"
+    cause: "A VRT event was submitted for a backerless registry — rotation is structurally invalid for registries with the NoBackers trait"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "regid"
+        type: "string"
+        description: "The backerless registry REGID"
+    related_port: "port://credential-lifecycle/registry/inbound/registry-management"
+
+  - name: "RegistrySequenceError"
+    description: "Registry management event has an invalid sequence number"
+    cause: "VRT event sn does not equal current registry sn + 1 — sequence gap, duplicate, or reversal detected"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "regid"
+        type: "string"
+        description: "The registry REGID"
+      - field: "received_sn"
+        type: "integer"
+        description: "The sequence number in the VRT event"
+      - field: "expected_sn"
+        type: "integer"
+        description: "The expected next sequence number (current sn + 1)"
+    related_port: "port://credential-lifecycle/registry/inbound/registry-management"
+
+  - name: "MissingKELSealError"
+    description: "Registry management event is not anchored in the issuer's KEL"
+    cause: "A registry inception (rip) or rotation (vrt) event was submitted without a corresponding anchor seal in the issuer's KEL"
+    recovery: "escrow"
+    severity: "transient"
+    context:
+      - field: "regid"
+        type: "string"
+        description: "The registry REGID"
+      - field: "issuer_aid"
+        type: "string"
+        description: "The issuer whose KEL lacks the seal"
+      - field: "event_said"
+        type: "string"
+        description: "The SAID of the unanchored registry event"
+    related_port: "port://credential-lifecycle/registry/inbound/registry-management"
+
+  - name: "ConfigTraitMutationError"
+    description: "Attempted to modify immutable config traits after registry inception"
+    cause: "A rotation event (vrt) attempted to change config traits (e.g., NoBackers, EstOnly) that were set at inception and are immutable"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "regid"
+        type: "string"
+        description: "The registry REGID"
+      - field: "inception_traits"
+        type: "array[string]"
+        description: "The config traits set at inception"
+      - field: "attempted_traits"
+        type: "array[string]"
+        description: "The config traits in the rotation event"
+    related_port: "port://credential-lifecycle/registry/inbound/registry-management"

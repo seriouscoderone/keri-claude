@@ -1,0 +1,148 @@
+# ubiquitous-language.yaml
+domain_ref: "identity/state"
+
+terms:
+  - term: "Key Event Verifier"
+    synonyms: ["Kever [keripy]", "IdentifierState [keriox]"]
+    definition: "State machine that tracks one AID's current key state. Initialized from an inception event and updated by each subsequent establishment event. Holds all current key state fields — signing keys, signing threshold, next key digests, next threshold, witness list, witness threshold, configuration traits, and last establishment data. Provides the authoritative answer to signature verification and rotation validation for a single AID."
+    invariants:
+      - "Exactly one instance per AID being tracked — keyed by the AID prefix"
+      - "State is updated only by establishment events (icp, rot, dip, drt)"
+      - "Interaction events (ixn) advance the sequence number and serder but do NOT modify key state fields"
+      - "State is deterministic — the same KEL prefix always produces the same Key Event Verifier state"
+      - "Can be initialized in two ways: from a raw inception event (incept) or from a cached state record (reload)"
+      - "In keripy: Kever class with mutable attributes (verfers, ndigers, tholder, ntholder, wits, toader, lastEst, estOnly, doNotDelegate)"
+      - "In keriox: IdentifierState struct with immutable semantics — apply() returns a new IdentifierState"
+    examples:
+      - "Kever initialized from inception event: sets prefixer, verfers, ndigers, tholder, ntholder, wits, toader, lastEst"
+      - "Kever updated by rotation: verfers replaced with new keys (verified against prior ndigers), new ndigers committed, wits updated via cuts/adds, lastEst updated"
+      - "IdentifierState.apply(&rotation_event) returns a new IdentifierState with updated current, witness_config, and last_est"
+    related_terms: ["Key State", "Establishment Subsequence", "Last Establishment Data", "State Reconstruction", "Configuration Traits"]
+
+  - term: "Last Establishment Data"
+    synonyms: ["lastEst [keripy]", "LastEstLoc [keripy]", "LastEstablishmentData [keriox]", "last_est [keriox]", "ee field [KSN]"]
+    definition: "Snapshot of the most recent establishment event processed by the Key Event Verifier. Records the sequence number and SAID of that event, plus the witness changes (removed and added) it introduced. Used as a required reference for validating the next rotation — the rotation must occur at a sequence number greater than the last establishment event's sequence number, and witness cuts/adds are computed relative to this state."
+    invariants:
+      - "Updated each time an establishment event (icp, rot, dip, drt) is processed by the state machine"
+      - "Contains: sequence number (s), event SAID/digest (d), witnesses removed (br), witnesses added (ba)"
+      - "At inception: lastEst.s = 0, lastEst.d = inception event SAID, br = [], ba = []"
+      - "A rotation at sn <= lastEst.s is stale and rejected (for rot; drt allows sn == lastEst.s for recovery)"
+      - "In keripy: LastEstLoc namedtuple with fields s (int) and d (str qb64 SAID); cuts/adds tracked separately as self.cuts/self.adds"
+      - "In keriox: LastEstablishmentData struct with sn: u64, digest: SaidValue, br: Vec<BasicPrefix>, ba: Vec<BasicPrefix>"
+    examples:
+      - "After inception at sn=0: lastEst = {s: 0, d: 'EABC...', br: [], ba: []}"
+      - "After rotation at sn=4 that removes witness W1 and adds W2: lastEst = {s: 4, d: 'EDEF...', br: ['W1...'], ba: ['W2...']}"
+      - "Rotation attempt at sn=3 when lastEst.s=4 is rejected as stale"
+    related_terms: ["Key Event Verifier", "Establishment Event", "Rotation Event", "Stale Event"]
+
+  - term: "State Reconstruction"
+    synonyms: ["KEL Replay", "compute_state_at_sn [keriox]", "reload [keripy]"]
+    definition: "The process of recomputing current key state by replaying the KEL from inception through all events up to a target sequence number, applying each event to the state machine in order. Enables stateless verification — any validator can reconstruct state from the log alone. Two strategies exist: full replay (apply every event from sn=0) and cache reload (load a previously cached state record)."
+    invariants:
+      - "Replaying the same KEL always produces the same key state (deterministic)"
+      - "Full replay: starts with default/empty IdentifierState, applies each event via the EventSemantics trait (keriox) or processes inception then each subsequent event (keripy)"
+      - "Only establishment events in the replay modify the resulting key state; interaction events are applied for hash-chain continuity but leave key state unchanged"
+      - "Cache reload: loads a KeyStateRecord/IdentifierState from the key state cache [.states in keripy], bypassing replay for performance"
+      - "Any validator can independently reconstruct key state from a KEL copy without trusting cached state"
+      - "In keriox: compute_state_at_sn() iterates finalized events from sn=0 to target sn, calling state.apply() on each"
+      - "In keripy: Key State Tracker (Kever in keripy).reload() restores state from a KeyStateRecord; Event Processor (Kevery in keripy) reinitializes Key State Trackers from the key state cache [.states] on startup"
+    examples:
+      - "A new validator bootstrapping: replays KEL [icp, ixn, ixn, rot, ixn, rot] → applies icp to get initial state, skips ixn key state, applies first rot, skips ixn, applies second rot → final key state"
+      - "compute_state_at_sn(prefix, 5): fetches events sn 0..5, sorts, applies each in order, returns IdentifierState at sn=5"
+      - "Key State Tracker reload (Kever.reload(ksr) in keripy): deserializes KeyStateRecord fields into tracker attributes, fetches the corresponding serder from the event store [.evts in keripy]"
+    related_terms: ["Key Event Verifier", "Establishment Subsequence", "Key State", "State Cache"]
+
+  - term: "Establishment Subsequence"
+    synonyms: ["Establishment Event Sequence"]
+    definition: "The ordered subsequence of only the establishment events (inception and rotations) within a KEL, ignoring all interaction events. Key state is derived exclusively from this subsequence. The establishment subsequence determines the key authority chain — each establishment event commits to the keys that will authorize the next one."
+    invariants:
+      - "First event is always an inception (icp or dip)"
+      - "Subsequent events are rotations (rot or drt) — interaction events (ixn) are excluded"
+      - "Key state at any point is fully determined by the establishment subsequence up to that point"
+      - "The establishment subsequence is independently hash-chained via the p (prior) field referencing the previous event's SAID"
+      - "Recovery rotations can supersede interaction events but cannot supersede prior establishment events"
+      - "In keripy: Kever.lastEst.s tracks the sn of the last establishment event in the subsequence"
+      - "In keriox: IdentifierState.last_est.sn tracks the sn of the last establishment event"
+    examples:
+      - "A KEL of [icp(sn=0), ixn(sn=1), ixn(sn=2), rot(sn=3), ixn(sn=4), rot(sn=5)] has establishment subsequence [icp(sn=0), rot(sn=3), rot(sn=5)]"
+      - "Key state after this KEL equals key state from replaying only [icp, rot, rot]"
+      - "A recovery rotation at sn=3 can supersede an ixn at sn=3, but cannot supersede a rot at sn=3"
+    related_terms: ["Key Event Verifier", "Key State", "State Reconstruction", "Last Establishment Data"]
+
+  - term: "Configuration Traits"
+    synonyms: ["c field", "config traits", "cnfg [keripy]", "TraitDex [keripy]"]
+    definition: "Behavioral constraint flags set in the c field of establishment events that restrict what an AID can do. Traits are cumulative — once set in any establishment event, they apply permanently to all subsequent events. The Key Event Verifier enforces these constraints on every event it processes."
+    invariants:
+      - "EstOnly (EO): only establishment events allowed — interaction events are rejected by the state machine"
+      - "DoNotDelegate (DND): the AID cannot serve as a delegator for other AIDs"
+      - "NoBackers: no backers/witnesses required for this AID"
+      - "DID (Delegated Identifier Delegator): validators may treat delegates as the AID itself"
+      - "Traits are cumulative and irreversible — once set, they cannot be removed by subsequent establishment events"
+      - "In keripy: Kever.config() method checks serder.traits (ked['c']), sets self.estOnly and self.doNotDelegate booleans; once True, stays True"
+      - "In keripy: Kever.state() serializes active traits back to the c list for KeyStateRecord"
+      - "Enforcement: Kever.update() checks self.estOnly before allowing interaction events"
+    examples:
+      - "Inception with c=['EO'] — Kever.estOnly set to True; any subsequent ixn event is rejected"
+      - "Inception with c=[], rotation with c=['DND'] — doNotDelegate becomes True permanently"
+      - "Kever.state() with estOnly=True and doNotDelegate=True → c=['EO', 'DND'] in KeyStateRecord"
+    related_terms: ["Key Event Verifier", "Key State", "Establishment Event", "Inception Event"]
+
+  - term: "Incremental State Update"
+    synonyms: ["Kever.update [keripy]", "IdentifierState.apply [keriox]"]
+    definition: "The process of advancing the Key Event Verifier's state by processing a single new event. For establishment events, this updates all key state fields (keys, thresholds, witnesses, lastEst, traits). For interaction events, this advances only the sequence number and current event reference without modifying key state. This is the primary hot path — most events are processed incrementally rather than via full reconstruction."
+    invariants:
+      - "Establishment event update: validates rotation (dual threshold, pre-rotation binding, witness changes), then replaces key state fields"
+      - "Interaction event update: only advances sn and serder; verifies the prior event hash chain and signatures against current key state"
+      - "The update is atomic — either all state fields change or none do (validation failure raises an error)"
+      - "In keripy: Kever.update() dispatches to Kever.rotate() for rot/drt events, or handles ixn directly"
+      - "In keriox: IdentifierState.apply() dispatches to the event's apply_to() implementation via EventSemantics trait"
+      - "After a successful establishment event update: lastEst is updated, config traits are checked and accumulated"
+    examples:
+      - "Processing a rotation: Kever.update() calls Kever.rotate() which returns (tholder, toader, wits, cuts, adds), then update() replaces self.verfers, self.ndigers, self.tholder, self.ntholder, self.wits, self.toader, self.lastEst"
+      - "Processing an interaction: Kever.update() verifies sigs against current verfers/tholder, advances self.sner, updates self.serder"
+      - "In keriox: rotation_event.apply_to(state) calls state.current.verify_next(&self.key_config), computes new witnesses, returns new IdentifierState"
+    related_terms: ["Key Event Verifier", "State Reconstruction", "Establishment Event", "Interaction Event"]
+
+  - term: "Stale Event"
+    synonyms: ["Superseded Event"]
+    definition: "An event whose sequence number is at or below the Key Event Verifier's last establishment event sequence number, making it too old to be a valid new event. Stale events are rejected by the state machine. The exception is recovery rotations (rot at sn > lastEst.s when the current event is ixn, or drt at sn == lastEst.s)."
+    invariants:
+      - "For rot: sn <= lastEst.s is stale and rejected"
+      - "For drt: sn < lastEst.s is stale and rejected (sn == lastEst.s is a valid recovery)"
+      - "Recovery rotation (rot): sn > lastEst.s but sn <= current sn — allowed only if the current event at that sn is an ixn"
+      - "Stale event detection happens in Kever.rotate() before any state mutation"
+    examples:
+      - "Current state: sn=5, lastEst.s=3. A rot at sn=2 is stale (2 <= 3)"
+      - "Current state: sn=5, lastEst.s=3. A rot at sn=4 is a recovery attempt (4 > 3 but 4 <= 5) — valid only if event at sn=4 was an ixn"
+    related_terms: ["Last Establishment Data", "Key Event Verifier", "Recovery Rotation"]
+
+events:
+  - name: "KeyEventVerifierCreated"
+    payload: "aid: AID, sn: 0, key_state: KeyState, source: InceptionEvent"
+    triggers: "An inception event (icp or dip) is processed, creating a new Key Event Verifier for the AID"
+
+  - name: "KeyStateAdvanced"
+    payload: "aid: AID, sn: int, key_state: KeyState, source: EstablishmentEvent, lastEst: LastEstablishmentData"
+    triggers: "An establishment event (rot or drt) is processed, updating the Key Event Verifier's key state fields"
+
+  - name: "SequenceAdvanced"
+    payload: "aid: AID, sn: int, said: SAID"
+    triggers: "An interaction event (ixn) is processed, advancing only the sequence number and event reference without modifying key state"
+
+  - name: "ConfigTraitActivated"
+    payload: "aid: AID, trait: TraitCode, source_sn: int"
+    triggers: "An establishment event introduces a new configuration trait that was not previously active for the AID"
+
+  - name: "StateReconstructed"
+    payload: "aid: AID, sn: int, key_state: KeyState, method: 'replay' | 'cache'"
+    triggers: "Key state is reconstructed either by replaying the KEL from inception or by loading from the state cache"
+
+rules:
+  - "One Key Event Verifier per AID — the state machine is keyed by AID prefix"
+  - "Only establishment events (icp, rot, dip, drt) modify key state fields; interaction events (ixn) advance only sn and serder"
+  - "Configuration traits are cumulative and irreversible — once activated, a trait cannot be deactivated"
+  - "A rotation at sn <= lastEst.s is stale and must be rejected (for rot; drt allows sn == lastEst.s for recovery)"
+  - "Recovery rotation is only valid when the superseded event is an interaction event — establishment events cannot be superseded"
+  - "Incremental update and full reconstruction must produce identical key state for the same KEL — determinism is mandatory"
+  - "The state machine enforces EstOnly by rejecting interaction events when the trait is active"
+  - "lastEst is updated at every establishment event to track the most recent establishment event's sn and SAID"

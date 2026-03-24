@@ -1,0 +1,62 @@
+# domain.yaml
+template_version: "1.0"
+id: "delegation/recovery"
+name: "Delegation Recovery"
+description: >
+  Recovery from key compromise via the delegation hierarchy. Covers the joint compromise
+  requirement (must compromise both delegatee and delegator keys), the delegated superseding
+  rules (B1-B3-C) that govern how one delegated rotation can supersede another based on
+  delegating event ordering, custodial delegation where the delegator controls pre-rotated keys,
+  and the security properties of multi-level delegation chains. This is pure protocol logic —
+  no cryptography, no persistence — just the rules governing delegation-based recovery.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Delegated Event Live-attacks, Superseding Rules B1-B3 and C, Combined Arms"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: Custodial Delegation, Combined Arms, Delegation Security"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — sections: Combined Arms, Delegation Security, Multi-level Delegation"
+
+ubiquitous_language:
+  - term: "Delegation Recovery"
+    definition: "Recovery from key compromise of a delegated AID via the delegator's additional layer of authority"
+    invariants:
+      - "An exploiter that compromises only the delegatee's keys cannot fully capture the delegated AID"
+      - "Recovery at any level of a delegation chain is possible from the next higher level"
+
+  - term: "Joint Compromise Requirement"
+    definition: "The security property that full exploit of a delegated AID requires simultaneous compromise of both delegatee and delegator authoritative keys"
+    invariants:
+      - "Extends recursively through delegation chains — each level adds an independent key set"
+      - "Significantly raises the bar for successful exploitation versus non-delegated AIDs"
+
+domain_clients:
+  - ref: "domain://delegation"
+    relationship: "Parent delegation domain delegates recovery logic — superseding rules, joint compromise analysis, and custodial delegation semantics"
+    via_port: "port://delegation/recovery/inbound/recovery-rules"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    This is a leaf domain — pure protocol logic with no kernel or external dependencies.
+    The superseding rules B1-B3-C define an ordering relation over delegated rotations based
+    on the delegating event's position in the delegator's KEL. Implementations encode these
+    rules in the event processing pipeline: in keripy, the superseding logic is embedded in
+    Kevery's delegation processing; in keriox, it is part of the validator module. Custodial
+    delegation is a deployment pattern (delegator holds pre-rotated keys) rather than a
+    separate code path — the same cooperative delegation mechanics apply.
+
+issues: []
+
+tags: ["recovery", "superseding", "joint-compromise", "custodial", "security", "combined-arms"]

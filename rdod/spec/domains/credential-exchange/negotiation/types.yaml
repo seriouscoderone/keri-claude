@@ -1,0 +1,39 @@
+domain_ref: "credential-exchange/negotiation"
+
+types:
+  - name: "NegotiationThread"
+    description: "The state of an in-progress IPEX negotiation between two parties. Tracks the message chain and current protocol state."
+    variants:
+      - name: "default"
+        fields:
+          - name: "thread_id"
+            type: "string"
+            required: true
+            description: "SAID of the initial message (apply or grant for direct)"
+          - name: "state"
+            type: "string"
+            required: true
+            description: "Current IPEX FSM state"
+            constraints:
+              enum: ["Idle", "Applied", "Offered", "Agreed", "Granted", "Admitted", "Spurned"]
+          - name: "discloser_aid"
+            type: "string"
+            required: true
+            description: "AID of the credential holder/issuer (sends offer, grant)"
+          - name: "disclosee_aid"
+            type: "string"
+            required: true
+            description: "AID of the credential requester/verifier (sends apply, agree, admit)"
+          - name: "messages"
+            type: "array[map]"
+            required: true
+            description: "Ordered message chain with SAIDs and types"
+          - name: "grant_bundle"
+            type: "TypeRef:credential-exchange#GrantBundle"
+            required: false
+            description: "The credential bundle (set after grant step)"
+        invariants:
+          - "Messages form a SAID chain: each message's p field = prior message's d field"
+          - "State transitions follow the IPEX FSM defined in verification.yaml"
+          - "Admitted and Spurned are terminal — no further messages accepted"
+          - "Role alternation: apply/agree/admit from disclosee; offer/grant from discloser"

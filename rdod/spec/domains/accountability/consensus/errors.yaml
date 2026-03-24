@@ -1,0 +1,58 @@
+# errors.yaml
+domain_ref: "accountability/consensus"
+
+# Error catalog for the Accountability Consensus domain.
+# Covers failures in witness threshold validation, BFT quorum
+# computation, first-seen rule enforcement, and immune constraint
+# checking.
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action
+#   fatal      — unrecoverable; event is permanently rejected
+
+errors:
+  - name: "InsufficientWitnessesError"
+    description: "Witness count is below the BFT quorum floor"
+    cause: "The number of designated witnesses is too few to provide meaningful accountability — fewer than the minimum required for Byzantine fault tolerance"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "witness_count"
+        type: "integer"
+        description: "Number of designated witnesses"
+      - field: "minimum_required"
+        type: "integer"
+        description: "BFT quorum floor"
+
+  - name: "TOADExceedsWitnessCountError"
+    description: "Witness threshold (TOAD) exceeds the number of available witnesses"
+    cause: "The bt field value is greater than the length of the b field — impossible to satisfy"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "toad"
+        type: "integer"
+        description: "The witness threshold"
+      - field: "witness_count"
+        type: "integer"
+        description: "Number of available witnesses"
+
+  - name: "FirstSeenConflictError"
+    description: "A different event already has first-seen status at this (prefix, sn)"
+    cause: "Witness already receipted a different event at the same sequence number — cannot replace first-seen"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "prefix"
+        type: "string"
+        description: "The AID prefix"
+      - field: "sn"
+        type: "integer"
+        description: "The conflicting sequence number"
+      - field: "first_seen_said"
+        type: "string"
+        description: "SAID of the already-receipted event"
+      - field: "conflicting_said"
+        type: "string"
+        description: "SAID of the rejected event"

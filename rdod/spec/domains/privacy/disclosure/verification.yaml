@@ -1,0 +1,127 @@
+# verification.yaml
+domain_ref: "privacy/disclosure"
+
+properties:
+  - invariant: "The compact value is the SAID of the block in its most compact form"
+    term: "Compact Disclosure"
+    technique: smt
+    formal:
+      language: z3
+      expression: "ForAll([block], Implies(is_compact(block), block == said_compute(most_compact_form(expand(block)))))"
+    notes: "Compact form is exactly the SAID — verifiable by expanding and recomputing"
+
+  - invariant: "The schema must include a oneOf composition validating both compact (string) and expanded (object) forms"
+    term: "Compact Disclosure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda schema, section: (
+          'oneOf' in schema['properties'][section]
+          and any(v.get('type') == 'string' for v in schema['properties'][section]['oneOf'])
+          and any(v.get('type') == 'object' for v in schema['properties'][section]['oneOf'])
+        )
+    strategy: "Generate schemas with and without oneOf; verify compact/expanded variants both validate"
+    notes: ""
+
+  - invariant: "Knowledge of schema + SAID is insufficient to discover content when UUID is present"
+    term: "Partial Disclosure"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        Implies(
+          And(has_uuid(block), entropy_bits(block.u) >= 128),
+          Not(Exists([content], And(
+            matches_schema(content, schema),
+            said_compute(content) == block.d,
+            content.u != block.u
+          )))
+        )
+    notes: "UUID prevents rainbow table discovery — infeasible to find content without knowing UUID"
+
+  - invariant: "Disclosure of a parent block does not require disclosure of nested child blocks"
+    term: "Nested Partial Disclosure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda parent, children: (
+          is_valid_disclosure(expand_block(parent))
+          and all(is_compact(child) for child in children)
+        )
+    strategy: "Generate nested blocks; expand parent while keeping children compact; verify validity"
+    notes: "Independent disclosure at each nesting level"
+
+  - invariant: "Disclosee must agree to contractual terms before receiving full disclosure"
+    term: "Chain-Link Confidentiality"
+    technique: symbolic
+    formal:
+      language: python
+      expression: "full_disclosure_only_after_agree(exchange_trace)"
+    notes: "Temporal ordering: offer(terms) -> agree(terms) must precede grant(full)"
+
+  - invariant: "Uses the A field (aggregate section), not the a field (attribute section)"
+    term: "Selective Disclosure"
+    technique: property-based
+    formal:
+      language: python
+      expression: "lambda acdc: is_selective(acdc) == ('A' in acdc and acdc['A'] and 'a' not in acdc)"
+    strategy: "Generate ACDCs with various a/A field combinations"
+    notes: "Selective disclosure uses aggregate section exclusively"
+
+  - invariant: "anyOf composition order must not correlate to actual array order"
+    term: "Selective Disclosure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda schema, blocks: (
+          anyof_order := [s['$id'] for s in schema['anyOf']],
+          block_order := [b['d'] for b in blocks],
+          anyof_order != block_order  # not necessarily equal
+        )[-1]
+    strategy: "Generate schemas and block arrays; verify no positional inference is possible"
+    notes: "Prevents positional inference from schema ordering"
+
+contracts:
+  - port_ref: "port://privacy/disclosure/inbound/mode-definitions"
+    preconditions:
+      - formal:
+          language: python
+          expression: "is_valid_acdc_variant(acdc_variant)"
+        description: "Input must be a structurally valid ACDC variant (compact, partial, or full)"
+    postconditions:
+      - formal:
+          language: python
+          expression: "result in ['compact', 'partial', 'full', 'selective']"
+        description: "classify_mode returns a recognized disclosure mode"
+      - formal:
+          language: python
+          expression: |
+            (result == 'compact') == all(isinstance(acdc_variant.get(s), str) for s in ['a', 'e', 'r'] if s in acdc_variant)
+        description: "compact classification matches all sections being SAID strings"
+
+state_machines:
+  - name: "Disclosure Progression"
+    term: "Graduated Disclosure"
+    states: ["compact", "partial", "full"]
+    transitions:
+      - from: "compact"
+        to: "partial"
+        trigger: "UUID and schema disclosed alongside SAID"
+        guard: "Block has d and u fields"
+      - from: "partial"
+        to: "full"
+        trigger: "Full block content disclosed"
+        guard: "No chain-link terms, or chain-link terms already agreed"
+      - from: "compact"
+        to: "full"
+        trigger: "Full block content disclosed directly"
+        guard: "No chain-link confidentiality requirements"
+    invariants:
+      - "Disclosure is monotonically increasing — cannot retract disclosed information"
+      - "Chain-link confidentiality gates the partial-to-full transition"
+      - "Compact < partial < full in information revealed"
+    initial_state: "compact"
+    terminal_states: ["full"]

@@ -1,0 +1,62 @@
+# domain.yaml
+template_version: "1.0"
+id: "credential-exchange/negotiation"
+name: "Exchange Negotiation"
+description: >
+  IPEX protocol flow — apply, offer, agree, grant, admit, spurn. Structured
+  negotiation for both credential issuance and presentation. Defines the message
+  types, the two exchange patterns (direct issuance vs full negotiation), bespoke
+  issued ACDCs, and the message construction and routing infrastructure. This is
+  pure protocol logic — no cryptography — just the state machine governing how
+  discloser and disclosee negotiate and complete an exchange.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "acdc-specification.md — Issuance and Presentation Exchange (IPEX) section: protocol routes, flow patterns, bespoke issuance"
+  - type: document
+    reference: "KERIArchGroupIssuance.md — IPEX protocol flows, direct issuance shortcut"
+  - type: implementation
+    reference: "keripy — src/keri/app/ipexing.py: protocol flow logic, grant/admit patterns"
+  - type: implementation
+    reference: "keripy — src/keri/core/exchanging.py (Exchanger: generic EXN message router and handler dispatcher)"
+
+ubiquitous_language:
+  - term: "IPEX Negotiation Flow"
+    definition: "The state machine governing the sequence of IPEX messages between discloser and disclosee — from initiation through completion or rejection"
+    invariants:
+      - "Two valid patterns: direct issuance (grant -> admit) and full negotiation (apply -> offer -> agree -> grant -> admit)"
+      - "Any negotiation step may be spurned, terminating that step but not the relationship"
+      - "The protocol is identical for issuance and presentation — only the disclosed content differs"
+
+domain_clients:
+  - ref: "domain://credential-exchange"
+    relationship: "Parent credential exchange domain delegates protocol flow logic to this subdomain"
+    via_port: "port://credential-exchange/negotiation/inbound/negotiate"
+
+subdomains: []
+
+kernels: []
+
+adjacents: []
+
+externals:
+  - name: "Transport"
+    abstraction: "Message delivery between agents"
+    ref: "port://credential-exchange/negotiation/outbound/message-transport"
+    implementation_notes: "Delivers constructed EXN messages to recipient agents. Implementations: HTTP, TCP, or agent-to-agent message relay."
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    This subdomain includes both protocol flow logic and message construction/routing
+    infrastructure (absorbed from the former ipex/messaging subdomain). In keripy,
+    the Exchanger class in exchanging.py provides the generic EXN router, while
+    ipexing.py contains the message construction functions (ipex*Exn()) and the
+    handler dispatch logic. The negotiation domain does not verify signatures
+    or compute proofs — it defines WHAT messages exist and HOW they sequence.
+
+issues: []
+
+tags: ["negotiation", "protocol-flow", "apply", "offer", "agree", "grant", "admit", "spurn", "direct-issuance", "messaging"]

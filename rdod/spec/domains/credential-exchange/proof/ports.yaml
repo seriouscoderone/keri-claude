@@ -1,0 +1,26 @@
+# ports.yaml
+domain_ref: "credential-exchange/proof"
+
+ports:
+  # Inbound -- what clients call
+  - id: "port://credential-exchange/proof/inbound/verify-disclosure"
+    type: inbound
+    name: "Disclosure Verification"
+    contract: "verify_proof_of_issuance(acdc_said: SAID, issuer_commitment: Signature, issuer_key_state: KeyState) -> Result<bool, VerificationError>; verify_proof_of_disclosure(compact_sad: SAD, expanded_sad: SAD) -> Result<bool, VerificationError>; verify_credential_artifacts(acdc: ACDC, tel_event: TELEvent, kel_seal: EventSeal) -> Result<bool, VerificationError>"
+    protocol: "method-call"
+    refs: ["domain://credential-exchange"]
+
+  - id: "port://credential-exchange/proof/inbound/authenticate-message"
+    type: inbound
+    name: "KRAM Authentication"
+    contract: "authenticate_exn(exn_message: ExchangeMessage, sender_key_state: KeyState) -> Result<bool, AuthenticationError>"
+    protocol: "method-call"
+    refs: ["domain://credential-exchange"]
+
+  # Outbound -- what proof delegates to
+  - id: "port://credential-exchange/proof/outbound/tel-chain-validation"
+    type: outbound
+    name: "TEL Chain Validation"
+    contract: "validate_tel_event(tel_event: TELEvent, registry_state: RegistryState) -> Result<bool, TELChainBrokenError>; verify_kel_anchor(kel_seal: EventSeal, issuer_aid: AID) -> Result<bool, MissingKELAnchorError>"
+    protocol: "method-call"
+    refs: ["domain://credential-lifecycle/verification"]

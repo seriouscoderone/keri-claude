@@ -1,0 +1,54 @@
+# errors.yaml
+domain_ref: "accountability/dissemination"
+
+# Error catalog for the Accountability Dissemination domain.
+# Covers failures in event delivery to witnesses, receipt collection,
+# and dissemination protocol execution.
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action
+#   fatal      — unrecoverable; event is permanently rejected
+
+errors:
+  - name: "WitnessUnreachableError"
+    description: "Cannot connect to a designated witness to deliver an event"
+    cause: "Network connectivity failure or witness endpoint not responding"
+    recovery: "retry"
+    severity: "transient"
+    context:
+      - field: "witness_aid"
+        type: "string"
+        description: "The unreachable witness AID"
+      - field: "endpoint"
+        type: "string"
+        description: "The endpoint URL that failed"
+
+  - name: "WitnessRejectionError"
+    description: "Witness rejected the submitted event"
+    cause: "The witness returned an error instead of a receipt — event may have invalid signatures or conflict with first-seen"
+    recovery: "abort"
+    severity: "recoverable"
+    context:
+      - field: "witness_aid"
+        type: "string"
+        description: "The rejecting witness"
+      - field: "reason"
+        type: "string"
+        description: "Rejection reason from the witness"
+
+  - name: "DisseminationTimeoutError"
+    description: "Event dissemination did not complete within the expected time"
+    cause: "Not all designated witnesses responded within the timeout window"
+    recovery: "retry"
+    severity: "transient"
+    context:
+      - field: "responded_count"
+        type: "integer"
+        description: "Number of witnesses that responded"
+      - field: "total_count"
+        type: "integer"
+        description: "Total designated witnesses"
+      - field: "timeout_seconds"
+        type: "integer"
+        description: "Configured timeout"

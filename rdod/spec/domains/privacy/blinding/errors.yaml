@@ -1,0 +1,127 @@
+# errors.yaml
+domain_ref: "privacy/blinding"
+
+# Error catalog for the Blinding (Private State Registry) domain.
+# Covers BLID computation, blinded attribute blocks, shared secret
+# salt derivation, blindable updates, UUID derivation, and state discovery.
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action
+#   fatal      — unrecoverable; event is permanently rejected
+
+errors:
+  - name: "BlindingKeyMismatchError"
+    description: "Shared secret salt does not produce the expected blinded identifiers"
+    cause: "The shared secret between issuer and discloser does not derive the correct UUIDs for the blinded TEL entries"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "registry_said"
+        type: "string"
+        description: "The blinded registry"
+      - field: "expected_uuid"
+        type: "string"
+        description: "The expected derived UUID"
+    related_port: "port://privacy/blinding/inbound/blinded-state"
+
+  - name: "UnblindingError"
+    description: "Cannot unblind a credential status entry"
+    cause: "The blinded TEL entry cannot be correlated to a credential — either the shared secret is wrong or the credential was never issued under this blinded registry"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "blinded_id"
+        type: "string"
+        description: "The blinded identifier that failed unblinding"
+    related_port: "port://privacy/blinding/inbound/blinded-state"
+
+  - name: "InsufficientSaltEntropyError"
+    description: "Shared secret salt has fewer than 128 bits of cryptographic entropy"
+    cause: "The salt provided for UUID derivation does not meet the minimum entropy requirement of 128 bits, making brute-force attacks feasible"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "salt_length_bits"
+        type: "integer"
+        description: "The actual entropy of the provided salt in bits"
+      - field: "minimum_required_bits"
+        type: "integer"
+        description: "The minimum required entropy (128)"
+    related_port: "port://privacy/blinding/inbound/uuid-derivation"
+
+  - name: "UUIDDerivationError"
+    description: "UUID derivation from shared secret salt and sequence number failed"
+    cause: "The hierarchically deterministic key derivation function (argon2/HKDF) failed to produce a valid UUID from the salt and event sequence number"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "salt_present"
+        type: "boolean"
+        description: "Whether a salt was provided"
+      - field: "sequence_number"
+        type: "integer"
+        description: "The event sequence number used for derivation"
+    related_port: "port://privacy/blinding/outbound/kdf"
+
+  - name: "UUIDLengthError"
+    description: "Derived UUID is not at least twice the salt length"
+    cause: "The KDF output is shorter than 2x the salt length, violating the entropy preservation requirement"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "uuid_length"
+        type: "integer"
+        description: "The actual length of the derived UUID"
+      - field: "salt_length"
+        type: "integer"
+        description: "The length of the input salt"
+      - field: "required_uuid_length"
+        type: "integer"
+        description: "The minimum required UUID length (2x salt length)"
+    related_port: "port://privacy/blinding/inbound/uuid-derivation"
+
+  - name: "BLIDComputationError"
+    description: "BLID computation failed due to invalid or missing blinded attribute block fields"
+    cause: "The blinded attribute block is missing required fields (d, u, td, ts) or the qb64 concatenation and Blake3-256 digest failed"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "missing_fields"
+        type: "array[string]"
+        description: "The fields that are missing from the blinded attribute block"
+      - field: "block_type"
+        type: "string"
+        description: "Whether this is a basic (4-field) or bound (6-field) block"
+    related_port: "port://privacy/blinding/inbound/blinded-state"
+
+  - name: "StateDiscoveryError"
+    description: "State discovery exhausted all possible states without finding a BLID match"
+    cause: "No combination of (UUID, candidate ACDC SAID, possible state) produces a BLID matching the bup event's b field — the salt may be wrong or the ACDC SAID is unknown"
+    recovery: "abort"
+    severity: "recoverable"
+    context:
+      - field: "regid"
+        type: "string"
+        description: "The registry REGID"
+      - field: "event_sn"
+        type: "integer"
+        description: "The bup event sequence number"
+      - field: "states_tried"
+        type: "integer"
+        description: "Number of state combinations attempted"
+    related_port: "port://privacy/blinding/inbound/blinded-state"
+
+  - name: "BLIDFieldOrderError"
+    description: "Blinded attribute block fields are concatenated in the wrong order"
+    cause: "The field concatenation order does not match the normative ordering — [d, u, td, ts] for basic blocks or [d, u, td, ts, bn, bd] for bound blocks"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "expected_order"
+        type: "array[string]"
+        description: "The normative field order for this block type"
+      - field: "block_type"
+        type: "string"
+        description: "Whether this is a basic or bound block"
+    related_port: "port://privacy/blinding/inbound/blinded-state"

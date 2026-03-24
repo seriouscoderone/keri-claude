@@ -1,0 +1,302 @@
+# verification.yaml
+domain_ref: "delegation/lifecycle"
+
+properties:
+  - invariant: "Step 1: Every signature on the delegated event MUST verify against the delegatee's current key state; if any signature fails verification, the event MUST be rejected (not escrowed)"
+    term: "Delegation Validation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=delegated_event_strategy(), tamper_sig=st.booleans())
+        def test_step1_signature_verification(event, tamper_sig):
+            if tamper_sig:
+                event.signatures[0] = corrupt_signature(event.signatures[0])
+            key_state = get_key_state(event.aid)
+            all_valid = all(sig.verifies(event.content, key_state) for sig in event.signatures)
+            if all_valid:
+                result = validate_step1(event, key_state)
+                assert result.passed
+            else:
+                result = validate_step1(event, key_state)
+                assert not result.passed
+                assert result.disposition == 'rejected'
+    strategy: "delegated_event_strategy() x st.booleans() for signature tampering"
+    notes: "Step 1 failure is terminal rejection — invalid signatures cannot be fixed by waiting."
+
+  - invariant: "Step 2: For dip events, the di field MUST be present, non-empty, and reference a CESR-qualified AID; for drt events, the delegator MUST be inherited from the inception event's di field; missing or empty di on dip MUST be rejected"
+    term: "Delegation Validation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event_type=st.sampled_from(['dip', 'drt']),
+               di_present=st.booleans(),
+               di_valid=st.booleans())
+        def test_step2_di_field(event_type, di_present, di_valid):
+            if event_type == 'dip':
+                event = build_dip_event(di=generate_aid() if (di_present and di_valid) else ('' if di_present else None))
+                if not di_present or not di_valid:
+                    result = validate_step2(event)
+                    assert not result.passed, "dip without valid di must fail step 2"
+                else:
+                    result = validate_step2(event)
+                    assert result.passed
+            elif event_type == 'drt':
+                event = build_drt_event()
+                # drt inherits delegator from inception
+                result = validate_step2(event)
+                assert result.passed == (event.delegator_from_inception is not None)
+    strategy: "st.sampled_from for event type, st.booleans for di presence and validity"
+    notes: "dip requires explicit di; drt inherits from inception. Both paths must be validated."
+
+  - invariant: "Step 3: The delegator's KEL MUST contain a seal where seal.i == delegated_event.aid AND seal.s == delegated_event.sn AND seal.d == delegated_event.said; if the delegator's KEL is unavailable, the event MUST be escrowed to .delegables; if the KEL is available but no matching seal exists, the event MUST be escrowed to .pdes"
+    term: "Delegation Validation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel_available=st.booleans(), seal_present=st.booleans())
+        def test_step3_seal_location(kel_available, seal_present):
+            event = build_valid_delegated_event()
+            if not kel_available:
+                delegator_kel = None
+                result = validate_step3(event, delegator_kel)
+                assert result.disposition == 'escrowed_delegable'
+            elif not seal_present:
+                delegator_kel = build_kel_without_matching_seal(event)
+                result = validate_step3(event, delegator_kel)
+                assert result.disposition == 'escrowed_pde'
+            else:
+                delegator_kel = build_kel_with_seal(event)
+                result = validate_step3(event, delegator_kel)
+                assert result.passed
+    strategy: "st.booleans for KEL availability and seal presence"
+    notes: "Step 3 has three outcomes: pass, escrow to delegable (no KEL), or escrow to PDE (no seal in KEL)."
+
+  - invariant: "Step 4: The seal's d field MUST exactly equal the delegated event's SAID; if seal.d != event.said, the seal does not authorize this event and step 4 MUST fail"
+    term: "Delegation Validation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(seal=delegation_seal_strategy(), event=delegated_event_strategy())
+        def test_step4_seal_digest_match(seal, event):
+            matches = (seal.d == event.said)
+            result = validate_step4(seal, event)
+            assert result.passed == matches, (
+                f"Step 4: seal.d={seal.d}, event.said={event.said}, "
+                f"expected passed={matches}, got {result.passed}"
+            )
+    strategy: "delegation_seal_strategy() x delegated_event_strategy()"
+    notes: "Final verification step — exact SAID match is the authorization proof."
+
+  - invariant: "Validation step failure routing is deterministic: step 1 failure -> rejected; step 2 failure -> rejected; step 3 failure (no KEL) -> escrowed_delegable; step 3 failure (no seal) -> escrowed_pde; step 4 failure -> rejected; no other disposition is possible"
+    term: "Delegation Validation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(failing_step=st.sampled_from([1, 2, 3, 4]),
+               kel_available=st.booleans())
+        def test_failure_routing_deterministic(failing_step, kel_available):
+            event = build_delegated_event_failing_at(failing_step, kel_available)
+            result = validate_delegation(event)
+            EXPECTED = {
+                1: 'rejected',
+                2: 'rejected',
+                3: 'escrowed_delegable' if not kel_available else 'escrowed_pde',
+                4: 'rejected',
+            }
+            assert result.disposition == EXPECTED[failing_step], (
+                f"Step {failing_step} failure must route to {EXPECTED[failing_step]}, "
+                f"got {result.disposition}"
+            )
+    strategy: "st.sampled_from for failing step, st.booleans for KEL availability"
+    notes: "Failure routing is a fixed mapping — no ambiguity in disposition."
+
+  - invariant: "PDE entries MUST have delegator KEL available but no matching seal; the delegator_kel_available flag MUST be true and seal_found MUST be false for every PDE entry"
+    term: "Partially-Delegated Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(pde_entry=pde_entry_strategy())
+        def test_pde_invariants(pde_entry):
+            assert pde_entry.delegator_kel_available, "PDE entry must have delegator KEL available"
+            assert not pde_entry.seal_found, "PDE entry must not have seal found"
+            assert pde_entry.escrow_type == 'pde'
+    strategy: "pde_entry_strategy()"
+    notes: "PDE is specifically for events where the delegator's KEL is available but no matching seal exists yet."
+
+  - invariant: "Both PDE and delegable escrow entries MUST be pruned after 3600 seconds; at exactly 3600 seconds the entry is expired; at 3599 seconds it is still active"
+    term: "Partially-Delegated Escrow"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        age, timeout = Ints('age timeout')
+        pruned = Bool('pruned')
+        s = Solver()
+        s.add(timeout == 3600)
+        s.add(pruned == (age >= timeout))
+        # Boundary: age == 3599 must NOT be pruned
+        s.add(age == 3599, pruned)
+        assert s.check() == unsat
+        # Boundary: age == 3600 must be pruned
+        s2 = Solver()
+        s2.add(timeout == 3600)
+        s2.add(pruned == (age >= timeout))
+        s2.add(age == 3600, Not(pruned))
+        assert s2.check() == unsat
+    notes: "Exact boundary at 3600s. Off-by-one in either direction is caught by SMT."
+
+  - invariant: "PDE and delegable escrows are mutually exclusive: an event MUST be in exactly one of {pde, delegable, rejected, approved}; the discriminant is delegator KEL availability at the time of step 3 failure"
+    term: "Delegable Event Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(entry=escrow_entry_strategy())
+        def test_escrow_mutual_exclusion(entry):
+            is_delegable = (entry.escrow_type == 'delegable')
+            is_pde = (entry.escrow_type == 'pde')
+            # Mutual exclusion
+            assert is_delegable != is_pde or (not is_delegable and not is_pde), (
+                "An entry cannot be both delegable and PDE simultaneously"
+            )
+            # Discriminant is KEL availability
+            if is_delegable:
+                assert not entry.delegator_kel_available
+            elif is_pde:
+                assert entry.delegator_kel_available
+    strategy: "escrow_entry_strategy()"
+    notes: "The two escrow types are mutually exclusive based on delegator KEL availability."
+
+  - invariant: "A delegated event MUST NOT be inserted into the KEL until its seal status is 'approved'; seal approval requires all four validation steps to pass"
+    term: "Approved Delegation Seals"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=delegated_event_strategy())
+        def test_approval_required_for_kel_insertion(event):
+            result = validate_delegation(event)
+            if result.disposition == 'approved':
+                assert result.step1_passed and result.step2_passed
+                assert result.step3_passed and result.step4_passed
+                # Approved events can be inserted into KEL
+                assert can_insert_to_kel(event)
+            else:
+                # Non-approved events must not be in KEL
+                assert not can_insert_to_kel(event)
+    strategy: "delegated_event_strategy()"
+    notes: "Seal approval is the gate to KEL insertion — all four steps must pass, no shortcuts."
+
+contracts:
+  - port_ref: "port://delegation/lifecycle/inbound/delegation-validation"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda event: event.type in ('dip', 'drt') and event.has_signatures()"
+        description: "Only signed delegated establishment events can be validated"
+      - formal:
+          language: python
+          expression: "lambda event, delegator_kel: delegator_kel is None or delegator_kel.valid()"
+        description: "If delegator KEL is provided, it must be structurally valid"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: result.is_validated() implies (result.signatures_valid and result.di_valid and result.seal_found and result.seal_matches)"
+        description: "Validated result means all four validation steps passed"
+      - formal:
+          language: python
+          expression: "lambda result: result.is_failure() implies result.failure_step in (1, 2, 3, 4)"
+        description: "Failure result identifies which specific step failed"
+
+  - port_ref: "port://delegation/lifecycle/inbound/escrow-management"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda event: event.type in ('dip', 'drt') and event.has_signatures()"
+        description: "Only signed delegated establishment events can be escrowed"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda result: result.is_ok() implies result.escrow_type in ('pde', 'delegable')"
+        description: "Escrowed events are placed in either PDE or delegable escrow"
+      - formal:
+          language: python
+          expression: "lambda delegator_aid, events: all(e.delegator_aid == delegator_aid for e in events)"
+        description: "get_escrowed_for_delegator returns only events for the specified delegator"
+
+  - port_ref: "port://delegation/lifecycle/outbound/escrow-store"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sn, said, event, dt: aid is not None and sn >= 0 and said is not None and event is not None"
+        description: "All required fields must be non-null for escrow storage"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, sn, said: get_pde_iter(aid).contains(sn, said) after put_pde(aid, sn, said, event, dt)"
+        description: "After put_pde, the entry is retrievable via get_pde_iter for the same AID"
+      - formal:
+          language: python
+          expression: "lambda aid, sn, said: not get_pde_iter(aid).contains(sn, said) after rem_pde(aid, sn, said)"
+        description: "After rem_pde, the entry is no longer retrievable"
+
+state_machines:
+  - name: "delegation-validation-pipeline"
+    term: "Delegation Validation"
+    states: ["received", "sig-checked", "di-verified", "seal-located", "approved", "escrowed-pde", "escrowed-delegable", "rejected"]
+    transitions:
+      - from: "received"
+        to: "sig-checked"
+        trigger: "Step 1 passes — event signatures verified against delegatee key state"
+        guard: "All signatures verify against the current key state for the delegatee"
+      - from: "received"
+        to: "rejected"
+        trigger: "Step 1 fails — invalid signatures"
+        guard: "One or more signatures do not verify"
+      - from: "sig-checked"
+        to: "di-verified"
+        trigger: "Step 2 passes — di field references a valid delegator AID"
+        guard: "di field present (dip) or delegator inherited (drt) and AID is valid"
+      - from: "sig-checked"
+        to: "rejected"
+        trigger: "Step 2 fails — invalid or missing delegator reference"
+        guard: "di field missing from dip, or referenced AID is invalid"
+      - from: "di-verified"
+        to: "escrowed-delegable"
+        trigger: "Delegator KEL not available — cannot search for seal"
+        guard: "Delegator's KEL has not been fetched or processed"
+      - from: "di-verified"
+        to: "seal-located"
+        trigger: "Step 3 passes — matching seal found in delegator's KEL"
+        guard: "Delegator's KEL contains a seal with matching (i, s, d)"
+      - from: "di-verified"
+        to: "escrowed-pde"
+        trigger: "Step 3 fails — delegator KEL available but no matching seal"
+        guard: "Delegator's KEL is available but contains no seal matching this event"
+      - from: "seal-located"
+        to: "approved"
+        trigger: "Step 4 passes — seal digest matches delegated event SAID"
+        guard: "seal.d == event.said"
+      - from: "escrowed-pde"
+        to: "seal-located"
+        trigger: "DelegatedEventPromoted — delegator's KEL advances and now contains matching seal"
+        guard: "New event in delegator's KEL contains matching seal"
+      - from: "escrowed-delegable"
+        to: "di-verified"
+        trigger: "Delegator's KEL becomes available — retry validation from step 3"
+        guard: "Delegator's KEL has been fetched and processed"
+    invariants:
+      - "Events must pass steps in order — no skipping from received to seal-located"
+      - "Escrowed events can be promoted back to the validation pipeline when new information arrives"
+      - "Rejected events are terminal — they cannot re-enter the pipeline"
+      - "Approved events have passed all four validation steps and are ready for KEL insertion"
+      - "Escrow timeout (3600s) transitions both escrowed-pde and escrowed-delegable to an implicit pruned state"
+    initial_state: "received"
+    terminal_states: ["approved", "rejected"]

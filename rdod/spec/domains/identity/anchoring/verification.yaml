@@ -1,0 +1,391 @@
+# verification.yaml
+domain_ref: "identity/anchoring"
+
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
+properties:
+  # Seal Binding invariants
+  - invariant: "A seal in an event's anchor list creates a cryptographic commitment at the exact position (prefix, sn, SAID) in the KEL. The commitment is one-way: the seal contains the digest of external data, but the external data is NOT stored in the KEL. The seal is permanent once the event is accepted."
+    term: "Seal"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(data=st.binary(min_size=1, max_size=4096),
+               kel=kel_strategy())
+        def test_seal_binding(data, kel):
+            seal = SealDigest(d=digest(data))
+            ixn = create_interaction(kel.aid, kel.expected_sn, seals=[seal])
+            # Seal creates commitment at this exact KEL position
+            assert ixn.i == kel.aid
+            assert ixn.sn == kel.expected_sn
+            # Data is NOT in the KEL — only the digest
+            assert data not in serialize(ixn), (
+                "External data MUST NOT appear in the serialized event"
+            )
+            assert seal.d == digest(data), (
+                "Seal digest MUST equal the digest of the external data"
+            )
+            # Commitment is permanent after acceptance
+            accepted_kel = kel.append(ixn)
+            assert accepted_kel.event_at(ixn.sn).a[0].d == digest(data)
+    strategy: "st.binary(1..4096), kel_strategy()"
+    notes: "One-way commitment: digest in KEL, data external. Position is (prefix, sn, SAID)."
+
+  # Seal Verification invariants
+  - invariant: "To verify a seal, the verifier MUST compute the digest/SAID of the referenced data and compare it to the seal's d field. If computed_digest != seal.d, verification MUST fail. The comparison is exact byte equality — no normalization, no fuzzy matching."
+    term: "Seal"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(data=st.binary(min_size=1, max_size=4096))
+        def test_seal_verification(data):
+            seal = SealDigest(d=digest(data))
+            # Correct data verifies
+            assert verify_seal(seal, data), (
+                "Seal MUST verify against the original data"
+            )
+            # Any modification to data MUST fail verification
+            if len(data) > 0:
+                modified = bytearray(data)
+                modified[0] ^= 0xFF
+                assert not verify_seal(seal, bytes(modified)), (
+                    "Modified data MUST NOT verify against the seal"
+                )
+            # Verification is exact byte comparison
+            assert digest(data) == seal.d
+    strategy: "st.binary(1..4096)"
+    notes: "Seal verification: compute digest of data, compare to seal.d. Exact match required."
+
+  # Interaction Event Constraint invariants
+  - invariant: "Interaction events (ixn) MUST NOT contain establishment-only fields: kt, k, nt, n, bt, b, br, ba. These fields change key state and are reserved for icp, rot, dip, drt events. If any of these fields appear in an ixn event, the event MUST be rejected as malformed."
+    term: "Interaction Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        ESTABLISHMENT_ONLY_FIELDS = {'kt', 'k', 'nt', 'n', 'bt', 'b', 'br', 'ba'}
+
+        @given(ixn=interaction_event_strategy())
+        def test_ixn_no_establishment_fields(ixn):
+            assert ixn.t == 'ixn'
+            for field in ESTABLISHMENT_ONLY_FIELDS:
+                assert field not in ixn.ked, (
+                    f"ixn MUST NOT contain establishment-only field '{field}'"
+                )
+    strategy: "interaction_event_strategy()"
+    notes: "Strict field separation: ixn carries v, t, d, i, s, p, a only."
+
+  - invariant: "An interaction event MUST have exactly the fields: v, t, d, i, s, p, a — in that order. Any additional fields MUST cause rejection. Any missing fields MUST cause rejection."
+    term: "Interaction Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(ixn=interaction_event_strategy())
+        def test_ixn_field_structure(ixn):
+            expected_fields = ['v', 't', 'd', 'i', 's', 'p', 'a']
+            actual_fields = list(ixn.ked.keys())
+            assert actual_fields == expected_fields, (
+                f"ixn fields MUST be exactly {expected_fields} in order, "
+                f"got {actual_fields}"
+            )
+    strategy: "interaction_event_strategy()"
+    notes: "Normative field order for ixn: v, t, d, i, s, p, a. No extras, no omissions."
+
+  # Interaction Event Key State Invariance
+  - invariant: "An interaction event MUST NOT modify key state. After processing an ixn event, the signing keys (k), signing threshold (kt), next-key digests (n), next-key threshold (nt), witness list (b), and witness threshold (bt) MUST be identical to their values before the ixn."
+    term: "Interaction Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_ixn_strategy())
+        def test_ixn_key_state_invariance(kel):
+            for i, event in enumerate(kel.events):
+                if event.t == 'ixn':
+                    state_before = compute_key_state(kel.events[:i])
+                    state_after = compute_key_state(kel.events[:i + 1])
+                    assert state_before.k == state_after.k, (
+                        "ixn MUST NOT change signing keys"
+                    )
+                    assert state_before.kt == state_after.kt, (
+                        "ixn MUST NOT change signing threshold"
+                    )
+                    assert state_before.n == state_after.n, (
+                        "ixn MUST NOT change next-key digests"
+                    )
+                    assert state_before.nt == state_after.nt, (
+                        "ixn MUST NOT change next-key threshold"
+                    )
+                    assert state_before.b == state_after.b, (
+                        "ixn MUST NOT change witness list"
+                    )
+                    assert state_before.bt == state_after.bt, (
+                        "ixn MUST NOT change witness threshold"
+                    )
+    strategy: "kel_with_ixn_strategy()"
+    notes: "Interaction events are key-state-invisible — they only anchor data."
+
+  # Anchor List Semantics invariants
+  - invariant: "The anchor list (a field) is an ordered array that may contain zero or more seals. An empty anchor list is valid — it produces a no-op interaction event that advances the sequence number without anchoring any data. The ordering of seals within the list is significant because it affects the event's SAID."
+    term: "Seal"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(seals=st.lists(seal_strategy(), min_size=0, max_size=10))
+        def test_anchor_list_semantics(seals):
+            ixn = create_interaction(test_aid, sn=0, seals=seals)
+            assert isinstance(ixn.ked['a'], list)
+            assert len(ixn.ked['a']) == len(seals)
+            # Empty list is valid
+            if len(seals) == 0:
+                assert ixn.ked['a'] == []
+                assert is_valid_ixn(ixn), "Empty anchor list MUST be valid"
+            # Order matters for SAID
+            if len(seals) >= 2:
+                reversed_seals = list(reversed(seals))
+                ixn_reversed = create_interaction(test_aid, sn=0, seals=reversed_seals)
+                assert ixn.said != ixn_reversed.said, (
+                    "Different seal ordering MUST produce different SAID"
+                )
+    strategy: "st.lists of seals (0..10)"
+    notes: "Anchor list: ordered, may be empty, order affects SAID."
+
+  # EO (Establishment Only) Constraint invariants
+  - invariant: "EO enforcement: when an identifier has the EO (Establishment Only) configuration trait, validators MUST reject interaction events (ixn) with error EstablishmentOnlyViolation (ref: errors://identity/anchoring#EstablishmentOnlyViolation). The rejection is immediate — the event is NOT escrowed, it is discarded. The EO trait is checked before any signature verification."
+    term: "Interaction Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(aid=aid_with_config_strategy(),
+               ixn=interaction_event_strategy())
+        def test_eo_enforcement(aid, ixn):
+            ixn_for_aid = set_aid(ixn, aid.prefix)
+            if 'EO' in aid.config:
+                result = validate_event(ixn_for_aid, aid.key_state)
+                # Rejection is immediate
+                assert result.is_rejected(), (
+                    f"Identifier {aid.prefix} has EO trait — "
+                    f"MUST reject ixn events immediately"
+                )
+                assert result.error_type == 'EstablishmentOnlyViolation', (
+                    "Rejection error MUST be EstablishmentOnlyViolation"
+                )
+                # Event is NOT escrowed — it is discarded
+                assert not result.is_escrowed, (
+                    "EO-rejected event MUST NOT be escrowed — it is discarded"
+                )
+                # EO trait is checked before signature verification
+                assert result.checked_before_sig_verify, (
+                    "EO trait MUST be checked before any signature verification"
+                )
+            else:
+                # Without EO, ixn events are permitted
+                pass
+    strategy: "aid_with_config_strategy() (with/without EO), interaction_event_strategy()"
+    notes: "EO enforcement: immediate rejection (not escrowed), EstablishmentOnlyViolation error, checked before sig verification."
+
+  - invariant: "Interaction event anchoring uses identical seal types as establishment event anchoring: DigestSeal (d field only), EventSeal (i, s, d fields), EventLocationSeal (i, s, t, p fields). The only difference is operational context — establishment events advance key state while interaction events do not. Seal verification (digest comparison, referenced event lookup) is identical in both cases."
+    term: "Interaction Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(aid=eo_aid_strategy(),
+               data=st.binary(min_size=1, max_size=4096))
+        def test_seal_type_parity(aid, data):
+            seal_digest = SealDigest(d=digest(data))
+            seal_event = SealEvent(i=aid.prefix, s=0, d=digest(data))
+            seal_location = SealEventLocation(i=aid.prefix, s=0, t='ixn', p=digest(data))
+            # All three seal types work in interaction events
+            ixn = create_interaction(aid.prefix, aid.expected_sn,
+                                     seals=[seal_digest, seal_event, seal_location])
+            assert len(ixn.ked['a']) == 3
+            # All three seal types work in establishment events
+            rot = create_rotation(aid.prefix, aid.expected_sn,
+                                   seals=[seal_digest, seal_event, seal_location])
+            assert len(rot.ked['a']) == 3
+            # Seal verification is identical in both contexts
+            for ixn_seal, rot_seal in zip(ixn.ked['a'], rot.ked['a']):
+                assert type(ixn_seal) == type(rot_seal), (
+                    "Seal types MUST be identical between ixn and rot anchoring"
+                )
+                assert ixn_seal.d == rot_seal.d, (
+                    "Seal digest comparison is identical in both contexts"
+                )
+            # Key state difference: rot advances, ixn does not
+            state_before = compute_key_state_before(aid)
+            state_after_ixn = compute_key_state_after(aid, ixn)
+            state_after_rot = compute_key_state_after(aid, rot)
+            assert state_before.k == state_after_ixn.k, (
+                "ixn MUST NOT advance key state"
+            )
+            assert state_before.k != state_after_rot.k, (
+                "rot MUST advance key state"
+            )
+    strategy: "eo_aid_strategy(), st.binary(1..4096)"
+    notes: "Identical seal types (DigestSeal, EventSeal, EventLocationSeal) in both ixn and rot. Only operational context differs: rot advances key state, ixn does not."
+
+  # Interaction Event Superseding invariants
+  - invariant: "An interaction event at sequence number sn can be superseded by a rotation event at the same sequence number during recovery. The superseding rotation MUST satisfy all rotation validation rules AND MUST have sn equal to the ixn being superseded."
+    term: "Interaction Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_ixn_strategy())
+        def test_ixn_supersedable_by_rotation(kel):
+            for event in kel.events:
+                if event.t == 'ixn':
+                    rot = build_recovery_rotation(kel.aid, sn=event.sn)
+                    assert rot.sn == event.sn, (
+                        "Superseding rotation sn MUST equal ixn sn"
+                    )
+                    assert rot.t == 'rot', (
+                        "Superseding event MUST be a rotation"
+                    )
+                    # The rotation replaces the ixn in the KEL
+                    assert is_valid_supersede(rot, event), (
+                        "Superseding rotation MUST pass all rotation validation rules"
+                    )
+    strategy: "kel_with_ixn_strategy()"
+    notes: "Recovery rotations can supersede ixn events at the same sn."
+
+  # Digest Seal Structure invariants
+  - invariant: "A Digest Seal MUST contain exactly one field: d (the digest/SAID of the anchored data). No other fields (i, s, etc.) are permitted in a digest seal."
+    term: "Digest Seal"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(data=st.binary(min_size=1, max_size=4096))
+        def test_digest_seal_structure(data):
+            seal = create_digest_seal(data)
+            seal_fields = set(seal_to_dict(seal).keys())
+            assert seal_fields == {'d'}, (
+                f"Digest seal MUST have exactly {{d}}, got {seal_fields}"
+            )
+            assert seal.d == digest(data)
+    strategy: "st.binary(1..4096)"
+    notes: "Digest seal: exactly {d}. No i, no s."
+
+  # Event Seal Structure invariants
+  - invariant: "An Event Seal MUST contain exactly three fields: i (AID prefix of the referenced event), s (sequence number as string of hex), d (SAID of the referenced event). All three fields MUST be present and non-null."
+    term: "Event Seal"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(aid=aid_strategy(),
+               sn=st.integers(min_value=0, max_value=10000))
+        def test_event_seal_structure(aid, sn):
+            said = compute_said_for_event(aid, sn)
+            seal = create_event_seal(aid, sn, said)
+            seal_fields = set(seal_to_dict(seal).keys())
+            assert seal_fields == {'i', 's', 'd'}, (
+                f"Event seal MUST have exactly {{i, s, d}}, got {seal_fields}"
+            )
+            assert seal.i == aid, "Event seal i MUST be the referenced AID"
+            assert seal.s == sn, "Event seal s MUST be the referenced sn"
+            assert seal.d == said, "Event seal d MUST be the referenced SAID"
+            assert seal.i is not None and seal.s is not None and seal.d is not None
+    strategy: "aid_strategy(), st.integers(0..10000)"
+    notes: "Event seal: exactly {i, s, d}. All non-null."
+
+  # Hash Chain Integrity invariants
+  - invariant: "Every interaction event MUST chain to its predecessor via the p field, which contains the SAID of the immediately prior event. If ixn.p != prior_event.said, the ixn MUST be rejected. This maintains the hash chain integrity of the KEL."
+    term: "Interaction Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_ixn_strategy())
+        def test_ixn_hash_chain(kel):
+            for i, event in enumerate(kel.events):
+                if event.t == 'ixn':
+                    assert i > 0, "ixn cannot be at sn=0"
+                    prior = kel.events[i - 1]
+                    assert event.ked['p'] == prior.said, (
+                        f"ixn at sn={event.sn} p field MUST equal "
+                        f"prior event SAID: {prior.said}"
+                    )
+    strategy: "kel_with_ixn_strategy()"
+    notes: "The p field chains ixn to predecessor. Breaks in the chain = rejected."
+
+contracts:
+  - port_ref: "port://identity/anchoring/inbound/data-anchoring"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, seals: (
+                aid is not None
+                and len(aid) > 0
+                and isinstance(seals, list)
+            )
+        description: "create_interaction requires valid non-empty AID and a list of seals (may be empty)"
+      - formal:
+          language: python
+          expression: |
+            lambda aid: (
+                'EO' not in get_config(aid)
+            )
+        description: "Identifier MUST NOT have EO (Establishment Only) trait — EO identifiers cannot produce ixn events"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, seals, result: (
+                result.t == 'ixn'
+                and result.i == aid
+                and result.ked['p'] is not None
+                and list(result.ked.keys()) == ['v', 't', 'd', 'i', 's', 'p', 'a']
+            )
+        description: "create_interaction returns an ixn with correct AID, hash chain, and normative field order"
+      - formal:
+          language: python
+          expression: |
+            lambda aid, seals, result: (
+                len(result.ked['a']) == len(seals)
+                and all(isinstance(s, Seal) for s in result.ked['a'])
+            )
+        description: "Anchor list in result MUST contain exactly the provided seals"
+
+  - port_ref: "port://identity/anchoring/inbound/seal-query"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, sn: (
+                aid is not None
+                and isinstance(sn, int)
+                and sn >= 0
+            )
+        description: "AID must be valid and sn must be a non-negative integer"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, sn, seals: (
+                isinstance(seals, list)
+                and all(isinstance(s, Seal) for s in seals)
+            )
+        description: "get_seals returns a list of valid Seal instances (may be empty)"
+      - formal:
+          language: python
+          expression: |
+            lambda aid, sn, seals: (
+                all(
+                    (hasattr(s, 'd') and s.d is not None)
+                    for s in seals
+                )
+            )
+        description: "Every returned seal MUST have a non-null d (digest) field"
+
+state_machines: []

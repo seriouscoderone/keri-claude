@@ -1,13 +1,13 @@
 # keri-claude
 
-A Claude Code **plugin** and **domain-driven design specification** for the KERI (Key Event Receipt Infrastructure) ecosystem. Provides 16 skills for protocol implementation and a complete 48-domain DDD spec designed for AI-driven development in any language.
+A Claude Code **plugin** and **domain-driven design specification** for the KERI (Key Event Receipt Infrastructure) ecosystem. Provides 16 skills for protocol implementation and a complete 46-domain DDD spec designed for AI-driven development in any language.
 
 ## What's Here
 
 **Two things in one repo:**
 
 1. **Skills Plugin** — 16 Claude Code skills covering protocol specs, implementation APIs, coding conventions, and architecture planning
-2. **DDD Specification** — A complete domain-driven design specification of the KERI ecosystem (48 domains, 560 UL terms, 202 typed errors, 61 formal types with 433 fields, 17 cross-domain protocols with 216 typed references, 21 state machines, 619 verification properties) — designed to be the input for AI-assisted implementation in any language
+2. **DDD Specification** — A complete domain-driven design specification of the KERI ecosystem (46 domains — every one buildable, no "word-only" containers) — designed to be the input for AI-assisted implementation in any language
 
 ## DDD Specification
 
@@ -29,77 +29,93 @@ The `rdod/spec/domains/` directory contains a complete DDD decomposition of the 
 
 ```mermaid
 graph TB
-    subgraph Protocol["Protocol Layer"]
+    subgraph Kernel["Kernel (Shared Language)"]
         CESR["cesr/<br/>Encoding"]
-        KERI["keri/<br/>Identity"]
-        ACDC["acdc/<br/>Credentials"]
-        DISC["discovery/<br/>Bootstrap"]
     end
 
-    subgraph Service["Service Layer"]
-        CAS["cloud-agent-service/<br/>Hosted Identity"]
-        WIT["witness-service/<br/>Accountability"]
-        WAT["watcher-service/<br/>Integrity"]
+    subgraph Domains["Buildable Domains"]
+        ID["identity/<br/>Create & manage"]
+        DEL["delegation/<br/>Hierarchical trust"]
+        ACC["accountability/<br/>Witness consensus"]
+        INT["integrity/<br/>Duplicity detection"]
+        CL["credential-lifecycle/<br/>Issue & revoke"]
+        CE["credential-exchange/<br/>Share credentials"]
+        PRV["privacy/<br/>Graduated disclosure"]
+        DISC["discovery/<br/>Find endpoints"]
     end
 
-    subgraph App["Application Layer"]
-        SIG["signify-client/<br/>Thin Wallet"]
-        LOC["local-agent/<br/>Fat Wallet"]
+    subgraph Service["Services"]
+        CAS["cloud-agent-service/"]
+        WIT["witness-service/"]
+        WAT["watcher-service/"]
     end
 
-    KERI -->|"kernel"| CESR
-    ACDC -->|"kernel"| CESR
-    ACDC -->|"partnership"| KERI
-    KERI -->|"partnership"| DISC
+    subgraph App["Applications"]
+        SIG["signify-client/"]
+        LOC["local-agent/"]
+    end
 
-    CAS -->|"conformist"| KERI
-    CAS -->|"conformist"| ACDC
-    WIT -->|"conformist"| KERI
-    WAT -->|"conformist"| KERI
+    ID -->|"kernel"| CESR
+    CL -->|"kernel"| CESR
+    ID -->|"partnership"| DISC
+    CL -->|"partnership"| ID
+
+    CAS -->|"conformist"| ID
+    CAS -->|"conformist"| CL
+    WIT -->|"conformist"| ACC
+    WAT -->|"conformist"| INT
 
     SIG -->|"customer-supplier"| CAS
-    LOC -->|"conformist"| KERI
-    LOC -->|"conformist"| ACDC
+    LOC -->|"conformist"| ID
+    LOC -->|"conformist"| CL
 ```
 
-### KERI Identity Subdomains
+### Identity & Trust Domains
 
 ```mermaid
 graph LR
-    subgraph identity["keri/identity/"]
-        EST["establishment<br/>inception, rotation"]
-        KC["key-commitment<br/>pre-rotation"]
-        TH["thresholds<br/>multi-sig"]
-        ST["state<br/>key config"]
-        AN["anchoring<br/>data seals"]
+    subgraph identity["identity/"]
+        EST["establishment"]
+        KC["key-commitment"]
+        TH["thresholds"]
+        ST["state"]
+        AN["anchoring"]
     end
 
-    subgraph delegation["keri/delegation/"]
+    subgraph delegation["delegation/"]
         AUTH["authorization"]
         LIF["lifecycle"]
         REC1["recovery"]
     end
 
-    subgraph accountability["keri/accountability/"]
+    subgraph accountability["accountability/"]
         RCPT["receipting"]
         CON["consensus"]
         DIS["dissemination"]
     end
 
-    subgraph integrity["keri/integrity/"]
+    subgraph integrity["integrity/"]
         DET["detection"]
         EVI["evidence"]
         REC2["recovery"]
     end
 
-    EST --> KC
-    EST --> TH
-    EST --> ST
-    EST --> AN
-    AUTH --> LIF
-    RCPT --> CON
-    DET --> EVI
-    EVI --> REC2
+    subgraph credentials["credential-lifecycle/"]
+        STAT["status"]
+        VER["verification"]
+        REG["registry"]
+    end
+
+    subgraph exchange["credential-exchange/"]
+        NEG["negotiation"]
+        PRF["proof"]
+    end
+
+    subgraph privacy["privacy/"]
+        DISC2["disclosure"]
+        BLI["blinding"]
+        AGG["aggregation"]
+    end
 ```
 
 ### IPEX Credential Exchange Flow
@@ -124,63 +140,57 @@ stateDiagram-v2
 ### Domain Map
 
 ```
-PROTOCOL LAYER
+KERNEL
   cesr/                              How data is encoded
     primitives/                        Self-describing crypto types
     composition/                       Composing primitives into messages
 
-  keri/                              How you prove who you are
-    identity/                          Create and manage identifiers
-      establishment                      inception, rotation
-      key-commitment                     pre-rotation (future key safety)
-      thresholds                         multi-sig requirements
-      state                              current key configuration
-      anchoring                          binding data to your identifier
-    delegation/                        Hierarchical trust
-      authorization                      delegator approves/denies
-      lifecycle                          delegated inception/rotation
-      recovery                           superseding rules
-    accountability/                    Others can verify your claims
-      receipting                         witnesses sign what they saw
-      consensus                          enough witnesses agree (KAWA)
-      dissemination                      spreading events to validators
-    integrity/                         Detecting and recovering from compromise
-      detection                          finding forks in event logs
-      evidence                           collecting proof of duplicity
-      recovery                           honest controller wins
-
-  acdc/                              How you prove what's true about you
-    credential-lifecycle/              Issue, track, revoke credentials
-      status                             active or revoked?
-      verification                       ACDC -> TEL -> KEL chain
-      registry                           creating/managing registries
-    credential-exchange/               Share credentials with others
-      negotiation                        apply/offer/agree/grant/admit
-      proof                              Proof of Issuance, Proof of Disclosure
-    privacy/                           Control what you reveal
-      disclosure                         graduated: compact -> partial -> full
-      blinding                           hidden credential status
-      aggregation                        selective disclosure mechanics
-
+DOMAINS
+  identity/                          Create and manage identifiers
+    establishment/                     inception, rotation
+    key-commitment/                    pre-rotation (future key safety)
+    thresholds/                        multi-sig requirements
+    state/                             current key configuration
+    anchoring/                         binding data to your identifier
+  delegation/                        Hierarchical trust
+    authorization/                     delegator approves/denies
+    lifecycle/                         delegated inception/rotation
+    recovery/                          superseding rules
+  accountability/                    Others can verify your claims
+    receipting/                        witnesses sign what they saw
+    consensus/                         enough witnesses agree (KAWA)
+    dissemination/                     spreading events to validators
+  integrity/                         Detecting and recovering from compromise
+    detection/                         finding forks in event logs
+    evidence/                          collecting proof of duplicity
+    recovery/                          honest controller wins
+  credential-lifecycle/              Issue, track, revoke credentials
+    status/                            active or revoked?
+    verification/                      ACDC -> TEL -> KEL chain
+    registry/                          creating/managing registries
+  credential-exchange/               Share credentials with others
+    negotiation/                       apply/offer/agree/grant/admit
+    proof/                             Proof of Issuance, Proof of Disclosure
+  privacy/                           Control what you reveal
+    disclosure/                        graduated: compact -> partial -> full
+    blinding/                          hidden credential status
+    aggregation/                       selective disclosure mechanics
   discovery/                         How you find others
 
-SERVICE LAYER
+SERVICES
   cloud-agent-service/               Hosted identity management
     api/                               3 ports: boot, admin, message router
     provisioning/                      multi-tenant agent lifecycle
     processing/                        async pipeline orchestration
-
   witness-service/                   Accountability infrastructure
     api/                               receives events, returns receipts
-
   watcher-service/                   Integrity infrastructure
     api/                               collects KELs, reports duplicity
 
-APPLICATION LAYER
+APPLICATIONS
   signify-client/                    Thin wallet — keys at the edge
     key-management/                    passcode, keepers, tiers
     resources/                         API surface for identifiers, credentials
-
   local-agent/                       Fat wallet — everything local
     api/                               CLI + direct interface
 ```
@@ -191,14 +201,14 @@ Each domain directory contains up to 8 spec files:
 
 | File | Purpose | Coverage |
 |------|---------|----------|
-| `domain.yaml` | Identity, relationships, published language, guidance | 48/48 |
-| `ubiquitous-language.yaml` | Detailed terms with invariants, examples, imports, specializes | 48/48 |
-| `ports.yaml` | Inbound/outbound interfaces with contracts | 48/48 |
-| `verification.yaml` | Formal properties, port contracts, state machines | 48/48 |
-| `errors.yaml` | Typed error taxonomy with cause, recovery, context | 42/48 |
-| `types.yaml` | Formal data structures with field constraints and variants | 24/48 |
-| `protocols.yaml` | Cross-domain orchestration flows with typed references | 7/48 |
-| `context-map.html` | Interactive Cytoscape visualization of all 48 domains | 1 |
+| `domain.yaml` | Identity, relationships, published language, guidance | 46/46 |
+| `ubiquitous-language.yaml` | Detailed terms with invariants, examples, imports, specializes | 46/46 |
+| `ports.yaml` | Inbound/outbound interfaces with contracts | 46/46 |
+| `verification.yaml` | Formal properties, port contracts, state machines | 46/46 |
+| `errors.yaml` | Typed error taxonomy with cause, recovery, context | 42/46 |
+| `types.yaml` | Formal data structures with field constraints and variants | 24/46 |
+| `protocols.yaml` | Cross-domain orchestration flows with typed references | 7/46 |
+| `context-map.html` | Interactive Cytoscape visualization of all 46 domains | 1 |
 
 ### Key Design Decisions
 

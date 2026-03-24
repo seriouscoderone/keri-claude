@@ -85,15 +85,15 @@ adjacents:
     pattern: "Customer-Supplier"
     via_port: "port://signify-client/resources/outbound/cloud-agent-comms"
     is_cross_cutting: false
-  - ref: "domain://keri"
+  - ref: "domain://identity"
     relationship: "Conformist — uses KERI protocol types and event structures directly without translation"
     pattern: "Conformist"
-    via_port: "port://keri/inbound/identifier-lifecycle"
+    via_port: "port://identity/inbound/identity-management"
     is_cross_cutting: false
-  - ref: "domain://acdc"
+  - ref: "domain://credential-lifecycle"
     relationship: "Conformist — uses ACDC credential types, schemas, and IPEX exchange protocol directly"
     pattern: "Conformist"
-    via_port: "port://acdc/inbound/credential-lifecycle"
+    via_port: "port://credential-lifecycle/inbound/state-management"
     is_cross_cutting: false
   - ref: "domain://discovery"
     relationship: "Customer-Supplier — resolves OOBIs via cloud agent for endpoint and key state discovery"

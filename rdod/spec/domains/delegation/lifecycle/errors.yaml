@@ -1,0 +1,48 @@
+# errors.yaml
+domain_ref: "delegation/lifecycle"
+
+# Error catalog for the Delegation Lifecycle domain.
+# Covers failures in delegation validation (4-step pipeline),
+# delegator KEL lookup, seal matching, and the DND configuration trait.
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action
+#   fatal      — unrecoverable; event is permanently rejected
+
+errors:
+  - name: "DelegatorNotFoundError"
+    description: "The delegator AID specified in the di field has no established key state"
+    cause: "The delegator's KEL has not been received — cannot verify delegation authority"
+    recovery: "escrow"
+    severity: "transient"
+    context:
+      - field: "delegator_aid"
+        type: "string"
+        description: "The delegator AID from the di field"
+      - field: "delegate_aid"
+        type: "string"
+        description: "The delegate AID attempting the operation"
+
+  - name: "DelegationSealMismatchError"
+    description: "The delegator's seal does not match the delegated event"
+    cause: "The seal in the delegator's KEL references a different SAID than the delegated event's computed SAID"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "seal_said"
+        type: "string"
+        description: "SAID in the delegator's seal"
+      - field: "event_said"
+        type: "string"
+        description: "SAID of the delegated event"
+
+  - name: "DelegationNotPermittedError"
+    description: "Delegator has the DND (Do Not Delegate) configuration trait"
+    cause: "The delegator's inception event includes the DND trait — it cannot act as a delegator"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "delegator_aid"
+        type: "string"
+        description: "The AID that has DND set"

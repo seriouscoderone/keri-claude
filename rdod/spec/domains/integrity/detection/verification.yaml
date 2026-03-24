@@ -1,0 +1,447 @@
+# verification.yaml
+domain_ref: "integrity/detection"
+
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
+properties:
+  # Duplicity Detection invariants
+  - invariant: "Duplicity exists when witness A has event with SAID_A at (prefix, sn) AND witness B has event with SAID_B at the same (prefix, sn) AND SAID_A != SAID_B. This is the formal definition — two different events at the same sequence number for the same identifier."
+    term: "Watcher"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(aid=aid_strategy(),
+               sn=st.integers(min_value=0, max_value=1000),
+               event_a=key_event_strategy(),
+               event_b=key_event_strategy())
+        def test_duplicity_detection(aid, sn, event_a, event_b):
+            assume(event_a.said != event_b.said)
+            kerl_a = build_kerl(aid, {sn: event_a})
+            kerl_b = build_kerl(aid, {sn: event_b})
+            result = compare_kerls(kerl_a, kerl_b)
+            assert result.has_duplicity(), (
+                f"Different SAIDs at ({aid}, {sn}) MUST be detected as duplicity: "
+                f"{event_a.said} vs {event_b.said}"
+            )
+            assert sn in result.duplicitous_sns()
+    strategy: "aid, sn, two events with different SAIDs"
+    notes: "The formal duplicity predicate: same (prefix, sn), different SAID."
+
+  - invariant: "If the same event (identical SAID) appears at the same (prefix, sn) across two sources, this is a duplicate, NOT duplicity. Duplicates are idempotent — they MUST NOT trigger duplicity alerts or be stored in the duplicity evidence log."
+    term: "Watcher"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(aid=aid_strategy(),
+               sn=st.integers(min_value=0, max_value=1000),
+               event=key_event_strategy())
+        def test_duplicate_not_duplicitous(aid, sn, event):
+            kerl_a = build_kerl(aid, {sn: event})
+            kerl_b = build_kerl(aid, {sn: event})  # Same event
+            result = compare_kerls(kerl_a, kerl_b)
+            assert not result.has_duplicity(), (
+                f"Same SAID {event.said} at ({aid}, {sn}) from two sources "
+                f"is a duplicate (idempotent), NOT duplicity"
+            )
+    strategy: "aid, sn, single event seen from two sources"
+    notes: "Same event resubmitted = duplicate (idempotent). Different event at same sn = duplicitous."
+
+  # Duplicity Evidence Log (DEL) invariants
+  - invariant: "Duplicitous events MUST be stored permanently in the Duplicity Evidence Log (DEL). Once an event pair (SAID_A, SAID_B) at (prefix, sn) is added to the DEL, it MUST NOT be auto-deleted, MUST NOT be auto-resolved, and MUST NOT be garbage-collected. The DEL is append-only and permanent."
+    term: "Juror"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(aid=aid_strategy(),
+               sn=st.integers(min_value=0, max_value=1000),
+               event_a=key_event_strategy(),
+               event_b=key_event_strategy())
+        def test_del_permanence(aid, sn, event_a, event_b):
+            assume(event_a.said != event_b.said)
+            del_log = DuplicityEvidenceLog()
+            del_log.add(aid, sn, event_a, event_b)
+            assert del_log.contains(aid, sn)
+            # Simulate passage of time, cleanup cycles
+            del_log.run_maintenance()
+            del_log.run_garbage_collection()
+            # Evidence MUST still be present
+            assert del_log.contains(aid, sn), (
+                "DEL entries MUST NOT be auto-deleted or garbage-collected"
+            )
+            evidence = del_log.get(aid, sn)
+            assert event_a.said in [e.said for e in evidence]
+            assert event_b.said in [e.said for e in evidence]
+    strategy: "aid, sn, two distinct events"
+    notes: "DEL is permanent. No auto-resolution. Only human/judge intervention can act on evidence."
+
+  - invariant: "The DEL MUST store both conflicting events, not just a reference to the conflict. Each DEL entry at (prefix, sn) MUST contain the full serialized events for both the first-seen event and the conflicting event."
+    term: "Juror"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(aid=aid_strategy(),
+               sn=st.integers(min_value=0, max_value=1000),
+               event_a=key_event_strategy(),
+               event_b=key_event_strategy())
+        def test_del_stores_both_events(aid, sn, event_a, event_b):
+            assume(event_a.said != event_b.said)
+            del_log = DuplicityEvidenceLog()
+            del_log.add(aid, sn, event_a, event_b)
+            evidence = del_log.get(aid, sn)
+            assert len(evidence.events) >= 2, (
+                "DEL MUST store at least both conflicting events"
+            )
+            saids = {e.said for e in evidence.events}
+            assert event_a.said in saids and event_b.said in saids
+    strategy: "aid, sn, two distinct events"
+    notes: "Evidence must be self-contained — both events stored for independent verification."
+
+  # Alert Semantics invariants
+  - invariant: "Duplicity notification delivery: when duplicity is detected, a cue with kin='duplicity' MUST be pushed to the cue queue. If a judge handler is registered, the cue is dispatched to the judge for adjudication. If no judge is registered, the cue remains in the queue — duplicity evidence is still recorded in the DEL regardless of judge availability. Delivery is synchronous within the processing cycle — no async fire-and-forget."
+    term: "Judge"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(aid=aid_strategy(),
+               sn=st.integers(min_value=0, max_value=1000),
+               event_a=key_event_strategy(),
+               event_b=key_event_strategy())
+        def test_duplicity_notification_delivery(aid, sn, event_a, event_b):
+            assume(event_a.said != event_b.said)
+            # Case 1: Judge registered — cue dispatched
+            cues = []
+            watcher = Watcher(cue_handler=cues.append)
+            watcher.detect_duplicity(aid, sn, event_a, event_b)
+            duplicity_cues = [c for c in cues if c['kin'] == 'duplicity']
+            assert len(duplicity_cues) >= 1, (
+                "Duplicity detection MUST push a cue with kin='duplicity' to the queue"
+            )
+            cue = duplicity_cues[0]
+            assert cue['aid'] == aid
+            assert cue['sn'] == sn
+            assert event_a.said in [e['said'] for e in cue['events']]
+            assert event_b.said in [e['said'] for e in cue['events']]
+            # Case 2: No judge registered — cue remains in queue, DEL still updated
+            no_judge_watcher = Watcher(cue_handler=None)
+            no_judge_watcher.detect_duplicity(aid, sn, event_a, event_b)
+            assert no_judge_watcher.del_log.contains(aid, sn), (
+                "DEL MUST be updated regardless of judge availability"
+            )
+            assert len(no_judge_watcher.cue_queue) >= 1, (
+                "Cue MUST remain in queue when no judge is registered"
+            )
+    strategy: "aid, sn, two distinct events"
+    notes: "Synchronous delivery within processing cycle. DEL updated regardless of judge availability. Cue persists in queue if no judge registered."
+
+  # Recovery Path invariants
+  - invariant: "An honest controller recovers from duplicity via a superseding rotation event: a rot event at sn >= fork_point signed with valid pre-rotation keys from the establishment event prior to the fork. The superseding rotation MUST satisfy: (1) sn >= fork_point, (2) signed by pre-committed next keys, (3) p field chains to the last accepted event before the fork."
+    term: "Watcher"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_fork_strategy())
+        def test_superseding_recovery(kel):
+            fork_point = kel.fork_sn
+            recovery_rot = build_superseding_rotation(
+                kel.aid,
+                sn=fork_point,
+                prior_est=kel.last_establishment_before(fork_point),
+            )
+            assert recovery_rot.sn >= fork_point, (
+                "Superseding rotation sn MUST be >= fork point"
+            )
+            assert recovery_rot.t == 'rot', (
+                "Recovery MUST be a rotation event"
+            )
+            # Pre-rotation binding: new keys must match prior next-key digests
+            prior_est = kel.last_establishment_before(fork_point)
+            for siger in recovery_rot.sigers:
+                if siger.ondex is not None:
+                    assert compute_digest(recovery_rot.k[siger.index]) == prior_est.n[siger.ondex], (
+                        "Recovery rotation MUST use pre-committed next keys"
+                    )
+    strategy: "kel_with_fork_strategy() — KELs with a known fork point"
+    notes: "Superseding recovery: rotation at fork point with pre-committed keys replaces the forked branch."
+
+  # Watcher Control invariants
+  - invariant: "A watcher MUST be under the validator's control, NOT the controller's. If watcher.controlled_by == controller.aid, the watcher MUST be rejected as compromised — a controller-controlled watcher defeats the purpose of independent verification."
+    term: "Watcher"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(watcher=watcher_strategy(),
+               validator=validator_strategy(),
+               controller=controller_strategy())
+        def test_watcher_control_separation(watcher, validator, controller):
+            assume(validator.aid != controller.aid)
+            assert watcher.controlled_by == validator.aid, (
+                "Watcher MUST be controlled by the validator"
+            )
+            assert watcher.controlled_by != controller.aid, (
+                "Watcher MUST NOT be controlled by the controller"
+            )
+    strategy: "watcher, validator, controller strategies"
+    notes: "Watchers are always under the validator's control — separation is a security invariant."
+
+  - invariant: "Insufficient witness diversity: when the watcher can only reach fewer than ceil((N+1)/2) distinct witnesses for an AID with N witnesses, MUST return InsufficientDiversityError with context: {available_count, required_count, total_witnesses}. The watcher logs a warning and operates in degraded mode — duplicity checks continue with available witnesses but the confidence level is reduced."
+    term: "Watcher"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(total_witnesses=st.integers(min_value=2, max_value=20),
+               available_fraction=st.floats(min_value=0.1, max_value=1.0))
+        def test_watcher_insufficient_diversity(total_witnesses, available_fraction):
+            import math
+            required = math.ceil((total_witnesses + 1) / 2)
+            available = max(1, int(total_witnesses * available_fraction))
+            watcher = Watcher()
+            sources = [MockWitness(i) for i in range(available)]
+            if available < required:
+                result = watcher.check_diversity(sources, total_witnesses)
+                assert result.is_insufficient(), (
+                    f"Available {available} < required {required}: "
+                    f"MUST return InsufficientDiversityError"
+                )
+                assert result.context['available_count'] == available
+                assert result.context['required_count'] == required
+                assert result.context['total_witnesses'] == total_witnesses
+                assert result.confidence == 'DEGRADED'
+            else:
+                result = watcher.check_diversity(sources, total_witnesses)
+                assert not result.is_insufficient(), (
+                    f"Available {available} >= required {required}: MUST NOT flag as insufficient"
+                )
+    strategy: "total_witnesses x available_fraction"
+    notes: "Diversity threshold: ceil((N+1)/2). Below threshold: InsufficientDiversityError with context. Degraded mode continues with reduced confidence."
+
+  # Discrepancy Detection invariants
+  - invariant: "Discrepancy detection MUST be deterministic: for two KERLs, the set of duplicitous sequence numbers is exactly {sn for sn in common_sns(kerl_a, kerl_b) where kerl_a.event_at(sn).said != kerl_b.event_at(sn).said}. No heuristics, no probabilistic detection."
+    term: "Watcher"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kerl_a=kerl_strategy(), kerl_b=kerl_strategy())
+        def test_discrepancy_detection_deterministic(kerl_a, kerl_b):
+            result = compare_kerls(kerl_a, kerl_b)
+            expected_discrepancies = {
+                sn for sn in common_sns(kerl_a, kerl_b)
+                if kerl_a.event_at(sn).said != kerl_b.event_at(sn).said
+            }
+            assert result.duplicitous_sns() == expected_discrepancies, (
+                f"Discrepancy detection must be deterministic: "
+                f"got {result.duplicitous_sns()}, expected {expected_discrepancies}"
+            )
+    strategy: "kerl_strategy() for both KERLs"
+    notes: "Discrepancy detection is a pure function of SAID comparison at common sequence numbers."
+
+  # Judge Decision Semantics invariants
+  - invariant: "A judge MUST produce exactly one of three decisions when presented with duplicity evidence: 'trust' (evidence is explained by superseding recovery), 'no_trust' (evidence indicates compromise), or 'reconcile' (evidence is ambiguous, more information needed). If duplicity evidence exists, the decision MUST NOT be unconditional 'trust' unless a valid superseding recovery rotation is present."
+    term: "Judge"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(evidence=st.lists(duplicity_evidence_strategy(), min_size=1, max_size=10))
+        def test_judge_decision_constraints(evidence):
+            judge = Judge()
+            decision = judge.evaluate(evidence)
+            assert decision.type in ('trust', 'no_trust', 'reconcile'), (
+                f"Judge decision MUST be one of three types, got: {decision.type}"
+            )
+            # If evidence exists and no superseding recovery, cannot be unconditional trust
+            if not any(has_superseding_recovery(e) for e in evidence):
+                assert decision.type in ('no_trust', 'reconcile'), (
+                    "With duplicity evidence and no superseding recovery, "
+                    "decision MUST be no_trust or reconcile, not trust"
+                )
+    strategy: "st.lists of duplicity evidence (non-empty)"
+    notes: "Three valid decisions. Trust requires superseding recovery to explain the fork."
+
+  - invariant: "The juror role MUST NOT make trust decisions — it collects and stores evidence only. The judge role MUST NOT collect evidence directly — it evaluates evidence provided by jurors. These roles are strictly separated."
+    term: "Juror"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(juror=juror_strategy(),
+               evidence=duplicity_evidence_strategy())
+        def test_juror_judge_separation(juror, evidence):
+            juror.store(evidence)
+            assert juror.has_evidence(evidence.aid), (
+                "Juror MUST store evidence"
+            )
+            assert not hasattr(juror, 'evaluate') or not callable(getattr(juror, 'evaluate', None)), (
+                "Juror MUST NOT have trust decision capability"
+            )
+    strategy: "juror and evidence strategies"
+    notes: "Jurors store. Judges decide. Separation prevents evidence collectors from influencing decisions."
+
+  # Eclipse Attack invariants
+  - invariant: "A successful eclipse attack requires isolating the validator from ALL ambient sources of the authentic KERL. If even one honest source remains reachable, the attack MUST fail because the watcher will detect the discrepancy."
+    term: "Eclipse Attack"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        total_sources = Int('total_sources')
+        blocked_sources = Int('blocked_sources')
+        eclipse_successful = Bool('eclipse_successful')
+        s = Solver()
+        s.add(total_sources >= 1)
+        s.add(blocked_sources >= 0, blocked_sources <= total_sources)
+        s.add(eclipse_successful == (blocked_sources == total_sources))
+        # Prove: if even one source is unblocked, eclipse fails
+        s.add(blocked_sources < total_sources, eclipse_successful)
+        assert s.check() == unsat
+    notes: "Eclipse attack is all-or-nothing — must block every single ambient source."
+
+  - invariant: "Eclipse attack cost scales linearly with watcher count and diversity: cost >= watcher_count * diversity_factor * base_cost_per_source. For each additional independent watcher, the attacker must compromise or block one more source. This is asymmetric in favor of the defender."
+    term: "Eclipse Attack"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(watcher_count=st.integers(min_value=1, max_value=1000),
+               diversity=st.integers(min_value=1, max_value=100))
+        def test_eclipse_cost_scaling(watcher_count, diversity):
+            cost = compute_eclipse_cost(watcher_count, diversity)
+            assert cost >= watcher_count * diversity * BASE_COST_PER_SOURCE, (
+                f"Eclipse cost {cost} below minimum for "
+                f"{watcher_count} watchers with {diversity} diversity"
+            )
+            # Adding one watcher strictly increases cost
+            cost_plus_one = compute_eclipse_cost(watcher_count + 1, diversity)
+            assert cost_plus_one > cost, (
+                "Adding a watcher MUST strictly increase eclipse attack cost"
+            )
+    strategy: "st.integers for watcher count and diversity"
+    notes: "Attack cost scales with watcher count x diversity — asymmetric in favor of defender."
+
+  # Ambient Duplicity Detection invariants
+  - invariant: "Ambient verifiability thresholds: a watcher's duplicity check confidence level is determined by witness diversity. FULL confidence: available_witnesses >= total_witnesses. SUFFICIENT confidence: available_witnesses >= ceil((total_witnesses + 1) / 2). DEGRADED confidence: available_witnesses < ceil((total_witnesses + 1) / 2). Implementations SHOULD expose the confidence level in duplicity query responses."
+    term: "Ambient Duplicity Detection"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(total_witnesses=st.integers(min_value=1, max_value=100),
+               available_witnesses=st.integers(min_value=0, max_value=100))
+        def test_ambient_verifiability_thresholds(total_witnesses, available_witnesses):
+            import math
+            assume(available_witnesses <= total_witnesses)
+            threshold = math.ceil((total_witnesses + 1) / 2)
+            result = assess_duplicity_confidence(available_witnesses, total_witnesses)
+            if available_witnesses >= total_witnesses:
+                assert result.confidence == 'FULL', (
+                    f"available ({available_witnesses}) >= total ({total_witnesses}): "
+                    f"confidence MUST be FULL, got {result.confidence}"
+                )
+            elif available_witnesses >= threshold:
+                assert result.confidence == 'SUFFICIENT', (
+                    f"available ({available_witnesses}) >= threshold ({threshold}): "
+                    f"confidence MUST be SUFFICIENT, got {result.confidence}"
+                )
+            else:
+                assert result.confidence == 'DEGRADED', (
+                    f"available ({available_witnesses}) < threshold ({threshold}): "
+                    f"confidence MUST be DEGRADED, got {result.confidence}"
+                )
+            # Confidence level SHOULD be exposed in query response
+            assert hasattr(result, 'confidence'), (
+                "Implementations SHOULD expose confidence level in duplicity query responses"
+            )
+    strategy: "total_witnesses x available_witnesses"
+    notes: "Three confidence tiers: FULL (all witnesses), SUFFICIENT (>= ceil((N+1)/2)), DEGRADED (below threshold). Exposed in query responses."
+
+contracts:
+  - port_ref: "port://integrity/detection/inbound/monitoring-lifecycle"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, sources: (
+                aid is not None
+                and len(sources) >= 2
+                and len(set(s.operator for s in sources)) >= 2
+            )
+        description: "Monitoring requires a valid AID and at least two sources from distinct operators"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda handle: handle.active and handle.aid is not None"
+        description: "monitor_aid returns an active handle bound to the specified AID"
+      - formal:
+          language: python
+          expression: |
+            lambda result: (
+                result.is_no_duplicity()
+                or (result.is_evidence() and len(result.evidence.events) >= 2)
+            )
+        description: "check_duplicity returns clean status or evidence containing at least two conflicting events"
+
+  - port_ref: "port://integrity/detection/inbound/trust-decisions"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, evidence: (
+                aid is not None
+                and all(e.aid == aid for e in evidence)
+                and len(evidence) >= 1
+            )
+        description: "Evidence must pertain to the specified AID and contain at least one entry"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda decision: (
+                decision.type in ('trust', 'no_trust', 'reconcile')
+                and decision.aid is not None
+            )
+        description: "Trust decisions must be one of the three valid types and reference a specific AID"
+      - formal:
+          language: python
+          expression: |
+            lambda aid, evidence, decision: (
+                len(evidence) > 0
+                and not any(has_superseding_recovery(e) for e in evidence)
+            ) implies decision.type in ('no_trust', 'reconcile')
+        description: "When duplicity evidence exists without superseding recovery, the decision MUST be no_trust or reconcile — not unconditional trust"
+
+  - port_ref: "port://integrity/detection/outbound/kel-sources"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda witness_aid, monitored_aid: witness_aid is not None and monitored_aid is not None"
+        description: "Both the witness/watcher AID and the monitored AID must be valid"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda kerl: (
+                kerl is not None
+                and all(kerl[i].sn <= kerl[i+1].sn for i in range(len(kerl) - 1))
+            )
+        description: "Returned KERL is non-null with events in non-decreasing sequence number order"
+      - formal:
+          language: python
+          expression: |
+            lambda a, b, result: (
+                result.is_consistent() == all(
+                    a.event_at(sn).said == b.event_at(sn).said
+                    for sn in common_sns(a, b)
+                )
+            )
+        description: "compare_kerls returns Consistent iff all common sequence numbers have matching SAIDs"

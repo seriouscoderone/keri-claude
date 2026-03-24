@@ -6,11 +6,11 @@ protocols:
     participants:
       - domain: "domain://discovery"
         role: "Resolves the OOBI URL and processes reply messages"
-      - domain: "domain://keri/identity/establishment"
+      - domain: "domain://identity/establishment"
         role: "Validates the fetched KEL events"
-      - domain: "domain://keri/identity/state"
+      - domain: "domain://identity/state"
         role: "Stores the resulting key state"
-      - domain: "domain://keri/accountability/receipting"
+      - domain: "domain://accountability/receipting"
         role: "Validates witness receipts included in the KEL replay"
     trigger: "User or system provides an OOBI URL for a remote identifier"
     steps:
@@ -33,41 +33,41 @@ protocols:
             action: "retry"
             compensation: "Retry with exponential backoff up to 3 attempts"
       - seq: 2
-        domain: "domain://keri/identity/establishment"
+        domain: "domain://identity/establishment"
         action: "validate_kel_replay"
-        port: "port://keri/identity/establishment/inbound/validate-event"
+        port: "port://identity/establishment/inbound/validate-event"
         input:
           description: "Stream of KEL events from the OOBI response"
         output:
           description: "Each event validated and accepted to local database"
         depends_on: [1]
         preconditions:
-          - "verification://keri/identity/establishment#Event Validation Pipeline"
+          - "verification://identity/establishment#Event Validation Pipeline"
         on_failure:
           - error: "ValidationError"
-            ref: "errors://keri/identity/establishment#ValidationError"
+            ref: "errors://identity/establishment#ValidationError"
             action: "abort"
             compensation: "Reject entire OOBI — do not partially accept a KEL"
       - seq: 3
-        domain: "domain://keri/accountability/receipting"
+        domain: "domain://accountability/receipting"
         action: "validate_witness_receipts"
-        port: "port://keri/accountability/receipting/inbound/receipt-lifecycle"
+        port: "port://accountability/receipting/inbound/receipt-lifecycle"
         input:
           description: "Witness receipts included in the replay"
         output:
           description: "Receipts verified — events are fully witnessed"
         depends_on: [2]
         preconditions:
-          - "verification://keri/accountability/receipting#Receipt"
+          - "verification://accountability/receipting#Receipt"
       - seq: 4
-        domain: "domain://keri/identity/state"
+        domain: "domain://identity/state"
         action: "establish_key_state"
-        port: "port://keri/identity/state/inbound/state-tracking"
+        port: "port://identity/state/inbound/state-tracking"
         input:
           description: "Validated KEL events"
         output:
           description: "Remote AID's key state available locally"
-          type: "types://keri/identity#KeyState"
+          type: "types://identity#KeyState"
         depends_on: [3]
       - seq: 5
         domain: "domain://discovery"
@@ -97,18 +97,18 @@ protocols:
   - name: "EndpointDiscoveryRegistration"
     description: "Publish a service endpoint so others can discover it. The controller signs reply messages declaring which AIDs serve which roles at which URLs — making the endpoints discoverable and verifiable via OOBI resolution."
     participants:
-      - domain: "domain://keri/identity/anchoring"
+      - domain: "domain://identity/anchoring"
         role: "Controller signs the endpoint declaration (end-role reply) using their current keys"
       - domain: "domain://discovery"
         role: "Processes the signed replies, applies BADA acceptance policy, stores the endpoint mapping for OOBI resolution"
-      - domain: "domain://keri/identity/state"
+      - domain: "domain://identity/state"
         role: "Provides the controller's current key state for reply signature verification"
     trigger: "Controller wants to declare a service endpoint for their AID"
     steps:
       - seq: 1
-        domain: "domain://keri/identity/anchoring"
+        domain: "domain://identity/anchoring"
         action: "construct_endpoint_seal"
-        port: "port://keri/identity/anchoring/inbound/data-anchoring"
+        port: "port://identity/anchoring/inbound/data-anchoring"
         input:
           description: "AID, role (witness/agent/watcher/etc.), endpoint URL, endpoint AID"
           types:
@@ -116,9 +116,9 @@ protocols:
               fields: ["cid", "role", "eid"]
         output:
           description: "Interaction event with endpoint authorization seal"
-          type: "types://keri/identity#InteractionEvent"
+          type: "types://identity#InteractionEvent"
         preconditions:
-          - "verification://keri/identity/anchoring#Seal"
+          - "verification://identity/anchoring#Seal"
       - seq: 2
         domain: "domain://discovery"
         action: "construct_end_role_reply"
@@ -133,9 +133,9 @@ protocols:
         preconditions:
           - "verification://discovery#Endpoint Authorization"
       - seq: 3
-        domain: "domain://keri/identity/state"
+        domain: "domain://identity/state"
         action: "verify_reply_signature"
-        port: "port://keri/identity/state/inbound/state-query"
+        port: "port://identity/state/inbound/state-query"
         input:
           description: "Reply message + controller's current key state"
         output:

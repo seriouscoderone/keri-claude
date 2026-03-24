@@ -1,0 +1,81 @@
+# ubiquitous-language.yaml
+domain_ref: "identity/anchoring"
+
+terms:
+  - term: "Interaction Event"
+    synonyms: ["ixn"]
+    definition: "A non-establishment event that anchors external data to the KEL via seals without changing key state. Field order: v, t, d, i, s, p, a."
+    invariants:
+      - "Does not modify key state — signing keys, thresholds, and witnesses remain unchanged"
+      - "Must be signed by a threshold-satisficing subset of current signing keys"
+      - "Hash-chained to predecessor via p field"
+      - "The a field contains a list of seals (anchors) binding external data"
+      - "Can be superseded by a rotation event at the same sequence number during recovery"
+    examples:
+      - "Interaction at s=1 anchoring a delegation seal: a=[{i: delegatee_AID, s: '0', d: delegatee_inception_SAID}]"
+      - "Interaction anchoring an ACDC credential issuance digest"
+    related_terms: ["Seal", "Non-Establishment Event", "Key State"]
+
+  # Inherits: "Seal" from domain://identity
+  - term: "Seal"
+    synonyms: ["Anchor"]
+    specializes: "Seal"
+    definition: "In the context of the anchoring subdomain, a seal is a cryptographic digest or reference embedded in the a field of an event that binds external data to the KEL. Specializes the parent definition with the anchoring perspective: seals in interaction events are the primary mechanism for anchoring external data, and delegation seals bind delegated establishment events."
+    invariants:
+      - "Commits to external data via digest — the data itself is not in the KEL"
+      - "Types include: digest seal, event seal (i, s, d fields), merkle tree root seal, latest establishment event seal"
+      - "Seals in interaction events are the primary mechanism for anchoring external data"
+      - "Delegation seals in delegator events bind to delegated inception/rotation events"
+    examples:
+      - "Event seal: {i: 'EHqSsH1Imc...', s: '0', d: 'EHqSsH1Imc...'} — references a specific event of another AID"
+      - "Digest seal anchoring an ACDC credential"
+    related_terms: ["Interaction Event", "Delegation Seal", "SAID"]
+
+  - term: "Digest Seal"
+    synonyms: ["SealDigest [keripy]"]
+    definition: "A seal containing only a digest (d field) that commits to external data by its hash. The simplest seal type."
+    invariants:
+      - "Contains a single d field with the digest of the anchored data"
+      - "The digest algorithm is encoded in the CESR prefix of the d value"
+      - "Verification requires the original data to recompute the digest"
+    examples:
+      - "{d: 'EHqSsH1Im...'} — Blake3-256 digest anchoring external data"
+    related_terms: ["Seal", "Event Seal"]
+
+  - term: "Event Seal"
+    synonyms: ["SealEvent [keripy]"]
+    definition: "A seal that references a specific event in another AID's KEL by prefix (i), sequence number (s), and SAID (d)."
+    invariants:
+      - "Contains three fields: i (AID prefix), s (sequence number), d (event SAID)"
+      - "Uniquely identifies a specific event in a specific KEL"
+      - "Used for delegation seals, cross-KEL references, and event-level commitments"
+    examples:
+      - "{i: 'EHqSsH1Im...', s: '0', d: 'EHqSsH1Im...'} — references inception of another AID"
+    related_terms: ["Seal", "Digest Seal", "Delegation Seal"]
+
+  - term: "Interaction Event Construction"
+    definition: "The domain-driven assembly of interaction events (ixn) that anchor data to the KEL without changing key state. The anchor section (a field) carries cryptographic seals binding external data to the identifier's event sequence. Implementations SHOULD provide typed builders for common seal types."
+    invariants:
+      - "Interaction events do not change key state — no kt, k, nt, n, bt, b fields"
+      - "Prior (p) field links to the previous event's SAID"
+      - "Anchor (a) field contains a list of seal objects"
+      - "Common seal types: digest seal, event seal, event location seal"
+    examples:
+      - "Anchoring builder: InteractionEvent.builder().prior(priorSAID).seal(DigestSeal.of(dataSAID)).seal(EventSeal.of(pre, sn, said)).build()"
+    related_terms: ["Data Anchoring", "Seal Types"]
+
+events:
+  - name: "InteractionCreated"
+    payload: "aid: AID, sn: int, seals: [Seal], said: SAID"
+    triggers: "Controller creates an interaction event anchoring seals to the KEL"
+
+  - name: "SealAnchored"
+    payload: "aid: AID, sn: int, seal_type: SealType, seal_digest: Digest"
+    triggers: "A seal is embedded in an interaction event, binding external data to the KEL"
+
+rules:
+  - "Interaction events do not modify key state — they only anchor data"
+  - "The a field must contain a list of seals (may be empty)"
+  - "Each seal type has a specific field structure — digest seal (d), event seal (i, s, d), etc."
+  - "Interaction events can be superseded by rotation events during recovery"
+  - "Seals commit to data by digest — the original data is not stored in the KEL"

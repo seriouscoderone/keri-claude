@@ -1,0 +1,114 @@
+# domain.yaml
+template_version: "1.0"
+id: "identity"
+name: "KERI Identity Management"
+description: >
+  Create and manage cryptographic identifiers — inception creates an AID bound to initial keys,
+  rotation changes the controlling keys via pre-rotation commitment, interaction events anchor
+  external data, and state tracking maintains the current authoritative key configuration.
+  This domain merges the event-driven lifecycle of key events (the KEL) with the computed
+  key state that results from processing those events. It is the core of what KERI does:
+  establishing, evolving, and querying the cryptographic identity of an AID.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "keri-specification.md — sections: Key event messages, Inception/Rotation/Interaction Event Message Body, Key State, Pre-rotation"
+  - type: document
+    reference: "KERI_WP_2.x.web.md — sections: Key Event Log, Key State, Pre-rotation, Establishment Events"
+  - type: document
+    reference: "KERI_SecurityDeepDive.web.md — sections: Establishment Subsequence, Combined Arms"
+  - type: document
+    reference: "keripy — Python reference implementation (Kevery, Kever, SerderKERI, eventing module, Baser storage)"
+  - type: document
+    reference: "keriox — Rust production implementation (EventProcessor, IdentifierState, KeyConfig, EventStorage)"
+
+ubiquitous_language:
+  - term: "KEL"
+    definition: "The append-only, hash-chained, cryptographically signed event log for a single AID"
+    invariants:
+      - "Exactly one authoritative KEL per AID"
+      - "Append-only — events cannot be modified or deleted"
+      - "Hash-chained — each event includes digest of prior event"
+
+  - term: "Key Event"
+    definition: "A cryptographically signed, hash-chained record in the KEL"
+    invariants:
+      - "Signed by keys authorized in the current key state"
+      - "Contains SAID (d field) and prior event digest (p field)"
+      - "Sequence numbers are monotonically increasing"
+
+  - term: "Key State"
+    definition: "The current authoritative configuration for an AID derived from its KEL's establishment subsequence"
+    invariants:
+      - "Deterministically computed from the KEL up to the latest establishment event"
+      - "Only establishment events (icp, rot, dip, drt) modify key state"
+      - "Includes: signing keys (k), next key digests (n), signing threshold (kt), rotation threshold (nt), witness list (b), witness threshold (bt), configuration traits (c)"
+
+  - term: "Pre-rotation Commitment"
+    definition: "Cryptographic commitment to the next set of rotation keys via publishing their digests in the current establishment event"
+    invariants:
+      - "Next key digests must appear in the establishment event preceding their use"
+      - "Pre-committed keys are never exposed until the rotation that activates them"
+
+published_language:
+  - term: "KEL"
+    description: "Key Event Log — the append-only identity ledger referenced by credential and service domains"
+  - term: "Controller"
+    description: "Entity controlling an AID — referenced by all domains that authenticate"
+  - term: "Exchange Message (exn)"
+    description: "Generic routed message envelope — used by IPEX, multisig coordination, discovery"
+  - term: "KRAM"
+    description: "Replay protection mechanism — used by cloud-agent-service and any message-receiving service"
+
+domain_clients: []
+
+subdomains:
+  - ref: "domain://identity/establishment"
+    relationship: "Owns the multi-step validation pipeline for inception and rotation events — signature verification, threshold satisfaction, pre-rotation binding, witness checks, delegation approval"
+    via_port: "port://identity/establishment/inbound/validate-event"
+  - ref: "domain://identity/key-commitment"
+    relationship: "Owns pre-rotation mechanics, key configuration (signing keys + next key digests), partial rotation, and transferable/non-transferable classification"
+    via_port: "port://identity/key-commitment/inbound/key-commitment"
+  - ref: "domain://identity/thresholds"
+    relationship: "Owns signing threshold (kt), rotation threshold (nt), dual threshold enforcement, fractionally weighted thresholds, witness threshold (bt/TOAD), and witness configuration"
+    via_port: "port://identity/thresholds/inbound/threshold-satisfaction"
+  - ref: "domain://identity/state"
+    relationship: "Owns the Kever state machine — per-AID state tracking, state reconstruction from the KEL, establishment subsequence management, last establishment data, configuration trait enforcement, and the authoritative answer to 'what is this AID's current key state?'"
+    via_port: "port://identity/state/inbound/state-tracking"
+  - ref: "domain://identity/anchoring"
+    relationship: "Owns interaction events — binding external data to the KEL via cryptographic seals"
+    via_port: "port://identity/anchoring/inbound/data-anchoring"
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "Ed25519 (event signing), Blake3-256/SHA-256 (SAID computation, prior event digest, seal digests, next key commitments)"
+    relationship: "Cryptographic algorithm types appear directly in event fields and key state structures — signatures, digests, public keys, and threshold expressions are kernel types"
+
+adjacents: []
+
+externals:
+  - name: "Event Persistence"
+    abstraction: "Repository"
+    ref: "port://identity/outbound/event-store"
+    implementation_notes: "Append-only store for KEL events with first-seen ordering. Implementations: LMDB (keripy), redb (keriox), DynamoDB (serious-keri)"
+
+implementation_guidance:
+  suggested_type: "package"
+  language_affinity: "any"
+  notes: >
+    This domain merges the event log and key state concepts from the original decomposition.
+    In keripy, the Kevery class handles event processing and the Kever class tracks per-AID
+    key state. In keriox, the EventProcessor and IdentifierState handle these roles. All
+    implementations must enforce normative field ordering, SAID computation, and deterministic
+    key state derivation per the specification.
+
+    Identifier Type Dimensions: Every KERI identifier is characterized by five orthogonal
+    dimensions (Transferability, Delegation, Witnessing, Signing Model, Operational Constraints) expressed through
+    field values in the inception event. Implementations SHOULD provide typed builders that
+    make these dimensions explicit rather than exposing raw field map manipulation. Example:
+    Identity.builder().transferable().witnessed(witnesses, toad).multiSig(threshold, keys).build()
+
+issues: []
+
+tags: ["identity", "kel", "establishment", "key-commitment", "pre-rotation", "thresholds", "anchoring"]

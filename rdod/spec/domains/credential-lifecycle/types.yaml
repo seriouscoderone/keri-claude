@@ -1,0 +1,424 @@
+domain_ref: "credential-lifecycle"
+
+types:
+  - name: "RegistryInceptionEvent"
+    description: "Creates a new credential registry. All credentials issued under this registry reference its REGID."
+    variants:
+      - name: "default"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string"
+          - name: "t"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["vcp"]
+            description: "Message type — registry inception"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID — becomes the REGID"
+          - name: "i"
+            type: "string"
+            required: true
+            description: "Registry identifier — computed as SAID (same as d)"
+          - name: "ii"
+            type: "string"
+            required: true
+            description: "Issuer AID — the identifier that owns this registry"
+          - name: "s"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["0"]
+            description: "Sequence number — always '0' for inception"
+          - name: "c"
+            type: "array[string]"
+            required: true
+            description: "Configuration — registry traits (e.g., NB for no backers)"
+          - name: "bt"
+            type: "string"
+            required: true
+            description: "Backer threshold"
+          - name: "b"
+            type: "array[string]"
+            required: true
+            description: "Backer AIDs"
+          - name: "n"
+            type: "string"
+            required: true
+            description: "Nonce — for privacy"
+        invariants:
+          - "d and i are both computed as SAID"
+          - "ii must reference an AID with established key state"
+          - "Must be anchored in the issuer's KEL via a seal"
+
+  - name: "IssuanceEvent"
+    description: "Records the issuance of a credential in the TEL."
+    variants:
+      - name: "backerless"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string"
+          - name: "t"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["iss"]
+            description: "Message type — backerless issuance"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID"
+          - name: "i"
+            type: "string"
+            required: true
+            description: "Credential SAID — the ACDC being issued"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Sequence number"
+          - name: "ri"
+            type: "string"
+            required: true
+            description: "Registry SAID (REGID)"
+          - name: "dt"
+            type: "string"
+            required: true
+            description: "Issuance datetime — ISO 8601"
+        invariants:
+          - "Registry ri must exist and be owned by the issuer"
+          - "Credential i must not already be issued in this registry"
+          - "Must be anchored in the issuer's KEL"
+      - name: "backed"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string"
+          - name: "t"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["bis"]
+            description: "Message type — backed issuance"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID"
+          - name: "i"
+            type: "string"
+            required: true
+            description: "Credential SAID"
+          - name: "ii"
+            type: "string"
+            required: true
+            description: "Issuer AID"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Sequence number"
+          - name: "ra"
+            type: "map"
+            required: true
+            description: "Registry anchor — seal linking to the registry"
+          - name: "dt"
+            type: "string"
+            required: true
+            description: "Issuance datetime"
+        invariants:
+          - "Requires backer signatures meeting the registry's backer threshold"
+
+  - name: "RevocationEvent"
+    description: "Records the revocation of a previously issued credential."
+    variants:
+      - name: "backerless"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string"
+          - name: "t"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["rev"]
+            description: "Message type — backerless revocation"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID"
+          - name: "i"
+            type: "string"
+            required: true
+            description: "Credential SAID being revoked"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Sequence number — must follow the issuance event"
+          - name: "ri"
+            type: "string"
+            required: true
+            description: "Registry SAID"
+          - name: "p"
+            type: "string"
+            required: true
+            description: "Prior TEL event SAID"
+          - name: "dt"
+            type: "string"
+            required: true
+            description: "Revocation datetime"
+        invariants:
+          - "Credential must be in Issued state — cannot revoke NotIssued or already Revoked"
+          - "Prior p must reference the issuance event's SAID"
+          - "Must be anchored in the issuer's KEL"
+      - name: "backed"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string"
+          - name: "t"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["brv"]
+            description: "Message type — backed revocation"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID"
+          - name: "i"
+            type: "string"
+            required: true
+            description: "Credential SAID"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Sequence number"
+          - name: "p"
+            type: "string"
+            required: true
+            description: "Prior TEL event SAID"
+          - name: "ra"
+            type: "map"
+            required: true
+            description: "Registry anchor"
+          - name: "dt"
+            type: "string"
+            required: true
+            description: "Revocation datetime"
+        invariants:
+          - "Requires backer signatures"
+
+  - name: "CredentialState"
+    description: "The state machine for a credential's lifecycle within a registry."
+    variants:
+      - name: "default"
+        fields:
+          - name: "state"
+            type: "string"
+            required: true
+            description: "Current lifecycle state"
+            constraints:
+              enum: ["NotIssued", "Issued", "Revoked"]
+          - name: "credential_said"
+            type: "string"
+            required: true
+            description: "The ACDC SAID"
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "The REGID"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "TEL sequence number of the latest state-changing event"
+          - name: "issued_at"
+            type: "string"
+            required: false
+            description: "ISO 8601 datetime of issuance (absent if NotIssued)"
+          - name: "revoked_at"
+            type: "string"
+            required: false
+            description: "ISO 8601 datetime of revocation (absent if not Revoked)"
+        invariants:
+          - "State transitions: NotIssued → Issued (via iss/bis) → Revoked (via rev/brv)"
+          - "No reverse transitions — Revoked is terminal"
+          - "Cannot skip states — must issue before revoking"
+
+  # ACDC credential types (from parent acdc domain)
+  - name: "Credential"
+    description: "An Authentic Chained Data Container (ACDC). Formal verifiable credential with six orthogonal type dimensions expressed through field presence/absence."
+    variants:
+      - name: "public-untargeted"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string — ACDC protocol, version, serialization kind, size"
+            constraints:
+              pattern: "ACDC[A-Za-z0-9_-]{13}\\."
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID — self-addressing identifier of this credential"
+          - name: "i"
+            type: "string"
+            required: true
+            description: "Issuer AID — the identifier that issued this credential"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Schema SAID — reference to the JSON Schema defining this credential's structure"
+          - name: "a"
+            type: "map"
+            required: true
+            description: "Attribute section — contains the credential's claims. Has its own d (SAID) field."
+        invariants:
+          - "No u field — credential content is public (discoverable)"
+          - "No i field in attribute section — credential is untargeted (bearer)"
+          - "Lowercase a (not uppercase A) — direct attribute disclosure, not selective"
+
+      - name: "private-targeted"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID"
+          - name: "u"
+            type: "string"
+            required: true
+            description: "UUID — high-entropy blinding factor for privacy"
+            constraints:
+              min_length: 22
+          - name: "i"
+            type: "string"
+            required: true
+            description: "Issuer AID"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Schema SAID"
+          - name: "a"
+            type: "map"
+            required: true
+            description: "Attribute section — must include u (blinding), i (issuee), d (SAID)"
+        invariants:
+          - "Top-level u field present with >= 128 bits of entropy — content is private"
+          - "Attribute section a must contain u field (blinding factor) and i field (issuee AID)"
+          - "Attribute section a.i is the issuee — credential is targeted to this AID"
+
+      - name: "private-targeted-selective"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID"
+          - name: "u"
+            type: "string"
+            required: true
+            description: "UUID — blinding factor"
+          - name: "i"
+            type: "string"
+            required: true
+            description: "Issuer AID"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Schema SAID"
+          - name: "A"
+            type: "string"
+            required: true
+            description: "Attribute aggregate — AGID commitment to the set of selectively-disclosable attributes"
+        invariants:
+          - "Uppercase A field (not lowercase a) — selective disclosure via aggregate"
+          - "A field value is the AGID (Aggregate Identifier) — digest of concatenated attribute SAIDs"
+          - "Cannot have both a and A fields simultaneously"
+          - "Individual attributes disclosed via inclusion proofs against the AGID"
+
+      - name: "metadata"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID"
+          - name: "u"
+            type: "string"
+            required: true
+            description: "UUID — EMPTY string (not absent, not high-entropy)"
+            constraints:
+              enum: [""]
+          - name: "i"
+            type: "string"
+            required: true
+            description: "Issuer AID"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Schema SAID"
+          - name: "a"
+            type: "map"
+            required: true
+            description: "Attribute section"
+        invariants:
+          - "u field is present but EMPTY — this is a metadata credential"
+          - "Metadata credentials provide structural commitment without content correlation"
+          - "Used in chain-link confidentiality — offer what's available before disclosing"
+    construction_defaults:
+      v: "Computed from protocol version and serialization kind"
+      d: "Computed as SAID after all fields are set"
+    encoding:
+      - format: "json"
+        notes: "Fields in canonical insertion order. SAID computed with d as placeholder."
+      - format: "cbor"
+        notes: "Same field ordering as JSON."
+      - format: "cesr"
+        notes: "CESR native with -G## count code."
+
+  - name: "CredentialSection"
+    description: "Optional sections that can be attached to any ACDC variant to add chaining, governance, or registry linkage."
+    variants:
+      - name: "edges"
+        fields:
+          - name: "e"
+            type: "map"
+            required: true
+            description: "Edge section — references to other ACDCs forming a credential chain (trust graph)"
+        invariants:
+          - "Each edge references another ACDC by its SAID"
+          - "Edges create a directed acyclic graph (DAG) of credential dependencies"
+          - "Edge section has its own d (SAID) field"
+      - name: "rules"
+        fields:
+          - name: "r"
+            type: "map"
+            required: true
+            description: "Rules section — Ricardian contract terms governing credential usage"
+        invariants:
+          - "Rules section has its own d (SAID) field"
+          - "Human and machine readable legal/usage terms"
+      - name: "registry"
+        fields:
+          - name: "rd"
+            type: "string"
+            required: true
+            description: "Registry delegation — SAID of the credential registry managing this credential's lifecycle"
+        invariants:
+          - "Links this credential to a TEL registry for status tracking (issuance/revocation)"

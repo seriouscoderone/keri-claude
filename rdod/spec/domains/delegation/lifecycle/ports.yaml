@@ -1,0 +1,26 @@
+# ports.yaml
+domain_ref: "delegation/lifecycle"
+
+ports:
+  # Inbound — what clients call
+  - id: "port://delegation/lifecycle/inbound/delegation-validation"
+    type: inbound
+    name: "Delegation Validation"
+    contract: "validate_delegated_event(event: SignedEstablishmentEvent, delegator_kel: KEL?) -> Result<Validated, ValidationFailure>; process_escrow_partial_dels() -> [PromotedEvent]; process_escrow_delegables() -> [PromotedEvent]"
+    protocol: "method-call"
+    refs: ["domain://delegation"]
+
+  - id: "port://delegation/lifecycle/inbound/escrow-management"
+    type: inbound
+    name: "Delegation Escrow Management"
+    contract: "escrow_partially_delegated(event: SignedEstablishmentEvent) -> Result; escrow_delegable(event: SignedEstablishmentEvent) -> Result; get_escrowed_for_delegator(delegator_aid: AID) -> [SignedEstablishmentEvent]; approve_seal(delegator_aid: AID, delegatee_aid: AID, seal_said: SAID) -> Result"
+    protocol: "method-call"
+    refs: ["domain://delegation"]
+
+  # Outbound — what validation depends on
+  - id: "port://delegation/lifecycle/outbound/escrow-store"
+    type: outbound
+    name: "Delegation Escrow Persistence"
+    contract: "put_pde(aid: AID, sn: int, said: SAID, event: SignedEstablishmentEvent, dt: datetime) -> Result; get_pde_iter(aid: AID) -> Iterator<SignedEstablishmentEvent>; rem_pde(aid: AID, sn: int, said: SAID) -> Result; put_delegable(aid: AID, sn: int, said: SAID, event: SignedEstablishmentEvent, dt: datetime) -> Result; get_delegable_iter(aid: AID) -> Iterator<SignedEstablishmentEvent>; rem_delegable(aid: AID, sn: int, said: SAID) -> Result; put_aes(delegator: AID, delegatee: AID, said: SAID) -> Result; get_aes(delegator: AID, delegatee: AID) -> SAID?; rem_aes(delegator: AID, delegatee: AID) -> Result"
+    protocol: "method-call"
+    refs: ["persistence"]

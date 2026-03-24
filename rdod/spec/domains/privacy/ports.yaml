@@ -1,0 +1,41 @@
+# ports.yaml
+domain_ref: "privacy"
+
+ports:
+  # Inbound — what the parent ACDC domain calls
+  - id: "port://privacy/inbound/privacy-management"
+    type: inbound
+    name: "Privacy and Graduated Disclosure Orchestration"
+    contract: "disclose(acdc, mode: DisclosureMode, options: DisclosureOptions) -> DisclosedVariant; classify(acdc) -> DisclosureMode; classify_privacy_level(acdc) -> PublicOrPrivateOrMetadata; verify_disclosure(disclosed_variant, issuer_kel) -> Result<Valid, VerificationError>; bulk_issue(acdc, count) -> [BulkInstance]"
+    protocol: "method-call"
+    refs: ["domain://credential-lifecycle"]
+
+  # Outbound — delegates to subdomains
+  - id: "port://privacy/outbound/disclosure"
+    type: outbound
+    name: "Disclosure Mode Definitions"
+    contract: "Delegates to port://privacy/disclosure/inbound/mode-definitions"
+    protocol: "method-call"
+    refs: ["domain://privacy/disclosure"]
+
+  - id: "port://privacy/outbound/blinding"
+    type: outbound
+    name: "Blinded State Operations"
+    contract: "Delegates to port://privacy/blinding/inbound/blinded-state"
+    protocol: "method-call"
+    refs: ["domain://privacy/blinding"]
+
+  - id: "port://privacy/outbound/aggregation"
+    type: outbound
+    name: "Aggregation Operations"
+    contract: "Delegates to port://privacy/aggregation/inbound/aggregation-operations"
+    protocol: "method-call"
+    refs: ["domain://privacy/aggregation"]
+
+  # Outbound -- kernel dependency for cryptographic operations
+  - id: "port://privacy/outbound/digest"
+    type: outbound
+    name: "Cryptographic Digest for Blinded Commitments"
+    contract: "said_compute(block_with_uuid) -> SAID; generate_uuid(entropy_bits: int) -> UUID"
+    protocol: "method-call"
+    refs: ["kernel://cryptographic-algorithms"]

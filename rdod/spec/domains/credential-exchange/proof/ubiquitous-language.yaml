@@ -1,0 +1,67 @@
+# ubiquitous-language.yaml
+domain_ref: "credential-exchange/proof"
+
+imports:
+  - term: "KRAM"
+    from: "domain://identity"
+    usage: "Exchange messages are authenticated via KRAM — signature validity checked before processing any IPEX content"
+
+terms:
+  - term: "Proof of Issuance"
+    synonyms: ["PoI"]
+    definition: "Evidence that an ACDC was authentically issued — provided by disclosing the SAID of the most compact form variant and the issuer's verifiable commitment (signature or seal) on that SAID."
+    invariants:
+      - "Issuer must provide signature or seal on the SAID of the most compact form"
+      - "A commitment to the top-level SAID is equivalent to a commitment to the hash tree root"
+      - "This single commitment provides PoI for all schema-authorized variants"
+    examples:
+      - "Issuer's signature on the compact ACDC SAID, verifiable against the issuer's key state at issuance"
+    related_terms: ["Proof of Disclosure", "Most Compact Form", "Credential Artifacts in Grant"]
+
+  - term: "Proof of Disclosure"
+    synonyms: ["PoD"]
+    definition: "Evidence that a specific variant of an ACDC has been disclosed — provided by disclosing the SAD of the most compact variant and recursively expanding nested SADs as needed."
+    invariants:
+      - "Discloser provides the SAD of the variant, verifiable against its SAID"
+      - "Nested blocks are recursively expanded from compact form and verified"
+      - "May satisfy commitment made in prior step via signature on SAID"
+    examples:
+      - "Full attribute section SAD disclosed and verified against its SAID from the compact form"
+    related_terms: ["Proof of Issuance", "SAD", "SAID", "Credential Artifacts in Grant"]
+
+  - term: "Credential Artifacts in Grant"
+    synonyms: []
+    definition: "The grant message embeds all artifacts needed for the recipient to verify the credential: the ACDC itself, the issuance TEL event (iss/bis), and the KEL anchor seal. This bundle enables the recipient to independently verify the credential's authenticity, chain, and revocation status."
+    invariants:
+      - "Grant contains the full ACDC (or selective disclosure variant)"
+      - "Grant contains the issuance TEL event (iss for backerless, bis for backed registries)"
+      - "Grant contains the KEL anchor seal binding the TEL event to the issuer's KEL"
+      - "Recipient can independently verify the credential without additional round-trips to the issuer"
+    examples:
+      - "Grant message carrying an ACDC, its iss event from the TEL, and the seal from the issuer's KEL interaction event"
+      - "Recipient verifying the grant by checking: ACDC SAID matches iss event, iss event digest matches KEL seal"
+    related_terms: ["Proof of Issuance", "Proof of Disclosure", "Transaction Event Seal", "TEL"]
+
+events:
+  - name: "IssuanceProofVerified"
+    payload: "acdc_said: SAID, issuer_aid: AID, compact_said: SAID"
+    triggers: "PoI check passes — issuer's commitment on the most compact SAID is cryptographically valid"
+
+  - name: "DisclosureProofVerified"
+    payload: "acdc_said: SAID, variant: DisclosureVariant, expanded_blocks: [SAID]"
+    triggers: "PoD check passes — all SAD expansions match their corresponding SAIDs"
+
+  - name: "CredentialArtifactsVerified"
+    payload: "acdc_said: SAID, tel_event_said: SAID, kel_seal_said: SAID"
+    triggers: "Full artifact bundle in a grant is verified — ACDC, TEL event, and KEL seal are consistent"
+
+  - name: "MessageAuthenticated"
+    payload: "exn_said: SAID, sender_aid: AID, route: Route"
+    triggers: "KRAM authentication passes — exchange message signature is valid against sender's current key state"
+
+rules:
+  - "Discloser must provide both Proof of Issuance (PoI) and Proof of Disclosure (PoD)"
+  - "A signature on the most compact form SAID provides PoI for all schema-authorized variants"
+  - "Credential artifact verification requires ACDC SAID to match iss event, and iss event digest to match KEL seal"
+  - "KRAM authentication is checked before processing any IPEX exchange message content"
+  - "Verification is stateless given a key state snapshot — it takes artifacts and returns valid/invalid"

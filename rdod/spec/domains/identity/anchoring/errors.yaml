@@ -1,0 +1,46 @@
+# errors.yaml
+domain_ref: "identity/anchoring"
+
+# Error catalog for the Identity Anchoring domain.
+# Covers failures in interaction event construction, seal validation,
+# EO (Establishment Only) enforcement, and non-transferable identifier
+# restrictions.
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action
+#   fatal      — unrecoverable; event is permanently rejected
+
+errors:
+  - name: "AnchoringNotPermittedError"
+    description: "Identifier has the EO (Establishment Only) configuration trait"
+    cause: "Interaction events (ixn) are not allowed for identifiers with the EO trait — all events must be establishment events"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "aid"
+        type: "string"
+        description: "The AID with EO set"
+
+  - name: "NonTransferableAnchoringError"
+    description: "Non-transferable identifier cannot produce interaction events"
+    cause: "Interaction events require a transferable identifier (non-empty next key commitments at inception)"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "aid"
+        type: "string"
+        description: "The non-transferable AID"
+
+  - name: "InvalidSealError"
+    description: "Seal in the anchor list is malformed"
+    cause: "A seal object in the a field does not conform to any recognized seal type (digest, event, or event-location)"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "seal_index"
+        type: "integer"
+        description: "Position of the invalid seal in the anchor list"
+      - field: "reason"
+        type: "string"
+        description: "What makes this seal invalid"

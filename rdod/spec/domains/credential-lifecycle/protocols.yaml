@@ -1,0 +1,170 @@
+domain_ref: "credential-lifecycle"
+
+protocols:
+  - name: "CredentialIssuance"
+    description: "Issue a new credential — create ACDC, record in TEL, anchor in issuer's KEL. The credential becomes verifiable by any party that resolves the issuer's OOBI."
+    participants:
+      - domain: "domain://credential-lifecycle/status"
+        role: "Records issuance event in TEL, transitions credential to Issued state"
+      - domain: "domain://credential-lifecycle/registry"
+        role: "Provides the registry under which this credential is issued"
+      - domain: "domain://identity/anchoring"
+        role: "Anchors TEL event seal in issuer's KEL"
+      - domain: "domain://accountability/receipting"
+        role: "Witnesses receipt the anchoring interaction event"
+    trigger: "Issuer decides to issue a credential (after IPEX negotiation or unilateral decision)"
+    steps:
+      - seq: 1
+        domain: "domain://credential-lifecycle/registry"
+        action: "verify_registry_exists"
+        port: "port://credential-lifecycle/registry/inbound/registry-management"
+        input:
+          description: "Registry SAID (REGID)"
+          types:
+            - ref: "types://credential-lifecycle#RegistryInceptionEvent"
+              fields: ["i"]
+        output:
+          description: "Registry confirmed active and owned by issuer"
+        on_failure:
+          - error: "MissingRegistryError"
+            ref: "errors://credential-lifecycle/status#MissingRegistryError"
+            action: "abort"
+            compensation: "Issuer must create registry first via vcp event"
+      - seq: 2
+        domain: "domain://credential-lifecycle/status"
+        action: "construct_acdc"
+        port: "port://credential-lifecycle/status/inbound/state-query"
+        input:
+          description: "Schema SAID, issuer AID, attributes, optional: recipient AID, privacy flag, edges, rules, registry SAID"
+        output:
+          description: "SAIDified ACDC with computed d field"
+      - seq: 3
+        domain: "domain://credential-lifecycle/status"
+        action: "construct_issuance_event"
+        port: "port://credential-lifecycle/status/inbound/state-query"
+        input:
+          description: "Credential SAID, registry SAID, datetime"
+          types:
+            - ref: "types://credential-lifecycle#IssuanceEvent/backerless"
+              fields: ["i", "ri", "dt"]
+        output:
+          description: "TEL issuance event (iss or bis)"
+          type: "types://credential-lifecycle#IssuanceEvent"
+        depends_on: [2]
+      - seq: 4
+        domain: "domain://identity/anchoring"
+        action: "anchor_tel_event"
+        port: "port://identity/anchoring/inbound/data-anchoring"
+        input:
+          description: "Issuer creates interaction event with seal containing TEL event SAID"
+          types:
+            - ref: "types://identity#InteractionEvent"
+              fields: ["a"]
+        output:
+          description: "Anchoring ixn accepted to issuer's KEL"
+        depends_on: [3]
+        preconditions:
+          - "verification://identity/anchoring#Seal"
+        on_failure:
+          - error: "ValidationError"
+            ref: "errors://identity/anchoring#InvalidSealError"
+            action: "abort"
+      - seq: 5
+        domain: "domain://accountability/receipting"
+        action: "collect_witness_receipts"
+        port: "port://accountability/receipting/inbound/receipt-lifecycle"
+        input:
+          description: "Anchoring interaction event"
+        output:
+          description: "Witness receipts for the KEL anchor"
+        depends_on: [4]
+      - seq: 6
+        domain: "domain://credential-lifecycle/status"
+        action: "accept_issuance"
+        port: "port://credential-lifecycle/status/inbound/state-query"
+        input:
+          description: "TEL event + KEL anchor confirmed"
+        output:
+          description: "Credential state transitions to Issued"
+          type: "types://credential-lifecycle#CredentialState"
+        depends_on: [4]
+    timeout: "3600s for witness receipts"
+    terminal_states:
+      success: "Credential exists in Issued state, TEL event recorded, KEL anchor witnessed"
+      failure: "Issuance aborted — credential remains in NotIssued state"
+
+  - name: "CredentialRevocation"
+    description: "Revoke a previously issued credential — record revocation in TEL, anchor in issuer's KEL. The credential becomes unverifiable for future presentations."
+    participants:
+      - domain: "domain://credential-lifecycle/status"
+        role: "Records revocation event in TEL, transitions credential to Revoked state"
+      - domain: "domain://identity/anchoring"
+        role: "Anchors TEL revocation seal in issuer's KEL"
+      - domain: "domain://accountability/receipting"
+        role: "Witnesses receipt the anchoring event"
+    trigger: "Issuer decides to revoke a credential"
+    steps:
+      - seq: 1
+        domain: "domain://credential-lifecycle/status"
+        action: "verify_credential_issued"
+        port: "port://credential-lifecycle/status/inbound/state-query"
+        input:
+          description: "Credential SAID"
+        output:
+          description: "Credential confirmed in Issued state"
+          type: "types://credential-lifecycle#CredentialState"
+        on_failure:
+          - error: "InvalidCredentialStateTransition"
+            ref: "errors://credential-lifecycle/status#InvalidCredentialStateError"
+            action: "abort"
+            compensation: "Cannot revoke — credential is NotIssued or already Revoked"
+      - seq: 2
+        domain: "domain://credential-lifecycle/status"
+        action: "construct_revocation_event"
+        port: "port://credential-lifecycle/status/inbound/state-query"
+        input:
+          description: "Credential SAID, registry SAID, prior TEL event SAID, datetime"
+          types:
+            - ref: "types://credential-lifecycle#RevocationEvent/backerless"
+              fields: ["i", "ri", "p", "dt"]
+        output:
+          description: "TEL revocation event (rev or brv)"
+          type: "types://credential-lifecycle#RevocationEvent"
+        depends_on: [1]
+      - seq: 3
+        domain: "domain://identity/anchoring"
+        action: "anchor_revocation"
+        port: "port://identity/anchoring/inbound/data-anchoring"
+        input:
+          description: "Issuer creates ixn with seal of TEL revocation event"
+          types:
+            - ref: "types://identity#InteractionEvent"
+              fields: ["a"]
+        output:
+          description: "Anchoring ixn accepted to KEL"
+        depends_on: [2]
+        preconditions:
+          - "verification://identity/anchoring#Seal"
+      - seq: 4
+        domain: "domain://accountability/receipting"
+        action: "collect_witness_receipts"
+        port: "port://accountability/receipting/inbound/receipt-lifecycle"
+        input:
+          description: "Anchoring event"
+        output:
+          description: "Witness receipts"
+        depends_on: [3]
+      - seq: 5
+        domain: "domain://credential-lifecycle/status"
+        action: "accept_revocation"
+        port: "port://credential-lifecycle/status/inbound/state-query"
+        input:
+          description: "TEL event + KEL anchor confirmed"
+        output:
+          description: "Credential state transitions to Revoked (terminal)"
+          type: "types://credential-lifecycle#CredentialState"
+        depends_on: [3]
+    timeout: "3600s"
+    terminal_states:
+      success: "Credential in Revoked state — future presentations will fail verification"
+      failure: "Revocation aborted — credential remains Issued"

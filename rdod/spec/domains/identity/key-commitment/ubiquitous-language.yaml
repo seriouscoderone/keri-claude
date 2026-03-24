@@ -1,0 +1,135 @@
+# ubiquitous-language.yaml
+domain_ref: "identity/key-commitment"
+
+terms:
+  # Inherits: "Pre-rotation" from domain://identity
+  - term: "Pre-rotation Commitment"
+    synonyms: ["Pre-rotation", "Forward-Blinded Commitment"]
+    specializes: "Pre-rotation"
+    definition: "In the context of the key-commitment subdomain, pre-rotation commitment is the cryptographic mechanism by which each establishment event publishes digests of the next rotation keys. Specializes the parent definition with implementation-level detail: the one-way commitment constraint, first-time/one-time/only-time key usage, CESR-encoded digest algorithms, and the dual-key compromise requirement for post-quantum resistance."
+    invariants:
+      - "Each set of pre-rotated keys is first-time, one-time, only-time use for rotation authority"
+      - "No rotation is valid without keys matching the pre-committed digests"
+      - "The digest algorithm is encoded in the CESR prefix of each n field entry (e.g., E prefix = Blake3-256)"
+      - "The commitment is one-way — actual public keys remain secret until the rotation that activates them"
+    examples:
+      - "Inception event commits to first rotation keys: n field contains Blake3-256 digests of next public keys"
+      - "Each rotation both activates the previously committed keys and commits to a new next set"
+      - "Attacker compromises current signing keys but cannot rotate — pre-committed keys are unknown"
+    related_terms: ["Next Key Digests", "Signing Keys", "Key Configuration", "Partial Rotation"]
+
+  - term: "Signing Keys"
+    synonyms: ["Current Keys", "k field", "verfers [keripy]", "current_public_keys [keriox]"]
+    definition: "The ordered list of qualified public keys currently authorized to sign events and other data for an AID. Specified in the k field of establishment events. Each key is a CESR-qualified public key whose prefix code identifies the key type (D=Ed25519, 1AAB=ECDSA secp256k1, 1AAJ=ECDSA secp256r1, 1AAD=Ed448)."
+    invariants:
+      - "At inception, signing keys are freely chosen by the controller"
+      - "At rotation, the new signing keys must include a threshold-satisficing subset of the previously pre-committed next keys (unblinded)"
+      - "Ordered — index position matters for indexed signatures and threshold satisfaction"
+      - "Each key is a qualified public key with a CESR prefix code identifying its algorithm"
+      - "In keripy, stored as a list of Verfer instances on the Kever"
+      - "In keriox, stored as current_public_keys in the KeyConfig struct"
+    examples:
+      - "A list of three Ed25519 public keys: ['DBFiIgoCOpJ...', 'DG-YwInLUx...', 'DGIAk2jkC3...']"
+      - "After rotation, the keys that were previously committed as next key digests now appear as full public keys in k"
+      - "A single key inception: k=['DABC...'] with the D prefix indicating Ed25519"
+    related_terms: ["Pre-rotation Commitment", "Key Configuration", "Transferable Identifier"]
+
+  - term: "Next Key Digests"
+    synonyms: ["Pre-rotated Key Digests", "n field", "Next Keys", "ndigers [keripy]", "next_keys_data [keriox]"]
+    definition: "The ordered list of cryptographic digests of the public keys that will be authorized for the next rotation. Published in the n field of establishment events as a forward-blinded commitment. Each entry is a CESR-qualified digest whose prefix code identifies the hash algorithm."
+    invariants:
+      - "Each entry is a qualified digest (e.g., E prefix = Blake3-256) of the corresponding next public key"
+      - "The actual public keys are kept secret until used in a subsequent rotation"
+      - "Provides post-quantum resistance — attacker must compromise both current and pre-committed keys"
+      - "An empty next key digest list (n = []) signals a non-transferable AID — no further rotations possible"
+      - "In keripy, stored as a list of Diger instances on the Kever (ndigers attribute)"
+      - "In keriox, stored as NextKeysData within KeyConfig, holding digests and the next threshold"
+      - "The digest is computed over the raw qualified public key bytes (qb64 of the Verfer)"
+    examples:
+      - "A list of three Blake3-256 digests: ['ELeFYMmuJb...', 'ENY9GYShOj...', 'EGyJ7y3Tle...']"
+      - "Empty list [] in inception means the AID is non-transferable — permanently bound to inception keys"
+      - "At rotation, the n field from the previous establishment event is verified against the new signing keys"
+    related_terms: ["Pre-rotation Commitment", "Signing Keys", "Key Configuration", "Non-transferable Identifier"]
+
+  - term: "Key Configuration"
+    synonyms: ["KeyConfig [keriox]", "key config"]
+    definition: "The current set of signing keys paired with the next key hash commitment. Represents the cryptographic material portion of key state — the keys authorized to sign now and the digests constraining the next rotation. This is the paired structure that embodies the pre-rotation chain."
+    invariants:
+      - "Current signing keys (verfers in keripy, current_public_keys in keriox) are qualified public keys ready for signature verification"
+      - "Next key digests (ndigers in keripy, next_keys_data in keriox) are one-way commitments to future rotation keys"
+      - "Both lists are ordered — index position matters for indexed signatures and threshold matching"
+      - "The pairing is atomic: current keys and next digests are always updated together at each establishment event"
+      - "In keriox, KeyConfig bundles current_public_keys, next_keys_data (digests + next threshold), and the signing threshold"
+    examples:
+      - "In keripy: verfers=[Verfer(qb64='DABC...'), Verfer(qb64='DDEF...')] + ndigers=[Diger(qb64='EABC...')]"
+      - "In keriox: KeyConfig { current_public_keys: [...], next_keys_data: NextKeysData { digests: [...], threshold: ... } }"
+      - "After rotation: previous ndigers are consumed (verified against new keys), new ndigers committed"
+    related_terms: ["Signing Keys", "Next Key Digests", "Pre-rotation Commitment", "Partial Rotation"]
+
+  - term: "Partial Rotation"
+    synonyms: []
+    definition: "A rotation where not all pre-rotated keys are repurposed as signing keys. Some pre-rotated keys are used only for their one-time rotation authority and then discarded, minimizing exposure. The newly current key list need only include a threshold-satisficing subset of the prior next keys."
+    invariants:
+      - "The new signing key list may contain fewer keys than the prior next key digest list"
+      - "Only a threshold-satisficing subset (per the prior rotation threshold nt) of next keys must appear as signing keys"
+      - "Discarded pre-rotated keys are consumed — they can never be used again"
+      - "Reduces exposure of pre-rotated keys as long-lived signing keys"
+      - "Provides stronger protection against establishment dead-attacks by limiting key reuse"
+      - "The rotation event's signatures carry ondex values mapping each signer to its position in the prior next key list"
+    examples:
+      - "Prior next has 5 keys with threshold 3; rotation uses 3 as signing keys and discards the other 2"
+      - "A 7-of-9 next key set where rotation promotes only 5 to signing keys with a 3-of-5 signing threshold"
+    related_terms: ["Pre-rotation Commitment", "Key Configuration", "Next Key Digests", "Signing Keys"]
+
+  - term: "Transferable Identifier"
+    synonyms: ["Transferable AID", "Transferable Prefix"]
+    definition: "An AID whose control authority can be transferred via key rotation. Uses transferable prefix codes that indicate the key type supports rotation. Must include pre-rotation commitments (next key digests) in establishment events to maintain the forward commitment chain."
+    invariants:
+      - "Prefix code indicates transferability: D (Ed25519), 1AAB (ECDSA secp256k1), 1AAJ (ECDSA secp256r1), 1AAD (Ed448)"
+      - "Establishment events MUST include next key digests (n field) for pre-rotation"
+      - "Control transfers via rotation events that satisfy the pre-rotation commitment"
+      - "Supports full KERI lifecycle: inception -> rotation* -> interaction*"
+      - "The prefix code is determined at inception and is permanent — it encodes the initial public key type"
+    examples:
+      - "Prefix starting with 'D' — transferable Ed25519 identifier, can rotate keys"
+      - "Prefix starting with 'E' — self-addressing transferable identifier (Blake3-256 digest of inception event)"
+      - "A multi-sig AID with 3 transferable Ed25519 keys and pre-rotation commitment to next 3 keys"
+    related_terms: ["Non-transferable Identifier", "Pre-rotation Commitment", "Key Configuration"]
+
+  - term: "Non-transferable Identifier"
+    synonyms: ["Non-transferable AID", "Non-transferable Prefix", "Ephemeral Identifier"]
+    definition: "An AID whose control authority is fixed at inception and cannot be rotated. Uses non-transferable prefix codes (the 'N' variants) that indicate the key type does not support rotation. The inception event has an empty next key digest list (n = []), permanently binding the AID to its inception keys."
+    invariants:
+      - "Prefix code indicates non-transferability: B (Ed25519N), 1AAA (ECDSA secp256k1N), 1AAI (ECDSA secp256r1N), 1AAC (Ed448N)"
+      - "The 'N' suffix in code names indicates non-transferable variant of the same key algorithm"
+      - "n field is empty list [] in inception event — no pre-rotation commitment exists"
+      - "Cannot issue rotation events — the inception key is permanent"
+      - "Compromise of the single key is unrecoverable — no recovery rotation possible"
+      - "Simpler and sufficient for ephemeral, witness, or low-value identifiers"
+    examples:
+      - "Prefix starting with 'B' — non-transferable Ed25519 identifier, fixed key"
+      - "A witness AID using a non-transferable prefix — witnesses typically don't rotate keys"
+      - "An ephemeral session identifier for a single interaction that does not need key rotation"
+    related_terms: ["Transferable Identifier", "Next Key Digests", "Pre-rotation Commitment"]
+
+events:
+  - name: "PreRotationCommitted"
+    payload: "aid: AID, next_digests: [Digest], digest_algorithm: DigestAlgorithm"
+    triggers: "An establishment event publishes new next key digests, creating a forward-blinded commitment to the next rotation keys"
+
+  - name: "KeyConfigurationUpdated"
+    payload: "aid: AID, new_signing_keys: [PublicKey], new_next_digests: [Digest], prior_next_digests: [Digest]"
+    triggers: "A rotation event replaces the current key configuration — prior next digests are consumed and new ones committed"
+
+  - name: "PartialRotationPerformed"
+    payload: "aid: AID, promoted_keys: [PublicKey], discarded_digests: [Digest], new_signing_keys: [PublicKey]"
+    triggers: "A rotation event promotes only a subset of pre-committed keys to signing keys, discarding the rest"
+
+rules:
+  - "Every establishment event for a transferable AID must include a non-empty next key digest list (n field)"
+  - "An empty next key digest list (n = []) permanently ends the AID's transferability — no further rotations are valid"
+  - "At rotation, each new signing key must match a pre-committed digest from the prior establishment event's n field"
+  - "Pre-rotated keys are first-time, one-time, only-time use for rotation authority — once consumed (matched or discarded), they cannot be reused"
+  - "The digest algorithm for next key digests is encoded in the CESR prefix of each n field entry and must be a supported algorithm from the kernel"
+  - "Partial rotation is valid as long as the promoted keys satisfy the prior rotation threshold (nt)"
+  - "Key configuration updates are atomic — signing keys and next key digests are always replaced together"

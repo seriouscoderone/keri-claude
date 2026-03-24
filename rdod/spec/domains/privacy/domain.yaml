@@ -1,0 +1,74 @@
+# domain.yaml
+template_version: "1.0"
+id: "privacy"
+name: "Credential Privacy"
+description: >
+  Control what you reveal — graduated disclosure from compact to full, blinded
+  credential status, and selective disclosure mechanics. Orchestrates progressive,
+  incremental revelation of credential data following the principle of least
+  disclosure. Defines three ACDC privacy levels (public, private, metadata) based
+  on the top-level UUID field, supports bulk issuance for anti-correlation, and
+  coordinates blinding, disclosure modes, and aggregation subdomains.
+version: "0.1.0"
+
+source_material:
+  - type: document
+    reference: "acdc-specification.md — ACDC protocol specification, Disclosure Mechanisms and Exploitation Protection sections"
+  - type: document
+    reference: "acdc-specification.md — ACDC Variants (Public, Private, Metadata), UUID Salty Nonce, Bulk Issuance sections"
+  - type: document
+    reference: "acdc-specification.md — Aggregate Section, Attribute Section"
+  - type: implementation
+    reference: "keripy — Python reference implementation, vdr/ and vc/ modules"
+  - type: implementation
+    reference: "keriox/teliox — Rust TEL implementation"
+
+ubiquitous_language:
+  - term: "Graduated Disclosure"
+    definition: "The incremental, interactive application of the principle of least disclosure — each disclosure reveals the minimum needed to facilitate further disclosure"
+    invariants:
+      - "Applies recursively: disclose enough to enable more disclosure"
+      - "Orchestrates disclosure, blinding, and aggregation subdomains in combination"
+
+  - term: "ACDC Privacy Level"
+    definition: "The privacy posture of an ACDC determined by its top-level UUID u field — public (absent), private (high-entropy), or metadata (empty)"
+    invariants:
+      - "Three mutually exclusive levels based on the u field"
+      - "Privacy level is set at issuance and cannot change"
+
+domain_clients:
+  - ref: "domain://credential-lifecycle"
+    relationship: "ACDC core domain drives privacy mechanisms for credential presentation"
+    via_port: "port://privacy/inbound/privacy-management"
+
+subdomains:
+  - ref: "domain://privacy/disclosure"
+    relationship: "Defines the disclosure type taxonomy — compact, partial, nested partial, full, selective, chain-link confidential"
+  - ref: "domain://privacy/blinding"
+    relationship: "Privacy-preserving blinded state management — BLID computation, UUID derivation from shared secret salt, state discovery"
+  - ref: "domain://privacy/aggregation"
+    relationship: "Aggregate computation, inclusion proofs, most compact form algorithm, Compactor engine, SAD path signatures"
+
+kernels:
+  - ref: "kernel://cryptographic-algorithms"
+    source: "SAID computation for blinded commitments, UUID entropy requirements (>= 128 bits cryptographic entropy)"
+    relationship: "Cryptographic algorithm types used for computing blinded SAIDs over UUID-protected blocks and generating high-entropy UUIDs"
+
+adjacents: []
+
+externals: []
+
+implementation_guidance:
+  suggested_type: "module"
+  language_affinity: "any"
+  notes: >
+    This is an orchestrating domain. Disclosure mode definitions live in disclosure/,
+    blinded state management in blinding/, and aggregate computation, compaction, and
+    path signatures in aggregation/. The parent coordinates graduated disclosure flows
+    that compose all three subdomains. Privacy levels are determined by the top-level
+    UUID u field. Bulk issuance generates multiple instances with unique SAIDs for
+    anti-correlation.
+
+issues: []
+
+tags: ["disclosure", "graduated", "orchestration", "privacy", "blinding", "bulk-issuance"]

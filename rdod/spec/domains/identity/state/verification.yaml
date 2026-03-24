@@ -1,0 +1,675 @@
+# verification.yaml
+domain_ref: "identity/state"
+
+# Verification properties are language-agnostic invariants.
+# Code examples use Python/pytest syntax for illustration — implementations
+# in other languages should express equivalent assertions in their native testing framework.
+
+properties:
+  # Key Event Verifier invariants
+  - invariant: "Exactly one Kever instance per AID prefix; creating a second Kever for the same prefix MUST overwrite or be rejected — never two concurrent instances"
+    term: "Key Event Verifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(aid=aid_strategy(), events=st.lists(key_event_strategy(), min_size=1, max_size=5))
+        def test_one_kever_per_aid(aid, events):
+            kevers = {}
+            for event in events:
+                event.i = aid
+                if aid not in kevers:
+                    kevers[aid] = KeyEventVerifier(event)
+            assert len([k for k in kevers if k == aid]) == 1
+    strategy: "aid_strategy() + key_event_strategy()"
+    notes: "Map keyed by prefix — exactly one Kever per AID."
+
+  - invariant: "Key state MUST be a pure function of the KEL: given the same KEL as input, the resulting key state (verfers, ndigers, tholder, ntholder, wits, toader) MUST be identical across any two independent replays"
+    term: "Key Event Verifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy())
+        def test_kever_deterministic(kel):
+            kever1 = replay_kel(kel)
+            kever2 = replay_kel(kel)
+            assert kever1.verfers == kever2.verfers
+            assert kever1.ndigers == kever2.ndigers
+            assert kever1.tholder == kever2.tholder
+            assert kever1.ntholder == kever2.ntholder
+            assert kever1.wits == kever2.wits
+            assert kever1.toader == kever2.toader
+            assert kever1.lastEst == kever2.lastEst
+            assert kever1.sn == kever2.sn
+    strategy: "kel_strategy()"
+    notes: "Determinism is mandatory — same KEL, same state, always."
+
+  - invariant: "Only establishment events (icp, rot, dip, drt) MUST change key state fields (verfers, ndigers, tholder, ntholder, wits, toader); interaction events (ixn) MUST NOT modify any key state field"
+    term: "Key Event Verifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kever=kever_strategy(), ixn=interaction_event_strategy())
+        def test_ixn_does_not_update_key_state(kever, ixn):
+            state_before = snapshot(kever)
+            kever.update(ixn)
+            assert kever.verfers == state_before.verfers
+            assert kever.ndigers == state_before.ndigers
+            assert kever.tholder == state_before.tholder
+            assert kever.ntholder == state_before.ntholder
+            assert kever.wits == state_before.wits
+            assert kever.toader == state_before.toader
+    strategy: "kever_strategy(), interaction_event_strategy()"
+    notes: "Interaction events advance sn and update serder, but never touch key state."
+
+  - invariant: "Interaction events (ixn) MUST advance the sequence number by exactly 1: for event e at position i, sn(e) == sn(previous_event) + 1"
+    term: "Key Event Verifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kever=kever_strategy(), ixn=interaction_event_strategy())
+        def test_ixn_advances_sn_by_one(kever, ixn):
+            sn_before = kever.sn
+            kever.update(ixn)
+            assert kever.sn == sn_before + 1
+    strategy: "kever_strategy(), interaction_event_strategy()"
+    notes: "sn increments by exactly 1 on every event, including ixn."
+
+  - invariant: "Sequence number monotonicity: for any two consecutive events e_i and e_{i+1} in a valid KEL, sn(e_{i+1}) == sn(e_i) + 1; gaps and duplicates MUST NOT appear in an accepted KEL"
+    term: "Key Event Verifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy())
+        def test_sn_monotonic(kel):
+            for i in range(len(kel.events) - 1):
+                assert kel.events[i + 1].sn == kel.events[i].sn + 1, \
+                    f"sn gap at index {i}: {kel.events[i].sn} -> {kel.events[i+1].sn}"
+            # sn starts at 0
+            assert kel.events[0].sn == 0
+    strategy: "kel_strategy()"
+    notes: "sn is a strict monotonic counter starting at 0. No gaps, no duplicates."
+
+  - invariant: "First-seen ordering (fn): fn MUST be assigned exactly once per event at first acceptance, MUST be monotonically increasing across all events for all prefixes, and MUST never be reused or reassigned"
+    term: "Key Event Verifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(events=st.lists(key_event_strategy(), min_size=2, max_size=20))
+        def test_first_seen_ordering(events):
+            fn_assignments = {}
+            next_fn = 0
+            for event in events:
+                event_id = (event.i, event.sn, event.said)
+                if event_id not in fn_assignments:
+                    fn_assignments[event_id] = next_fn
+                    next_fn += 1
+            # Verify monotonicity
+            fns = list(fn_assignments.values())
+            assert fns == sorted(fns)
+            # Verify uniqueness
+            assert len(fns) == len(set(fns))
+            # Verify no gaps
+            for i in range(len(fns) - 1):
+                assert fns[i + 1] == fns[i] + 1
+    strategy: "st.lists(key_event_strategy(), 2..20)"
+    notes: "fn is a global, monotonic, gap-free counter. Assigned once, never changed."
+
+  - invariant: "Kever can be initialized in two equivalent ways: (1) replay from inception event through KEL, (2) reload from a cached key state record; both MUST produce identical state"
+    term: "Key Event Verifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy())
+        def test_kever_two_init_paths(kel):
+            kever_replay = replay_kel(kel)
+            ksr = build_key_state_record(kever_replay)
+            kever_reload = reload_kever(ksr)
+            assert kever_replay.verfers == kever_reload.verfers
+            assert kever_replay.ndigers == kever_reload.ndigers
+            assert kever_replay.tholder == kever_reload.tholder
+            assert kever_replay.ntholder == kever_reload.ntholder
+            assert kever_replay.wits == kever_reload.wits
+            assert kever_replay.sn == kever_reload.sn
+    strategy: "kel_strategy()"
+    notes: "Both initialization paths must produce equivalent state."
+
+  # Last Establishment Data invariants
+  - invariant: "lastEst MUST be updated each time an establishment event is processed: lastEst.s = event.sn, lastEst.d = event.said; interaction events MUST NOT modify lastEst"
+    term: "Last Establishment Data"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_rotation_strategy())
+        def test_last_est_updated_at_establishment(kel):
+            kever = None
+            for event in kel.events:
+                if event.t in ('icp', 'dip'):
+                    kever = KeyEventVerifier(event)
+                    assert kever.lastEst.s == 0
+                    assert kever.lastEst.d == event.said
+                elif event.t in ('rot', 'drt'):
+                    lastEst_before = kever.lastEst
+                    kever.update(event)
+                    assert kever.lastEst.s == event.sn
+                    assert kever.lastEst.d == event.said
+                elif event.t == 'ixn':
+                    lastEst_before = (kever.lastEst.s, kever.lastEst.d)
+                    kever.update(event)
+                    assert (kever.lastEst.s, kever.lastEst.d) == lastEst_before
+    strategy: "kel_with_rotation_strategy()"
+    notes: "lastEst tracks the most recent establishment event. ixn never modifies it."
+
+  - invariant: "At inception: lastEst.s MUST equal 0, lastEst.d MUST equal the inception event SAID"
+    term: "Last Establishment Data"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(icp=inception_event_strategy())
+        def test_last_est_at_inception(icp):
+            kever = KeyEventVerifier(icp)
+            assert kever.lastEst.s == 0
+            assert kever.lastEst.d == icp.said
+    strategy: "inception_event_strategy()"
+    notes: "Initial lastEst from inception."
+
+  - invariant: "For rot: a rotation at sn <= lastEst.s MUST be rejected as stale"
+    term: "Last Establishment Data"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        sn, lastEst_s = Ints('sn lastEst_s')
+        is_stale = Bool('is_stale')
+        s = Solver()
+        s.add(is_stale == (sn <= lastEst_s))
+        s.add(sn <= lastEst_s, Not(is_stale))
+        assert s.check() == unsat  # rot at sn <= lastEst.s is always stale
+    notes: "SMT proves staleness detection for rot events."
+
+  - invariant: "For drt: sn < lastEst.s MUST be rejected as stale, but sn == lastEst.s MUST be accepted as a valid recovery rotation"
+    term: "Last Establishment Data"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        drt_sn, lastEst_s = Ints('drt_sn lastEst_s')
+        is_stale = Bool('is_stale')
+        is_recovery = Bool('is_recovery')
+        s = Solver()
+        s.add(is_stale == (drt_sn < lastEst_s))
+        s.add(is_recovery == (drt_sn == lastEst_s))
+        # drt at sn < lastEst.s is stale
+        s.add(drt_sn < lastEst_s, Not(is_stale))
+        assert s.check() == unsat
+        # drt at sn == lastEst.s is recovery, NOT stale
+        s2 = Solver()
+        s2.add(is_stale == (drt_sn < lastEst_s))
+        s2.add(is_recovery == (drt_sn == lastEst_s))
+        s2.add(drt_sn == lastEst_s, is_stale)
+        assert s2.check() == unsat
+    notes: "drt has different staleness rule — sn == lastEst.s is recovery, not stale."
+
+  # State Reconstruction invariants
+  - invariant: "State reconstruction MUST be deterministic: replaying the same KEL MUST always produce the same key state regardless of the validator or implementation"
+    term: "State Reconstruction"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy())
+        def test_reconstruction_deterministic(kel):
+            state1 = reconstruct_state(kel)
+            state2 = reconstruct_state(kel)
+            assert state1 == state2
+    strategy: "kel_strategy()"
+    notes: "Same KEL always yields same state — foundational property."
+
+  - invariant: "Key state is fully determined by the establishment subsequence alone: replaying only establishment events (filtering out ixn) MUST produce the same key state fields (signing_keys, next_digests, witnesses, thresholds) as replaying the full KEL"
+    term: "State Reconstruction"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_ixn_strategy())
+        def test_reconstruction_only_establishment_modifies(kel):
+            state_full = reconstruct_state(kel)
+            est_events = [e for e in kel.events if e.t in ('icp', 'rot', 'dip', 'drt')]
+            state_est_only = reconstruct_state_from_events(est_events)
+            assert state_full.signing_keys == state_est_only.signing_keys
+            assert state_full.next_digests == state_est_only.next_digests
+            assert state_full.witnesses == state_est_only.witnesses
+            assert state_full.tholder == state_est_only.tholder
+    strategy: "kel_with_ixn_strategy()"
+    notes: "ixn events maintain hash-chain continuity but do not affect key state."
+
+  - invariant: "Any validator MUST be able to independently reconstruct key state from a KEL copy without trusting any cached state or third party"
+    term: "State Reconstruction"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy())
+        def test_independent_reconstruction(kel):
+            state_v1 = reconstruct_state(kel)
+            state_v2 = reconstruct_state(kel)
+            assert state_v1 == state_v2
+    strategy: "kel_strategy()"
+    notes: "No trusted third party needed — anyone with the KEL can verify."
+
+  # Establishment Subsequence invariants
+  - invariant: "First event in any KEL MUST be an inception (icp or dip) at sn == 0; any other event type at sn == 0 MUST be rejected"
+    term: "Establishment Subsequence"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy())
+        def test_first_event_is_inception(kel):
+            assert kel.events[0].t in ('icp', 'dip')
+            assert kel.events[0].sn == 0
+    strategy: "kel_strategy()"
+    notes: "Every KEL must start with inception at sn=0."
+
+  - invariant: "Key state at any point is fully determined by the establishment subsequence up to that point; ixn events between establishments do not affect key state"
+    term: "Establishment Subsequence"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy())
+        def test_state_from_establishment_subsequence(kel):
+            est_subseq = [e for e in kel.events if e.t in ('icp', 'rot', 'dip', 'drt')]
+            state_full = compute_key_state(kel)
+            state_est = compute_key_state_from_events(est_subseq)
+            assert state_full.signing_keys == state_est.signing_keys
+            assert state_full.next_digests == state_est.next_digests
+            assert state_full.witnesses == state_est.witnesses
+    strategy: "kel_strategy()"
+    notes: "Establishment subsequence alone determines key state."
+
+  # Configuration Traits invariants
+  - invariant: "EstOnly (EO) trait: if 'EO' is in the configuration traits, interaction events (ixn) MUST be rejected by the state machine with a typed error"
+    term: "Configuration Traits"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=est_only_kel_strategy(), ixn=interaction_event_strategy())
+        def test_est_only_rejects_ixn(kel, ixn):
+            kever = replay_kel(kel)
+            assert kever.estOnly
+            result = kever.validate(ixn)
+            assert result.is_err()
+            assert 'EstOnly' in str(result.error())
+    strategy: "est_only_kel_strategy() generates KELs with EO config trait"
+    notes: "EstOnly trait makes ixn structurally invalid."
+
+  - invariant: "Traits are cumulative and irreversible: once set in any establishment event, a trait MUST persist for the lifetime of the identifier; subsequent establishment events MUST NOT remove previously set traits"
+    term: "Configuration Traits"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_traits_strategy())
+        def test_traits_cumulative_irreversible(kel):
+            active_traits = set()
+            for event in kel.events:
+                if event.t in ('icp', 'rot', 'dip', 'drt'):
+                    if hasattr(event, 'c') and event.c:
+                        active_traits.update(event.c)
+            kever = replay_kel(kel)
+            # All accumulated traits must be present
+            assert set(kever.config_traits) == active_traits
+            # No trait that was ever set can be absent
+            for event in kel.events:
+                if event.t in ('icp', 'rot', 'dip', 'drt') and hasattr(event, 'c'):
+                    for trait in event.c:
+                        assert trait in kever.config_traits
+    strategy: "kel_with_traits_strategy()"
+    notes: "Traits only accumulate — never removed."
+
+  # Incremental State Update invariants
+  - invariant: "State update MUST be atomic: if validation of an establishment event fails at any step, ALL key state fields MUST remain unchanged (rollback to pre-update snapshot)"
+    term: "Incremental State Update"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kever=kever_strategy(), bad_rot=invalid_rotation_strategy())
+        def test_update_atomic_on_failure(kever, bad_rot):
+            state_before = snapshot(kever)
+            try:
+                kever.update(bad_rot)
+                assert False, "Should have raised ValidationError"
+            except ValidationError:
+                assert kever.verfers == state_before.verfers
+                assert kever.ndigers == state_before.ndigers
+                assert kever.tholder == state_before.tholder
+                assert kever.ntholder == state_before.ntholder
+                assert kever.wits == state_before.wits
+                assert kever.toader == state_before.toader
+                assert kever.sn == state_before.sn
+                assert kever.lastEst == state_before.lastEst
+    strategy: "kever_strategy(), invalid_rotation_strategy()"
+    notes: "Failed updates leave ALL state unchanged — full atomicity guarantee."
+
+  - invariant: "On successful establishment event, ALL key state fields MUST be updated atomically: verfers from k field, ndigers from n field, tholder from kt field, ntholder from nt field, wits from witness changes, toader from bt field, lastEst from (sn, said)"
+    term: "Incremental State Update"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kever=kever_strategy(), rot=valid_rotation_strategy())
+        def test_update_all_fields_on_success(kever, rot):
+            kever.update(rot)
+            # All fields must reflect the rotation event
+            assert kever.verfers == parse_verfers(rot.k)
+            assert kever.ndigers == parse_digers(rot.n)
+            assert kever.tholder == parse_threshold(rot.kt)
+            assert kever.ntholder == parse_threshold(rot.nt)
+            assert kever.lastEst.s == rot.sn
+            assert kever.lastEst.d == rot.said
+            assert kever.sn == rot.sn
+    strategy: "kever_strategy(), valid_rotation_strategy()"
+    notes: "All fields update together — partial update is a bug."
+
+  # Stale Event invariants
+  - invariant: "For rot: sn <= lastEst.s MUST be rejected as stale — the rotation is at or behind the current establishment"
+    term: "Stale Event"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        rot_sn, lastEst_s = Ints('rot_sn lastEst_s')
+        is_stale = Bool('is_stale')
+        s = Solver()
+        s.add(is_stale == (rot_sn <= lastEst_s))
+        s.add(rot_sn <= lastEst_s, Not(is_stale))
+        assert s.check() == unsat
+    notes: "Stale rot detection is a boundary condition."
+
+  - invariant: "For drt: sn < lastEst.s MUST be rejected as stale; sn == lastEst.s MUST be accepted as a valid recovery rotation (supersedes the event at that sn)"
+    term: "Stale Event"
+    technique: smt
+    formal:
+      language: z3-python
+      expression: |
+        from z3 import *
+        drt_sn, lastEst_s = Ints('drt_sn lastEst_s')
+        is_stale = Bool('is_stale')
+        is_recovery = Bool('is_recovery')
+        s = Solver()
+        s.add(is_stale == (drt_sn < lastEst_s))
+        s.add(is_recovery == (drt_sn == lastEst_s))
+        s.add(drt_sn < lastEst_s, Not(is_stale))
+        assert s.check() == unsat
+        s2 = Solver()
+        s2.add(is_stale == (drt_sn < lastEst_s))
+        s2.add(is_recovery == (drt_sn == lastEst_s))
+        s2.add(drt_sn == lastEst_s, is_stale)
+        assert s2.check() == unsat
+    notes: "drt has different staleness rule — sn == lastEst.s is recovery, not stale."
+
+  - invariant: "Recovery rotation: a rot event with lastEst.s < sn <= current_sn MUST only supersede an ixn event at that sn; if the event at that sn is an establishment event, recovery MUST be rejected"
+    term: "Stale Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_with_ixn_after_establishment_strategy())
+        def test_recovery_supersedes_ixn_only(kel):
+            kever = replay_kel(kel)
+            for event in kel.events:
+                if event.t == 'ixn' and event.sn > kever.lastEst.s:
+                    # Can supersede this ixn with a recovery rotation
+                    rot = build_recovery_rotation(kel.aid, sn=event.sn)
+                    result = kever.validate(rot)
+                    assert not result.is_stale()
+            # Cannot supersede an establishment event
+            for event in kel.events:
+                if event.t in ('icp', 'rot', 'dip', 'drt'):
+                    rot = build_recovery_rotation(kel.aid, sn=event.sn)
+                    result = kever.validate(rot)
+                    assert result.is_stale() or result.is_rejected()
+    strategy: "kel_with_ixn_after_establishment_strategy()"
+    notes: "Recovery rotations can only supersede interaction events, never establishment events."
+
+  # Boundary condition invariants
+  - invariant: "Non-transferable identifier: an inception with n == [] (empty next digests) MUST create a non-transferable Kever; subsequent rotation events MUST be rejected"
+    term: "Key Event Verifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(icp=nontransferable_inception_strategy())
+        def test_nontransferable_no_rotation(icp):
+            assert icp.n == []
+            kever = KeyEventVerifier(icp)
+            rot = build_rotation(icp.i, sn=1)
+            result = kever.validate(rot)
+            assert result.is_err()
+            assert 'non-transferable' in str(result.error()).lower()
+    strategy: "nontransferable_inception_strategy()"
+    notes: "Empty next digests = no rotation possible. Identifier is permanent."
+
+  - invariant: "Inception MUST be at sn == 0; if sn != 0 on an inception event, the event MUST be rejected"
+    term: "Key Event Verifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(icp=inception_event_strategy(),
+               bad_sn=st.integers(min_value=1, max_value=100))
+        def test_inception_must_be_sn_zero(icp, bad_sn):
+            icp.sn = bad_sn
+            with pytest.raises(ValidationError, match='inception must be sn=0'):
+                KeyEventVerifier(icp)
+    strategy: "inception_event_strategy(), st.integers(1..100)"
+    notes: "sn=0 is the only valid sn for inception."
+
+  - invariant: "Hash chain continuity: for every non-inception event, event.p MUST equal the SAID of the immediately preceding event; if event.p != prior_event.said, reject"
+    term: "Key Event Verifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy())
+        def test_hash_chain_continuity(kel):
+            for i in range(1, len(kel.events)):
+                event = kel.events[i]
+                prior = kel.events[i - 1]
+                assert event.p == prior.said, \
+                    f"Hash chain broken at sn={event.sn}: p={event.p} != prior.said={prior.said}"
+    strategy: "kel_strategy()"
+    notes: "The p field creates a hash chain linking each event to its predecessor."
+
+contracts:
+  - port_ref: "port://identity/state/inbound/state-tracking"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, inception: (
+                inception.t in ('icp', 'dip')
+                and inception.sn == 0
+                and inception.i == aid
+            )
+        description: "create_kever requires an inception event at sn=0 matching the AID"
+      - formal:
+          language: python
+          expression: |
+            lambda aid, event, sigs: (
+                len(sigs) >= 1
+                and event.i == aid
+                and event.sn >= 0
+            )
+        description: "update_kever requires at least one signature and matching AID"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, inception, kever: (
+                kever.aid == aid
+                and kever.sn == 0
+                and kever.lastEst.s == 0
+                and kever.lastEst.d == inception.said
+            )
+        description: "create_kever returns a Kever at sn=0 with lastEst pointing to inception"
+      - formal:
+          language: python
+          expression: |
+            lambda aid, event, sigs, result: (
+                (result.is_ok() and result.value().sn == event.sn)
+                or result.is_err()
+            )
+        description: "update_kever advances to event's sn on success, or returns typed error"
+
+  - port_ref: "port://identity/state/inbound/state-reconstruction"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, kel: (
+                aid is not None
+                and len(kel.events) >= 1
+                and kel.events[0].t in ('icp', 'dip')
+                and kel.events[0].sn == 0
+            )
+        description: "AID must be provided and KEL must start with inception at sn=0"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, kel, result: (
+                result.is_ok()
+                and result.value().sn == kel.events[-1].sn
+                and result.value().aid == aid
+            )
+        description: "Reconstructed state reflects the final event in the KEL"
+
+  - port_ref: "port://identity/state/inbound/state-query"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None and isinstance(aid, str)"
+        description: "AID must be a non-None string"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, result: (
+                result is None
+                or (result.s >= 0 and result.d is not None)
+            )
+        description: "get_last_establishment returns None (unknown AID) or valid establishment data with sn >= 0"
+
+  - port_ref: "port://identity/state/outbound/persistence"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None and isinstance(aid, str)"
+        description: "AID must be a non-None string for all persistence operations"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda aid, state, store: (
+                store.get_cached_state(aid) == state
+            )
+        description: "put_cached_state followed by get_cached_state returns the same record"
+
+state_machines:
+  - name: "KeverLifecycle"
+    term: "Key Event Verifier"
+    states:
+      - "uninitialized"
+      - "active"
+      - "est_only"
+      - "non_transferable"
+    transitions:
+      - from: "uninitialized"
+        to: "active"
+        trigger: "inception event (icp) processed"
+        guard: "event.t == 'icp' and event.sn == 0 and len(event.n) > 0"
+      - from: "uninitialized"
+        to: "non_transferable"
+        trigger: "non-transferable inception (icp with n=[]) processed"
+        guard: "event.t == 'icp' and event.sn == 0 and event.n == []"
+      - from: "uninitialized"
+        to: "active"
+        trigger: "delegated inception (dip) processed"
+        guard: "event.t == 'dip' and event.sn == 0 and event.di is not None and len(event.n) > 0"
+      - from: "active"
+        to: "active"
+        trigger: "rotation event (rot/drt) processed"
+        guard: "event.t in ('rot', 'drt') and event.sn > lastEst.s and dual_threshold_satisfied(event) and pre_rotation_valid(event) and len(event.n) > 0"
+      - from: "active"
+        to: "active"
+        trigger: "interaction event (ixn) processed"
+        guard: "event.t == 'ixn' and event.sn == expected_sn and not estOnly"
+      - from: "active"
+        to: "est_only"
+        trigger: "establishment event with EO trait"
+        guard: "event.t in ('rot', 'drt') and 'EO' in event.c"
+      - from: "active"
+        to: "non_transferable"
+        trigger: "rotation with empty next digests"
+        guard: "event.t in ('rot', 'drt') and event.n == []"
+      - from: "est_only"
+        to: "est_only"
+        trigger: "rotation event processed (ixn rejected)"
+        guard: "event.t in ('rot', 'drt') and event.sn > lastEst.s and len(event.n) > 0"
+      - from: "est_only"
+        to: "non_transferable"
+        trigger: "rotation with empty next digests"
+        guard: "event.t in ('rot', 'drt') and event.n == []"
+    invariants:
+      - "In 'active' state: verfers, ndigers, tholder, ntholder, wits, toader MUST all be set and non-None"
+      - "In 'non_transferable' state: no further rotations are possible (n == []); any rot/drt event MUST be rejected"
+      - "In 'est_only' state: interaction events MUST be rejected with typed error"
+      - "sn MUST be monotonically increasing across all transitions: sn(e_{i+1}) == sn(e_i) + 1"
+      - "lastEst MUST be updated only on establishment event transitions"
+      - "Configuration traits only accumulate — transitions MUST NOT remove traits"
+      - "Hash chain: every non-inception event.p MUST equal prior event.said"
+    initial_state: "uninitialized"
+    terminal_states: ["non_transferable"]
+
+  - name: "IdentifierLifecycle"
+    term: "Identifier State"
+    states: ["Nonexistent", "Inception", "Active", "Abandoned"]
+    initial_state: "Nonexistent"
+    terminal_states: ["Abandoned"]
+    transitions:
+      - from: "Nonexistent"
+        to: "Inception"
+        trigger: "Inception event (icp or dip) accepted"
+        guard: "Valid signatures AND (delegated implies delegator seal present)"
+      - from: "Inception"
+        to: "Active"
+        trigger: "Witness receipts meet TOAD (or unwitnessed identifier)"
+        guard: "witness_receipt_count >= toad OR toad == 0"
+      - from: "Active"
+        to: "Active"
+        trigger: "Rotation (rot/drt) or interaction (ixn) event accepted"
+        guard: "Valid pre-rotation binding (for rot/drt) AND valid signatures AND witness receipts meet TOAD"
+      - from: "Active"
+        to: "Abandoned"
+        trigger: "Rotation event with empty next key list (n=[], nt='0')"
+        guard: "Valid rotation event with n==[] and nt=='0'"
+    invariants:
+      - "Non-transferable identifiers go directly from Inception to Active with no possibility of rotation or abandonment"
+      - "Abandoned is terminal — no further events of any type accepted"
+      - "Active -> Active transitions increment sn by exactly 1"
+      - "Only establishment events (icp, rot, dip, drt) change key material; ixn events change only sn and anchors"

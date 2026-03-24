@@ -1,0 +1,208 @@
+# verification.yaml
+domain_ref: "privacy/blinding"
+
+properties:
+  - invariant: "Computed on the text domain (qb64) CESR serialization of concatenated field values"
+    term: "BLID"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        ForAll([block],
+          Implies(
+            is_valid_blinded_block(block),
+            block.d == blake3_256(concat_qb64(block.d_placeholder, block.u, block.td, block.ts))
+          )
+        )
+    notes: "BLID computation is a digest of qb64-encoded field concatenation"
+
+  - invariant: "Uses dummy character (#) replacement for self-referential computation (like SAID protocol)"
+    term: "BLID"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        ForAll([block],
+          Implies(
+            is_valid_blid(block.d),
+            block.d == replace_dummy(
+              blake3_256(concat_qb64(dummy_placeholder, block.u, block.td, block.ts)),
+              blake3_256(concat_qb64(dummy_placeholder, block.u, block.td, block.ts))
+            )
+          )
+        )
+    notes: "Self-referential digest protocol — dummy chars replaced with computed value"
+
+  - invariant: "Field concatenation order: [d, u, td, ts] for basic blocks; [d, u, td, ts, bn, bd] for bound blocks"
+    term: "BLID"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda block, is_bound: (
+          fields := ['d', 'u', 'td', 'ts'] + (['bn', 'bd'] if is_bound else []),
+          concat := ''.join(block[f] for f in fields),
+          block['d'] == blake3_256_qb64(concat)
+        )
+    strategy: "Generate basic and bound blocks; verify field ordering in concatenation"
+    notes: "Ordering is normative — wrong order produces wrong BLID"
+
+  - invariant: "Typically uses Blake3-256 digest (E code, 44 characters)"
+    term: "BLID"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(is_valid_blid(blid), And(blid[0] == 'E', StringLength(blid) == 44))"
+    notes: "CESR E-code prefix and fixed length for Blake3-256"
+
+  - invariant: "UUID is the blinding factor — derived from shared secret salt and event sequence number"
+    term: "Blinded Attribute Block"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda salt, sn, block: block['u'] == derive_uuid(salt, sn)
+    strategy: "Generate salt+sn pairs; verify UUID in block matches derivation"
+    notes: "UUID is deterministically derived, not random"
+
+  - invariant: "Shared secret salt must have >= 128 bits of cryptographic entropy"
+    term: "Shared Secret Salt"
+    technique: smt
+    formal:
+      language: z3
+      expression: "Implies(is_valid_salt(salt), entropy_bits(salt) >= 128)"
+    notes: "Minimum entropy for brute-force resistance"
+
+  - invariant: "Derived UUID must be twice as long as the salt to preserve cryptographic entropy"
+    term: "Shared Secret Salt"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        ForAll([salt, sn],
+          Implies(
+            is_valid_salt(salt),
+            bit_length(derive_uuid(salt, sn)) >= 2 * bit_length(salt)
+          )
+        )
+    notes: "UUID length >= 2x salt length for entropy preservation through KDF"
+
+  - invariant: "Deterministic: same salt + same sequence number always produces the same UUID"
+    term: "UUID Derivation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda salt, sn: derive_uuid(salt, sn) == derive_uuid(salt, sn)
+    strategy: "Derive UUID from same inputs multiple times; verify identical results"
+    notes: "KDF determinism — both issuer and discloser must compute same UUID"
+
+  - invariant: "Hierarchical: each sequence number produces an independent UUID with no correlation to other sequence numbers"
+    term: "UUID Derivation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda salt, sn1, sn2: (
+          sn1 != sn2 and derive_uuid(salt, sn1) != derive_uuid(salt, sn2)
+        )
+    strategy: "Generate multiple sn values from same salt; verify all UUIDs are distinct"
+    notes: "Independence across sequence numbers"
+
+  - invariant: "New blinding factor per update — prevents correlation between updates and state changes"
+    term: "Blindable Update"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda events: (
+          blids := [e['b'] for e in events if e['t'] == 'bup'],
+          len(set(blids)) == len(blids)  # all unique
+        )
+    strategy: "Generate sequences of bup events; verify all BLIDs are distinct"
+    notes: "No BLID reuse across updates"
+
+  - invariant: "Each bup uses a fresh UUID derived from the next sequence number — the BLID changes even when state is unchanged"
+    term: "Decorrelation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda salt, sn, same_state, same_acdc_said: (
+          blid_a := compute_blid(derive_uuid(salt, sn), same_acdc_said, same_state),
+          blid_b := compute_blid(derive_uuid(salt, sn + 1), same_acdc_said, same_state),
+          blid_a != blid_b  # different despite same state
+        )
+    strategy: "Compute BLIDs for consecutive sn with identical state; verify BLIDs differ"
+    notes: "State-independent BLID variation — decorrelation mechanism"
+
+  - invariant: "Match is found when computed BLID equals the b field in the bup event"
+    term: "State Discovery"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        lambda salt, sn, bup_event, acdc_said, actual_state, possible_states: (
+          discovered := None,
+          uuid := derive_uuid(salt, sn),
+          discovered := next(
+            (s for s in possible_states
+             if compute_blid(uuid, acdc_said, s) == bup_event['b']),
+            None
+          ),
+          discovered == actual_state
+        )[-1]
+    strategy: "Generate bup events with known state; attempt discovery via all possible states; verify correct state found"
+    notes: "State discovery correctness — the brute-force over finite state set always finds the right state"
+
+  - invariant: "Without the salt, brute-forcing the UUID is computationally infeasible (>= 128 bits entropy)"
+    term: "State Discovery"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        Implies(
+          And(is_valid_salt(salt), entropy_bits(salt) >= 128),
+          brute_force_cost(derive_uuid(salt, sn)) >= 2**128
+        )
+    notes: "Security bound — 128-bit entropy makes brute-force infeasible"
+
+contracts:
+  - port_ref: "port://privacy/blinding/inbound/blinded-state"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            is_valid_uuid(uuid) and entropy_bits(uuid) >= 256
+        description: "UUID must be valid with sufficient entropy (2x the 128-bit salt minimum)"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            is_valid_said(result) and result[0] == 'E' and len(result) == 44
+        description: "compute_blid returns a valid Blake3-256 SAID (E-code, 44 chars)"
+
+  - port_ref: "port://privacy/blinding/inbound/uuid-derivation"
+    preconditions:
+      - formal:
+          language: python
+          expression: "is_valid_salt(salt) and entropy_bits(salt) >= 128 and isinstance(sn, int) and sn >= 0"
+        description: "Salt must have >= 128 bits entropy; sequence number must be non-negative"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            len(result) >= 2 * len(salt) and derive_uuid(salt, sn) == result
+        description: "Derived UUID is at least 2x salt length and is deterministic"
+
+  - port_ref: "port://privacy/blinding/outbound/kdf"
+    preconditions:
+      - formal:
+          language: python
+          expression: "len(salt) >= 16 and isinstance(path, int) and path >= 0"
+        description: "Salt must be at least 16 bytes (128 bits); path must be non-negative integer"
+    postconditions:
+      - formal:
+          language: python
+          expression: "len(result) >= 2 * len(salt)"
+        description: "KDF output is at least 2x the salt length"
