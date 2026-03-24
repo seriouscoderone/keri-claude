@@ -133,27 +133,6 @@ terms:
       - "Graceful decommission: controller rotates with {n: [], nt: '0'} — signals permanent retirement"
     related_terms: ["Identifier Transferability", "Identifier Type Dimensions"]
 
-events:
-  - name: "InceptionCreated"
-    payload: "aid: AID, key_state: KeyState, witnesses: [WitnessAID], config: [Trait], said: SAID"
-    triggers: "Controller creates a new AID by generating and signing an inception event"
-
-  - name: "RotationPerformed"
-    payload: "aid: AID, sn: int, new_keys: [PublicKey], new_next_digests: [Digest], witness_changes: {removed: [AID], added: [AID]}, said: SAID"
-    triggers: "Controller rotates keys by generating a rotation event satisfying pre-rotation commitment and dual threshold"
-
-  - name: "InteractionAnchored"
-    payload: "aid: AID, sn: int, seals: [Seal], said: SAID"
-    triggers: "Controller anchors external data to the KEL via an interaction event"
-
-  - name: "KeyStateComputed"
-    payload: "aid: AID, key_state: KeyState, from_event: EstablishmentEvent"
-    triggers: "A new establishment event is validated, and the resulting key state is derived"
-
-  - name: "EventValidated"
-    payload: "aid: AID, sn: int, event_type: EventType, said: SAID"
-    triggers: "A received event passes all validation checks and is accepted into the KEL"
-
   - term: "Escrow Type Pattern"
     synonyms: ["Escrow Structure"]
     definition: "The common structure shared by all escrow types. Every escrow is defined by four elements: (1) a trigger condition that causes an event to enter the escrow, (2) a storage location (subdatabase) where the escrowed event is held, (3) a timeout after which the event is pruned, and (4) a reprocessing trigger that causes the event to be re-validated through the pipeline."
@@ -376,6 +355,27 @@ events:
       - "A rotation event for our own AID arrives from an external peer -> escrowed as misfit -> controller must re-submit locally"
       - "An event for an AID we witness arrives from a non-controller source -> misfit escrow"
     related_terms: ["Local Source Protection", "Event Locality", "Event Source Record"]
+
+events:
+  - name: "InceptionCreated"
+    payload: "aid: AID, key_state: KeyState, witnesses: [WitnessAID], config: [Trait], said: SAID"
+    triggers: "Controller creates a new AID by generating and signing an inception event"
+
+  - name: "RotationPerformed"
+    payload: "aid: AID, sn: int, new_keys: [PublicKey], new_next_digests: [Digest], witness_changes: {removed: [AID], added: [AID]}, said: SAID"
+    triggers: "Controller rotates keys by generating a rotation event satisfying pre-rotation commitment and dual threshold"
+
+  - name: "InteractionAnchored"
+    payload: "aid: AID, sn: int, seals: [Seal], said: SAID"
+    triggers: "Controller anchors external data to the KEL via an interaction event"
+
+  - name: "KeyStateComputed"
+    payload: "aid: AID, key_state: KeyState, from_event: EstablishmentEvent"
+    triggers: "A new establishment event is validated, and the resulting key state is derived"
+
+  - name: "EventValidated"
+    payload: "aid: AID, sn: int, event_type: EventType, said: SAID"
+    triggers: "A received event passes all validation checks and is accepted into the KEL"
 
 rules:
   - "The KEL is the sole source of truth for an AID's control authority — no external oracle"

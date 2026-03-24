@@ -53,6 +53,17 @@ terms:
       - "{i: 'EHqSsH1Im...', s: '0', d: 'EHqSsH1Im...'} — references inception of another AID"
     related_terms: ["Seal", "Digest Seal", "Delegation Seal"]
 
+  - term: "Interaction Event Construction"
+    definition: "The domain-driven assembly of interaction events (ixn) that anchor data to the KEL without changing key state. The anchor section (a field) carries cryptographic seals binding external data to the identifier's event sequence. Implementations SHOULD provide typed builders for common seal types."
+    invariants:
+      - "Interaction events do not change key state — no kt, k, nt, n, bt, b fields"
+      - "Prior (p) field links to the previous event's SAID"
+      - "Anchor (a) field contains a list of seal objects"
+      - "Common seal types: digest seal, event seal, event location seal"
+    examples:
+      - "Anchoring builder: InteractionEvent.builder().prior(priorSAID).seal(DigestSeal.of(dataSAID)).seal(EventSeal.of(pre, sn, said)).build()"
+    related_terms: ["Data Anchoring", "Seal Types"]
+
 events:
   - name: "InteractionCreated"
     payload: "aid: AID, sn: int, seals: [Seal], said: SAID"
@@ -68,14 +79,3 @@ rules:
   - "Each seal type has a specific field structure — digest seal (d), event seal (i, s, d), etc."
   - "Interaction events can be superseded by rotation events during recovery"
   - "Seals commit to data by digest — the original data is not stored in the KEL"
-
-  - term: "Interaction Event Construction"
-    definition: "The domain-driven assembly of interaction events (ixn) that anchor data to the KEL without changing key state. The anchor section (a field) carries cryptographic seals binding external data to the identifier's event sequence. Implementations SHOULD provide typed builders for common seal types."
-    invariants:
-      - "Interaction events do not change key state — no kt, k, nt, n, bt, b fields"
-      - "Prior (p) field links to the previous event's SAID"
-      - "Anchor (a) field contains a list of seal objects"
-      - "Common seal types: digest seal, event seal, event location seal"
-    examples:
-      - "Anchoring builder: InteractionEvent.builder().prior(priorSAID).seal(DigestSeal.of(dataSAID)).seal(EventSeal.of(pre, sn, said)).build()"
-    related_terms: ["Data Anchoring", "Seal Types"]

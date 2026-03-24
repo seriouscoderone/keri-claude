@@ -176,6 +176,19 @@ terms:
       - "CBOR kind code: 'CBOR' — e.g., version string 'KERICAACAACBORAABC.'"
     related_terms: ["Version String", "SAID", "Event Field Structure"]
 
+  - term: "Establishment Event Construction"
+    definition: "The domain-driven assembly of inception and rotation events. Inception events (icp/dip) establish all four identifier dimensions. Rotation events (rot/drt) modify keys, thresholds, and witness sets while preserving the identifier's core dimensions. Implementations SHOULD provide typed builders that enforce pre-rotation binding, threshold validity, and canonical field ordering."
+    invariants:
+      - "Inception: sets all dimensions — transferability, delegation, witnessing, signing model"
+      - "Rotation: modifies keys (k, kt), next commitments (n, nt), and witness set (br, ba) — cannot change delegation model"
+      - "Pre-rotation binding: rotation event's new keys MUST match digests committed in the previous establishment event's n field"
+      - "SAID computation: d field computed over the entire event body with d as placeholder"
+      - "For inception: i field also computed as SAID (self-certifying identifier)"
+    examples:
+      - "Inception builder: InceptionEvent.builder().keys(pubkeys).threshold('2').nextKeys(nextDigests).nextThreshold('2').witnesses(wits).toad(2).build()"
+      - "Rotation builder: RotationEvent.builder().prior(priorSAID).keys(newKeys).threshold('2').nextKeys(newNextDigests).cutWitnesses(removed).addWitnesses(added).build()"
+    related_terms: ["Identifier Type Dimensions", "Pre-rotation Commitment"]
+
 events:
   - name: "ValidationPassed"
     payload: "aid: AID, sn: int, event_type: EventType, said: SAID"
@@ -205,16 +218,3 @@ rules:
   - "Delegation validation requires the delegator's KEL to contain a seal referencing the delegated event by prefix, sn, and SAID"
   - "Local source protection is checked before signature verification -- remote events targeting local AIDs are escrowed as misfits"
   - "Validation is stateless given a key state snapshot -- it does not mutate state, only returns accept/reject/escrow-reason"
-
-  - term: "Establishment Event Construction"
-    definition: "The domain-driven assembly of inception and rotation events. Inception events (icp/dip) establish all four identifier dimensions. Rotation events (rot/drt) modify keys, thresholds, and witness sets while preserving the identifier's core dimensions. Implementations SHOULD provide typed builders that enforce pre-rotation binding, threshold validity, and canonical field ordering."
-    invariants:
-      - "Inception: sets all dimensions — transferability, delegation, witnessing, signing model"
-      - "Rotation: modifies keys (k, kt), next commitments (n, nt), and witness set (br, ba) — cannot change delegation model"
-      - "Pre-rotation binding: rotation event's new keys MUST match digests committed in the previous establishment event's n field"
-      - "SAID computation: d field computed over the entire event body with d as placeholder"
-      - "For inception: i field also computed as SAID (self-certifying identifier)"
-    examples:
-      - "Inception builder: InceptionEvent.builder().keys(pubkeys).threshold('2').nextKeys(nextDigests).nextThreshold('2').witnesses(wits).toad(2).build()"
-      - "Rotation builder: RotationEvent.builder().prior(priorSAID).keys(newKeys).threshold('2').nextKeys(newNextDigests).cutWitnesses(removed).addWitnesses(added).build()"
-    related_terms: ["Identifier Type Dimensions", "Pre-rotation Commitment"]

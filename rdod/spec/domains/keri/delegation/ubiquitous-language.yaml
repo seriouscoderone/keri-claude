@@ -63,15 +63,6 @@ terms:
       - "Delegated inception: Boatswain waits for delegator's anchoring seal -> marks complete"
     related_terms: ["Delegated Inception", "Delegated Rotation", "Partially-Delegated Escrow"]
 
-events:
-  - name: "DelegatedInceptionCreated"
-    payload: "delegatee_aid: AID, delegator_aid: AID, key_state: KeyState, seal: DelegationSeal"
-    triggers: "A delegatee creates a delegated inception event and the delegator anchors the corresponding seal"
-
-  - name: "DelegatedRotationPerformed"
-    payload: "delegatee_aid: AID, delegator_aid: AID, new_keys: [PublicKey], seal: DelegationSeal"
-    triggers: "A delegatee creates a delegated rotation event and the delegator anchors the corresponding seal"
-
   - term: "Partially-Delegated Escrow"
     synonyms: ["PDE", ".pdes [keripy]", "DelegationEscrow [keriox]"]
     definition: "Holds delegated events (dip/drt) that pass signature validation but whose delegator has not yet anchored the approving seal in its own KEL. Events are reprocessed when the delegator's anchoring event arrives."
@@ -107,6 +98,15 @@ events:
     examples:
       - "Local node creates a dip for a new delegated AID -> escrowed in delegable event escrow [.delegables in keripy] -> waits for delegator to anchor seal -> cleared on approval"
     related_terms: ["Partially-Delegated Escrow", "Delegation Validation", "Event Locality"]
+
+events:
+  - name: "DelegatedInceptionCreated"
+    payload: "delegatee_aid: AID, delegator_aid: AID, key_state: KeyState, seal: DelegationSeal"
+    triggers: "A delegatee creates a delegated inception event and the delegator anchors the corresponding seal"
+
+  - name: "DelegatedRotationPerformed"
+    payload: "delegatee_aid: AID, delegator_aid: AID, new_keys: [PublicKey], seal: DelegationSeal"
+    triggers: "A delegatee creates a delegated rotation event and the delegator anchors the corresponding seal"
 
 rules:
   - "Delegation requires cooperation — both the delegator seal and the delegatee's di field must exist"

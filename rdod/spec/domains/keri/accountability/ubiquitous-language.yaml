@@ -58,11 +58,6 @@ terms:
       - "TOAD=3 but only 2 receipts -> toader.satisfy([0, 2]) -> False -> escrow to PWE"
     related_terms: ["KAWA", "TOAD", "Witness"]
 
-events:
-  - name: "WitnessAgreementComplete"
-    payload: "aid: AID, sn: int, event_said: SAID, witness_count: int, threshold: int"
-    triggers: "KAWA completes — sufficient witness receipts collected, event is fully witnessed"
-
   - term: "Partially-Witnessed Escrow"
     synonyms: ["PWE", ".pwes [keripy]", "PartiallyWitnessedEscrow [keriox]"]
     definition: "Holds events that pass signature validation but whose witness receipt count does not yet satisfy the witness threshold (TOAD). Events are reprocessed when new witness receipts arrive."
@@ -77,6 +72,11 @@ events:
       - "TOAD=3 with 5 witnesses: event has 2 receipts -> PWE. Third receipt arrives -> 3 >= 3 -> accept to KEL."
       - "Receipt for an event not yet in PWE arrives first -> stored; when event enters PWE, the pre-existing receipt counts toward threshold"
     related_terms: ["Escrow Cascade", "Witness Threshold Check", "Escrow Timeout", "TOAD"]
+
+events:
+  - name: "WitnessAgreementComplete"
+    payload: "aid: AID, sn: int, event_said: SAID, witness_count: int, threshold: int"
+    triggers: "KAWA completes — sufficient witness receipts collected, event is fully witnessed"
 
 rules:
   - "KAWA orchestrates consensus (first-seen, quorum), receipting (receipt lifecycle), and dissemination (propagation) via subdomains"

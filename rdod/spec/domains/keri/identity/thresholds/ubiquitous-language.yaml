@@ -141,6 +141,34 @@ terms:
       - "3-of-5 group rotation: Counselor tracks 3 partial sigs arrived -> marks complete"
     related_terms: ["Threshold Satisfaction", "Partially-Signed Escrow", "Signature Accumulation"]
 
+  - term: "Partially-Signed Escrow"
+    synonyms: ["PSE", ".pses [keripy]", "PartiallySignedEscrow [keriox]"]
+    definition: "Holds events that have been verified for sequence order but whose controller signatures do not yet satisfy the signing threshold. Accumulates additional signatures over time as they arrive from other multi-sig participants. Events are reprocessed when new signatures are added."
+    invariants:
+      - "Triggered when signature verification passes for at least one sig but tholder.satisfy(indices) returns False"
+      - "Indexed by prefix + sn in the partially-signed escrow subdatabase [.pses in keripy]"
+      - "Signatures are accumulated: new arrivals of the same event (same SAID) merge their signatures into the existing escrow entry"
+      - "Default timeout: 3600 seconds (keripy TimeoutPSE), configurable via EscrowConfig.partially_signed_timeout (keriox)"
+      - "On reprocessing, if signatures now satisfy the threshold, the event advances to witness/delegation checks (may cascade to PWE or PDE)"
+    examples:
+      - "3-of-5 multi-sig: first participant submits event with 1 signature -> PSE. Second participant adds signature -> still 2 < 3 -> stays in PSE. Third arrives -> 3 >= 3 -> threshold satisfied -> advance to witness check."
+      - "After threshold satisfaction, witness count is insufficient -> event moves from PSE to PWE"
+    related_terms: ["Escrow Cascade", "Signature Accumulation", "Escrow Timeout", "Threshold Satisfaction"]
+
+  - term: "Signature Accumulation"
+    synonyms: ["Partial Signature Merge"]
+    definition: "The process of merging newly-arriving signatures into an existing partially-signed escrow entry for the same event. When a multi-sig participant signs and submits the same event (same SAID), their signature is appended to the existing signature set rather than creating a duplicate escrow entry."
+    invariants:
+      - "Signatures are matched by event SAID -- only signatures for the exact same event are merged"
+      - "The controller signature store [.sigs in keripy] uses append semantics, not replace"
+      - "After accumulation, the updated signature set is re-checked against the threshold"
+      - "Idempotent: re-submitting the same signature from the same index is a no-op"
+      - "Both controller signatures (Sigers) and witness receipts (Wigers) can accumulate over time"
+    examples:
+      - "3-of-5 multi-sig: participant A signs -> controller signature store has [sig_A]. Participant B signs -> store has [sig_A, sig_B]. Participant C signs -> store has [sig_A, sig_B, sig_C] -> threshold satisfied."
+      - "Same participant re-submits -> signature at same index already present -> no change"
+    related_terms: ["Partially-Signed Escrow", "Idempotent Logging", "Threshold Satisfaction"]
+
 events:
   - name: "SigningThresholdSatisfied"
     payload: "aid: AID, threshold: Threshold, satisfied_indices: [int], key_count: int"
@@ -169,34 +197,6 @@ events:
   - name: "WitnessSetChanged"
     payload: "aid: AID, removed: [WitnessAID], added: [WitnessAID], new_witness_count: int, new_toad: int"
     triggers: "A rotation event modifies the witness list or witness threshold"
-
-  - term: "Partially-Signed Escrow"
-    synonyms: ["PSE", ".pses [keripy]", "PartiallySignedEscrow [keriox]"]
-    definition: "Holds events that have been verified for sequence order but whose controller signatures do not yet satisfy the signing threshold. Accumulates additional signatures over time as they arrive from other multi-sig participants. Events are reprocessed when new signatures are added."
-    invariants:
-      - "Triggered when signature verification passes for at least one sig but tholder.satisfy(indices) returns False"
-      - "Indexed by prefix + sn in the partially-signed escrow subdatabase [.pses in keripy]"
-      - "Signatures are accumulated: new arrivals of the same event (same SAID) merge their signatures into the existing escrow entry"
-      - "Default timeout: 3600 seconds (keripy TimeoutPSE), configurable via EscrowConfig.partially_signed_timeout (keriox)"
-      - "On reprocessing, if signatures now satisfy the threshold, the event advances to witness/delegation checks (may cascade to PWE or PDE)"
-    examples:
-      - "3-of-5 multi-sig: first participant submits event with 1 signature -> PSE. Second participant adds signature -> still 2 < 3 -> stays in PSE. Third arrives -> 3 >= 3 -> threshold satisfied -> advance to witness check."
-      - "After threshold satisfaction, witness count is insufficient -> event moves from PSE to PWE"
-    related_terms: ["Escrow Cascade", "Signature Accumulation", "Escrow Timeout", "Threshold Satisfaction"]
-
-  - term: "Signature Accumulation"
-    synonyms: ["Partial Signature Merge"]
-    definition: "The process of merging newly-arriving signatures into an existing partially-signed escrow entry for the same event. When a multi-sig participant signs and submits the same event (same SAID), their signature is appended to the existing signature set rather than creating a duplicate escrow entry."
-    invariants:
-      - "Signatures are matched by event SAID -- only signatures for the exact same event are merged"
-      - "The controller signature store [.sigs in keripy] uses append semantics, not replace"
-      - "After accumulation, the updated signature set is re-checked against the threshold"
-      - "Idempotent: re-submitting the same signature from the same index is a no-op"
-      - "Both controller signatures (Sigers) and witness receipts (Wigers) can accumulate over time"
-    examples:
-      - "3-of-5 multi-sig: participant A signs -> controller signature store has [sig_A]. Participant B signs -> store has [sig_A, sig_B]. Participant C signs -> store has [sig_A, sig_B, sig_C] -> threshold satisfied."
-      - "Same participant re-submits -> signature at same index already present -> no change"
-    related_terms: ["Partially-Signed Escrow", "Idempotent Logging", "Threshold Satisfaction"]
 
 rules:
   - "A signing threshold (kt) must be satisfiable: for simple thresholds, M <= len(keys); for weighted, at least one subset of keys has sum >= 1"

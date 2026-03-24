@@ -65,6 +65,20 @@ terms:
       - "Future quantum computer compromises all exposed Ed25519 keys — trusted jurors with post-quantum archives provide protection"
     related_terms: ["Live Duplicity", "Duplicity"]
 
+  - term: "Likely Duplicitous Escrow"
+    synonyms: ["LDE", ".ldes [keripy]", "DuplicitousEvents [keriox]"]
+    definition: "Permanent storage for events that appear at the same sequence number as an already-accepted event but with a different SAID. This is evidence of duplicity -- the controller has signed two conflicting events at the same position. These events are never automatically resolved; they serve as forensic evidence for duplicity detection."
+    invariants:
+      - "Triggered when sn < expected_sn AND the event's SAID differs from the already-accepted event at that sn"
+      - "Events are NEVER automatically reprocessed or resolved"
+      - "Serves as forensic evidence -- proves the controller signed conflicting events"
+      - "Default timeout: 3600 seconds for pruning old entries (keripy TimeoutLDE), but the evidence is typically preserved"
+      - "Detection of likely duplicitous events may trigger watchers and jurors to investigate"
+    examples:
+      - "Event at sn=3 with SAID=X is already accepted. A different event at sn=3 with SAID=Y arrives -> escrowed to LDE as duplicity evidence."
+      - "A malicious controller signs two different rotation events at sn=5 with different key sets -> both cannot be valid -> the second one seen goes to LDE"
+    related_terms: ["Escrow Cascade", "Duplicity", "Escrow Timeout"]
+
 events:
   - name: "DuplicityDetected"
     payload: "aid: AID, sn: int, first_seen_event: KeyEvent, conflicting_event: KeyEvent, detected_by: WatcherAID"
@@ -85,20 +99,6 @@ events:
   - name: "TrustReconciled"
     payload: "aid: AID, recovery_event: RotationEvent, decided_by: JudgeAID"
     triggers: "A judge accepts a superseding recovery rotation and reconciles trust in the AID"
-
-  - term: "Likely Duplicitous Escrow"
-    synonyms: ["LDE", ".ldes [keripy]", "DuplicitousEvents [keriox]"]
-    definition: "Permanent storage for events that appear at the same sequence number as an already-accepted event but with a different SAID. This is evidence of duplicity -- the controller has signed two conflicting events at the same position. These events are never automatically resolved; they serve as forensic evidence for duplicity detection."
-    invariants:
-      - "Triggered when sn < expected_sn AND the event's SAID differs from the already-accepted event at that sn"
-      - "Events are NEVER automatically reprocessed or resolved"
-      - "Serves as forensic evidence -- proves the controller signed conflicting events"
-      - "Default timeout: 3600 seconds for pruning old entries (keripy TimeoutLDE), but the evidence is typically preserved"
-      - "Detection of likely duplicitous events may trigger watchers and jurors to investigate"
-    examples:
-      - "Event at sn=3 with SAID=X is already accepted. A different event at sn=3 with SAID=Y arrives -> escrowed to LDE as duplicity evidence."
-      - "A malicious controller signs two different rotation events at sn=5 with different key sets -> both cannot be valid -> the second one seen goes to LDE"
-    related_terms: ["Escrow Cascade", "Duplicity", "Escrow Timeout"]
 
 rules:
   - "Duplicity is the existence of two verified but different events at the same sequence number — it is always detectable"
