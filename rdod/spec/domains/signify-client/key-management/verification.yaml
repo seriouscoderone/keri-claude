@@ -99,20 +99,20 @@ properties:
       language: z3
       expression: |
         tier = String('tier')
-        time_cost = Int('time_cost')
-        memory_cost = Int('memory_cost')
+        opslimit = Int('opslimit')
+        memlimit = Int('memlimit')
         s = Solver()
         # Exact tier -> argon2 parameter mapping
         s.add(Or(
-            And(tier == StringVal('low'), time_cost == 2, memory_cost == 67108864),
-            And(tier == StringVal('med'), time_cost == 4, memory_cost == 268435456),
-            And(tier == StringVal('high'), time_cost == 6, memory_cost == 1073741824)
+            And(tier == StringVal('low'), opslimit == 2, memlimit == 67108864),
+            And(tier == StringVal('med'), opslimit == 3, memlimit == 268435456),
+            And(tier == StringVal('high'), opslimit == 4, memlimit == 1073741824)
         ))
         # Prove: each tier maps to exactly one parameter set
         # Try to find low tier with med parameters
         s.add(tier == StringVal('low'))
-        s.add(time_cost == 4)
-        assert s.check() == unsat  # Low tier cannot have med time_cost
+        s.add(opslimit == 3)
+        assert s.check() == unsat  # Low tier cannot have med opslimit (opslimit=3)
     strategy: ""
     notes: "SMT proof that tier-to-argon2 mapping is deterministic — each tier has exactly one parameter set"
 

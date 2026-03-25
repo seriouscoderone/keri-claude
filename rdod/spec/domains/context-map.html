@@ -37103,7 +37103,7 @@ const RDOD_DATA = {
           "technique": "smt",
           "formal": {
             "language": "z3",
-            "expression": "tier = String('tier')\ntime_cost = Int('time_cost')\nmemory_cost = Int('memory_cost')\ns = Solver()\n# Exact tier -> argon2 parameter mapping\ns.add(Or(\n    And(tier == StringVal('low'), time_cost == 2, memory_cost == 67108864),\n    And(tier == StringVal('med'), time_cost == 4, memory_cost == 268435456),\n    And(tier == StringVal('high'), time_cost == 6, memory_cost == 1073741824)\n))\n# Prove: each tier maps to exactly one parameter set\n# Try to find low tier with med parameters\ns.add(tier == StringVal('low'))\ns.add(time_cost == 4)\nassert s.check() == unsat  # Low tier cannot have med time_cost\n"
+            "expression": "tier = String('tier')\nopslimit = Int('opslimit')\nmemlimit = Int('memlimit')\ns = Solver()\n# Exact tier -> argon2 parameter mapping\ns.add(Or(\n    And(tier == StringVal('low'), opslimit == 2, memlimit == 67108864),\n    And(tier == StringVal('med'), opslimit == 3, memlimit == 268435456),\n    And(tier == StringVal('high'), opslimit == 4, memlimit == 1073741824)\n))\n# Prove: each tier maps to exactly one parameter set\n# Try to find low tier with med parameters\ns.add(tier == StringVal('low'))\ns.add(opslimit == 3)\nassert s.check() == unsat  # Low tier cannot have med opslimit (opslimit=3)\n"
           },
           "strategy": "",
           "notes": "SMT proof that tier-to-argon2 mapping is deterministic — each tier has exactly one parameter set"
