@@ -31,6 +31,21 @@ terms:
 
   # Inherits: "Establishment Event" from domain://identity (identical definition — parent owns this term)
 
+  - term: "AID"
+    synonyms: ["Autonomic Identifier", "Identifier Prefix"]
+    specializes: "domain://cesr/primitives"
+    definition: "An Autonomic Identifier — a self-certifying, self-managing cryptographic identifier. The AID prefix is either a qualified public key (non-transferable) or the SAID of the inception event (transferable/self-addressing). The identity domain owns the semantic meaning: an AID represents a controller's root of trust, its key state history (KEL), and all authority derived from it. CESR owns the encoding (qb64 prefix format)."
+    invariants:
+      - "Every AID is backed by a KEL that proves its current key state"
+      - "Transferable AIDs can rotate keys via rotation events — the AID persists across rotations"
+      - "Non-transferable AIDs cannot rotate — the public key IS the identifier permanently"
+      - "Self-certifying: no trusted third party needed to verify the binding between AID and keys"
+      - "Self-managing: the controller autonomously manages key state without external authority"
+    examples:
+      - "Transferable (self-addressing): EDP1vjs81wNMFBx9MF2v-d7xQEYpLbSGZkm2Ub6bvKFm (E prefix = Blake3-256 SAID)"
+      - "Non-transferable: BFs8BBx86uytIM0D2BhsE5rrqVIT8ef8mflpNceHo4XH (B prefix = Ed25519 public key)"
+    related_terms: ["KEL", "Key State", "Inception Event", "Identifier Type Dimensions"]
+
   - term: "Inception Event"
     synonyms: ["icp"]
     definition: "The first event in a KEL that creates an AID and establishes its initial key state. Field order: v, t, d, i, s, kt, k, nt, n, bt, b, c, a."
