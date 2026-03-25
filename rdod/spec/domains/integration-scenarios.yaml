@@ -1,0 +1,422 @@
+# Cross-domain end-state assertions for protocol verification.
+# Each scenario references a protocol and asserts what must be TRUE across
+# all participating domains after the protocol completes.
+
+scenarios:
+
+  # ── Identity Lifecycle ──────────────────────────────────────────────────────
+
+  - name: "SingleSigInception_happy"
+    protocol: "protocols://identity#SingleSigInception"
+    description: "Create a single-signature identifier with 3 witnesses and TOAD=2. Verify all domains reach correct end state."
+    setup:
+      description: "One Ed25519 signing key, one Blake3-256 next key digest, 3 non-transferable witness AIDs, TOAD=2, no configuration traits"
+      preconditions:
+        - domain: "domain://identity/state"
+          condition: "No KeyState exists for the new AID prefix"
+        - domain: "domain://accountability"
+          condition: "No witness receipts exist for the new AID"
+        - domain: "domain://discovery"
+          condition: "No OOBI endpoints registered for the new AID"
+    end_state_assertions:
+      - domain: "domain://identity/state"
+        assertion: "KeyState exists with sn=0, transferable=true, 1 signing key, 1 next digest, 3 witnesses, toad=2"
+        verifiable_by: "get_key_state(aid) returns valid KeyState; aid in kevers"
+      - domain: "domain://identity/establishment"
+        assertion: "Inception event (icp) logged to KEL with first-seen ordinal assigned; SAID of event equals AID prefix (self-certifying)"
+        verifiable_by: "get_event(aid, sn=0) returns event with t='icp' and d==i"
+      - domain: "domain://accountability/receipting"
+        assertion: "At least 2 witness receipts exist for the inception event (satisfies TOAD=2)"
+        verifiable_by: "get_receipts(aid, sn=0).count >= 2"
+      - domain: "domain://discovery"
+        assertion: "OOBI is resolvable at each witness URL, returning KEL replay + end-role replies"
+        verifiable_by: "HTTP GET /oobi/{aid}/witness returns 200 with CESR body"
+    failure_scenarios:
+      - name: "insufficient_witnesses"
+        inject_failure_at: "step 3 (collect_witness_receipts) — only 1 of 3 witnesses responds"
+        expected_state:
+          - domain: "domain://identity/establishment"
+            assertion: "Event held in Partially-Witnessed Escrow (PWE), NOT accepted to KEL"
+          - domain: "domain://identity/state"
+            assertion: "No KeyState exists — event not yet accepted"
+      - name: "invalid_signature"
+        inject_failure_at: "step 2 (validate_and_accept) — controller signature doesn't verify"
+        expected_state:
+          - domain: "domain://identity/establishment"
+            assertion: "Event rejected immediately — not escrowed, not accepted"
+    reference_implementation:
+      source: "keripy tests/app/test_habbing.py::test_habery, test_hab_rotate_with_witness"
+      notes: "Asserts: hab.pre in hby.habs, hab.pre in hby.kevers, hab.pre in hby.prefixes"
+
+  - name: "KeyRotation_happy"
+    protocol: "protocols://identity#KeyRotation"
+    description: "Rotate keys for an existing transferable identifier. Verify pre-rotation binding and state update."
+    setup:
+      description: "Existing identifier at sn=0 with pre-committed next key digests"
+      preconditions:
+        - domain: "domain://identity/state"
+          condition: "KeyState exists at sn=0 with non-empty next_key_digests"
+        - domain: "domain://identity/key-commitment"
+          condition: "New signing keys produce digests matching prior next commitments"
+    end_state_assertions:
+      - domain: "domain://identity/state"
+        assertion: "KeyState updated: sn=1, new signing keys active, new next digests committed, prior keys no longer valid for new events"
+        verifiable_by: "get_key_state(aid).sn == 1; signing_keys == new_keys"
+      - domain: "domain://identity/establishment"
+        assertion: "Rotation event (rot) logged to KEL; p field matches prior event's SAID"
+        verifiable_by: "get_event(aid, sn=1).t == 'rot'; event.p == get_event(aid, sn=0).d"
+      - domain: "domain://accountability/receipting"
+        assertion: "Witness receipts collected for the rotation event"
+        verifiable_by: "get_receipts(aid, sn=1).count >= toad"
+    failure_scenarios:
+      - name: "pre_rotation_binding_failure"
+        inject_failure_at: "step 2 (verify_pre_rotation_binding) — new key digests don't match"
+        expected_state:
+          - domain: "domain://identity/state"
+            assertion: "KeyState unchanged at sn=0 — rotation rejected"
+          - domain: "domain://identity/key-commitment"
+            assertion: "PreRotationBindingError raised with mismatch details"
+    reference_implementation:
+      source: "keripy tests/app/test_habbing.py::test_hab_rotate_with_witness"
+      notes: "Asserts kever state after rotation, verifies new keys and next digests"
+
+  - name: "DelegatedInception_happy"
+    protocol: "protocols://identity#DelegatedInception"
+    description: "Create a delegated identifier requiring delegator approval. Verify two-party KEL coordination."
+    setup:
+      description: "Delegate keys ready, delegator AID exists with established key state"
+      preconditions:
+        - domain: "domain://identity/state"
+          condition: "Delegator has established KeyState"
+        - domain: "domain://delegation"
+          condition: "Delegator has not anchored any seal for this delegate"
+    end_state_assertions:
+      - domain: "domain://identity/state"
+        assertion: "Delegated AID exists with sn=0, delegator field set, transferable=true"
+        verifiable_by: "get_key_state(delegate_aid).delegator == delegator_aid"
+      - domain: "domain://identity/establishment"
+        assertion: "Delegated inception event (dip) logged with di field matching delegator"
+        verifiable_by: "get_event(delegate_aid, sn=0).t == 'dip'; event.di == delegator_aid"
+      - domain: "domain://delegation/authorization"
+        assertion: "Delegator's KEL contains an interaction event with seal anchoring the dip SAID"
+        verifiable_by: "delegator KEL has ixn with seal.d == delegate_dip.d"
+      - domain: "domain://accountability/receipting"
+        assertion: "Both delegate's dip and delegator's ixn have witness receipts"
+        verifiable_by: "receipts exist for both events"
+    failure_scenarios:
+      - name: "delegator_timeout"
+        inject_failure_at: "step 3 (await_delegator_seal) — delegator never anchors approval"
+        expected_state:
+          - domain: "domain://identity/establishment"
+            assertion: "Event held in Partially-Delegated Escrow (PDE)"
+          - domain: "domain://identity/state"
+            assertion: "No KeyState for delegate — not yet accepted"
+    reference_implementation:
+      source: "keripy tests/core/test_eventing.py::test_kever (delegation sections)"
+      notes: "Tests dip event with di field, delegator seal verification"
+
+  # ── Multisig ────────────────────────────────────────────────────────────────
+
+  - name: "MultisigInception_happy"
+    protocol: "protocols://identity/thresholds#MultisigInception"
+    description: "Create a multi-signature identifier with 3 members and threshold 2-of-3."
+    setup:
+      description: "3 member AIDs each with established key state, signing threshold '2', 3 witnesses"
+      preconditions:
+        - domain: "domain://identity/state"
+          condition: "All 3 member AIDs have established KeyState"
+        - domain: "domain://identity/thresholds"
+          condition: "No group coordination in progress for these members"
+    end_state_assertions:
+      - domain: "domain://identity/state"
+        assertion: "Group AID exists with sn=0, 3 signing keys, threshold='2', transferable=true"
+        verifiable_by: "get_key_state(group_aid); len(signing_keys)==3; threshold=='2'"
+      - domain: "domain://identity/thresholds"
+        assertion: "Counselor reports coordination complete for the group inception"
+        verifiable_by: "counselor.complete(prefixer, number, diger) == True"
+      - domain: "domain://accountability/receipting"
+        assertion: "Witness receipts collected for the group inception event"
+        verifiable_by: "get_receipts(group_aid, sn=0).count >= toad"
+    failure_scenarios:
+      - name: "coordination_timeout"
+        inject_failure_at: "step 3 (accumulate_signatures) — only 1 of 3 members signs before timeout"
+        expected_state:
+          - domain: "domain://identity/thresholds"
+            assertion: "Partially-Signed Escrow (PSE) contains 1 signature; threshold not satisfied"
+          - domain: "domain://identity/state"
+            assertion: "No group AID created"
+    reference_implementation:
+      source: "keripy tests/app/test_grouping.py::test_multisig_incept"
+      notes: "Asserts counselor.complete(), kever.sn, verfers match expected keys"
+
+  - name: "MultisigRotation_happy"
+    protocol: "protocols://identity/thresholds#MultisigRotation"
+    description: "Rotate keys for an existing multi-sig identifier. All members must coordinate."
+    setup:
+      description: "Group AID at sn=0, all members have new keys matching prior next commitments"
+      preconditions:
+        - domain: "domain://identity/state"
+          condition: "Group AID exists at sn=0 with pre-committed next key digests"
+    end_state_assertions:
+      - domain: "domain://identity/state"
+        assertion: "Group AID at sn=1 with new keys active"
+        verifiable_by: "ghab.kever.sn == 1; verfers == new_keys; ndigers == new_next_digests"
+      - domain: "domain://identity/thresholds"
+        assertion: "Counselor reports rotation coordination complete"
+        verifiable_by: "counselor.complete(prefixer, number, diger) == True"
+    reference_implementation:
+      source: "keripy tests/app/test_grouping.py::test_multisig_rotate"
+      notes: "Asserts ghab.kever.sn == 1, verfers match nkeys, ndigers match ndigs"
+
+  # ── Credentials ─────────────────────────────────────────────────────────────
+
+  - name: "CredentialIssuance_happy"
+    protocol: "protocols://credential-lifecycle#CredentialIssuance"
+    description: "Issue a credential — create ACDC, record in TEL, anchor in issuer's KEL."
+    setup:
+      description: "Issuer AID with established key state, registry created, JSON schema available"
+      preconditions:
+        - domain: "domain://identity/state"
+          condition: "Issuer has established KeyState"
+        - domain: "domain://credential-lifecycle/registry"
+          condition: "Registry exists (vcp event accepted)"
+        - domain: "domain://credential-lifecycle/status"
+          condition: "No credential exists with this SAID"
+    end_state_assertions:
+      - domain: "domain://credential-lifecycle/status"
+        assertion: "Credential in Issued state; TEL issuance event recorded"
+        verifiable_by: "reger.saved.get(keys=(creder.said,)) is not None"
+      - domain: "domain://identity/anchoring"
+        assertion: "Issuer's KEL contains an ixn with seal anchoring the TEL event SAID"
+        verifiable_by: "issuer KEL has ixn with seal referencing TEL event"
+      - domain: "domain://credential-lifecycle/verification"
+        assertion: "ACDC → TEL → KEL chain is verifiable"
+        verifiable_by: "verify_chain(acdc_said) returns True"
+    failure_scenarios:
+      - name: "missing_registry"
+        inject_failure_at: "step 1 (verify_registry_exists) — registry not found"
+        expected_state:
+          - domain: "domain://credential-lifecycle/status"
+            assertion: "MissingRegistryError raised; no credential created"
+    reference_implementation:
+      source: "keripy tests/vc/test_protocoling.py::test_ipex (issuance section)"
+      notes: "Asserts creder.said, issuer.issue(), anchor seal, reger.saved verification"
+
+  - name: "CredentialRevocation_happy"
+    protocol: "protocols://credential-lifecycle#CredentialRevocation"
+    description: "Revoke a previously issued credential."
+    setup:
+      description: "Credential exists in Issued state"
+      preconditions:
+        - domain: "domain://credential-lifecycle/status"
+          condition: "Credential is in Issued state"
+    end_state_assertions:
+      - domain: "domain://credential-lifecycle/status"
+        assertion: "Credential in Revoked state (terminal); TEL revocation event recorded"
+        verifiable_by: "credential state == Revoked; rev event in TEL"
+      - domain: "domain://identity/anchoring"
+        assertion: "Issuer's KEL contains ixn anchoring the revocation TEL event"
+        verifiable_by: "issuer KEL has ixn with revocation seal"
+    reference_implementation:
+      source: "keripy tests/vdr/test_eventing.py"
+      notes: "Tests TEL state transitions including revocation"
+
+  # ── Credential Exchange (IPEX) ──────────────────────────────────────────────
+
+  - name: "DirectGrant_happy"
+    protocol: "protocols://credential-exchange/negotiation#DirectGrant"
+    description: "Direct credential grant — holder sends grant, verifier admits."
+    setup:
+      description: "Credential issued and verified, recipient AID exists"
+      preconditions:
+        - domain: "domain://credential-lifecycle/status"
+          condition: "Credential in Issued state with valid TEL→KEL chain"
+        - domain: "domain://identity/state"
+          condition: "Both grantor and recipient have established KeyState"
+    end_state_assertions:
+      - domain: "domain://credential-exchange/negotiation"
+        assertion: "IPEX thread in Admitted state; grant and admit messages recorded"
+        verifiable_by: "grant exn exists with route=/ipex/grant; admit exn references grant.said"
+      - domain: "domain://credential-exchange/proof"
+        assertion: "Grant bundle verified: ACDC + TEL event + KEL seal all present and valid"
+        verifiable_by: "verify_credential_artifacts(grant) == True"
+      - domain: "domain://credential-lifecycle"
+        assertion: "Recipient's credential store has the ACDC"
+        verifiable_by: "recipient reger.saved.get(keys=(creder.said,)) is not None"
+    failure_scenarios:
+      - name: "chain_verification_failure"
+        inject_failure_at: "step 2 (verify_credential_chain) — KEL anchor missing"
+        expected_state:
+          - domain: "domain://credential-exchange/negotiation"
+            assertion: "Grant escrowed awaiting issuer's KEL events"
+          - domain: "domain://credential-lifecycle"
+            assertion: "Credential NOT in recipient's store"
+    reference_implementation:
+      source: "keripy tests/vc/test_protocoling.py::test_ipex (grant/admit section)"
+      notes: "Asserts grant0.raw, ipexhan.verify(serder=grant0), admit message construction"
+
+  - name: "NegotiatedIssuance_happy"
+    protocol: "protocols://credential-exchange/negotiation#NegotiatedIssuance"
+    description: "Full IPEX negotiation — apply, offer, agree, grant, admit."
+    setup:
+      description: "Prospective holder and issuer both have established AIDs, schema available"
+      preconditions:
+        - domain: "domain://identity/state"
+          condition: "Both parties have established KeyState"
+    end_state_assertions:
+      - domain: "domain://credential-exchange/negotiation"
+        assertion: "IPEX thread completed: 5 messages (apply→offer→agree→grant→admit) with SAID chain"
+        verifiable_by: "admit.p == grant.d; grant.p == agree.d; agree.p == offer.d; offer.p == apply.d"
+      - domain: "domain://credential-lifecycle/status"
+        assertion: "New credential issued in TEL with Issued state"
+        verifiable_by: "credential state == Issued"
+      - domain: "domain://credential-lifecycle"
+        assertion: "Both issuer and holder have the credential in their stores"
+        verifiable_by: "reger.saved for both parties"
+    failure_scenarios:
+      - name: "spurn_at_offer"
+        inject_failure_at: "step 3 (agree) — holder spurns the offer instead of agreeing"
+        expected_state:
+          - domain: "domain://credential-exchange/negotiation"
+            assertion: "IPEX thread in Spurned state (terminal); no credential issued"
+          - domain: "domain://credential-lifecycle/status"
+            assertion: "No credential created"
+    reference_implementation:
+      source: "keripy tests/vc/test_protocoling.py::test_ipex"
+      notes: "Full apply→offer→grant→admit flow with SAID verification at each step"
+
+  # ── Discovery ───────────────────────────────────────────────────────────────
+
+  - name: "OOBIResolution_happy"
+    protocol: "protocols://discovery#OOBIResolution"
+    description: "Resolve an OOBI URL to establish key state for a remote identifier."
+    setup:
+      description: "Remote AID exists with witnesses; resolver has OOBI URL"
+      preconditions:
+        - domain: "domain://identity/state"
+          condition: "Resolver does NOT have KeyState for the remote AID"
+    end_state_assertions:
+      - domain: "domain://identity/state"
+        assertion: "Remote AID's KeyState now available locally"
+        verifiable_by: "get_key_state(remote_aid) returns valid state"
+      - domain: "domain://identity/establishment"
+        assertion: "Remote AID's KEL events validated and stored locally"
+        verifiable_by: "get_event(remote_aid, sn=0) returns inception event"
+      - domain: "domain://discovery"
+        assertion: "OOBI marked as resolved; endpoint mappings stored"
+        verifiable_by: "obr.state == Result.resolved"
+    failure_scenarios:
+      - name: "invalid_kel"
+        inject_failure_at: "step 2 (validate_kel_replay) — KEL events don't verify"
+        expected_state:
+          - domain: "domain://identity/state"
+            assertion: "No KeyState created — entire OOBI rejected"
+          - domain: "domain://discovery"
+            assertion: "OOBI marked as failed"
+    reference_implementation:
+      source: "keripy tests/app/test_oobiing.py"
+      notes: "Asserts obr.state == Result.resolved, kever existence after resolution"
+
+  - name: "EndpointDiscoveryRegistration_happy"
+    protocol: "protocols://discovery#EndpointDiscoveryRegistration"
+    description: "Controller publishes a service endpoint, making it discoverable via OOBI."
+    setup:
+      description: "Controller AID exists, witness/agent AID exists, endpoint URL known"
+      preconditions:
+        - domain: "domain://identity/state"
+          condition: "Controller has established KeyState"
+        - domain: "domain://discovery"
+          condition: "No endpoint registered for this AID/role/eid combination"
+    end_state_assertions:
+      - domain: "domain://identity/anchoring"
+        assertion: "Controller's KEL contains endpoint authorization seal"
+        verifiable_by: "controller KEL has ixn with end-role seal"
+      - domain: "domain://discovery"
+        assertion: "Endpoint mapping stored: (cid, role, eid) → allowed, verifiable via OOBI"
+        verifiable_by: "resolve_oobi returns end-role reply for this AID/role/eid"
+    reference_implementation:
+      source: "keria tests/app/test_aiding.py::test_endrole_ends"
+      notes: "Tests end-role creation and resolution via KERIA API"
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+
+  - name: "AgentProvisioning_happy"
+    protocol: "protocols://cloud-agent-service#AgentProvisioning"
+    description: "Provision a new cloud agent for a controller via Signify boot."
+    setup:
+      description: "Signify client has generated edge keys and inception event"
+      preconditions:
+        - domain: "domain://cloud-agent-service/provisioning"
+          condition: "No agent exists for this controller AID"
+    end_state_assertions:
+      - domain: "domain://cloud-agent-service/provisioning"
+        assertion: "Agent instance created with dedicated databases; controller→agent mapping stored"
+        verifiable_by: "agency.get(controller_aid) returns Agent; agent.active == True"
+      - domain: "domain://identity/establishment"
+        assertion: "Agent's own AID established with key state"
+        verifiable_by: "agent AID has KeyState at sn=0"
+      - domain: "domain://cloud-agent-service/api"
+        assertion: "Admin API accepts authenticated requests from the controller's Signify client"
+        verifiable_by: "POST /agent with signed headers returns 200"
+    reference_implementation:
+      source: "keria tests/app/test_agenting.py"
+      notes: "Tests boot flow, agent creation, identifier management via API"
+
+  # ── Integrity ───────────────────────────────────────────────────────────────
+
+  - name: "DuplicityCheck_detected"
+    protocol: "protocols://integrity#DuplicityCheck"
+    description: "Watcher detects duplicity by cross-checking witness KEL copies."
+    setup:
+      description: "AID with 3 witnesses; witness A has event X at sn=5, witness B has event Y at sn=5 (different SAIDs)"
+      preconditions:
+        - domain: "domain://integrity/evidence"
+          condition: "No duplicity evidence exists for this AID"
+    end_state_assertions:
+      - domain: "domain://integrity/detection"
+        assertion: "Duplicity detected: two events at same (prefix, sn) with different SAIDs"
+        verifiable_by: "fork found at sn=5 with said_a != said_b"
+      - domain: "domain://integrity/evidence"
+        assertion: "DuplicityEvidence entry stored permanently in DEL; both events preserved with signatures"
+        verifiable_by: "DEL entry exists with both event bodies and valid signatures"
+    failure_scenarios:
+      - name: "no_duplicity"
+        inject_failure_at: "step 3 (compare_events_by_sn) — all witnesses agree"
+        expected_state:
+          - domain: "domain://integrity/evidence"
+            assertion: "No DEL entry created — this is the normal, healthy outcome"
+    reference_implementation:
+      source: "keripy tests/core/test_eventing.py (duplicity sections)"
+      notes: "Tests escrowLDEvent, duplicitous event detection"
+
+  - name: "SupersedingRecovery_happy"
+    protocol: "protocols://integrity#SupersedingRecovery"
+    description: "Honest controller recovers from duplicity using pre-rotated keys."
+    setup:
+      description: "Duplicity detected at fork_point_sn; controller has pre-rotated keys from before the fork"
+      preconditions:
+        - domain: "domain://integrity/evidence"
+          condition: "DuplicityEvidence exists in DEL for this AID"
+        - domain: "domain://identity/key-commitment"
+          condition: "Pre-rotation commitments from last establishment event before fork are available"
+    end_state_assertions:
+      - domain: "domain://identity/state"
+        assertion: "KeyState updated with recovery rotation — new keys from pre-rotation, forked branch invalidated"
+        verifiable_by: "kever at recovery_sn has new keys; events from fork branch are disputed"
+      - domain: "domain://integrity/recovery"
+        assertion: "KEL reconciled — recovery branch is the new trunk; forked events preserved but disputed"
+        verifiable_by: "superseded events queryable by fn but not in active KEL sequence"
+      - domain: "domain://integrity/evidence"
+        assertion: "DEL evidence preserved — recovery doesn't delete duplicity proof"
+        verifiable_by: "DEL entries still exist after recovery"
+    failure_scenarios:
+      - name: "recovery_keys_dont_match"
+        inject_failure_at: "step 3 (verify_recovery_keys) — keys don't match pre-commitments"
+        expected_state:
+          - domain: "domain://identity/state"
+            assertion: "KeyState unchanged — recovery rotation rejected"
+          - domain: "domain://identity/key-commitment"
+            assertion: "PreRotationBindingError raised"
+    reference_implementation:
+      source: "keripy tests/core/test_eventing.py (superseding recovery sections)"
+      notes: "Tests superseding rotation with pre-rotated key validation"
