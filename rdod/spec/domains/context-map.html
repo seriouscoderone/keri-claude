@@ -13350,7 +13350,13 @@ const RDOD_DATA = {
         "relationship": "Credential registry management — creating, configuring, and managing the containers that track groups of credentials"
       }
     ],
-    "kernels": [],
+    "kernels": [
+      {
+        "ref": "kernel://cesr",
+        "source": "domain://cesr",
+        "relationship": "CESR primitives (SAID, AID, Diger) adopted natively in credential and TEL data structures"
+      }
+    ],
     "adjacents": [
       {
         "ref": "domain://credential-exchange",
@@ -21740,6 +21746,11 @@ const RDOD_DATA = {
     ],
     "kernels": [
       {
+        "ref": "kernel://cesr",
+        "source": "domain://cesr",
+        "relationship": "CESR primitives (Verfer, Diger, Siger, AID, SAID) adopted natively in all identity data structures"
+      },
+      {
         "ref": "kernel://cryptographic-algorithms",
         "source": "Ed25519 (event signing), Blake3-256/SHA-256 (SAID computation, prior event digest, seal digests, next key commitments)",
         "relationship": "Cryptographic algorithm types appear directly in event fields and key state structures — signatures, digests, public keys, and threshold expressions are kernel types"
@@ -29710,6 +29721,12 @@ const RDOD_DATA = {
         "reference": "keriox — keriox_core/src/processor/escrow.rs (DuplicitousEvents escrow), keriox_core/src/processor/notification.rs (NotificationBus, KeyEventAdded)"
       }
     ],
+    "published_language": [
+      {
+        "term": "Watcher",
+        "description": "Observer that monitors KEL integrity by cross-checking witness copies for duplicity"
+      }
+    ],
     "ubiquitous_language": [
       {
         "term": "Duplicity",
@@ -29879,12 +29896,6 @@ const RDOD_DATA = {
       "notes": "This is an orchestrating domain decomposed into three subdomains: evidence (fork detection, escrow lifecycle, notification bus), recovery (superseding rules, reconciliation, trunk/branch model), and monitoring (watcher/juror/judge roles, ambient verifiability). The parent domain owns the threat model overview — duplicity vs internal inconsistency, live vs dead attacks — and coordinates the subdomains. Implementation-specific details live in the subdomains.\n"
     },
     "issues": [],
-    "published_language": [
-      {
-        "term": "Watcher",
-        "description": "Observer that monitors KEL integrity by cross-checking witness copies for duplicity"
-      }
-    ],
     "tags": [
       "duplicity",
       "security",
