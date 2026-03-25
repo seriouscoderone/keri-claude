@@ -434,3 +434,103 @@ types:
             description: "Registry delegation — SAID of the credential registry managing this credential's lifecycle"
         invariants:
           - "Links this credential to a TEL registry for status tracking (issuance/revocation)"
+
+  - name: "REGID"
+    description: "Registry Identifier — the SAID of a registry inception event (vcp). Uniquely identifies a credential registry."
+    variants:
+      - name: "default"
+        fields:
+          - name: "qb64"
+            type: "string"
+            required: true
+            description: "CESR-qualified registry SAID"
+        invariants:
+          - "Computed as the SAID of the registry inception (vcp) event"
+          - "Immutable — does not change across registry rotations"
+
+  - name: "CredentialStateSnapshot"
+    description: "The current state of a credential at a point in time — derived from processing TEL events."
+    variants:
+      - name: "default"
+        fields:
+          - name: "credential_said"
+            type: "string"
+            required: true
+            description: "SAID of the credential"
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID of the registry this credential belongs to"
+          - name: "state"
+            type: "string"
+            required: true
+            description: "Current lifecycle state"
+            constraints:
+              enum: ["NotIssued", "Issued", "Revoked"]
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "TEL sequence number of the latest event"
+          - name: "latest_event_said"
+            type: "string"
+            required: true
+            description: "SAID of the latest TEL event"
+        invariants:
+          - "Derived from processing TEL events — not directly authored"
+          - "State transitions: NotIssued → Issued → Revoked (no reverse)"
+
+  - name: "RegistryStateSnapshot"
+    description: "The current state of a credential registry — backer list, thresholds, and configuration."
+    variants:
+      - name: "default"
+        fields:
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID"
+          - name: "issuer_aid"
+            type: "string"
+            required: true
+            description: "AID of the registry owner/issuer"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Registry sequence number"
+          - name: "backers"
+            type: "array[string]"
+            required: true
+            description: "Current backer AIDs (witnesses for backed registries)"
+          - name: "backer_threshold"
+            type: "integer"
+            required: true
+            description: "Backer threshold"
+        invariants:
+          - "Derived from processing vcp/vrt events"
+
+  - name: "TELEvent"
+    description: "Union type for any event in a Transaction Event Log. Discriminated by the t field."
+    variants:
+      - name: "issuance"
+        fields:
+          - name: "event"
+            type: "TypeRef:credential-lifecycle#IssuanceEvent"
+            required: true
+            description: "Issuance event (iss or bis)"
+        invariants:
+          - "t field is 'iss' (backerless) or 'bis' (backed)"
+      - name: "revocation"
+        fields:
+          - name: "event"
+            type: "TypeRef:credential-lifecycle#RevocationEvent"
+            required: true
+            description: "Revocation event (rev or brv)"
+        invariants:
+          - "t field is 'rev' (backerless) or 'brv' (backed)"
+      - name: "registry_inception"
+        fields:
+          - name: "event"
+            type: "TypeRef:credential-lifecycle#RegistryInceptionEvent"
+            required: true
+            description: "Registry inception event (vcp)"
+        invariants:
+          - "t field is 'vcp'"

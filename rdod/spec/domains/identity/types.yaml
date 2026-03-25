@@ -437,4 +437,134 @@ types:
               {"prefix":"DFs8BBx86uytIM0D2BhsE5rrqVIT8ef8mflpNceHo4XH","sn":0,"digest":"EPLRRJFe2FHdXKVTkSEX4xb4x-YaPFJ2Xds1vhtNTd4n","ilk":"icp","signing_keys":["DFs8BBx86uytIM0D2BhsE5rrqVIT8ef8mflpNceHo4XH"],"signing_threshold":"1","next_key_digests":[],"next_threshold":"0","witness_threshold":0,"witnesses":[],"config_traits":[],"transferable":false,"last_establishment_sn":0,"first_seen_sn":0}
             notes: "Derived from non-transferable icp. next_key_digests=[] and sn=0 means non-transferable. Logical representation — keripy exposes via Kever attributes."
 
+  - name: "KeyEvent"
+    description: "Union type for any event in a Key Event Log. Discriminated by the t (type/ilk) field."
+    variants:
+      - name: "inception"
+        fields:
+          - name: "event"
+            type: "TypeRef:identity#InceptionEvent"
+            required: true
+            description: "Non-delegated or delegated inception event (icp/dip)"
+        invariants:
+          - "t field is 'icp' or 'dip'"
+          - "sn is always 0"
+      - name: "rotation"
+        fields:
+          - name: "event"
+            type: "TypeRef:identity#RotationEvent"
+            required: true
+            description: "Non-delegated or delegated rotation event (rot/drt)"
+        invariants:
+          - "t field is 'rot' or 'drt'"
+          - "sn >= 1"
+      - name: "interaction"
+        fields:
+          - name: "event"
+            type: "TypeRef:identity#InteractionEvent"
+            required: true
+            description: "Interaction event (ixn)"
+        invariants:
+          - "t field is 'ixn'"
+          - "Does not change key state"
+    construction_defaults: {}
+
+  - name: "EstablishmentEvent"
+    description: "Subset of KeyEvent that changes key state — inception or rotation. Excludes interaction events."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event"
+            type: "TypeRef:identity#KeyEvent"
+            required: true
+            description: "Must be inception or rotation variant, not interaction"
+        invariants:
+          - "Only icp, rot, dip, drt ilks — never ixn"
+          - "Modifies signing keys, thresholds, witness set, or next key commitments"
+
+  - name: "PublicKey"
+    description: "A CESR-qualified public verification key. The qb64 representation includes the algorithm code prefix."
+    variants:
+      - name: "default"
+        fields:
+          - name: "qb64"
+            type: "string"
+            required: true
+            description: "CESR Base64url-encoded public key with algorithm prefix"
+            constraints:
+              pattern: "^[A-Za-z0-9_-]+"
+          - name: "algorithm"
+            type: "string"
+            required: true
+            description: "Cryptographic algorithm"
+            constraints:
+              enum: ["Ed25519", "ECDSA-secp256k1", "ECDSA-secp256r1", "Ed448"]
+        invariants:
+          - "First character(s) of qb64 determine the algorithm (D=Ed25519, 1AAB=secp256k1, etc.)"
+          - "Equivalent to a Verfer primitive in CESR"
+
+  - name: "WitnessAID"
+    description: "A non-transferable AID used to identify a witness. The public key IS the identifier — no key rotation possible."
+    variants:
+      - name: "default"
+        fields:
+          - name: "qb64"
+            type: "string"
+            required: true
+            description: "CESR-qualified non-transferable AID prefix (B prefix for Ed25519)"
+        invariants:
+          - "Must be non-transferable — prefix code indicates non-transferable key type"
+          - "B prefix = Ed25519 non-transferable"
+
+  - name: "InceptionConfig"
+    description: "Construction parameters for creating a new identifier. Captures all five type dimensions."
+    variants:
+      - name: "default"
+        fields:
+          - name: "signing_keys"
+            type: "array[PublicKey]"
+            required: true
+            description: "Initial signing public keys"
+            constraints:
+              min_length: 1
+          - name: "signing_threshold"
+            type: "string"
+            required: true
+            description: "Signing threshold expression (simple integer or weighted)"
+            constraints:
+              min: "1"
+          - name: "next_key_digests"
+            type: "array[string]"
+            required: true
+            description: "Pre-rotation commitments — digests of next signing keys. Empty for non-transferable."
+          - name: "next_threshold"
+            type: "string"
+            required: true
+            description: "Next key threshold. '0' for non-transferable."
+          - name: "witnesses"
+            type: "array[WitnessAID]"
+            required: true
+            description: "Designated witness AIDs. Empty for unwitnessed."
+          - name: "witness_threshold"
+            type: "integer"
+            required: true
+            description: "TOAD — witness threshold. 0 for unwitnessed."
+            constraints:
+              min: 0
+          - name: "config_traits"
+            type: "array[string]"
+            required: true
+            description: "Operational constraints: EO, DND, DID, RB, NRB"
+            constraints:
+              enum: ["EO", "DND", "DID", "RB", "NRB"]
+          - name: "delegator"
+            type: "string"
+            required: false
+            description: "Delegator AID — if present, creates a delegated identifier (dip instead of icp)"
+        invariants:
+          - "len(signing_keys) >= integer(signing_threshold) for simple thresholds"
+          - "witness_threshold <= len(witnesses)"
+          - "If next_key_digests is empty, identifier is non-transferable"
+          - "If delegator is present, inception uses dip ilk"
+
   # ExchangeMessage, QueryMessage, ReplyMessage moved to kernel://keri-messaging

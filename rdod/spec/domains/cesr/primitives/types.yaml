@@ -185,3 +185,90 @@ types:
           - "Always UTC (timezone +00:00)"
           - "Microsecond precision (6 decimal places) — supports up to 1M messages/second for KRAM"
           - "Used in KRAM timeliness checking — must be monotonically increasing per sender"
+
+  - name: "Siger"
+    description: "Indexed signature — a controller or witness signature with an index indicating which key in the key list produced it."
+    variants:
+      - name: "default"
+        fields:
+          - name: "qb64"
+            type: "string"
+            required: true
+            description: "CESR-qualified indexed signature"
+          - name: "index"
+            type: "integer"
+            required: true
+            description: "Index into the signing key list"
+            constraints:
+              min: 0
+          - name: "ondex"
+            type: "integer"
+            required: false
+            description: "Index into the rotation (next) key list — present only for dual-indexed signatures"
+        invariants:
+          - "index identifies which key in the current key list signed this"
+          - "ondex identifies which key in the next key list this maps to (for rotation verification)"
+
+  - name: "Cigar"
+    description: "Unindexed signature — typically from a non-transferable witness whose public key IS their identifier."
+    variants:
+      - name: "default"
+        fields:
+          - name: "qb64"
+            type: "string"
+            required: true
+            description: "CESR-qualified unindexed signature"
+          - name: "verfer"
+            type: "TypeRef:cesr/primitives#Matter"
+            required: true
+            description: "The public key (Verfer) that produced this signature"
+        invariants:
+          - "verfer.verify(raw_data, cigar.raw) must return True"
+
+  - name: "Diger"
+    description: "Digest primitive — a cryptographic hash with its algorithm code."
+    variants:
+      - name: "default"
+        fields:
+          - name: "qb64"
+            type: "string"
+            required: true
+            description: "CESR-qualified digest"
+          - name: "code"
+            type: "string"
+            required: true
+            description: "Digest algorithm code (E=Blake3-256, F=Blake2b-256, etc.)"
+        invariants:
+          - "qb64 is the CESR encoding of code + raw digest bytes"
+
+  - name: "Digest"
+    description: "A raw digest value — the output of a hash function. Alias for Diger in many contexts."
+    variants:
+      - name: "default"
+        fields:
+          - name: "qb64"
+            type: "string"
+            required: true
+            description: "CESR-qualified digest"
+        invariants:
+          - "Functionally equivalent to Diger — used when the context is 'a hash value' rather than 'a CESR primitive'"
+
+  - name: "EventSeal"
+    description: "A seal referencing a specific event in another identifier's KEL — used for delegation and cross-KEL anchoring."
+    variants:
+      - name: "default"
+        fields:
+          - name: "i"
+            type: "string"
+            required: true
+            description: "AID prefix of the referenced event's identifier"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Sequence number of the referenced event"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID of the referenced event"
+        invariants:
+          - "References a specific event by (prefix, sn, said) — all three must match"
