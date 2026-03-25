@@ -94,6 +94,12 @@ types:
           - "Registry ri must exist and be owned by the issuer"
           - "Credential i must not already be issued in this registry"
           - "Must be anchored in the issuer's KEL"
+        examples:
+          - format: "json"
+            description: "Backerless TEL issuance event"
+            value: |
+              {"v":"KERI10JSON0000ed_","t":"iss","d":"ECUw7AdWEE3fvr7dgbFDXj0CEZuJTTa_H8-iLLAmIUPO","i":"EElymNmgs1u0mSaoCeOtSsNOROLuqOz103V3-4E-ClXH","s":"0","ri":"EB-u4VAF7A7_GR8PXJoAVHv5X9vjtXew8Yo6Z3w9mQUQ","dt":"2021-06-27T21:26:21.233257+00:00"}
+            notes: "i = credential SAID (not issuer). ri = registry SAID. From keripy test_protocoling.py"
       - name: "backed"
         fields:
           - name: "v"
@@ -283,6 +289,12 @@ types:
           - "No u field — credential content is public (discoverable)"
           - "No i field in attribute section — credential is untargeted (bearer)"
           - "Lowercase a (not uppercase A) — direct attribute disclosure, not selective"
+        examples:
+          - format: "json"
+            description: "Public targeted ACDC credential"
+            value: |
+              {"v":"ACDC10JSON000197_","d":"EElymNmgs1u0mSaoCeOtSsNOROLuqOz103V3-4E-ClXH","i":"EMl4RhuR_JxpiMd1N8DEJEhTxM3Ovvn9Xya8AN-tiUbl","ri":"EB-u4VAF7A7_GR8PXJoAVHv5X9vjtXew8Yo6Z3w9mQUQ","s":"EMQWEcCnVRk1hatTNyK3sIykYSrrFvafX3bHQ9Gkk1kC","a":{"d":"EO9_6NattzsFiO8Fw1cxjYmDjOsKKSbootn-wXn9S3iB","dt":"2021-06-27T21:26:21.233257+00:00","i":"EMl4RhuR_JxpiMd1N8DEJEhTxM3Ovvn9Xya8AN-tiUbl","LEI":"254900OPPU84GM83MG36"}}
+            notes: "Public (no u field), targeted (a.i present), with registry (ri). From keripy test_protocoling.py"
 
       - name: "private-targeted"
         fields:

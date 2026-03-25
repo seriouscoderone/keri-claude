@@ -59,6 +59,17 @@ types:
           - "Prior (p) field links to the previous message's SAID in a conversation — empty string for first message"
           - "Subject to KRAM replay protection — dt must be monotonically increasing per sender"
           - "Must be signed by sender's current keys — provides non-repudiable attribution"
+        examples:
+          - format: "json"
+            description: "IPEX apply message"
+            value: |
+              {"v":"KERI10JSON000175_","t":"exn","d":"EHVK5cO32UQJCkpK9RqRP_ONViK8u3JNXn73nJ8hdmXr","i":"EMl4RhuR_JxpiMd1N8DEJEhTxM3Ovvn9Xya8AN-tiUbl","rp":"","p":"","dt":"2021-06-27T21:26:21.233257+00:00","r":"/ipex/apply","q":{},"a":{"m":"Please give me a credential","s":"EMQWEcCnVRk1hatTNyK3sIykYSrrFvafX3bHQ9Gkk1kC"}}
+            notes: "r=/ipex/apply routes to credential-exchange domain. p='' (first message). From keripy test_protocoling.py"
+          - format: "json"
+            description: "IPEX spurn message"
+            value: |
+              {"v":"KERI10JSON000125_","t":"exn","d":"EHijfrof83z7JeFR-wJO9Ptgl-PieQHhKC-FbZIDvGvM","i":"EMl4RhuR_JxpiMd1N8DEJEhTxM3Ovvn9Xya8AN-tiUbl","rp":"","p":"EHVK5cO32UQJCkpK9RqRP_ONViK8u3JNXn73nJ8hdmXr","dt":"2021-06-27T21:26:21.233257+00:00","r":"/ipex/spurn","q":{},"a":{"m":"I reject you"},"e":{}}
+            notes: "p references the spurned message's SAID. Terminal message. From keripy test_protocoling.py"
     construction_defaults:
       p: ""
       q: "{}"
@@ -108,6 +119,12 @@ types:
           - "Routes logs/ksn/mbx handled by identity domain"
           - "Routes tels/tsn handled by credential-lifecycle domain"
           - "Subject to KRAM replay protection"
+        examples:
+          - format: "json"
+            description: "Query for KEL logs"
+            value: |
+              {"v":"KERI10JSON0000c9_","t":"qry","d":"EGN68_seecuzXQO15FFGJLVwZCBCPYW-hy29fjWWPQbp","dt":"2021-01-01T00:00:00.000000+00:00","r":"log","rr":"","q":{"i":"DAvCLRr5luWmp7keDvDuLP0kIqcyBYq79b3Dho1QvrjI"}}
+            notes: "r='log' queries for KEL events. q.i is the target AID. From keripy test_eventing.py"
 
   - name: "ReplyMessage"
     description: "Response to a query or unsolicited state notification. Route determines the content type."
