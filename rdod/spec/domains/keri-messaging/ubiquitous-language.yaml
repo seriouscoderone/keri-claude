@@ -55,6 +55,39 @@ terms:
       - "t='iss' -> Tevery.processEvent()"
     related_terms: ["Message Parser", "Event Processor", "Key Event", "Witness", "IPEX"]
 
+  - term: "Domain Event Bus"
+    synonyms: ["Notification Bus", "Internal Event Coordination"]
+    definition: "The internal counterpart to external messaging. While exn/qry/rpy carry messages between services over the network, the Domain Event Bus coordinates reactions between domains within a single deployment. When a domain accepts a significant state change (e.g., key event accepted, credential issued, duplicity detected), it publishes a domain event. Other domains that need to react — collecting witness receipts, reprocessing escrows, triggering queries — subscribe to relevant events."
+    invariants:
+      - "Every domain's events: section defines what domain events it publishes"
+      - "Domain events are the trigger mechanism for cross-domain protocol steps"
+      - "The bus is an abstraction — implementations choose the mechanism (cue queues, observer pattern, channels, event emitters)"
+      - "Events MUST be delivered reliably within a processing cycle — no silent drops"
+      - "A domain event carries: event kind, source domain, payload (event data), and context"
+    examples:
+      - "identity publishes KeyEventAccepted → accountability reacts by collecting witness receipts"
+      - "credential-lifecycle publishes CredentialIssued → credential-exchange can now grant it"
+      - "integrity publishes DuplicityDetected → validators are alerted, DEL is updated"
+    related_terms: ["Exchange Message (exn)", "Exchanger"]
+
+  - term: "External Messaging"
+    definition: "Messages that travel over the network between services or controllers — exn, qry, rpy. These are CESR-encoded, signed by the sender's AID, subject to KRAM replay protection, and routed by the Exchanger. External messaging is the wire protocol."
+    invariants:
+      - "Always CESR-encoded"
+      - "Always signed by sender's current keys"
+      - "Subject to KRAM timeliness check"
+      - "Dispatched by route (exn) or route+type (qry, rpy)"
+    related_terms: ["Exchange Message (exn)", "KRAM", "Domain Event Bus"]
+
+  - term: "Internal Domain Events"
+    definition: "Events published within a deployment when a domain completes a significant operation. Unlike external messages, these do not travel over the network, are not CESR-encoded, and are not signed. They trigger cross-domain reactions within the same process or service boundary."
+    invariants:
+      - "Do not leave the deployment boundary"
+      - "Not CESR-encoded — format is implementation-specific"
+      - "Not signed — trust is implicit within a deployment"
+      - "Common event kinds: KeyEventAccepted, ReceiptCollected, EscrowResolved, DuplicityDetected, CredentialIssued, OOBIResolved"
+    related_terms: ["Domain Event Bus", "External Messaging"]
+
 events:
 
 rules:
