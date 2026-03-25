@@ -18,9 +18,11 @@ terms:
       - "Seal not found in Ean's KEL — event escrowed to partially-delegated escrow [.pdes in keripy] pending Ean's anchoring event"
     related_terms: ["Partially-Delegated Escrow", "Delegable Event Escrow", "Approved Delegation Seals"]
 
+  # Inherits: "Partially-Delegated Escrow" from domain://delegation
   - term: "Partially-Delegated Escrow"
     synonyms: ["PDE", ".pdes [keripy]", "DelegationEscrow [keriox]"]
-    definition: "Holds delegated events (dip, drt) that have been received and validated locally but are awaiting the delegator's anchoring seal. Events sit here until the delegator's KEL shows a seal committing to the delegated event's digest."
+    specializes: "domain://delegation"
+    definition: "In the context of delegation lifecycle, the Partially-Delegated Escrow manages the promotion pipeline: events sit here until the delegator's KEL shows a seal committing to the delegated event's digest, then are promoted to the KEL."
     invariants:
       - "Contains delegated events whose delegator seal has not yet been found"
       - "Timeout: 3600 seconds — escrowed events are pruned after expiry"
