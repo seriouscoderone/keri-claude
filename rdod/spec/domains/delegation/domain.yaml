@@ -83,6 +83,9 @@ subdomains:
     relationship: "Owns delegated inception and rotation event lifecycle — validation pipeline and escrow queues"
 
 kernels:
+  - ref: "kernel://cesr"
+    source: "domain://cesr"
+    relationship: "CESR primitives (Prefixer, Diger, Seqner, Seal) adopted natively for delegation seal construction and verification"
   - ref: "kernel://cryptographic-algorithms"
     source: "Ed25519 (signing both delegator and delegatee events), Blake3-256/SHA-256 (delegation seal digests, delegatee AID derivation)"
     relationship: "Delegation verification requires cryptographic verification of both delegator and delegatee signatures and digest verification of the delegation seal — kernel types appear directly"

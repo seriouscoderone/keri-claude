@@ -1,221 +1,243 @@
 graph TD
   subgraph Layer0["Layer 0"]
+    cesr_composition["cesr/composition"]
+    cesr_primitives["cesr/primitives"]
+  end
+  subgraph Layer1["Layer 1"]
+    cesr["cesr"]
+  end
+  subgraph Layer2["Layer 2"]
     accountability_consensus["accountability/consensus"]
     accountability_dissemination["accountability/dissemination"]
     accountability_receipting["accountability/receipting"]
-    cesr_composition["cesr/composition"]
-    cesr_primitives["cesr/primitives"]
     delegation_authorization["delegation/authorization"]
     delegation_lifecycle["delegation/lifecycle"]
     delegation_recovery["delegation/recovery"]
     integrity_detection["integrity/detection"]
     integrity_evidence["integrity/evidence"]
     integrity_recovery["integrity/recovery"]
+    keri_messaging["keri-messaging"]
     privacy_aggregation["privacy/aggregation"]
     privacy_blinding["privacy/blinding"]
     privacy_disclosure["privacy/disclosure"]
   end
-  subgraph Layer1["Layer 1"]
+  subgraph Layer3["Layer 3"]
     accountability["accountability"]
-    cesr["cesr"]
+    credential_exchange_negotiation["credential-exchange/negotiation"]
     delegation["delegation"]
     integrity["integrity"]
   end
-  subgraph Layer2["Layer 2"]
-    keri_messaging["keri-messaging"]
-  end
-  subgraph Layer3["Layer 3"]
-    credential_exchange_negotiation["credential-exchange/negotiation"]
+  subgraph Layer4["Layer 4"]
     identity_anchoring["identity/anchoring"]
     identity_establishment["identity/establishment"]
     identity_key_commitment["identity/key-commitment"]
     identity_state["identity/state"]
     identity_thresholds["identity/thresholds"]
   end
-  subgraph Layer4["Layer 4"]
+  subgraph Layer5["Layer 5"]
     discovery["discovery"]
     identity["identity"]
   end
-  subgraph Layer5["Layer 5"]
+  subgraph Layer6["Layer 6"]
     credential_lifecycle_registry["credential-lifecycle/registry"]
     credential_lifecycle_status["credential-lifecycle/status"]
     credential_lifecycle_verification["credential-lifecycle/verification"]
     witness_service_api["witness-service/api"]
   end
-  subgraph Layer6["Layer 6"]
+  subgraph Layer7["Layer 7"]
     credential_exchange_proof["credential-exchange/proof"]
     witness_service["witness-service"]
   end
-  subgraph Layer7["Layer 7"]
+  subgraph Layer8["Layer 8"]
     credential_exchange["credential-exchange"]
     credential_lifecycle["credential-lifecycle"]
     privacy["privacy"]
     watcher_service_api["watcher-service/api"]
   end
-  subgraph Layer8["Layer 8"]
+  subgraph Layer9["Layer 9"]
     watcher_service["watcher-service"]
   end
-  subgraph Layer9["Layer 9"]
+  subgraph Layer10["Layer 10"]
     cloud_agent_service_api["cloud-agent-service/api"]
     cloud_agent_service_processing["cloud-agent-service/processing"]
     cloud_agent_service_provisioning["cloud-agent-service/provisioning"]
     local_agent_api["local-agent/api"]
   end
-  subgraph Layer10["Layer 10"]
+  subgraph Layer11["Layer 11"]
     cloud_agent_service["cloud-agent-service"]
     local_agent["local-agent"]
   end
-  subgraph Layer11["Layer 11"]
+  subgraph Layer12["Layer 12"]
     signify_client_key_management["signify-client/key-management"]
     signify_client_resources["signify-client/resources"]
   end
-  subgraph Layer12["Layer 12"]
+  subgraph Layer13["Layer 13"]
     signify_client["signify-client"]
   end
+  credential_exchange --> cesr
+  credential_exchange --> keri_messaging
+  credential_exchange --> credential_exchange_negotiation
+  credential_exchange --> credential_exchange_proof
+  cloud_agent_service --> cloud_agent_service_api
+  cloud_agent_service --> cloud_agent_service_provisioning
+  cloud_agent_service --> cesr
+  cloud_agent_service --> discovery
+  cloud_agent_service --> cloud_agent_service_processing
+  cloud_agent_service --> watcher_service
+  cloud_agent_service --> identity
+  cloud_agent_service --> witness_service
+  cloud_agent_service --> credential_lifecycle
+  cloud_agent_service --> keri_messaging
+  identity_state --> delegation
+  identity_state --> integrity
   identity_state --> cesr
   identity_state --> keri_messaging
   identity_state --> accountability
-  identity_state --> delegation
-  identity_state --> integrity
-  identity --> identity_state
-  identity --> cesr
-  identity --> identity_establishment
-  identity --> keri_messaging
-  identity --> identity_key_commitment
-  identity --> accountability
-  identity --> delegation
-  identity --> integrity
-  identity --> identity_anchoring
-  identity --> identity_thresholds
-  local_agent_api --> identity
-  local_agent_api --> cesr
-  local_agent_api --> witness_service
-  local_agent_api --> keri_messaging
-  local_agent_api --> credential_lifecycle
-  local_agent_api --> watcher_service
-  local_agent_api --> discovery
-  accountability --> accountability_receipting
-  accountability --> accountability_consensus
-  accountability --> accountability_dissemination
-  credential_lifecycle --> identity
-  credential_lifecycle --> cesr
-  credential_lifecycle --> credential_lifecycle_status
-  credential_lifecycle --> credential_lifecycle_registry
-  credential_lifecycle --> credential_lifecycle_verification
-  delegation --> delegation_authorization
-  delegation --> delegation_recovery
-  delegation --> delegation_lifecycle
-  local_agent --> identity
-  local_agent --> local_agent_api
-  local_agent --> cesr
-  local_agent --> witness_service
-  local_agent --> keri_messaging
-  local_agent --> credential_lifecycle
-  local_agent --> watcher_service
-  local_agent --> discovery
-  credential_lifecycle_registry --> identity
+  identity_thresholds --> delegation
+  identity_thresholds --> integrity
+  identity_thresholds --> cesr
+  identity_thresholds --> cesr_primitives
+  identity_thresholds --> keri_messaging
+  identity_thresholds --> accountability
+  privacy_blinding --> cesr
+  accountability_consensus --> cesr
+  signify_client_key_management --> cloud_agent_service
+  signify_client_key_management --> discovery
+  signify_client_key_management --> cesr
+  signify_client_key_management --> identity
+  signify_client_key_management --> credential_lifecycle
+  signify_client_key_management --> keri_messaging
+  privacy_disclosure --> cesr
+  credential_lifecycle_status --> cesr
+  credential_lifecycle_status --> identity
+  privacy --> cesr
+  privacy --> privacy_disclosure
+  privacy --> privacy_aggregation
+  privacy --> privacy_blinding
+  integrity_evidence --> cesr
+  cloud_agent_service_api --> discovery
+  cloud_agent_service_api --> cesr
+  cloud_agent_service_api --> watcher_service
+  cloud_agent_service_api --> identity
+  cloud_agent_service_api --> witness_service
+  cloud_agent_service_api --> credential_lifecycle
+  cloud_agent_service_api --> keri_messaging
   credential_lifecycle_registry --> cesr
-  signify_client --> identity
-  signify_client --> cesr
-  signify_client --> keri_messaging
-  signify_client --> credential_lifecycle
-  signify_client --> signify_client_key_management
-  signify_client --> cloud_agent_service
-  signify_client --> signify_client_resources
-  signify_client --> discovery
-  watcher_service --> identity
-  watcher_service --> witness_service
-  watcher_service --> watcher_service_api
-  cloud_agent_service_processing --> identity
-  cloud_agent_service_processing --> cesr
-  cloud_agent_service_processing --> witness_service
-  cloud_agent_service_processing --> keri_messaging
-  cloud_agent_service_processing --> credential_lifecycle
-  cloud_agent_service_processing --> watcher_service
-  cloud_agent_service_processing --> discovery
+  credential_lifecycle_registry --> identity
+  delegation --> cesr
+  delegation --> delegation_lifecycle
+  delegation --> delegation_recovery
+  delegation --> delegation_authorization
+  delegation_lifecycle --> cesr
+  identity_establishment --> delegation
+  identity_establishment --> integrity
   identity_establishment --> cesr
   identity_establishment --> keri_messaging
   identity_establishment --> accountability
-  identity_establishment --> delegation
-  identity_establishment --> integrity
-  keri_messaging --> cesr
-  integrity --> integrity_evidence
-  integrity --> integrity_recovery
-  integrity --> integrity_detection
-  witness_service_api --> accountability_receipting
-  witness_service_api --> cesr
-  witness_service_api --> identity
-  cloud_agent_service_api --> identity
-  cloud_agent_service_api --> cesr
-  cloud_agent_service_api --> witness_service
-  cloud_agent_service_api --> keri_messaging
-  cloud_agent_service_api --> credential_lifecycle
-  cloud_agent_service_api --> watcher_service
-  cloud_agent_service_api --> discovery
-  watcher_service_api --> identity
-  watcher_service_api --> cesr
-  watcher_service_api --> integrity_detection
-  watcher_service_api --> witness_service
-  signify_client_resources --> identity
-  signify_client_resources --> cesr
-  signify_client_resources --> keri_messaging
-  signify_client_resources --> credential_lifecycle
-  signify_client_resources --> cloud_agent_service
-  signify_client_resources --> discovery
+  identity_key_commitment --> delegation
+  identity_key_commitment --> integrity
   identity_key_commitment --> cesr
   identity_key_commitment --> keri_messaging
   identity_key_commitment --> accountability
-  identity_key_commitment --> delegation
-  identity_key_commitment --> integrity
-  signify_client_key_management --> identity
-  signify_client_key_management --> cesr
-  signify_client_key_management --> keri_messaging
-  signify_client_key_management --> credential_lifecycle
-  signify_client_key_management --> cloud_agent_service
-  signify_client_key_management --> discovery
-  privacy --> privacy_aggregation
-  privacy --> privacy_disclosure
-  privacy --> privacy_blinding
-  credential_lifecycle_status --> identity
-  credential_lifecycle_status --> cesr
+  local_agent --> discovery
+  local_agent --> cesr
+  local_agent --> watcher_service
+  local_agent --> identity
+  local_agent --> local_agent_api
+  local_agent --> witness_service
+  local_agent --> credential_lifecycle
+  local_agent --> keri_messaging
+  signify_client --> cloud_agent_service
+  signify_client --> discovery
+  signify_client --> cesr
+  signify_client --> signify_client_resources
+  signify_client --> signify_client_key_management
+  signify_client --> identity
+  signify_client --> credential_lifecycle
+  signify_client --> keri_messaging
+  credential_lifecycle --> credential_lifecycle_registry
+  credential_lifecycle --> cesr
+  credential_lifecycle --> credential_lifecycle_verification
+  credential_lifecycle --> identity
+  credential_lifecycle --> credential_lifecycle_status
+  delegation_authorization --> cesr
+  credential_exchange_proof --> cesr
+  credential_exchange_proof --> credential_lifecycle_verification
+  credential_exchange_proof --> keri_messaging
+  accountability --> cesr
+  accountability --> accountability_receipting
+  accountability --> accountability_consensus
+  accountability --> accountability_dissemination
+  privacy_aggregation --> cesr
+  accountability_receipting --> cesr
+  delegation_recovery --> cesr
+  credential_lifecycle_verification --> cesr
+  credential_lifecycle_verification --> identity
+  identity --> identity_key_commitment
+  identity --> delegation
+  identity --> identity_establishment
+  identity --> identity_state
+  identity --> integrity
+  identity --> identity_thresholds
+  identity --> cesr
+  identity --> identity_anchoring
+  identity --> keri_messaging
+  identity --> accountability
+  local_agent_api --> discovery
+  local_agent_api --> cesr
+  local_agent_api --> watcher_service
+  local_agent_api --> identity
+  local_agent_api --> witness_service
+  local_agent_api --> credential_lifecycle
+  local_agent_api --> keri_messaging
+  witness_service --> identity
+  witness_service --> witness_service_api
+  integrity_detection --> cesr
+  keri_messaging --> cesr
+  accountability_dissemination --> cesr
+  witness_service_api --> cesr
+  witness_service_api --> accountability_receipting
+  witness_service_api --> identity
+  integrity --> cesr
+  integrity --> integrity_detection
+  integrity --> integrity_evidence
+  integrity --> integrity_recovery
+  integrity_recovery --> cesr
+  cloud_agent_service_provisioning --> discovery
+  cloud_agent_service_provisioning --> cesr
+  cloud_agent_service_provisioning --> watcher_service
+  cloud_agent_service_provisioning --> identity
+  cloud_agent_service_provisioning --> witness_service
+  cloud_agent_service_provisioning --> credential_lifecycle
+  cloud_agent_service_provisioning --> keri_messaging
+  cesr --> cesr_composition
+  cesr --> cesr_primitives
+  discovery --> cesr
+  discovery --> keri_messaging
+  cloud_agent_service_processing --> discovery
+  cloud_agent_service_processing --> cesr
+  cloud_agent_service_processing --> watcher_service
+  cloud_agent_service_processing --> identity
+  cloud_agent_service_processing --> witness_service
+  cloud_agent_service_processing --> credential_lifecycle
+  cloud_agent_service_processing --> keri_messaging
+  identity_anchoring --> delegation
+  identity_anchoring --> integrity
   identity_anchoring --> cesr
   identity_anchoring --> keri_messaging
   identity_anchoring --> accountability
-  identity_anchoring --> delegation
-  identity_anchoring --> integrity
-  credential_exchange_proof --> credential_lifecycle_verification
-  credential_exchange_proof --> keri_messaging
-  cloud_agent_service --> identity
-  cloud_agent_service --> cesr
-  cloud_agent_service --> witness_service
-  cloud_agent_service --> keri_messaging
-  cloud_agent_service --> credential_lifecycle
-  cloud_agent_service --> watcher_service
-  cloud_agent_service --> cloud_agent_service_api
-  cloud_agent_service --> cloud_agent_service_provisioning
-  cloud_agent_service --> cloud_agent_service_processing
-  cloud_agent_service --> discovery
-  cloud_agent_service_provisioning --> identity
-  cloud_agent_service_provisioning --> cesr
-  cloud_agent_service_provisioning --> witness_service
-  cloud_agent_service_provisioning --> keri_messaging
-  cloud_agent_service_provisioning --> credential_lifecycle
-  cloud_agent_service_provisioning --> watcher_service
-  cloud_agent_service_provisioning --> discovery
-  identity_thresholds --> cesr
-  identity_thresholds --> keri_messaging
-  identity_thresholds --> accountability
-  identity_thresholds --> delegation
-  identity_thresholds --> integrity
-  identity_thresholds --> cesr_primitives
-  cesr --> cesr_composition
-  cesr --> cesr_primitives
-  credential_exchange --> credential_exchange_proof
-  credential_exchange --> credential_exchange_negotiation
-  credential_exchange --> keri_messaging
-  witness_service --> identity
-  witness_service --> witness_service_api
-  credential_lifecycle_verification --> identity
-  credential_lifecycle_verification --> cesr
+  signify_client_resources --> cloud_agent_service
+  signify_client_resources --> discovery
+  signify_client_resources --> cesr
+  signify_client_resources --> identity
+  signify_client_resources --> credential_lifecycle
+  signify_client_resources --> keri_messaging
+  watcher_service --> identity
+  watcher_service --> watcher_service_api
+  watcher_service --> witness_service
+  credential_exchange_negotiation --> cesr
   credential_exchange_negotiation --> keri_messaging
-  discovery --> keri_messaging
+  watcher_service_api --> cesr
+  watcher_service_api --> identity
+  watcher_service_api --> integrity_detection
+  watcher_service_api --> witness_service
