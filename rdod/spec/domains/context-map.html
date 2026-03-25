@@ -7669,7 +7669,7 @@ const RDOD_DATA = {
                 "name": "code",
                 "type": "string",
                 "required": true,
-                "description": "CESR type code — identifies the cryptographic algorithm and raw size"
+                "description": "CESR type code — identifies the cryptographic algorithm and raw size. See code-table.yaml for the complete 151-entry code registry (110 master + 19 indexed + 22 count)."
               },
               {
                 "name": "raw",
@@ -36258,7 +36258,7 @@ const RDOD_DATA = {
     "_types": [
       {
         "name": "DisclosureForm",
-        "description": "The level of content revelation for a credential block. Forms progress monotonically from compact (least revealed) to full (everything revealed).",
+        "description": "The level of content revelation for a credential block. Seven forms covering the full graduated disclosure spectrum. Forms progress monotonically — disclosed information cannot be retracted.",
         "variants": [
           {
             "name": "compact",
@@ -36335,6 +36335,25 @@ const RDOD_DATA = {
             ]
           },
           {
+            "name": "nested-partial",
+            "fields": [
+              {
+                "name": "sections",
+                "type": "map",
+                "required": true,
+                "description": "Each top-level section (a, e, r) independently at a different disclosure level"
+              }
+            ],
+            "invariants": [
+              "Each nested block can independently be compact, partial, or full",
+              "Verification follows the SAID tree — each block verifiable against its parent's SAID",
+              "Between partial (one level) and full (all levels)"
+            ],
+            "examples": [
+              "Credential with full attributes, compact edges, partial rules — reveals what you do but not who vouched for you"
+            ]
+          },
+          {
             "name": "full",
             "fields": [
               {
@@ -36348,6 +36367,62 @@ const RDOD_DATA = {
               "All fields present and expanded",
               "SAID(expanded block) must match any prior compact commitment",
               "Terminal form — no further expansion possible"
+            ]
+          },
+          {
+            "name": "metadata",
+            "fields": [
+              {
+                "name": "d",
+                "type": "string",
+                "required": true,
+                "description": "SAID of the metadata ACDC"
+              },
+              {
+                "name": "u",
+                "type": "string",
+                "required": true,
+                "description": "Empty UUID — signals metadata variant (not private, not public)",
+                "constraints": {
+                  "enum": [
+                    ""
+                  ]
+                }
+              },
+              {
+                "name": "structural_fields",
+                "type": "map",
+                "required": true,
+                "description": "Issuer, schema, edges, rules — visible without correlation to actual credential"
+              }
+            ],
+            "invariants": [
+              "Top-level u field is EMPTY (not absent, not high-entropy)",
+              "Structural fields visible but NOT correlated to the actual private credential",
+              "Used for chain-link confidentiality pre-negotiation — offer before agreement"
+            ]
+          },
+          {
+            "name": "bulk-issued",
+            "fields": [
+              {
+                "name": "blinded_said",
+                "type": "string",
+                "required": true,
+                "description": "Blinded SAID of this instance — unique per copy"
+              },
+              {
+                "name": "bulk_commitment",
+                "type": "string",
+                "required": true,
+                "description": "Aggregate commitment binding all copies in the bulk issuance set"
+              }
+            ],
+            "invariants": [
+              "Each copy has a unique SAID and UUID — unlinkable across presentations",
+              "Issuer signs blinded SAIDs, not the SADs themselves",
+              "Proof of inclusion: discloser unblinds their SAID, verifier checks against bulk commitment",
+              "Distinct from Bulk-Issued pattern: this is the DISCLOSURE form, not the issuance pattern"
             ]
           }
         ]
