@@ -13,7 +13,7 @@ types:
             constraints:
               pattern: "^https?://.+/oobi/.+"
           - name: "cid"
-            type: "TypeRef:cesr/primitives#AID"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "Controller AID — the identifier being introduced"
           - name: "role"
@@ -23,7 +23,7 @@ types:
             constraints:
               enum: ["witness", "watcher", "agent", "controller", "mailbox"]
           - name: "eid"
-            type: "TypeRef:cesr/primitives#AID"
+            type: "types://cesr/primitives#AID"
             required: false
             description: "Endpoint AID — the specific provider's identifier (optional, narrows to one provider)"
         invariants:
@@ -38,7 +38,7 @@ types:
             required: true
             description: "HTTP(S) URL to the data endpoint"
           - name: "said"
-            type: "TypeRef:cesr/primitives#SAID"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the content-addressed data (schema, credential, etc.)"
         invariants:
@@ -56,7 +56,7 @@ types:
             constraints:
               pattern: "^https?://.+/.well-known/keri/oobi/.+"
           - name: "cid"
-            type: "TypeRef:cesr/primitives#AID"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "Controller AID embedded in the well-known path"
         invariants:
@@ -93,7 +93,7 @@ types:
       - name: "default"
         fields:
           - name: "cid"
-            type: "TypeRef:cesr/primitives#AID"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "Controller AID — who authorized this endpoint"
           - name: "role"
@@ -103,7 +103,7 @@ types:
             constraints:
               enum: ["witness", "watcher", "agent", "controller", "mailbox"]
           - name: "eid"
-            type: "TypeRef:cesr/primitives#AID"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "Endpoint AID — the service's identifier"
         invariants:
@@ -117,7 +117,7 @@ types:
       - name: "default"
         fields:
           - name: "eid"
-            type: "TypeRef:cesr/primitives#AID"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "Service endpoint AID"
           - name: "scheme"

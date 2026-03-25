@@ -11,11 +11,11 @@ types:
             required: true
             description: "Human-readable identifier name (alias)"
           - name: "prefix"
-            type: "TypeRef:cesr/primitives#AID"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "The identifier (AID)"
           - name: "key_state"
-            type: "TypeRef:identity#KeyState"
+            type: "types://identity#KeyState"
             required: true
             description: "Current cryptographic configuration"
           - name: "event_log"
@@ -37,15 +37,15 @@ types:
             required: true
             description: "Group identifier name"
           - name: "prefix"
-            type: "TypeRef:cesr/primitives#AID"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "Group AID"
           - name: "members"
-            type: "array[TypeRef:cesr/primitives#AID]"
+            type: "array[types://cesr/primitives#AID]"
             required: true
             description: "Member AIDs participating in this group"
           - name: "local_member"
-            type: "TypeRef:cesr/primitives#AID"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "This agent's member AID within the group"
         invariants:
@@ -58,7 +58,7 @@ types:
       - name: "default"
         fields:
           - name: "prefix"
-            type: "TypeRef:cesr/primitives#AID"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "The remote AID"
           - name: "alias"
@@ -66,7 +66,7 @@ types:
             required: false
             description: "Human-readable name for this contact"
           - name: "key_state"
-            type: "TypeRef:identity#KeyState"
+            type: "types://identity#KeyState"
             required: true
             description: "Cached key state (may be stale)"
           - name: "endpoints"
