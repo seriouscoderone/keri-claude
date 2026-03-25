@@ -1,0 +1,65 @@
+Build Order (47 domains, 8 layers):
+
+Layer 0 (foundation — no dependencies):
+  accountability/consensus
+  accountability/dissemination
+  accountability/receipting
+  cesr/composition
+  cesr/primitives
+  cloud-agent-service/api
+  cloud-agent-service/processing
+  cloud-agent-service/provisioning
+  credential-lifecycle/status
+  credential-lifecycle/verification
+  delegation/authorization
+  delegation/lifecycle
+  delegation/recovery
+  identity/anchoring
+  identity/establishment
+  identity/key-commitment
+  identity/state
+  integrity/detection
+  integrity/evidence
+  integrity/recovery
+  privacy/aggregation
+  privacy/blinding
+  privacy/disclosure
+  signify-client/key-management
+  signify-client/resources
+
+Layer 1 (depends on layers 0–0):
+  accountability
+  cesr
+  credential-exchange/proof
+  delegation
+  identity/thresholds
+  integrity
+
+Layer 2 (depends on layers 0–1):
+  keri-messaging
+  watcher-service/api
+  witness-service/api
+
+Layer 3 (depends on layers 0–2):
+  credential-exchange/negotiation
+  discovery
+  identity
+
+Layer 4 (depends on layers 0–3):
+  credential-lifecycle/registry
+  witness-service
+
+Layer 5 (depends on layers 0–4):
+  credential-exchange
+  credential-lifecycle
+  privacy
+  watcher-service
+
+Layer 6 (depends on layers 0–5):
+  cloud-agent-service
+  local-agent/api
+
+Layer 7 (services + applications):
+  local-agent
+  signify-client
+
