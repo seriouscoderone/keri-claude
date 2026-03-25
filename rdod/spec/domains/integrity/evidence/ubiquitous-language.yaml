@@ -1,6 +1,11 @@
 # ubiquitous-language.yaml
 domain_ref: "integrity/evidence"
 
+imports:
+  - term: "Domain Event Bus"
+    from: "domain://keri-messaging"
+    usage: "Publishes domain events when significant state changes occur; consumes events to trigger escrow reprocessing"
+
 terms:
   - term: "Duplicity Evidence"
     synonyms: ["Conflicting Events"]

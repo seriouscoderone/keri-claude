@@ -2005,7 +2005,13 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [],
+    "kernels": [
+      {
+        "ref": "kernel://keri-messaging",
+        "source": "domain://keri-messaging",
+        "relationship": "Publishes and consumes domain events for cross-domain coordination"
+      }
+    ],
     "adjacents": [],
     "externals": [
       {
@@ -2055,7 +2061,13 @@ const RDOD_DATA = {
       "When the missing event arrives, matching escrowed receipts are promoted to verified storage",
       "The KERL is append-only — existing entries cannot be modified"
     ],
-    "_imports": [],
+    "_imports": [
+      {
+        "term": "Domain Event Bus",
+        "from": "domain://keri-messaging",
+        "usage": "Publishes domain events when significant state changes occur; consumes events to trigger escrow reprocessing"
+      }
+    ],
     "ubiquitous_language": [
       {
         "term": "Receipt",
@@ -16351,6 +16363,11 @@ const RDOD_DATA = {
     "subdomains": [],
     "kernels": [
       {
+        "ref": "kernel://keri-messaging",
+        "source": "domain://keri-messaging",
+        "relationship": "Publishes and consumes domain events for cross-domain coordination"
+      },
+      {
         "ref": "kernel://cryptographic-algorithms",
         "source": "Blake3-256 digest comparison for seal verification (comparing TEL event SAID against the seal digest in the issuer's KEL)",
         "relationship": "Digest comparison is a kernel operation invoked during KEL anchor verification"
@@ -16410,7 +16427,13 @@ const RDOD_DATA = {
       "Escrow reprocessing MUST occur when blocking conditions resolve — implementations may use event-driven notification, periodic polling, or any mechanism that ensures timely reprocessing.",
       "Stale escrow entries are pruned after a configurable time-to-live to prevent unbounded growth"
     ],
-    "_imports": [],
+    "_imports": [
+      {
+        "term": "Domain Event Bus",
+        "from": "domain://keri-messaging",
+        "usage": "Publishes domain events when significant state changes occur; consumes events to trigger escrow reprocessing"
+      }
+    ],
     "ubiquitous_language": [
       {
         "term": "TEL Validation Pipeline",
@@ -30789,7 +30812,13 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [],
+    "kernels": [
+      {
+        "ref": "kernel://keri-messaging",
+        "source": "domain://keri-messaging",
+        "relationship": "Publishes and consumes domain events for cross-domain coordination"
+      }
+    ],
     "adjacents": [],
     "externals": [
       {
@@ -30847,7 +30876,13 @@ const RDOD_DATA = {
       "Event acceptance triggers downstream evidence processing — implementations decouple this via internal coordination mechanisms",
       "Fork detection compares SAIDs, not event content — different SAIDs at the same (prefix, sn) is sufficient"
     ],
-    "_imports": [],
+    "_imports": [
+      {
+        "term": "Domain Event Bus",
+        "from": "domain://keri-messaging",
+        "usage": "Publishes domain events when significant state changes occur; consumes events to trigger escrow reprocessing"
+      }
+    ],
     "ubiquitous_language": [
       {
         "term": "Duplicity Evidence",
