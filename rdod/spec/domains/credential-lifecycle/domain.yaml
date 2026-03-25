@@ -13,6 +13,14 @@ description: >
   direct signatures on TEL events. TELs support both public (unblinded)
   and private (blinded) state registries.
 
+  Boundary guide for consumers — three sibling domains cover credentials:
+  credential-lifecycle owns the state machine (issue, revoke, verify status).
+  credential-exchange owns sharing credentials with others (IPEX negotiation).
+  privacy owns controlling what gets revealed (graduated disclosure, blinding).
+  If you need to create/revoke/check a credential, you're here. If you need
+  to send it to someone, go to credential-exchange. If you need to control
+  what's visible, go to privacy.
+
 version: "0.1.0"
 
 source_material:
