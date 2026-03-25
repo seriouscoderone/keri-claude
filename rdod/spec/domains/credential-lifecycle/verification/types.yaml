@@ -1,0 +1,23 @@
+domain_ref: "credential-lifecycle/verification"
+
+types:
+  - name: "VerifiableEvent"
+    description: "A TEL event bundled with its verification context — the event itself plus the KEL seal and registry state needed to verify it."
+    variants:
+      - name: "default"
+        fields:
+          - name: "tel_event"
+            type: "types://credential-lifecycle#TELEvent"
+            required: true
+            description: "The TEL event being verified"
+          - name: "kel_seal"
+            type: "types://cesr/primitives#EventSeal"
+            required: true
+            description: "Seal referencing the issuer's KEL anchor"
+          - name: "registry_state"
+            type: "types://credential-lifecycle#RegistryStateSnapshot"
+            required: true
+            description: "Registry state at the time of verification"
+        invariants:
+          - "All three components required for complete verification"
+          - "Missing any component → escrow until available"

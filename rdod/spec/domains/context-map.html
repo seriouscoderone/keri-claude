@@ -17057,6 +17057,41 @@ const RDOD_DATA = {
         ],
         "related_port": "port://credential-lifecycle/verification/inbound/process-escrows"
       }
+    ],
+    "_types": [
+      {
+        "name": "VerifiableEvent",
+        "description": "A TEL event bundled with its verification context — the event itself plus the KEL seal and registry state needed to verify it.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "tel_event",
+                "type": "types://credential-lifecycle#TELEvent",
+                "required": true,
+                "description": "The TEL event being verified"
+              },
+              {
+                "name": "kel_seal",
+                "type": "types://cesr/primitives#EventSeal",
+                "required": true,
+                "description": "Seal referencing the issuer's KEL anchor"
+              },
+              {
+                "name": "registry_state",
+                "type": "types://credential-lifecycle#RegistryStateSnapshot",
+                "required": true,
+                "description": "Registry state at the time of verification"
+              }
+            ],
+            "invariants": [
+              "All three components required for complete verification",
+              "Missing any component → escrow until available"
+            ]
+          }
+        ]
+      }
     ]
   },
   "delegation/authorization": {
@@ -20499,6 +20534,44 @@ const RDOD_DATA = {
             "invariants": [
               "Authorization via signed reply message (route=/loc/scheme)",
               "Subject to BADA acceptance policy"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "WitnessEndpoint",
+        "description": "A resolved witness endpoint — the witness AID paired with its network URL.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "witness_aid",
+                "type": "string",
+                "required": true,
+                "description": "Non-transferable witness AID"
+              },
+              {
+                "name": "url",
+                "type": "string",
+                "required": true,
+                "description": "HTTP(S) URL where the witness is reachable"
+              },
+              {
+                "name": "role",
+                "type": "string",
+                "required": true,
+                "description": "Always 'witness'",
+                "constraints": {
+                  "enum": [
+                    "witness"
+                  ]
+                }
+              }
+            ],
+            "invariants": [
+              "Resolved from end-role + loc-scheme reply messages",
+              "URL is verified via BADA acceptance policy"
             ]
           }
         ]
@@ -30473,6 +30546,97 @@ const RDOD_DATA = {
             ]
           }
         ]
+      },
+      {
+        "name": "MonitorHandle",
+        "description": "A reference to an active duplicity monitoring session for a specific AID.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "string",
+                "required": true,
+                "description": "The AID being monitored"
+              },
+              {
+                "name": "witnesses",
+                "type": "array[string]",
+                "required": true,
+                "description": "Witness AIDs being cross-checked"
+              },
+              {
+                "name": "active",
+                "type": "boolean",
+                "required": true,
+                "description": "Whether monitoring is currently active"
+              }
+            ],
+            "invariants": [
+              "One monitor handle per AID per watcher",
+              "Deactivated when the AID is no longer watched"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "TrustDecision",
+        "description": "The outcome of a judge's evaluation of duplicity evidence for an AID.",
+        "variants": [
+          {
+            "name": "trusted",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "string",
+                "required": true,
+                "description": "The AID being evaluated"
+              }
+            ],
+            "invariants": [
+              "No duplicity evidence found — AID is trusted"
+            ]
+          },
+          {
+            "name": "revoked",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "evidence",
+                "type": "types://integrity#DuplicityEvidence",
+                "required": true,
+                "description": "The duplicity evidence that caused revocation"
+              }
+            ],
+            "invariants": [
+              "Duplicity detected and not recovered — AID is not trusted"
+            ]
+          },
+          {
+            "name": "reconciled",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "recovery_sn",
+                "type": "integer",
+                "required": true,
+                "description": "Sequence number where superseding recovery occurred"
+              }
+            ],
+            "invariants": [
+              "Duplicity was detected but superseding recovery resolved it"
+            ]
+          }
+        ]
       }
     ],
     "_protocols": [
@@ -32040,7 +32204,9 @@ const RDOD_DATA = {
           "Receipts (-> Witness Agreement): rct (non-transferable receipt), vrc (transferable receipt)",
           "Queries & Replies (-> query handler): qry (query), rpy (reply), pro (prod/probe), bar (bare reply)",
           "Exchanges (-> Exchanger): exn (exchange message — carries IPEX, multi-sig coordination, challenge-response), xip (exchange inception — first message in a multi-exchange transaction set, all subsequent exn messages reference the xip SAID)",
-          "TEL Events (-> TEL Processor): vcp (registry inception), vrt (registry rotation), iss (issuance), rev (revocation), bis (backed issuance), brv (backed revocation), rip (TEL registry inception), bup (blindable update), upd (public update)",
+          "TEL Events v1 (-> TEL Processor): vcp (registry inception), vrt (registry rotation), iss (backerless issuance), rev (backerless revocation), bis (backed issuance), brv (backed revocation)",
+          "TEL Events v2 (new in KERI 2.0): rip (registry inception — replaces vcp), bup (blindable update — new), upd (public update — new). V1 types (vcp/vrt/iss/rev/bis/brv) remain valid in v2.",
+          "TEL version mapping: vcp→rip (registry inception), iss/bis remain (issuance), rev/brv remain (revocation), NEW: bup (blindable state update), upd (public state update)",
           "ACDC Types (-> ACDC Processor): acm (ACDC field map — default labeled message type), act (ACDC fixed field with attribute section — CESR native), acg (ACDC fixed field with aggregate section — CESR native), ace (ACDC with extra fields — experimental), sch (schema)",
           "The ilk field determines which processing pipeline handles the message"
         ],
@@ -36220,6 +36386,65 @@ const RDOD_DATA = {
             ]
           }
         ]
+      },
+      {
+        "name": "BlindedAttributeBlock",
+        "description": "A credential attribute block with UUID blinding — the u field provides entropy that prevents rainbow table discovery of the block's content from its SAID.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "d",
+                "type": "string",
+                "required": true,
+                "description": "SAID of the block (commitment)"
+              },
+              {
+                "name": "u",
+                "type": "string",
+                "required": true,
+                "description": "UUID blinding factor — high entropy (>= 128 bits)"
+              },
+              {
+                "name": "attributes",
+                "type": "map",
+                "required": true,
+                "description": "The actual attribute data (hidden behind the SAID+UUID)"
+              }
+            ],
+            "invariants": [
+              "u field MUST have >= 128 bits of entropy",
+              "SAID(block) is a blinded commitment — cannot discover content without u",
+              "Public blocks (no u) cannot be blinded"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "SADPath",
+        "description": "A path expression identifying a specific location within a nested SAD structure. Used for selective disclosure and SAD path signatures.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "path",
+                "type": "array[string]",
+                "required": true,
+                "description": "Ordered sequence of field labels from root to target"
+              }
+            ],
+            "invariants": [
+              "Each element is a field label in the SAD hierarchy",
+              "Empty path refers to the root SAD"
+            ],
+            "examples": [
+              "['a', 'i'] — the issuee field inside the attributes section",
+              "['e', 'edge1', 'd'] — the SAID of a specific edge"
+            ]
+          }
+        ]
       }
     ]
   },
@@ -36442,16 +36667,19 @@ const RDOD_DATA = {
       },
       {
         "term": "Signing Request",
-        "synonyms": [],
-        "definition": "A request originating from the cloud agent for the controller to cryptographically sign an event, credential, or exchange message.",
+        "synonyms": [
+          "Pending Operation"
+        ],
+        "definition": "A pending operation on the cloud agent that requires the controller's signature. The Signify protocol is PULL-based: the controller's edge client polls KERIA for pending operations, signs locally with edge-held keys, and pushes the signed result back. The cloud agent never initiates contact with the controller — it queues operations and waits.",
         "invariants": [
-          "Cloud agent can never produce a valid signature — only request one",
-          "Controller reviews the content before signing",
-          "Signing is asynchronous — the agent waits for the edge response"
+          "PULL model: controller polls agent for pending operations — agent does NOT push to controller",
+          "Cloud agent can never produce a valid signature — only queue a request for one",
+          "Controller signs locally at the edge, then submits the signed result back to the agent",
+          "Signing is asynchronous — the agent queues the operation, controller polls and fulfills"
         ],
         "examples": [
-          "Multi-sig: KERIA assembles partial event, requests each participant's signature",
-          "Credential issuance: KERIA prepares ACDC, controller signs at edge"
+          "Controller calls GET /operations → sees pending multisig event → signs locally → POST signed event back",
+          "Multi-sig: KERIA queues partial event as pending, each participant's Signify client polls, signs, submits"
         ],
         "related_terms": [
           "Signify Protocol",

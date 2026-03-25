@@ -63,15 +63,16 @@ terms:
     related_terms: ["Browser Extension", "Signing Request"]
 
   - term: "Signing Request"
-    synonyms: []
-    definition: "A request originating from the cloud agent for the controller to cryptographically sign an event, credential, or exchange message."
+    synonyms: ["Pending Operation"]
+    definition: "A pending operation on the cloud agent that requires the controller's signature. The Signify protocol is PULL-based: the controller's edge client polls KERIA for pending operations, signs locally with edge-held keys, and pushes the signed result back. The cloud agent never initiates contact with the controller — it queues operations and waits."
     invariants:
-      - "Cloud agent can never produce a valid signature — only request one"
-      - "Controller reviews the content before signing"
-      - "Signing is asynchronous — the agent waits for the edge response"
+      - "PULL model: controller polls agent for pending operations — agent does NOT push to controller"
+      - "Cloud agent can never produce a valid signature — only queue a request for one"
+      - "Controller signs locally at the edge, then submits the signed result back to the agent"
+      - "Signing is asynchronous — the agent queues the operation, controller polls and fulfills"
     examples:
-      - "Multi-sig: KERIA assembles partial event, requests each participant's signature"
-      - "Credential issuance: KERIA prepares ACDC, controller signs at edge"
+      - "Controller calls GET /operations → sees pending multisig event → signs locally → POST signed event back"
+      - "Multi-sig: KERIA queues partial event as pending, each participant's Signify client polls, signs, submits"
     related_terms: ["Signify Protocol", "Browser Extension"]
 
 events:

@@ -133,3 +133,26 @@ types:
         invariants:
           - "Authorization via signed reply message (route=/loc/scheme)"
           - "Subject to BADA acceptance policy"
+
+  - name: "WitnessEndpoint"
+    description: "A resolved witness endpoint — the witness AID paired with its network URL."
+    variants:
+      - name: "default"
+        fields:
+          - name: "witness_aid"
+            type: "string"
+            required: true
+            description: "Non-transferable witness AID"
+          - name: "url"
+            type: "string"
+            required: true
+            description: "HTTP(S) URL where the witness is reachable"
+          - name: "role"
+            type: "string"
+            required: true
+            description: "Always 'witness'"
+            constraints:
+              enum: ["witness"]
+        invariants:
+          - "Resolved from end-role + loc-scheme reply messages"
+          - "URL is verified via BADA acceptance policy"

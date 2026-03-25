@@ -85,3 +85,41 @@ types:
           - "Metadata ACDC has empty u field — cannot be correlated to the actual Private credential"
           - "Agreement is non-repudiable — signed exn message via IPEX"
           - "Terms in rules section are Ricardian — human and machine readable"
+
+  - name: "BlindedAttributeBlock"
+    description: "A credential attribute block with UUID blinding — the u field provides entropy that prevents rainbow table discovery of the block's content from its SAID."
+    variants:
+      - name: "default"
+        fields:
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID of the block (commitment)"
+          - name: "u"
+            type: "string"
+            required: true
+            description: "UUID blinding factor — high entropy (>= 128 bits)"
+          - name: "attributes"
+            type: "map"
+            required: true
+            description: "The actual attribute data (hidden behind the SAID+UUID)"
+        invariants:
+          - "u field MUST have >= 128 bits of entropy"
+          - "SAID(block) is a blinded commitment — cannot discover content without u"
+          - "Public blocks (no u) cannot be blinded"
+
+  - name: "SADPath"
+    description: "A path expression identifying a specific location within a nested SAD structure. Used for selective disclosure and SAD path signatures."
+    variants:
+      - name: "default"
+        fields:
+          - name: "path"
+            type: "array[string]"
+            required: true
+            description: "Ordered sequence of field labels from root to target"
+        invariants:
+          - "Each element is a field label in the SAD hierarchy"
+          - "Empty path refers to the root SAD"
+        examples:
+          - "['a', 'i'] — the issuee field inside the attributes section"
+          - "['e', 'edge1', 'd'] — the SAID of a specific edge"

@@ -92,3 +92,58 @@ types:
           - "Recovery keys must match pre-rotation commitments from the LAST establishment event BEFORE the fork"
           - "Superseding rotation has priority over the forked branch because it uses authentic pre-rotated keys"
           - "After recovery, all events from the forked branch at sn >= fork_point are invalidated"
+
+  - name: "MonitorHandle"
+    description: "A reference to an active duplicity monitoring session for a specific AID."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The AID being monitored"
+          - name: "witnesses"
+            type: "array[string]"
+            required: true
+            description: "Witness AIDs being cross-checked"
+          - name: "active"
+            type: "boolean"
+            required: true
+            description: "Whether monitoring is currently active"
+        invariants:
+          - "One monitor handle per AID per watcher"
+          - "Deactivated when the AID is no longer watched"
+
+  - name: "TrustDecision"
+    description: "The outcome of a judge's evaluation of duplicity evidence for an AID."
+    variants:
+      - name: "trusted"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The AID being evaluated"
+        invariants:
+          - "No duplicity evidence found — AID is trusted"
+      - name: "revoked"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+          - name: "evidence"
+            type: "types://integrity#DuplicityEvidence"
+            required: true
+            description: "The duplicity evidence that caused revocation"
+        invariants:
+          - "Duplicity detected and not recovered — AID is not trusted"
+      - name: "reconciled"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+          - name: "recovery_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number where superseding recovery occurred"
+        invariants:
+          - "Duplicity was detected but superseding recovery resolved it"
