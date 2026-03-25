@@ -3,12 +3,13 @@ domain_ref: "signify-client/resources"
 
 terms:
   - term: "Controller AID"
-    synonyms: ["Agent AID"]
-    definition: "The AID created during initial agent provisioning that identifies the controller to KERIA. Used for KRAM authentication of all subsequent requests."
+    synonyms: []
+    definition: "The controller's own AID — keys held at the edge by the Signify client. Identifies the human/entity to KERIA. Used for KRAM authentication of all requests. DISTINCT from the Agent AID, which is the cloud agent's own identifier created during provisioning."
     invariants:
-      - "Created during boot (agent provisioning)"
+      - "Keys are generated and held at the edge — never sent to the cloud agent"
       - "The controller AID's KEL is the trust anchor for the entire agent relationship"
       - "Rotation of this AID rotates the authentication relationship"
+      - "NOT the same as Agent AID — the agent has its own separate AID and KEL"
     examples:
       - "client.boot() → creates controller AID and provisions agent instance"
       - "All subsequent KRAM headers reference this AID's key state"
