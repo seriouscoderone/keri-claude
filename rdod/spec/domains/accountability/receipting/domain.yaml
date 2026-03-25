@@ -44,8 +44,8 @@ implementation_guidance:
     In keripy, the Receiptor class processes cues from Kevery to generate receipts for
     witnessed events. Receipt escrows are drained by Kevery.processEscrowUnverWitness(),
     processEscrowUnverNonTrans(), and processEscrowUnverTrans(). In keriox, the
-    WitnessReceiptGenerator subscribes to KeyEventAdded notifications from the
-    NotificationBus and creates non-transferable receipts using the witness's signing keys.
+    WitnessReceiptGenerator subscribes to KeyEventAdded notifications via internal
+    coordination and creates non-transferable receipts using the witness's signing keys.
     Receipt type selection depends on the signer's AID type (transferable vs. non-transferable)
     and role (witness vs. validator).
 

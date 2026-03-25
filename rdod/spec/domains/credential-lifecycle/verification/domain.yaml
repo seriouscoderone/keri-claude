@@ -55,10 +55,12 @@ implementation_guidance:
   notes: >
     In keripy, the validation pipeline spans Verifier (src/keri/vdr/verifying.py) and
     Tevery.processEvent() (src/keri/vdr/eventing.py). The Verifier class manages cues
-    (notification messages) and escrow processing. In keriox, TelEventProcessor.process()
-    in src/processor.rs implements the pipeline, with TelNotificationBus providing pub-sub
-    escrow reprocessing. The pipeline is stateless given a registry state snapshot and
-    the issuer's KEL -- it takes a VerifiableEvent and returns accept/reject/escrow-reason.
+    and escrow processing. In keriox, TelEventProcessor.process()
+    in src/processor.rs implements the pipeline. The pipeline is stateless given a registry
+    state snapshot and the issuer's KEL -- it takes a VerifiableEvent and returns
+    accept/reject/escrow-reason.
+
+    Internal coordination: keripy uses cues for signaling TEL escrow reprocessing. keriox uses TelNotificationBus. This is implementation-specific — the spec requires escrow reprocessing when blocking conditions resolve, but doesn't prescribe the dispatch mechanism.
 
 issues: []
 

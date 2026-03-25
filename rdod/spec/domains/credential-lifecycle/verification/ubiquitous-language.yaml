@@ -70,7 +70,7 @@ terms:
       - "An iss event escrowed in missing issuer escrow [.taes in keripy] because the issuer's ixn event containing the anchor seal is not yet received"
       - "A bis event in partial witness escrow [.twes in keripy] with 1 of 3 required backer signatures -- waiting for 2 more"
       - "After a VCP event arrives, MissingRegistryEscrow entries for that REGID are reprocessed"
-    related_terms: ["TEL Validation Pipeline", "TEL Notification Bus", "Verifiable Event", "Out-of-Order TEL Escrow", "Missing Registry Escrow", "Missing Issuer Escrow"]
+    related_terms: ["TEL Validation Pipeline", "Verifiable Event", "Out-of-Order TEL Escrow", "Missing Registry Escrow", "Missing Issuer Escrow"]
 
   - term: "Out-of-Order TEL Escrow"
     synonyms: ["OOT", ".oots [keripy]", "OutOfOrderEscrow [keriox]"]
@@ -115,24 +115,6 @@ terms:
       - "Seal verified: the iss event is now cryptographically bound to the issuer's key state at KEL sn=5"
     related_terms: ["Transaction Event Seal", "Verifiable Event", "TEL Validation Pipeline", "TEL Escrows"]
 
-  - term: "TEL Notification Bus"
-    synonyms: ["TelNotificationBus [keriox]", "cues [keripy]"]
-    definition: "Pub-sub notification mechanism for coordinating escrow reprocessing. When a blocking condition resolves (e.g., a missing registry VCP arrives, or a missing issuer KEL event is received), the notification bus signals the appropriate escrow queue to reprocess its held events. In keriox: TelNotificationBus with typed notification enum. In keripy: cues-based message passing between Tevery/Verifier and the escrow processing loop."
-    invariants:
-      - "Typed notifications indicate which blocking condition has resolved"
-      - "In keriox: TelNotificationBus uses observer pattern -- escrow handlers subscribe to specific notification types"
-      - "In keriox: notification types include RegistryUpdated, IssuerUpdated, TelEventAdded"
-      - "In keripy: cues are dicts with 'kin' (kind) field indicating the notification type, processed by Verifier.processCues()"
-      - "In keripy: Regery.processEscrows() iterates escrow subdatabases and retries held events"
-      - "Notifications trigger reprocessing through the same TEL Validation Pipeline -- no special escrow-only path"
-      - "Prevents polling -- escrow reprocessing is event-driven, not timer-driven"
-    examples:
-      - "VCP event processed -> TelNotificationBus emits RegistryUpdated(regid) -> MissingRegistryEscrow reprocesses held events for that REGID"
-      - "Issuer's KEL event received -> notification emits IssuerUpdated(issuer_aid) -> MissingIssuerEscrow reprocesses held events for that issuer"
-      - "In keripy: Tevery appends cue {kin: 'telquery', q: {ri: regid}} -> Verifier.processCues() handles escrow retry"
-      - "In keriox: TelNotificationBus.notify(TelEventAdded(regid, sn)) -> OutOfOrderEscrow checks if the missing sn has arrived"
-    related_terms: ["TEL Escrows", "TEL Validation Pipeline", "TEL Event Processor"]
-
 events:
   - name: "TelValidationPassed"
     payload: "regid: REGID, event_sn: int, event_said: SAID, event_type: EventType"
@@ -156,5 +138,5 @@ rules:
   - "Missing dependencies (registry state, issuer KEL event, prior TEL event) result in escrow, not rejection"
   - "Escrowed events are reprocessed through the same pipeline when the blocking condition resolves -- no shortcut path"
   - "KEL anchor verification is the critical step that provides non-repudiability without direct signatures on TEL events"
-  - "Escrow reprocessing is event-driven via the notification bus, not timer-driven via polling"
+  - "Escrow reprocessing MUST occur when blocking conditions resolve — implementations may use event-driven notification, periodic polling, or any mechanism that ensures timely reprocessing."
   - "Stale escrow entries are pruned after a configurable time-to-live to prevent unbounded growth"

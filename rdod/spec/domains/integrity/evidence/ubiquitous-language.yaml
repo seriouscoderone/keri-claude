@@ -57,20 +57,6 @@ terms:
       - "A judge queries the DEL store [.dels in keripy] for an AID and finds confirmed duplicity evidence — revokes trust"
     related_terms: ["Likely Duplicitous Escrow", "Fork Detection", "Duplicity Evidence"]
 
-  - term: "Notification Bus"
-    synonyms: ["NotificationBus [keriox]", "cues [keripy]"]
-    definition: "Pub-sub system enabling escrow reprocessing and component coordination. When an event is accepted (KeyEventAdded), all escrows and dependent components are notified so they can retry their pending items."
-    invariants:
-      - "In keripy: implemented as a cues deque drained by processCues() — components push cue dicts, consumers pop and handle them"
-      - "In keriox: implemented as NotificationBus with observer pattern — components register as observers for specific notification types"
-      - "KeyEventAdded is the primary notification — triggers escrow draining, receipt generation, and delegation processing"
-      - "Decouples event acceptance from downstream processing — the event processor does not need to know about all consumers"
-      - "Other notification types include delegated event notifications and receipt notifications"
-    examples:
-      - "In keriox: NotificationBus.notify(KeyEventAdded {prefix, sn, digest}) triggers WitnessReceiptGenerator, escrow processors"
-      - "In keripy: Kevery pushes {'kin':'eventAdded', 'prefix':..., 'sn':...} to cues; Receiptor drains it to generate receipts"
-    related_terms: ["Likely Duplicitous Escrow", "Duplicitous Event Log"]
-
 events:
   - name: "ForkDetected"
     payload: "aid: AID, sn: int, accepted_event: KeyEvent, conflicting_event: KeyEvent"
@@ -90,11 +76,11 @@ events:
 
   - name: "KeyEventAdded"
     payload: "aid: AID, sn: int, digest: SAID"
-    triggers: "An event is accepted into the KEL — published on the notification bus to trigger escrow reprocessing"
+    triggers: "An event is accepted into the KEL — triggers escrow reprocessing of dependent events"
 
 rules:
   - "A fork at (prefix, sn) is non-repudiable evidence of duplicity — only the controller can sign events"
   - "Likely duplicitous events are escrowed for 3600 seconds before being pruned or promoted"
   - "Confirmed duplicity evidence in the DEL store [.dels in keripy] is never automatically deleted — it is permanent forensic record"
-  - "The notification bus decouples event acceptance from downstream evidence processing"
+  - "Event acceptance triggers downstream evidence processing — implementations decouple this via internal coordination mechanisms"
   - "Fork detection compares SAIDs, not event content — different SAIDs at the same (prefix, sn) is sufficient"

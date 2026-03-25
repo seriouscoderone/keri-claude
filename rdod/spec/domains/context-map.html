@@ -2018,7 +2018,7 @@ const RDOD_DATA = {
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
-      "notes": "In keripy, the Receiptor class processes cues from Kevery to generate receipts for witnessed events. Receipt escrows are drained by Kevery.processEscrowUnverWitness(), processEscrowUnverNonTrans(), and processEscrowUnverTrans(). In keriox, the WitnessReceiptGenerator subscribes to KeyEventAdded notifications from the NotificationBus and creates non-transferable receipts using the witness's signing keys. Receipt type selection depends on the signer's AID type (transferable vs. non-transferable) and role (witness vs. validator).\n"
+      "notes": "In keripy, the Receiptor class processes cues from Kevery to generate receipts for witnessed events. Receipt escrows are drained by Kevery.processEscrowUnverWitness(), processEscrowUnverNonTrans(), and processEscrowUnverTrans(). In keriox, the WitnessReceiptGenerator subscribes to KeyEventAdded notifications via internal coordination and creates non-transferable receipts using the witness's signing keys. Receipt type selection depends on the signer's AID type (transferable vs. non-transferable) and role (witness vs. validator).\n"
     },
     "issues": [],
     "tags": [
@@ -2188,7 +2188,7 @@ const RDOD_DATA = {
         "invariants": [
           "Triggers on new key event acceptance — KeyEventAdded notification in keriox, cues in keripy",
           "Generates a non-transferable receipt using the witness's signing keys",
-          "In keriox: observes KeyEventAdded notification from the NotificationBus",
+          "In keriox: observes KeyEventAdded notification via internal coordination",
           "In keripy: the Receiptor class processes cues from Kevery to generate receipts",
           "The generated receipt is then disseminated to the controller and other witnesses"
         ],
@@ -12772,7 +12772,7 @@ const RDOD_DATA = {
       },
       {
         "ref": "domain://credential-lifecycle/verification",
-        "relationship": "Multi-step validation pipeline for TEL events — KEL anchor verification, escrow management, notification bus"
+        "relationship": "Multi-step validation pipeline for TEL events — KEL anchor verification, escrow management, escrow reprocessing triggers"
       },
       {
         "ref": "domain://credential-lifecycle/registry",
@@ -13084,16 +13084,16 @@ const RDOD_DATA = {
           "Tevery [keripy]",
           "TelEventProcessor [keriox]"
         ],
-        "definition": "Processes incoming TEL events against current registry state. Factory for TEL Event Verifier instances. Escrows out-of-order and missing-anchor events. In keriox: uses TelNotificationBus pub-sub for escrow reprocessing.",
+        "definition": "Processes incoming TEL events against current registry state. Factory for TEL Event Verifier instances. Escrows out-of-order and missing-anchor events. Triggers escrow reprocessing when blocking conditions resolve.",
         "invariants": [
           "Creates and manages TEL Event Verifier (Tever) instances as registries are encountered",
           "Validates TEL events against the current registry and credential state",
           "Escrows events that cannot be immediately validated (out-of-order, missing anchor, missing registry)",
-          "In keriox: TelNotificationBus pub-sub pattern auto-retries escrowed events when blocking conditions resolve"
+          "Escrowed events are automatically retried when blocking conditions resolve"
         ],
         "examples": [
           "Tevery receiving a bis event, finding no registry for it yet, and escrowing it for later",
-          "TelEventProcessor reprocessing escrowed events after a VCP event arrives via notification bus"
+          "TelEventProcessor reprocessing escrowed events after a VCP event arrives"
         ],
         "related_terms": [
           "TEL Event Verifier",
@@ -16368,7 +16368,7 @@ const RDOD_DATA = {
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
-      "notes": "In keripy, the validation pipeline spans Verifier (src/keri/vdr/verifying.py) and Tevery.processEvent() (src/keri/vdr/eventing.py). The Verifier class manages cues (notification messages) and escrow processing. In keriox, TelEventProcessor.process() in src/processor.rs implements the pipeline, with TelNotificationBus providing pub-sub escrow reprocessing. The pipeline is stateless given a registry state snapshot and the issuer's KEL -- it takes a VerifiableEvent and returns accept/reject/escrow-reason.\n"
+      "notes": "In keripy, the validation pipeline spans Verifier (src/keri/vdr/verifying.py) and Tevery.processEvent() (src/keri/vdr/eventing.py). The Verifier class manages cues and escrow processing. In keriox, TelEventProcessor.process() in src/processor.rs implements the pipeline. The pipeline is stateless given a registry state snapshot and the issuer's KEL -- it takes a VerifiableEvent and returns accept/reject/escrow-reason.\nInternal coordination: keripy uses cues for signaling TEL escrow reprocessing. keriox uses TelNotificationBus. This is implementation-specific — the spec requires escrow reprocessing when blocking conditions resolve, but doesn't prescribe the dispatch mechanism.\n"
     },
     "issues": [],
     "tags": [
@@ -16407,7 +16407,7 @@ const RDOD_DATA = {
       "Missing dependencies (registry state, issuer KEL event, prior TEL event) result in escrow, not rejection",
       "Escrowed events are reprocessed through the same pipeline when the blocking condition resolves -- no shortcut path",
       "KEL anchor verification is the critical step that provides non-repudiability without direct signatures on TEL events",
-      "Escrow reprocessing is event-driven via the notification bus, not timer-driven via polling",
+      "Escrow reprocessing MUST occur when blocking conditions resolve — implementations may use event-driven notification, periodic polling, or any mechanism that ensures timely reprocessing.",
       "Stale escrow entries are pruned after a configurable time-to-live to prevent unbounded growth"
     ],
     "_imports": [],
@@ -16518,7 +16518,6 @@ const RDOD_DATA = {
         ],
         "related_terms": [
           "TEL Validation Pipeline",
-          "TEL Notification Bus",
           "Verifiable Event",
           "Out-of-Order TEL Escrow",
           "Missing Registry Escrow",
@@ -16605,34 +16604,6 @@ const RDOD_DATA = {
           "Verifiable Event",
           "TEL Validation Pipeline",
           "TEL Escrows"
-        ]
-      },
-      {
-        "term": "TEL Notification Bus",
-        "synonyms": [
-          "TelNotificationBus [keriox]",
-          "cues [keripy]"
-        ],
-        "definition": "Pub-sub notification mechanism for coordinating escrow reprocessing. When a blocking condition resolves (e.g., a missing registry VCP arrives, or a missing issuer KEL event is received), the notification bus signals the appropriate escrow queue to reprocess its held events. In keriox: TelNotificationBus with typed notification enum. In keripy: cues-based message passing between Tevery/Verifier and the escrow processing loop.",
-        "invariants": [
-          "Typed notifications indicate which blocking condition has resolved",
-          "In keriox: TelNotificationBus uses observer pattern -- escrow handlers subscribe to specific notification types",
-          "In keriox: notification types include RegistryUpdated, IssuerUpdated, TelEventAdded",
-          "In keripy: cues are dicts with 'kin' (kind) field indicating the notification type, processed by Verifier.processCues()",
-          "In keripy: Regery.processEscrows() iterates escrow subdatabases and retries held events",
-          "Notifications trigger reprocessing through the same TEL Validation Pipeline -- no special escrow-only path",
-          "Prevents polling -- escrow reprocessing is event-driven, not timer-driven"
-        ],
-        "examples": [
-          "VCP event processed -> TelNotificationBus emits RegistryUpdated(regid) -> MissingRegistryEscrow reprocesses held events for that REGID",
-          "Issuer's KEL event received -> notification emits IssuerUpdated(issuer_aid) -> MissingIssuerEscrow reprocesses held events for that issuer",
-          "In keripy: Tevery appends cue {kin: 'telquery', q: {ri: regid}} -> Verifier.processCues() handles escrow retry",
-          "In keriox: TelNotificationBus.notify(TelEventAdded(regid, sn)) -> OutOfOrderEscrow checks if the missing sn has arrived"
-        ],
-        "related_terms": [
-          "TEL Escrows",
-          "TEL Validation Pipeline",
-          "TEL Event Processor"
         ]
       }
     ],
@@ -16746,8 +16717,8 @@ const RDOD_DATA = {
           "notes": "Time-based pruning prevents unbounded growth"
         },
         {
-          "invariant": "Notifications trigger reprocessing through the same TEL Validation Pipeline",
-          "term": "TEL Notification Bus",
+          "invariant": "Escrow reprocessing triggers pass events through the same TEL Validation Pipeline",
+          "term": "TEL Escrows",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -21779,7 +21750,7 @@ const RDOD_DATA = {
           "Order: OOE first, then receipt/witness escrows, then PSE, then PWE, then PDE",
           "Escrow processing order MUST be: OOE first (releases sequence-gapped events), then PSE (releases signature-deficient events), then PWE (releases witness-deficient events), then PDE (releases delegation-pending events). Order matters because each resolution may cascade into the next escrow type.",
           "Each sweep iterates the full queue for each escrow type before moving to the next type",
-          "In keriox, the notification bus pattern replaces explicit sweep ordering -- each escrow listens for relevant notifications and processes asynchronously"
+          "In keriox, internal coordination replaces explicit sweep ordering -- each escrow listens for relevant notifications and processes asynchronously"
         ],
         "examples": [
           "OOE sweep releases event at sn=4 -> this triggers PSE to re-check sn=4 (if it was also partially signed) -> PSE passes -> PWE check -> all pass -> accepted"
@@ -29918,7 +29889,7 @@ const RDOD_DATA = {
     "subdomains": [
       {
         "ref": "domain://integrity/evidence",
-        "relationship": "Owns fork detection, evidence escrow lifecycle (.ldes -> .dels), and notification bus"
+        "relationship": "Owns fork detection, evidence escrow lifecycle (.ldes -> .dels), and escrow reprocessing triggers"
       },
       {
         "ref": "domain://integrity/recovery",
@@ -29946,7 +29917,7 @@ const RDOD_DATA = {
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
-      "notes": "This is an orchestrating domain decomposed into three subdomains: evidence (fork detection, escrow lifecycle, notification bus), recovery (superseding rules, reconciliation, trunk/branch model), and monitoring (watcher/juror/judge roles, ambient verifiability). The parent domain owns the threat model overview — duplicity vs internal inconsistency, live vs dead attacks — and coordinates the subdomains. Implementation-specific details live in the subdomains.\n"
+      "notes": "This is an orchestrating domain decomposed into three subdomains: evidence (fork detection, escrow lifecycle, escrow reprocessing triggers), recovery (superseding rules, reconciliation, trunk/branch model), and monitoring (watcher/juror/judge roles, ambient verifiability). The parent domain owns the threat model overview — duplicity vs internal inconsistency, live vs dead attacks — and coordinates the subdomains. Implementation-specific details live in the subdomains.\n"
     },
     "issues": [],
     "tags": [
@@ -30790,7 +30761,7 @@ const RDOD_DATA = {
     "template_version": "1.0",
     "id": "integrity/evidence",
     "name": "Duplicity Evidence",
-    "description": "Detection and storage of duplicitous events — fork detection, evidence collection, the Likely Duplicitous Escrow (temporary holding), the Duplicitous Event Log (permanent forensic evidence), and the notification bus for cross-component coordination. When an incoming event conflicts with an already-accepted event at the same (prefix, sn), this subdomain detects the fork, stages the evidence in the Likely Duplicitous Escrow [.ldes in keripy], promotes confirmed duplicity to the Duplicitous Event Log store [.dels in keripy], and notifies dependent components.\n",
+    "description": "Detection and storage of duplicitous events — fork detection, evidence collection, the Likely Duplicitous Escrow (temporary holding), and the Duplicitous Event Log (permanent forensic evidence). When an incoming event conflicts with an already-accepted event at the same (prefix, sn), this subdomain detects the fork, stages the evidence in the Likely Duplicitous Escrow [.ldes in keripy], promotes confirmed duplicity to the Duplicitous Event Log store [.dels in keripy], and triggers reprocessing of dependent components.\n",
     "version": "0.1.0",
     "source_material": [
       {
@@ -30830,7 +30801,7 @@ const RDOD_DATA = {
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
-      "notes": "In keripy, fork detection occurs in Kevery when an incoming event at an occupied sn has a different digest. Likely duplicitous events are stored in the Likely Duplicitous Escrow and processed by the escrow processing loop with a 3600s timeout. Confirmed duplicity is promoted to the Duplicitous Event Log store. The cues queue provides the notification bus — components push cue dicts and consumers pop and handle them. In keriox, the DuplicitousEvents escrow and NotificationBus with observer pattern serve the same roles.\n"
+      "notes": "In keripy, fork detection occurs in Kevery when an incoming event at an occupied sn has a different digest. Likely duplicitous events are stored in the Likely Duplicitous Escrow and processed by the escrow processing loop with a 3600s timeout. Confirmed duplicity is promoted to the Duplicitous Event Log store. In keriox, the DuplicitousEvents escrow serves the same role.\nInternal coordination: keripy uses a cues deque (processCues pattern) for signaling escrow reprocessing. keriox uses a NotificationBus with observer pattern. This is an implementation choice, not a spec requirement — the spec only requires that escrow reprocessing occurs when blocking conditions resolve.\n"
     },
     "issues": [],
     "tags": [
@@ -30866,14 +30837,14 @@ const RDOD_DATA = {
       {
         "name": "KeyEventAdded",
         "payload": "aid: AID, sn: int, digest: SAID",
-        "triggers": "An event is accepted into the KEL — published on the notification bus to trigger escrow reprocessing"
+        "triggers": "An event is accepted into the KEL — triggers escrow reprocessing of dependent events"
       }
     ],
     "_rules": [
       "A fork at (prefix, sn) is non-repudiable evidence of duplicity — only the controller can sign events",
       "Likely duplicitous events are escrowed for 3600 seconds before being pruned or promoted",
       "Confirmed duplicity evidence in the DEL store [.dels in keripy] is never automatically deleted — it is permanent forensic record",
-      "The notification bus decouples event acceptance from downstream evidence processing",
+      "Event acceptance triggers downstream evidence processing — implementations decouple this via internal coordination mechanisms",
       "Fork detection compares SAIDs, not event content — different SAIDs at the same (prefix, sn) is sufficient"
     ],
     "_imports": [],
@@ -30968,29 +30939,6 @@ const RDOD_DATA = {
           "Fork Detection",
           "Duplicity Evidence"
         ]
-      },
-      {
-        "term": "Notification Bus",
-        "synonyms": [
-          "NotificationBus [keriox]",
-          "cues [keripy]"
-        ],
-        "definition": "Pub-sub system enabling escrow reprocessing and component coordination. When an event is accepted (KeyEventAdded), all escrows and dependent components are notified so they can retry their pending items.",
-        "invariants": [
-          "In keripy: implemented as a cues deque drained by processCues() — components push cue dicts, consumers pop and handle them",
-          "In keriox: implemented as NotificationBus with observer pattern — components register as observers for specific notification types",
-          "KeyEventAdded is the primary notification — triggers escrow draining, receipt generation, and delegation processing",
-          "Decouples event acceptance from downstream processing — the event processor does not need to know about all consumers",
-          "Other notification types include delegated event notifications and receipt notifications"
-        ],
-        "examples": [
-          "In keriox: NotificationBus.notify(KeyEventAdded {prefix, sn, digest}) triggers WitnessReceiptGenerator, escrow processors",
-          "In keripy: Kevery pushes {'kin':'eventAdded', 'prefix':..., 'sn':...} to cues; Receiptor drains it to generate receipts"
-        ],
-        "related_terms": [
-          "Likely Duplicitous Escrow",
-          "Duplicitous Event Log"
-        ]
       }
     ],
     "_ports": [
@@ -31007,7 +30955,7 @@ const RDOD_DATA = {
       {
         "id": "port://integrity/evidence/inbound/notification",
         "type": "inbound",
-        "name": "Notification Bus",
+        "name": "Internal Coordination",
         "contract": "subscribe(notification_type: NotificationType, observer: Observer) -> Subscription; notify(notification: Notification) -> void; drain_cues() -> [Cue]",
         "protocol": "pub-sub",
         "refs": [
@@ -31104,8 +31052,8 @@ const RDOD_DATA = {
           "notes": "DEL entries are forensic evidence — permanent, never pruned, never timed out."
         },
         {
-          "invariant": "Notification delivery guarantee: duplicity notifications are delivered synchronously within the event processing cycle via the cue queue. Each registered subscriber receives the notification in order. If a subscriber throws an exception, the exception is isolated — other subscribers still receive the notification. The notification contains: {kin: 'duplicity', prefix: AID, sn: int, said_a: SAID, said_b: SAID}.",
-          "term": "Notification Bus",
+          "invariant": "Notification delivery guarantee: duplicity notifications are delivered synchronously within the event processing cycle. Each registered subscriber receives the notification in order. If a subscriber throws an exception, the exception is isolated — other subscribers still receive the notification. The notification contains: {kin: 'duplicity', prefix: AID, sn: int, said_a: SAID, said_b: SAID}.",
+          "term": "Likely Duplicitous Escrow",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -31380,7 +31328,7 @@ const RDOD_DATA = {
       },
       {
         "name": "NotificationDeliveryError",
-        "description": "Failed to deliver a notification to one or more subscribers on the notification bus",
+        "description": "Failed to deliver a notification to one or more subscribers via internal coordination",
         "cause": "A KeyEventAdded or other notification could not be delivered to a registered subscriber — subscriber may have been removed or is unresponsive",
         "recovery": "retry",
         "severity": "transient",

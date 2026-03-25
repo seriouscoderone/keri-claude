@@ -127,8 +127,8 @@ properties:
     strategy: "st.lists of del entries x st.integers for elapsed time (up to 10 years)"
     notes: "DEL entries are forensic evidence — permanent, never pruned, never timed out."
 
-  - invariant: "Notification delivery guarantee: duplicity notifications are delivered synchronously within the event processing cycle via the cue queue. Each registered subscriber receives the notification in order. If a subscriber throws an exception, the exception is isolated — other subscribers still receive the notification. The notification contains: {kin: 'duplicity', prefix: AID, sn: int, said_a: SAID, said_b: SAID}."
-    term: "Notification Bus"
+  - invariant: "Notification delivery guarantee: duplicity notifications are delivered synchronously within the event processing cycle. Each registered subscriber receives the notification in order. If a subscriber throws an exception, the exception is isolated — other subscribers still receive the notification. The notification contains: {kin: 'duplicity', prefix: AID, sn: int, said_a: SAID, said_b: SAID}."
+    term: "Likely Duplicitous Escrow"
     technique: property-based
     formal:
       language: python

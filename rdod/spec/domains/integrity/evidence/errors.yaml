@@ -4,7 +4,7 @@ domain_ref: "integrity/evidence"
 # Error catalog for the Duplicity Evidence domain.
 # Covers fork detection, duplicity evidence validation,
 # LDE (Likely Duplicitous Escrow), DEL (Duplicitous Event Log),
-# and the notification bus.
+# and internal coordination for escrow reprocessing.
 #
 # Severity levels:
 #   transient  — condition may self-resolve (escrow and retry)
@@ -109,7 +109,7 @@ errors:
     related_port: "port://integrity/evidence/inbound/evidence-management"
 
   - name: "NotificationDeliveryError"
-    description: "Failed to deliver a notification to one or more subscribers on the notification bus"
+    description: "Failed to deliver a notification to one or more subscribers via internal coordination"
     cause: "A KeyEventAdded or other notification could not be delivered to a registered subscriber — subscriber may have been removed or is unresponsive"
     recovery: "retry"
     severity: "transient"

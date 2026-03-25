@@ -41,7 +41,7 @@ domain_clients:
 
 subdomains:
   - ref: "domain://integrity/evidence"
-    relationship: "Owns fork detection, evidence escrow lifecycle (.ldes -> .dels), and notification bus"
+    relationship: "Owns fork detection, evidence escrow lifecycle (.ldes -> .dels), and escrow reprocessing triggers"
   - ref: "domain://integrity/recovery"
     relationship: "Owns superseding rules (A0-A2, B1-B3, C), reconciliation, and trunk/disputed-branch model"
   - ref: "domain://integrity/detection"
@@ -64,10 +64,11 @@ implementation_guidance:
   language_affinity: "any"
   notes: >
     This is an orchestrating domain decomposed into three subdomains: evidence (fork detection,
-    escrow lifecycle, notification bus), recovery (superseding rules, reconciliation, trunk/branch
-    model), and monitoring (watcher/juror/judge roles, ambient verifiability). The parent domain
-    owns the threat model overview — duplicity vs internal inconsistency, live vs dead attacks —
-    and coordinates the subdomains. Implementation-specific details live in the subdomains.
+    escrow lifecycle, escrow reprocessing triggers), recovery (superseding rules, reconciliation,
+    trunk/branch model), and monitoring (watcher/juror/judge roles, ambient verifiability). The
+    parent domain owns the threat model overview — duplicity vs internal inconsistency, live vs
+    dead attacks — and coordinates the subdomains. Implementation-specific details live in the
+    subdomains.
 
 issues: []
 

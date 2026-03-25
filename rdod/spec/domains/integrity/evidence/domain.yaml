@@ -4,11 +4,11 @@ id: "integrity/evidence"
 name: "Duplicity Evidence"
 description: >
   Detection and storage of duplicitous events — fork detection, evidence collection, the Likely
-  Duplicitous Escrow (temporary holding), the Duplicitous Event Log (permanent forensic evidence),
-  and the notification bus for cross-component coordination. When an incoming event conflicts with
-  an already-accepted event at the same (prefix, sn), this subdomain detects the fork, stages the
-  evidence in the Likely Duplicitous Escrow [.ldes in keripy], promotes confirmed duplicity to the
-  Duplicitous Event Log store [.dels in keripy], and notifies dependent components.
+  Duplicitous Escrow (temporary holding), and the Duplicitous Event Log (permanent forensic evidence).
+  When an incoming event conflicts with an already-accepted event at the same (prefix, sn), this
+  subdomain detects the fork, stages the evidence in the Likely Duplicitous Escrow [.ldes in keripy],
+  promotes confirmed duplicity to the Duplicitous Event Log store [.dels in keripy], and triggers
+  reprocessing of dependent components.
 version: "0.1.0"
 
 source_material:
@@ -44,9 +44,9 @@ implementation_guidance:
     In keripy, fork detection occurs in Kevery when an incoming event at an occupied sn has a
     different digest. Likely duplicitous events are stored in the Likely Duplicitous Escrow and processed by
     the escrow processing loop with a 3600s timeout. Confirmed duplicity is promoted
-    to the Duplicitous Event Log store. The cues queue provides the notification bus — components push cue dicts and consumers
-    pop and handle them. In keriox, the DuplicitousEvents escrow and NotificationBus with observer
-    pattern serve the same roles.
+    to the Duplicitous Event Log store. In keriox, the DuplicitousEvents escrow serves the same role.
+
+    Internal coordination: keripy uses a cues deque (processCues pattern) for signaling escrow reprocessing. keriox uses a NotificationBus with observer pattern. This is an implementation choice, not a spec requirement — the spec only requires that escrow reprocessing occurs when blocking conditions resolve.
 
 issues: []
 
