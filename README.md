@@ -220,6 +220,8 @@ Each domain directory contains up to 8 spec files:
 
 **Type taxonomies** — KERI identifiers have 5 orthogonal dimensions (Transferability, Delegation, Witnessing, Signing Model, Operational Constraints). ACDC credentials have 6 dimensions (Privacy, Targeting, Disclosure, Chaining, Governance, Revocation). These are first-class UL terms with builder pattern guidance.
 
+**CESR as kernel** — CESR is the only ecosystem domain referenced via `kernel://cesr` instead of `domain://` adjacents. This is because CESR is adopted natively — every domain's data structures literally contain CESR primitives (Verfer, Diger, Siger, AID). You don't wrap or translate CESR types; they ARE your internal types. Other domains (identity, accountability, credential-lifecycle) are consumed via ports, not embedded as raw types.
+
 **Escrow as domain pattern** — Each escrow type lives in the domain whose precondition it waits on (OOE in identity, PSE in thresholds, PWE in accountability, PDE in delegation, LDE in integrity). The pattern is cross-cutting; the rules are domain-specific.
 
 ### Tooling
