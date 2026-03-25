@@ -18,25 +18,6 @@ source_material:
   - type: user-input
     reference: "CLAUDE.md — KERIA service architecture (ports 3901/3902/3903)"
 
-ubiquitous_language:
-  - term: "Admin API"
-    definition: "The management endpoint (port 3901) for all agent operations — KRAM-authenticated, scoped to the requesting controller's agent instance"
-    invariants:
-      - "All requests authenticated via KRAM — unsigned requests rejected"
-      - "Scoped to the authenticated controller's agent instance"
-
-  - term: "Message Router"
-    definition: "The protocol endpoint (port 3902) receiving external KERI messages from other agents, witnesses, and watchers — routes to correct agent instance by target AID"
-    invariants:
-      - "No KRAM required — messages are protocol-authenticated (KERI signatures)"
-      - "Routes by target AID to the correct agent instance"
-
-  - term: "Notification"
-    definition: "A queued message for the edge client indicating an action requiring attention"
-    invariants:
-      - "Edge client polls for notifications — agent cannot push"
-      - "Notifications have a type, related resource, and read/unread state"
-
 domain_clients:
   - ref: "domain://cloud-agent-service"
     relationship: "Parent domain delegates request handling and routing to this subdomain"

@@ -24,26 +24,6 @@ source_material:
   - type: document
     reference: "simple-cesr — TypeScript CESR primitives library (implementation survey)"
 
-ubiquitous_language:
-  - term: "Matter"
-    definition: "The base class for all CESR primitives — encapsulates a (code, raw) pair and provides domain transforms to/from qb64 and qb2"
-    invariants:
-      - "Every Matter instance holds a code (text) and raw (bytes) pair"
-      - "Supports conversion to qb64 (T domain), qb2 (B domain), and (code, raw) R domain"
-      - "Code determines the cryptographic algorithm type and raw size"
-
-  - term: "Verfer"
-    definition: "A public verification key primitive — wraps a public key and provides signature verification"
-    invariants:
-      - "Code determines the key algorithm (D=Ed25519, 1AAB=ECDSA secp256k1, 1AAJ=ECDSA secp256r1, 1AAD=Ed448)"
-      - "Raw value is the public key bytes"
-
-  - term: "Diger"
-    definition: "A cryptographic digest (hash) primitive — wraps a digest value and provides comparison and verification"
-    invariants:
-      - "Code determines the hash algorithm (E=Blake3-256, F=Blake2b-256, H=SHA3-256, I=SHA2-256)"
-      - "Can compute digest from serialized data or wrap an existing digest"
-
 published_language:
   - term: "SAID"
     description: "Self-Addressing Identifier — content-addressable digest used by all domains for field maps"

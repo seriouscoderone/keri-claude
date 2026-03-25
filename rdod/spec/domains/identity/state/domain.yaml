@@ -25,26 +25,6 @@ source_material:
   - type: document
     reference: "KERI_WP_2.x.web.md — sections: Key State, Establishment Subsequence"
 
-ubiquitous_language:
-  - term: "Key Event Verifier"
-    definition: "State machine tracking one AID's current key state, computed deterministically from the KEL's establishment subsequence"
-    invariants:
-      - "One instance per AID being tracked"
-      - "State is updated only by establishment events (icp, rot, dip, drt)"
-      - "Provides the authoritative current key state for signature verification and rotation validation"
-
-  - term: "Last Establishment Data"
-    definition: "Snapshot of the most recent establishment event — sequence number, event digest, witnesses removed, and witnesses added — used for rotation validation"
-    invariants:
-      - "Updated each time an establishment event is processed"
-      - "Required input for validating the next rotation event"
-
-  - term: "Configuration Traits"
-    definition: "Cumulative behavioral constraints (EO, DND, NoBackers, DID) set in establishment events' c field"
-    invariants:
-      - "Once set, a trait cannot be removed — traits are cumulative across the AID's lifetime"
-      - "Enforced on every subsequent event processed by the state machine"
-
 domain_clients:
   - ref: "domain://identity"
     relationship: "Parent domain delegates per-AID state tracking, state reconstruction, establishment subsequence management, and configuration trait enforcement to this subdomain"

@@ -43,27 +43,6 @@ source_material:
   - type: implementation
     reference: "keriox — keriox_core/src/event/sections/threshold.rs (tally), components/witness/src/"
 
-ubiquitous_language:
-  - term: "KAWA"
-    definition: "KERI's Algorithm for Witness Agreement — single-phase BFT agreement by designated witnesses"
-    invariants:
-      - "Single-phase agreement — no multi-phase commit required"
-      - "The controller is the sole source of truth for event creation"
-      - "Witnesses are designated by the controller, not self-selected"
-
-  - term: "Witness"
-    definition: "An entity designated by a controller to verify, receipt, store, and disseminate key events"
-    invariants:
-      - "Designated by the controller in establishment events — not self-selected"
-      - "A witness's receipt constitutes a first-seen guarantee"
-      - "Accountable — duplicitous witnessing is detectable"
-
-  - term: "TOAD"
-    definition: "Threshold of Accountable Duplicity — the numeric threshold of witness receipts required before an event is fully witnessed"
-    invariants:
-      - "Set in the bt field of establishment events"
-      - "Must be at least ample(witness_count), the BFT minimum"
-
 published_language:
   - term: "Witness"
     description: "Designated accountability node — referenced by service and accountability domains"

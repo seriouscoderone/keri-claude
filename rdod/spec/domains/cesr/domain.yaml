@@ -21,47 +21,6 @@ source_material:
   - type: document
     reference: "cesr-specification.md — CESR encoding specification (ToIP/IETF), v1.0"
 
-ubiquitous_language:
-  - term: "Composability"
-    definition: "The property that any set of self-framing concatenated primitives in either the Text or Binary domain may be converted as a group to the other domain and back without loss"
-    invariants:
-      - "T(cat(b[k])) = cat(T(b[k])) and B(cat(t[k])) = cat(B(t[k])) for all k"
-      - "All primitives MUST be aligned on 24-bit boundaries"
-      - "Text domain primitives MUST be integer multiples of 4 Base64 characters"
-      - "Binary domain primitives MUST be integer multiples of 3 bytes"
-
-  - term: "Primitive"
-    definition: "A self-framing atomic unit of encoded data — the fundamental building block of CESR streams, consisting of a type code prefix and a value"
-    invariants:
-      - "Every primitive is self-framing — extractable from a stream without delimiters"
-      - "Every primitive MUST satisfy the composability property"
-      - "Represented in the R domain as a (code, raw) pair"
-
-  - term: "Domain"
-    definition: "One of three representation spaces for CESR data: Text (T) for streamable Base64, Binary (B) for streamable bytes, and Raw (R) for the non-streamable (code, raw) working pair"
-    invariants:
-      - "Six transformations exist: T(B), B(T), T(R), R(T), B(R), R(B)"
-      - "Composability is defined between T and B domains"
-      - "Cryptographic operations occur in the R domain"
-
-  - term: "Self-Framing"
-    definition: "The property that a primitive or group encodes its own type and size, allowing extraction from a stream without external delimiters or envelopes"
-    invariants:
-      - "A parser can determine type and length from the leading code characters/bytes alone"
-      - "Concatenated self-framing elements are separable without wrapper structures"
-
-  - term: "Code"
-    definition: "The type prefix prepended to a primitive's value that identifies the cryptographic suite or data type, and implicitly or explicitly encodes the value size"
-    invariants:
-      - "The code MUST be stable in the Text domain — leading type characters do not change when value changes"
-      - "Code size is a function of pad size: ps=0 -> 4*M chars, ps=1 -> 4*M+1 chars, ps=2 -> 4*M+2 chars"
-
-  - term: "Serialization Kind"
-    definition: "One of the four supported serialization formats for field map data interleaved in a CESR stream: JSON, CBOR, MGPK (MessagePack), or CESR native"
-    invariants:
-      - "Each kind has unique start bits enabling cold-start detection"
-      - "Non-native serializations MUST have a Version String as their first field"
-
 published_language:
   # Primitive terms are published by cesr/primitives (the authoritative subdomain).
   # Parent cesr/ publishes only concepts that span both subdomains.

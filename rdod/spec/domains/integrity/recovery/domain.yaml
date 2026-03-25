@@ -18,19 +18,6 @@ source_material:
   - type: document
     reference: "KERI_SecurityDeepDive.web.md — sections: Survivability, Superseding Recovery"
 
-ubiquitous_language:
-  - term: "Superseding Recovery"
-    definition: "Recovery from key compromise by issuing a rotation event that supersedes a compromised event at the same sequence number"
-    invariants:
-      - "Creates a fork with a recovered trunk and a disputed branch"
-      - "The controller is still accountable for harm caused by compromised events"
-
-  - term: "Superseding Rules"
-    definition: "The formal rules determining when one event can supersede another at the same sn"
-    invariants:
-      - "A0-A2 for non-delegated events, B1-B3 for delegated events, C for recursive delegation"
-      - "Non-delegated rotations cannot supersede other rotations"
-
 domain_clients:
   - ref: "domain://integrity"
     relationship: "Parent domain invokes superseding recovery when a validator receives a superseding rotation event"

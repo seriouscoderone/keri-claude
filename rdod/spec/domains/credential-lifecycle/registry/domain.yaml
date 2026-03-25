@@ -21,20 +21,6 @@ source_material:
   - type: implementation
     reference: "keriox/teliox — src/state.rs: ManagerTelState, registry management event processing"
 
-ubiquitous_language:
-  - term: "Registry Inception"
-    definition: "The initialization event for a TEL registry, establishing its REGID, binding it to an issuer AID, and setting configuration traits"
-    invariants:
-      - "Message type t field must be 'rip' (or 'vcp' in legacy format)"
-      - "SAID of this event becomes the REGID"
-      - "Config traits (e.g., NoBackers) are immutable after inception"
-
-  - term: "Registry Rotation"
-    definition: "A management event that updates a registry's backer configuration — adding or removing backer witnesses and adjusting the threshold"
-    invariants:
-      - "Only valid for registries with backers (not NoBackers)"
-      - "Does not affect credential state — only registry management state"
-
 domain_clients:
   - ref: "domain://credential-lifecycle"
     relationship: "Parent credential lifecycle domain delegates registry creation and management to this subdomain"

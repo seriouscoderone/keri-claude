@@ -24,19 +24,6 @@ source_material:
   - type: document
     reference: "keriox -- processor/validator.rs: EventValidator.validate_event(); event/sections/key_config.rs: KeyConfig.verify_next(), NextKeysData.check_threshold()"
 
-ubiquitous_language:
-  - term: "Event Validation Pipeline"
-    definition: "The complete step-by-step sequence that validates an incoming key event from receipt to acceptance or escrow"
-    invariants:
-      - "Multi-step: sequence check, signature verification, threshold satisfaction, pre-rotation binding, witness threshold, delegation approval"
-      - "Re-entrant: escrowed events are reprocessed through the same pipeline when their blocking condition resolves"
-
-  - term: "Dual Threshold Verification"
-    definition: "The core validation logic that checks signatures, witness receipts, and delegation for an event"
-    invariants:
-      - "For rotation events, enforces BOTH the current signing threshold AND the prior next-key threshold"
-      - "Failure at any step routes to the appropriate escrow queue"
-
 domain_clients:
   - ref: "domain://identity"
     relationship: "Parent domain delegates all incoming event validation to this subdomain"

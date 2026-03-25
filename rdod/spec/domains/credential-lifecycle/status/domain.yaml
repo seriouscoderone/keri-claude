@@ -24,19 +24,6 @@ source_material:
   - type: implementation
     reference: "keriox/teliox -- src/state.rs: TelState enum (NotIssued, Issued, Revoked), ManagerTelState struct"
 
-ubiquitous_language:
-  - term: "Credential State"
-    definition: "The finite state machine tracking an ACDC's lifecycle within its registry TEL"
-    invariants:
-      - "States: NotIssued -> Issued -> Revoked (one-directional, no backtracking)"
-      - "State is determined by replaying the credential's TEL events from inception"
-
-  - term: "TEL Event Verifier"
-    definition: "State machine tracking one registry's management TEL state and per-credential state"
-    invariants:
-      - "One instance per registry, keyed by REGID"
-      - "Holds registry management state and exposes per-credential state queries"
-
 domain_clients:
   - ref: "domain://credential-lifecycle"
     relationship: "Parent domain delegates credential and registry state tracking to this subdomain"

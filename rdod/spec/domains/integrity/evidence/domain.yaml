@@ -21,19 +21,6 @@ source_material:
   - type: implementation
     reference: "keriox — keriox_core/src/processor/escrow.rs (DuplicitousEvents escrow), keriox_core/src/processor/notification.rs (NotificationBus, KeyEventAdded)"
 
-ubiquitous_language:
-  - term: "Duplicity Evidence"
-    definition: "The pair of verified but different events at the same sequence number that proves duplicity occurred"
-    invariants:
-      - "Non-repudiable — both events bear valid signatures from the controller's keys"
-      - "Evidence can be stored and presented to any party for independent verification"
-
-  - term: "Fork Detection"
-    definition: "Identifying when multiple events exist at the same (prefix, sequence number) with different digests"
-    invariants:
-      - "Both events must have valid signatures against the key state at that sn"
-      - "Detected forks trigger escrow to the Likely Duplicitous Escrow"
-
 domain_clients:
   - ref: "domain://integrity"
     relationship: "Parent domain drives evidence collection when duplicity is suspected during event processing"

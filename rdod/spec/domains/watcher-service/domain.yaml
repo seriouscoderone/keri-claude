@@ -19,27 +19,6 @@ source_material:
   - type: user-input
     reference: "CLAUDE.md — keriox components/watcher"
 
-ubiquitous_language:
-  - term: "Watcher Node"
-    definition: "A deployed watcher instance that polls witnesses and cross-checks KEL copies, under the validator's control"
-    invariants:
-      - "Under the validator's control — not the controller's"
-      - "Polls multiple witnesses for the same AID's KERL"
-      - "Flags conflicting events as potential duplicity"
-
-  - term: "Watcher AID"
-    definition: "The identifier of the watcher node, used to authenticate watcher responses"
-    invariants:
-      - "Authenticates query responses to validators"
-      - "Validators designate watchers by AID"
-
-  - term: "KEL Cross-Check"
-    definition: "The core operation: comparing KERL copies from multiple witnesses for the same AID, flagging differences as potential duplicity"
-    invariants:
-      - "Compares events at the same (prefix, sn) across witness sources"
-      - "Identical events across sources confirm consistency"
-      - "Conflicting events at the same position indicate potential duplicity"
-
 domain_clients:
   - ref: "domain://signify-client"
     relationship: "Indirect — Signify clients access watchers via cloud-agent-service proxy"

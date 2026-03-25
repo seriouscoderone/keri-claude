@@ -20,19 +20,6 @@ source_material:
   - type: implementation
     reference: "keriox — components/watcher/ (watcher node)"
 
-ubiquitous_language:
-  - term: "Watcher"
-    definition: "An entity under the validator's control that monitors for duplicity by collecting and comparing KEL copies from multiple sources"
-    invariants:
-      - "Under the validator's control, NOT the controller's"
-      - "Cross-checks KEL copies from witnesses, other watchers, or the controller"
-
-  - term: "Judge"
-    definition: "An entity that makes trust decisions based on duplicity evidence"
-    invariants:
-      - "The final arbiter of trust for the validator"
-      - "Evaluates evidence to decide trust or no-trust"
-
 domain_clients:
   - ref: "domain://integrity"
     relationship: "Parent domain delegates monitoring lifecycle — watcher enrollment, evidence queries, trust decisions"

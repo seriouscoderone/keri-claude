@@ -21,14 +21,6 @@ source_material:
   - type: implementation
     reference: "keripy — src/keri/core/exchanging.py (Exchanger: generic EXN message router and handler dispatcher)"
 
-ubiquitous_language:
-  - term: "IPEX Negotiation Flow"
-    definition: "The state machine governing the sequence of IPEX messages between discloser and disclosee — from initiation through completion or rejection"
-    invariants:
-      - "Two valid patterns: direct issuance (grant -> admit) and full negotiation (apply -> offer -> agree -> grant -> admit)"
-      - "Any negotiation step may be spurned, terminating that step but not the relationship"
-      - "The protocol is identical for issuance and presentation — only the disclosed content differs"
-
 domain_clients:
   - ref: "domain://credential-exchange"
     relationship: "Parent credential exchange domain delegates protocol flow logic to this subdomain"

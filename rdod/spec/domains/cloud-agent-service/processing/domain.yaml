@@ -21,21 +21,6 @@ source_material:
   - type: user-input
     reference: "CLAUDE.md — HIO orchestration, Doer/Deck pattern"
 
-ubiquitous_language:
-  - term: "Processing Unit"
-    definition: "Event-driven processing unit with a periodic work cycle — the cooperative scheduling primitive for all async work (Doer in HIO/keripy)"
-    invariants:
-      - "Non-blocking — each work cycle processes available work and returns"
-      - "Processing Units drain work from Message Queues (FIFO queues)"
-      - "No threads — concurrency via cooperative scheduling"
-
-  - term: "Long-running Operation"
-    definition: "An async task tracked by the Monitor — edge clients poll via GET /operations/{name} until done"
-    invariants:
-      - "Operations named {type}.{oid}"
-      - "Monitor checks completion by querying the relevant component"
-      - "Operations have a done flag, optional error, and response payload"
-
 domain_clients:
   - ref: "domain://cloud-agent-service"
     relationship: "Parent domain delegates async event processing to this subdomain"

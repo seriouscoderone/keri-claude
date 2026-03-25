@@ -19,19 +19,6 @@ source_material:
   - type: document
     reference: "KERI_SecurityDeepDive.web.md — sections: Combined Arms, Delegation Security, Multi-level Delegation"
 
-ubiquitous_language:
-  - term: "Delegation Recovery"
-    definition: "Recovery from key compromise of a delegated AID via the delegator's additional layer of authority"
-    invariants:
-      - "An exploiter that compromises only the delegatee's keys cannot fully capture the delegated AID"
-      - "Recovery at any level of a delegation chain is possible from the next higher level"
-
-  - term: "Joint Compromise Requirement"
-    definition: "The security property that full exploit of a delegated AID requires simultaneous compromise of both delegatee and delegator authoritative keys"
-    invariants:
-      - "Extends recursively through delegation chains — each level adds an independent key set"
-      - "Significantly raises the bar for successful exploitation versus non-delegated AIDs"
-
 domain_clients:
   - ref: "domain://delegation"
     relationship: "Parent delegation domain delegates recovery logic — superseding rules, joint compromise analysis, and custodial delegation semantics"

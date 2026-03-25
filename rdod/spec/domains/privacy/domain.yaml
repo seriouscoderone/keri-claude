@@ -23,19 +23,6 @@ source_material:
   - type: implementation
     reference: "keriox/teliox — Rust TEL implementation"
 
-ubiquitous_language:
-  - term: "Graduated Disclosure"
-    definition: "The incremental, interactive application of the principle of least disclosure — each disclosure reveals the minimum needed to facilitate further disclosure"
-    invariants:
-      - "Applies recursively: disclose enough to enable more disclosure"
-      - "Orchestrates disclosure, blinding, and aggregation subdomains in combination"
-
-  - term: "ACDC Privacy Level"
-    definition: "The privacy posture of an ACDC determined by its top-level UUID u field — public (absent), private (high-entropy), or metadata (empty)"
-    invariants:
-      - "Three mutually exclusive levels based on the u field"
-      - "Privacy level is set at issuance and cannot change"
-
 domain_clients:
   - ref: "domain://credential-lifecycle"
     relationship: "ACDC core domain drives privacy mechanisms for credential presentation"

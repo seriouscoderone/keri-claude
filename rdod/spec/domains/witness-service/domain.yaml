@@ -18,28 +18,6 @@ source_material:
   - type: user-input
     reference: "CLAUDE.md — keriox components/witness, keripy witness module"
 
-ubiquitous_language:
-  - term: "Witness Node"
-    definition: "A deployed witness instance with its own non-transferable AID, HTTP endpoint, and KERL storage"
-    invariants:
-      - "Signs receipts with its own non-transferable key — never signs on behalf of a controller"
-      - "Accepts events under the first-seen rule — rejects conflicting events at the same (prefix, sn)"
-      - "Serves KERLs to validators on request"
-
-  - term: "Witness AID"
-    definition: "The non-transferable identifier (B prefix) of the witness, used to verify receipt signatures"
-    invariants:
-      - "Non-transferable — no key rotation, no pre-rotation commitment"
-      - "B prefix indicates Ed25519 non-transferable"
-      - "Must be included in the controller's witness list (backer) to be authoritative"
-
-  - term: "Receipt Generation"
-    definition: "Automatic generation of a non-transferable receipt upon first-seen event acceptance"
-    invariants:
-      - "Receipt generated only on first-seen acceptance — duplicate events receive the existing receipt"
-      - "Receipt signature is from the witness's own non-transferable AID"
-      - "Implementations: WitnessReceiptGenerator (keriox), Receiptor (keripy)"
-
 domain_clients:
   - ref: "domain://signify-client"
     relationship: "Indirect — Signify clients access witnesses via cloud-agent-service proxy"

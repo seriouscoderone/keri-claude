@@ -22,19 +22,6 @@ source_material:
   - type: implementation
     reference: "keriox — components/witness/src/ (witness node implementation), keriox_core/src/event/event_data/inception.rs (witness_config)"
 
-ubiquitous_language:
-  - term: "Round-robin Dissemination"
-    definition: "An efficient receipt dissemination protocol where the controller exchanges events and receipts with each witness in turn, requiring at most 2*N acknowledged exchanges"
-    invariants:
-      - "Network load scales linearly with N"
-      - "At most two passes through all N witnesses for full dissemination"
-
-  - term: "Witness Designation"
-    definition: "The act of a controller specifying its witness set and accountability threshold in establishment events"
-    invariants:
-      - "Witnesses are designated by the controller — not self-selected"
-      - "Initial witness set in inception (b and bt fields); modifications at rotation (br, ba)"
-
 domain_clients:
   - ref: "domain://accountability"
     relationship: "Parent orchestrates witness agreement; dissemination provides the propagation protocols, witness designation mechanics, and operational mode selection"

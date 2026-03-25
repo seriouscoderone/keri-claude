@@ -20,22 +20,6 @@ source_material:
   - type: document
     reference: "keripy app/habbing.py — Habery/Hab programmatic API"
 
-ubiquitous_language:
-  - term: "Message Intake"
-    definition: "CESR deserialization for direct mode message processing — the local agent processes KERI streams in-process rather than over HTTP"
-    invariants:
-      - "Same CESR deserialization as service APIs, but in-process rather than over network"
-  - term: "Request Authentication"
-    definition: "Signature verification for locally-sourced and remotely-received messages"
-    invariants:
-      - "Local operations are trusted (signed by the controller's own keys)"
-      - "Remote messages (from witnesses, watchers, peers) are verified against key state"
-  - term: "Protocol Dispatch"
-    definition: "Routing operations to the appropriate domain handler — CLI commands and API calls both dispatch through the same domain layer"
-    invariants:
-      - "Every kli command maps to exactly one domain operation"
-      - "The programmatic API provides the same operations as the CLI"
-
 domain_clients:
   - ref: "domain://local-agent"
     relationship: "Parent domain"

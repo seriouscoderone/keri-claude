@@ -34,15 +34,6 @@ published_language:
   - term: "Watcher"
     description: "Observer that monitors KEL integrity by cross-checking witness copies for duplicity"
 
-ubiquitous_language:
-  - term: "Duplicity"
-    definition: "The existence of two or more verified but different versions of an event at the same sequence number in a KEL"
-    invariants:
-      - "Both versions are cryptographically verifiable but mutually inconsistent"
-      - "Indicates either key compromise or malicious controller behavior"
-      - "Always detectable given access to both versions"
-      - "KERI is duplicity-evident — duplicity cannot be prevented but is always detectable"
-
 domain_clients:
   - ref: "domain://identity"
     relationship: "Parent domain drives duplicity monitoring and evidence handling"

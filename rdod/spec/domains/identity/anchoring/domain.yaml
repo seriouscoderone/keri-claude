@@ -22,22 +22,6 @@ source_material:
   - type: document
     reference: "keriox — keriox_core/src/event/event_data/interaction.rs (InteractionEvent, seal types)"
 
-ubiquitous_language:
-  - term: "Interaction Event"
-    definition: "A non-establishment event that anchors external data to the KEL via seals without changing key state"
-    invariants:
-      - "Does not modify key state — signing keys, thresholds, and witnesses remain unchanged"
-      - "Must be signed by a threshold-satisficing subset of current signing keys"
-      - "Hash-chained to predecessor via p field"
-      - "The a field contains a list of seals (anchors) binding external data"
-      - "Can be superseded by a rotation event at the same sequence number during recovery"
-
-  - term: "Seal"
-    definition: "A cryptographic digest or reference embedded in the a field of an event that binds external data to the KEL without disclosing the data"
-    invariants:
-      - "Commits to external data via digest — the data itself is not in the KEL"
-      - "Types include: digest seal, event seal (i, s, d fields), merkle tree root seal, latest establishment event seal"
-
 domain_clients:
   - ref: "domain://identity"
     relationship: "Parent identity domain delegates interaction event creation and seal construction to this subdomain"

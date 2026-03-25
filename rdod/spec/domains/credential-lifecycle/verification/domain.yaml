@@ -29,19 +29,6 @@ source_material:
   - type: implementation
     reference: "keriox/teliox -- src/tel/mod.rs: Tel.verify_binding() (KEL anchor check)"
 
-ubiquitous_language:
-  - term: "TEL Validation Pipeline"
-    definition: "The multi-step sequence that validates an incoming TEL event from receipt to acceptance or escrow"
-    invariants:
-      - "Steps: extract registry ID, compute registry state, verify KEL anchor seal, compute credential state, apply transition"
-      - "Failure at any step routes to the appropriate escrow queue for later reprocessing"
-
-  - term: "TEL Escrows"
-    definition: "Typed escrow queues for TEL events that cannot be immediately validated"
-    invariants:
-      - "Three escrow types: out-of-order, missing registry, missing issuer"
-      - "Events are reprocessed when the blocking condition resolves"
-
 domain_clients:
   - ref: "domain://credential-lifecycle"
     relationship: "Parent domain delegates all incoming TEL event validation to this subdomain"

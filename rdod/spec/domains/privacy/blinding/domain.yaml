@@ -23,19 +23,6 @@ source_material:
   - type: implementation
     reference: "keriox/teliox -- src/event/verifiable_event.rs (blinded event handling), src/state.rs (blinded state transitions)"
 
-ubiquitous_language:
-  - term: "BLID"
-    definition: "Blinding SAID -- a cryptographic digest of the concatenated CESR serialization of a blinded attribute block's field values"
-    invariants:
-      - "Computed on text domain (qb64) CESR concatenation of field values"
-      - "Uses Blake3-256 digest (E code, 44 characters)"
-
-  - term: "Blinded Attribute Block"
-    definition: "Fixed-field CESR concatenation (d, u, td, ts) whose digest serves as the b field in a blindable update event"
-    invariants:
-      - "UUID is derived from shared secret salt and event sequence number"
-      - "Only holders of the shared secret salt can reconstruct and verify"
-
 domain_clients:
   - ref: "domain://privacy"
     relationship: "Parent privacy domain delegates blinded state operations -- bup event construction, BLID computation, and state discovery"

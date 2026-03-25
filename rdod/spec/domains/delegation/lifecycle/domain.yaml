@@ -21,19 +21,6 @@ source_material:
   - type: implementation
     reference: "keriox — keriox_core/src/processor/escrow.rs (DelegationEscrow — notified on KeyEventAdded), keriox_core/src/processor/validator.rs (validate_event with delegator verification)"
 
-ubiquitous_language:
-  - term: "Delegation Validation"
-    definition: "The multi-step validation process for delegated events that verifies both the delegatee's authority and the delegator's approval"
-    invariants:
-      - "Events failing any step are escrowed to the appropriate queue rather than rejected outright"
-      - "Validation completes only when both delegatee signatures and delegator seal are verified"
-
-  - term: "Partially-Delegated Escrow"
-    definition: "Holds delegated events that have been received and validated locally but are awaiting the delegator's anchoring seal"
-    invariants:
-      - "Events are promoted to the KEL when the matching seal is found"
-      - "Timeout: 3600 seconds — escrowed events are pruned after expiry"
-
 domain_clients:
   - ref: "domain://delegation"
     relationship: "Parent delegation domain delegates validation pipeline and escrow management for delegated events"

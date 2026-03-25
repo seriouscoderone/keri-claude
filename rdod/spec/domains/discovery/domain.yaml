@@ -15,29 +15,6 @@ source_material:
   - type: document
     reference: "keridoc-llms-full.md — OOBI documentation"
 
-ubiquitous_language:
-  - term: "OOBI"
-    definition: "Out-of-Band Introduction — a URL that associates an AID with a network endpoint, enabling bootstrap discovery"
-    invariants:
-      - "An OOBI is not a trust statement — it merely introduces an endpoint to query"
-      - "Trust is established only after resolving the OOBI and verifying the KEL"
-
-  - term: "BADA"
-    definition: "Best Available Data Accepted — policy for accepting endpoint authorization data, preferring the most recent and most authoritative"
-    invariants:
-      - "Signed endpoint authorizations supersede unsigned ones"
-      - "More recent authorizations supersede older ones"
-
-  - term: "Endpoint Authorization"
-    definition: "A signed statement by an AID's controller designating network endpoints for that AID"
-    invariants:
-      - "Must be anchored in the AID's KEL via a seal or rotation event"
-
-  - term: "Well-Known OOBI"
-    definition: "An OOBI discoverable at a standard URL path (/.well-known/keri/oobi/{aid})"
-    invariants:
-      - "Follows the RFC 8615 .well-known URI convention"
-
 domain_clients:
   - ref: "domain://identity"
     relationship: "KERI uses OOBIs to bootstrap identifier discovery and resolve endpoints"

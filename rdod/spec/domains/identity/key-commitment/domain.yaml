@@ -25,19 +25,6 @@ source_material:
   - type: document
     reference: "keriox keriox_core/src/event/sections/key_config.rs — KeyConfig, NextKeysData, verify_next()"
 
-ubiquitous_language:
-  - term: "Pre-rotation Commitment"
-    definition: "Cryptographic commitment to the next set of rotation keys via publishing their digests in the current establishment event"
-    invariants:
-      - "Next key digests must appear in the establishment event preceding their use"
-      - "Pre-committed keys are never exposed until the rotation that activates them"
-
-  - term: "Key Configuration"
-    definition: "The current set of signing keys paired with the next key hash commitment"
-    invariants:
-      - "Current keys and next digests are both ordered — index position matters"
-      - "Represents the cryptographic material portion of key state"
-
 domain_clients:
   - ref: "domain://identity"
     relationship: "Parent domain delegates key commitment management, key configuration pairing, and transferability classification to this subdomain"

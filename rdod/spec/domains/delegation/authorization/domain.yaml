@@ -20,19 +20,6 @@ source_material:
   - type: implementation
     reference: "keriox — keriox_core/src/event/event_data/delegated.rs (SourceSeal struct with sn and digest fields)"
 
-ubiquitous_language:
-  - term: "Cooperative Delegation"
-    definition: "A delegation mechanism requiring cooperation between delegator and delegatee — implemented as a pair of cryptographically bound events"
-    invariants:
-      - "Both parties must participate — neither can act unilaterally"
-      - "The pair of events (delegating + delegated) forms the complete delegation commitment"
-
-  - term: "Two-way Binding"
-    definition: "The cryptographic peg formed by the delegation seal in the delegator's KEL and the di field in the delegatee's inception — together proving mutual agreement"
-    invariants:
-      - "Both references must exist for a valid delegation"
-      - "Neither party can forge the other's binding"
-
 domain_clients:
   - ref: "domain://delegation"
     relationship: "Parent delegation domain delegates cooperative binding mechanics — seal construction, di field binding, and source seal coupling"

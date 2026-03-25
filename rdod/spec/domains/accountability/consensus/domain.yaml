@@ -26,26 +26,6 @@ source_material:
   - type: implementation
     reference: "keriox — keriox_core/src/event/sections/threshold.rs (tally validation)"
 
-ubiquitous_language:
-  - term: "First-seen Rule"
-    definition: "The first verified version of an event at a given sequence number wins — first seen, always seen, never unseen"
-    invariants:
-      - "Once accepted, an event cannot be unseen or replaced (except by superseding recovery)"
-      - "All subsequent versions of the same event at the same location are discarded"
-
-  - term: "Immune Constraint"
-    definition: "M > (N + F + 1) / 2 — the mathematical guarantee that at most one sufficient agreement exists despite F faulty witnesses"
-    invariants:
-      - "When satisfied, the service cannot produce multiple divergent proper KERLs"
-      - "Any non-faulty witness with a proper agreement will keep and provide it on demand"
-
-  - term: "Accountability Threshold"
-    definition: "The minimum M of N designated witnesses that must receipt an event for the controller to accept accountability"
-    invariants:
-      - "Set in the bt field of establishment events"
-      - "M must be no greater than N (the number of witnesses)"
-      - "Can be changed at rotation along with the witness set"
-
 published_language:
   - term: "Quorum Calculation"
     description: "BFT quorum floor computation for witness agreement (KAWA)"

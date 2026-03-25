@@ -23,16 +23,6 @@ source_material:
   - type: user-input
     reference: "CLAUDE.md — KERIA service architecture (ports 3901/3902/3903)"
 
-ubiquitous_language:
-  - term: "KERIA"
-    definition: "Cloud agent hosting service — the orchestrating service that delegates provisioning (Agency), API exposure (Admin/Message Router), and async processing (Doers/Monitor) to its three subdomains. Never holds private keys."
-    invariants:
-      - "Zero access to private signing or decryption keys"
-      - "Can store, forward, and assemble — but never sign"
-      - "Delegates provisioning to cloud-agent-service/provisioning"
-      - "Delegates API exposure to cloud-agent-service/api"
-      - "Delegates async processing to cloud-agent-service/processing"
-
 domain_clients:
   - ref: "domain://signify-client"
     relationship: "Customer-Supplier — thin wallets drive the cloud agent via Signify protocol (signify-client/resources/outbound/cloud-agent-comms -> cloud-agent-service/api/inbound/admin-api)"

@@ -33,31 +33,6 @@ source_material:
   - type: implementation
     reference: "keriox — keriox_core/src/event/event_data/delegated.rs (SourceSeal), keriox_core/src/processor/escrow.rs (DelegationEscrow), keriox_core/src/processor/validator.rs (validate_event with delegator verification)"
 
-ubiquitous_language:
-  - term: "Delegated Inception"
-    definition: "The inception event for a delegated AID — type 'dip' with di field referencing the delegator"
-    invariants:
-      - "Must include di field with the delegator's AID"
-      - "Requires a corresponding delegation seal in the delegator's KEL to be valid"
-
-  - term: "Delegated Rotation"
-    definition: "A rotation event for a delegated AID — type 'drt', inherits delegator from inception"
-    invariants:
-      - "Does NOT include di field — inherits delegator from the delegated inception"
-      - "Requires a corresponding delegation seal in the delegator's KEL to be valid"
-
-  - term: "Delegation Chain"
-    definition: "A chain of delegation where a delegated AID itself acts as a delegator, forming a hierarchical tree of authority"
-    invariants:
-      - "Verification requires walking up to the root non-delegated AID"
-      - "Superseding recovery rules apply recursively up the chain"
-
-  - term: "DID Configuration Trait"
-    definition: "A configuration trait (c field value 'DID') that instructs validators to treat delegates as equivalent to the delegator"
-    invariants:
-      - "Set in the c field of an establishment event"
-      - "Enables transparent delegation for authorization purposes"
-
 published_language:
   - term: "Boatswain"
     description: "Tracks delegation approval progress — queried by Monitor for operation completion"

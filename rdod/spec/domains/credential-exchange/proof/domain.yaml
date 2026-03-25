@@ -19,14 +19,6 @@ source_material:
   - type: implementation
     reference: "keripy — src/keri/core/exchanging.py (Exchanger signature validation); src/keri/app/ipexing.py (grant artifact verification)"
 
-ubiquitous_language:
-  - term: "Exchange Proof"
-    definition: "The set of cryptographic proof mechanisms that validate IPEX disclosures — encompassing proof of issuance, proof of disclosure, credential artifact integrity, and message authentication"
-    invariants:
-      - "Discloser must provide both Proof of Issuance (PoI) and Proof of Disclosure (PoD)"
-      - "A signature on the most compact form SAID provides PoI for all schema-authorized variants"
-      - "Exchange messages are authenticated via KRAM"
-
 domain_clients:
   - ref: "domain://credential-exchange"
     relationship: "Parent credential exchange domain delegates cryptographic verification to this subdomain"

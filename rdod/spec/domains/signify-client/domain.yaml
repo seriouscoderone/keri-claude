@@ -19,51 +19,6 @@ source_material:
   - type: user-input
     reference: "CLAUDE.md — signify-ts, signifypy, browser extension architecture"
 
-ubiquitous_language:
-  - term: "Signify Client"
-    definition: "Controller-side library that holds private keys, signs all operations, and communicates with a KERIA cloud agent via KRAM-authenticated HTTP. Orchestrates key-management and resources subdomains"
-    invariants:
-      - "Private keys generated and stored locally — never transmitted"
-      - "All requests to cloud agent signed via KRAM"
-      - "Delegates key lifecycle to signify-client/key-management"
-      - "Delegates resource API to signify-client/resources"
-
-  - term: "Signify Protocol"
-    definition: "The contract between thin wallet and cloud agent — defines how the controller drives KERIA via KRAM-authenticated requests while retaining all key material locally"
-    invariants:
-      - "KRAM authenticates all admin API requests (port 3901)"
-      - "Async operations polled by edge — agent cannot push"
-      - "All event/credential operations edge-signed before submission"
-      - "This boundary exists only in the thin wallet deployment model — fat wallets have no equivalent"
-
-  - term: "KRAM"
-    definition: "KERI Request Authentication Method — HTTP signature-based authentication using KERI identifiers. Each request includes signed headers that the cloud agent verifies against the controller's KEL"
-    invariants:
-      - "Signature covers HTTP method, path, and body digest"
-      - "Cloud agent verifies against controller AID's current key state"
-      - "Replay protection via nonce and timestamp"
-
-  - term: "Browser Extension"
-    definition: "Chrome/Firefox extension wrapping signify-ts, providing passwordless web authentication via signed HTTP headers"
-    invariants:
-      - "Private keys accessible only to background script and popup — never to websites"
-      - "Websites communicate via polaris-web library (content script bridge)"
-      - "Requires active tab context for all operations"
-
-  - term: "Signing Association"
-    definition: "A stored mapping between a website origin and a credential/AID, authorizing the browser extension to sign requests for that website"
-    invariants:
-      - "Established by explicit user approval in the extension"
-      - "Scoped to a specific origin (website domain)"
-      - "Stored in Chrome storage, not transmitted"
-
-  - term: "Signing Request"
-    definition: "A request originating from the cloud agent for the controller to cryptographically sign an event, credential, or exchange message"
-    invariants:
-      - "Cloud agent can never produce a valid signature — only request one"
-      - "Controller reviews the content before signing"
-      - "Signing is asynchronous — the agent waits for the edge response"
-
 domain_clients: []
 
 subdomains:

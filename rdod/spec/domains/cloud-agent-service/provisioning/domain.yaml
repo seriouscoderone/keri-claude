@@ -18,28 +18,6 @@ source_material:
   - type: user-input
     reference: "CLAUDE.md — KERIA service architecture (port 3903 boot endpoint)"
 
-ubiquitous_language:
-  - term: "Agency"
-    definition: "The provisioning service that creates and destroys agent instances — the boot entry point for new Signify clients"
-    invariants:
-      - "POST /boot with inception event -> provisions new agent instance"
-      - "One-time per controller AID — idempotent on retry"
-      - "Returns agent configuration (endpoints, controller AID confirmation)"
-
-  - term: "Agent Instance"
-    definition: "A provisioned agent representing a single controller — contains the controller's managed AIDs, credential wallet, contact book, and pending operations"
-    invariants:
-      - "Bound to exactly one controller AID (the authentication anchor)"
-      - "Isolated from other agent instances"
-      - "Persists across KERIA restarts"
-
-  - term: "Multi-tenancy"
-    definition: "One KERIA process hosts many agent instances, each isolated — one controller's data inaccessible to others"
-    invariants:
-      - "Bidirectional mappings: controller AID <-> agent AID"
-      - "Infrastructure concern, not visible to the Signify protocol"
-      - "Agency manages the lifecycle of all tenant agent instances"
-
 domain_clients:
   - ref: "domain://cloud-agent-service"
     relationship: "Parent domain delegates agent lifecycle management to this subdomain"

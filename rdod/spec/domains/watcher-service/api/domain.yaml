@@ -18,20 +18,6 @@ source_material:
   - type: document
     reference: "keriox components/watcher — Rust watcher implementation (axum HTTP handler)"
 
-ubiquitous_language:
-  - term: "Message Intake"
-    definition: "CESR deserialization of inbound KEL streams at the watcher HTTP boundary"
-    invariants:
-      - "All inbound bytes are CESR-decoded before any domain processing"
-  - term: "Request Authentication"
-    definition: "Verification that inbound KEL copies come from designated witnesses"
-    invariants:
-      - "KEL copies with unverifiable source are rejected"
-  - term: "Protocol Dispatch"
-    definition: "Routing deserialized messages to the integrity detection domain for cross-checking"
-    invariants:
-      - "Accepts KEL queries and duplicity queries — other message types rejected"
-
 domain_clients:
   - ref: "domain://watcher-service"
     relationship: "Parent domain"
