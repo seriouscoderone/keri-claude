@@ -35414,7 +35414,13 @@ const RDOD_DATA = {
         "relationship": "Cryptographic algorithm types used for computing blinded SAIDs over UUID-protected blocks and generating high-entropy UUIDs"
       }
     ],
-    "adjacents": [],
+    "adjacents": [
+      {
+        "ref": "domain://credential-exchange",
+        "relationship": "Customer-Supplier — chain-link confidentiality gating requires knowledge of whether the IPEX agree step has completed before full disclosure is permitted",
+        "pattern": "Customer-Supplier"
+      }
+    ],
     "externals": [],
     "implementation_guidance": {
       "suggested_type": "module",
@@ -35845,15 +35851,15 @@ const RDOD_DATA = {
           "notes": "Least disclosure principle — each step is minimal for the next."
         },
         {
-          "invariant": "If the ACDC's rules section contains a chain-link confidentiality clause (requiring disclosure agreement), then the full ACDC content MUST NOT be disclosed to the disclosee until the agree step in the IPEX exchange has completed. Specifically: if rules.chainLinkConfidential == true, then full disclosure MUST be preceded by a completed IPEX agree message from the disclosee.",
+          "invariant": "If the ACDC's rules section contains a chain-link confidentiality clause, full disclosure MUST NOT occur until the disclosee has agreed to the contractual terms. The privacy domain queries the credential-exchange domain (declared adjacent) to confirm agreement status — it does not track exchange protocol state internally.",
           "term": "Graduated Disclosure",
           "technique": "property-based",
           "formal": {
-            "language": "python",
-            "expression": "@given(acdc=acdc_with_rules_strategy(),\n       ipex_state=ipex_state_strategy())\ndef test_chainlink_gating(acdc, ipex_state):\n    if has_chainlink_confidentiality(acdc):\n        if not ipex_state.agree_completed:\n            assert not can_disclose_full(acdc, ipex_state), (\n                \"Full disclosure MUST NOT occur before IPEX agree step \"\n                \"when chain-link confidentiality is required\"\n            )\n        else:\n            # After agree, full disclosure is permitted\n            assert can_disclose_full(acdc, ipex_state)\n    else:\n        # No chain-link clause — full disclosure has no IPEX gating\n        assert can_disclose_full(acdc, ipex_state)\n"
+            "language": "pseudocode",
+            "expression": "for any acdc with rules.chainLinkConfidential == true:\n  disclosure_permitted = query_exchange_agreement_status(acdc, disclosee)\n  if NOT disclosure_permitted:\n    full_disclosure(acdc, disclosee) MUST raise ChainLinkConfidentialityViolation\n  else:\n    full_disclosure(acdc, disclosee) MUST succeed\nfor any acdc WITHOUT chainLinkConfidential rule:\n  full_disclosure(acdc, disclosee) MUST succeed regardless of exchange state\n"
           },
-          "strategy": "acdc_with_rules_strategy(), ipex_state_strategy()",
-          "notes": "Chain-link confidentiality creates a mandatory gate: agree before full disclosure."
+          "strategy": "",
+          "notes": "Chain-link confidentiality creates a mandatory gate: contractual agreement before full disclosure. The gate check delegates to credential-exchange domain, not internal IPEX state."
         },
         {
           "invariant": "The A field (aggregate digest for selective disclosure) and the a field (inline attributes for targeted/untargeted ACDCs) are mutually exclusive at the top level of an ACDC. If both A and a are present, the ACDC MUST be rejected as invalid. Exactly one of {A present, a present, neither present} MUST hold.",

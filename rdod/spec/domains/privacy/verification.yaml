@@ -133,29 +133,22 @@ properties:
     notes: "Least disclosure principle — each step is minimal for the next."
 
   # Chain-Link Confidentiality Gating invariants
-  - invariant: "If the ACDC's rules section contains a chain-link confidentiality clause (requiring disclosure agreement), then the full ACDC content MUST NOT be disclosed to the disclosee until the agree step in the IPEX exchange has completed. Specifically: if rules.chainLinkConfidential == true, then full disclosure MUST be preceded by a completed IPEX agree message from the disclosee."
+  - invariant: "If the ACDC's rules section contains a chain-link confidentiality clause, full disclosure MUST NOT occur until the disclosee has agreed to the contractual terms. The privacy domain queries the credential-exchange domain (declared adjacent) to confirm agreement status — it does not track exchange protocol state internally."
     term: "Graduated Disclosure"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        @given(acdc=acdc_with_rules_strategy(),
-               ipex_state=ipex_state_strategy())
-        def test_chainlink_gating(acdc, ipex_state):
-            if has_chainlink_confidentiality(acdc):
-                if not ipex_state.agree_completed:
-                    assert not can_disclose_full(acdc, ipex_state), (
-                        "Full disclosure MUST NOT occur before IPEX agree step "
-                        "when chain-link confidentiality is required"
-                    )
-                else:
-                    # After agree, full disclosure is permitted
-                    assert can_disclose_full(acdc, ipex_state)
-            else:
-                # No chain-link clause — full disclosure has no IPEX gating
-                assert can_disclose_full(acdc, ipex_state)
-    strategy: "acdc_with_rules_strategy(), ipex_state_strategy()"
-    notes: "Chain-link confidentiality creates a mandatory gate: agree before full disclosure."
+        for any acdc with rules.chainLinkConfidential == true:
+          disclosure_permitted = query_exchange_agreement_status(acdc, disclosee)
+          if NOT disclosure_permitted:
+            full_disclosure(acdc, disclosee) MUST raise ChainLinkConfidentialityViolation
+          else:
+            full_disclosure(acdc, disclosee) MUST succeed
+        for any acdc WITHOUT chainLinkConfidential rule:
+          full_disclosure(acdc, disclosee) MUST succeed regardless of exchange state
+    strategy: ""
+    notes: "Chain-link confidentiality creates a mandatory gate: contractual agreement before full disclosure. The gate check delegates to credential-exchange domain, not internal IPEX state."
 
   # Selective vs Aggregate Disclosure Mutual Exclusion
   - invariant: "The A field (aggregate digest for selective disclosure) and the a field (inline attributes for targeted/untargeted ACDCs) are mutually exclusive at the top level of an ACDC. If both A and a are present, the ACDC MUST be rejected as invalid. Exactly one of {A present, a present, neither present} MUST hold."
