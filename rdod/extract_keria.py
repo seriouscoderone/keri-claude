@@ -23,28 +23,28 @@ MODULE_HINTS = {
     "app.aiding": "cloud-agent-service/api",
 
     # Credential management endpoints
-    "app.credentialing": "acdc/credential-lifecycle",
+    "app.credentialing": "credential-lifecycle",
 
     # Multisig group coordination
-    "app.grouping": "keri/identity/thresholds",
+    "app.grouping": "identity/thresholds",
 
     # HTTP indirect mode message ingestion
     "app.indirecting": "cloud-agent-service/api",
 
     # Exchange message history
-    "app.messaging": "acdc/credential-exchange",
+    "app.messaging": "credential-exchange",
 
     # Notification system
     "app.notifying": "cloud-agent-service/api",
 
     # Credential presentation
-    "app.presenting": "acdc/credential-exchange/negotiation",
+    "app.presenting": "credential-exchange/negotiation",
 
     # OpenAPI spec generation
     "app.specing": "cloud-agent-service/api",
 
     # Watcher support (empty placeholder)
-    "app.watching": "keri/integrity/detection",
+    "app.watching": "integrity/detection",
 
     # CLI
     "app.cli": "cloud-agent-service",
@@ -68,7 +68,7 @@ MODULE_HINTS = {
     "end.ending": "discovery",
 
     # Peer exchange
-    "peer.exchanging": "acdc/credential-exchange/negotiation",
+    "peer.exchanging": "credential-exchange/negotiation",
 
     # Testing
     "testing": "_cross-cutting/testing",
@@ -83,36 +83,36 @@ SYMBOL_OVERRIDES = {
     "app.agenting.Agency": "cloud-agent-service/provisioning",
     "app.agenting.Agent": "cloud-agent-service/provisioning",
     "app.agenting.setup": "cloud-agent-service/api",
-    "app.agenting.Witnesser": "keri/accountability/receipting",
-    "app.agenting.Delegator": "keri/delegation/lifecycle",
+    "app.agenting.Witnesser": "accountability/receipting",
+    "app.agenting.Delegator": "delegation/lifecycle",
     "app.agenting.Escrower": "cloud-agent-service/processing",
-    "app.agenting.GroupRequester": "keri/identity/thresholds",
-    "app.agenting.Querier": "keri/identity/state",
+    "app.agenting.GroupRequester": "identity/thresholds",
+    "app.agenting.Querier": "identity/state",
 
     # aiding.py — mixed identity + contacts
-    "app.aiding.IdentifierCollectionEnd": "keri/identity/establishment",
-    "app.aiding.IdentifierResourceEnd": "keri/identity/state",
+    "app.aiding.IdentifierCollectionEnd": "identity/establishment",
+    "app.aiding.IdentifierResourceEnd": "identity/state",
     "app.aiding.EndRoleCollectionEnd": "discovery",
     "app.aiding.EndRoleResourceEnd": "discovery",
-    "app.aiding.ChallengeCollectionEnd": "keri/identity/key-commitment",
-    "app.aiding.ChallengeResourceEnd": "keri/identity/key-commitment",
+    "app.aiding.ChallengeCollectionEnd": "identity/key-commitment",
+    "app.aiding.ChallengeResourceEnd": "identity/key-commitment",
     "app.aiding.ContactCollectionEnd": "cloud-agent-service/api",
     "app.aiding.ContactResourceEnd": "cloud-agent-service/api",
-    "app.aiding.RpyEscrowCollectionEnd": "keri/identity",
+    "app.aiding.RpyEscrowCollectionEnd": "identity",
 
     # credentialing.py — mixed lifecycle + registry
-    "app.credentialing.RegistryCollectionEnd": "acdc/credential-lifecycle/registry",
-    "app.credentialing.CredentialCollectionEnd": "acdc/credential-lifecycle/status",
-    "app.credentialing.CredentialResourceEnd": "acdc/credential-lifecycle/status",
-    "app.credentialing.CredentialQueryCollectionEnd": "acdc/credential-lifecycle",
-    "app.credentialing.SchemaResourceEnd": "acdc/credential-lifecycle",
-    "app.credentialing.SchemaCollectionEnd": "acdc/credential-lifecycle",
-    "app.credentialing.Registrar": "acdc/credential-lifecycle/status",
-    "app.credentialing.Credentialer": "acdc/credential-lifecycle/status",
+    "app.credentialing.RegistryCollectionEnd": "credential-lifecycle/registry",
+    "app.credentialing.CredentialCollectionEnd": "credential-lifecycle/status",
+    "app.credentialing.CredentialResourceEnd": "credential-lifecycle/status",
+    "app.credentialing.CredentialQueryCollectionEnd": "credential-lifecycle",
+    "app.credentialing.SchemaResourceEnd": "credential-lifecycle",
+    "app.credentialing.SchemaCollectionEnd": "credential-lifecycle",
+    "app.credentialing.Registrar": "credential-lifecycle/status",
+    "app.credentialing.Credentialer": "credential-lifecycle/status",
 
     # db/basing.py — mixed provisioning + search
     "db.basing.AgencyBaser": "cloud-agent-service/provisioning",
-    "db.basing.Seeker": "acdc/credential-lifecycle",
+    "db.basing.Seeker": "credential-lifecycle",
 }
 
 

@@ -25,9 +25,9 @@ MODULE_HINTS = {
     "core.serdering": "cesr/composition",
 
     # KERI protocol
-    "core.eventing": "keri/identity",  # cross-cutting, needs per-symbol refinement
-    "core.parsing": "keri/identity/establishment",
-    "core.routing": "keri/identity",
+    "core.eventing": "identity",  # cross-cutting, needs per-symbol refinement
+    "core.parsing": "identity/establishment",
+    "core.routing": "identity",
     "core.scheming": "cesr/primitives",
     "core.kraming": "cloud-agent-service/api",
     "core.mapping": "cesr/composition",
@@ -44,17 +44,17 @@ MODULE_HINTS = {
     "app.habbing": "local-agent",
     "app.keeping": "local-agent",
     "app.directing": "local-agent",
-    "app.agenting": "keri/accountability/receipting",
-    "app.indirecting": "keri/accountability/dissemination",
-    "app.delegating": "keri/delegation/lifecycle",
+    "app.agenting": "accountability/receipting",
+    "app.indirecting": "accountability/dissemination",
+    "app.delegating": "delegation/lifecycle",
     "app.oobiing": "discovery",
-    "app.grouping": "keri/identity/thresholds",
+    "app.grouping": "identity/thresholds",
     "app.notifying": "cloud-agent-service/api",
     "app.signaling": "cloud-agent-service/api",
     "app.forwarding": "cloud-agent-service/processing",
-    "app.querying": "keri/identity/state",
-    "app.challenging": "keri/identity/key-commitment",
-    "app.watching": "keri/integrity/detection",
+    "app.querying": "identity/state",
+    "app.challenging": "identity/key-commitment",
+    "app.watching": "integrity/detection",
     "app.organizing": "local-agent",
     "app.storing": "local-agent",
     "app.configing": "local-agent",
@@ -64,21 +64,21 @@ MODULE_HINTS = {
     "app.specing": "cloud-agent-service/api",
 
     # VDR
-    "vdr.eventing": "acdc/credential-lifecycle/status",
-    "vdr.credentialing": "acdc/credential-lifecycle/status",
-    "vdr.viring": "acdc/credential-lifecycle",
-    "vdr.verifying": "acdc/credential-lifecycle/verification",
+    "vdr.eventing": "credential-lifecycle/status",
+    "vdr.credentialing": "credential-lifecycle/status",
+    "vdr.viring": "credential-lifecycle",
+    "vdr.verifying": "credential-lifecycle/verification",
 
     # VC / IPEX
-    "vc.protocoling": "acdc/credential-exchange/negotiation",
-    "vc.walleting": "acdc/credential-lifecycle",
-    "vc.proving": "acdc/privacy/disclosure",
+    "vc.protocoling": "credential-exchange/negotiation",
+    "vc.walleting": "credential-lifecycle",
+    "vc.proving": "privacy/disclosure",
 
     # ACDC
-    "acdc.messaging": "acdc/credential-exchange/negotiation",
+    "acdc.messaging": "credential-exchange/negotiation",
 
     # Peer
-    "peer.exchanging": "acdc/credential-exchange/negotiation",
+    "peer.exchanging": "credential-exchange/negotiation",
 
     # Help
     "help": "_cross-cutting/utilities",
@@ -95,82 +95,82 @@ MODULE_HINTS = {
     "cli.common.config": "local-agent/api",
 
     # Identity establishment
-    "cli.commands.incept": "keri/identity/establishment",
-    "cli.commands.rotate": "keri/identity/establishment",
-    "cli.commands.init": "keri/identity/establishment",
+    "cli.commands.incept": "identity/establishment",
+    "cli.commands.rotate": "identity/establishment",
+    "cli.commands.init": "identity/establishment",
 
     # Identity anchoring
-    "cli.commands.interact": "keri/identity/anchoring",
+    "cli.commands.interact": "identity/anchoring",
 
     # Identity state
-    "cli.commands.status": "keri/identity/state",
-    "cli.commands.kevers": "keri/identity/state",
-    "cli.commands.query": "keri/identity/state",
-    "cli.commands.aid": "keri/identity/state",
-    "cli.commands.list": "keri/identity/state",
-    "cli.commands.rename": "keri/identity/state",
-    "cli.commands.event": "keri/identity/state",
-    "cli.commands.rollback": "keri/identity/state",
+    "cli.commands.status": "identity/state",
+    "cli.commands.kevers": "identity/state",
+    "cli.commands.query": "identity/state",
+    "cli.commands.aid": "identity/state",
+    "cli.commands.list": "identity/state",
+    "cli.commands.rename": "identity/state",
+    "cli.commands.event": "identity/state",
+    "cli.commands.rollback": "identity/state",
 
     # Identity thresholds (multisig)
-    "cli.commands.multisig": "keri/identity/thresholds",
-    "cli.commands.multisig.incept": "keri/identity/thresholds",
-    "cli.commands.multisig.rotate": "keri/identity/thresholds",
-    "cli.commands.multisig.interact": "keri/identity/thresholds",
-    "cli.commands.multisig.join": "keri/identity/thresholds",
-    "cli.commands.multisig.shell": "keri/identity/thresholds",
-    "cli.commands.multisig.demo": "keri/identity/thresholds",
-    "cli.commands.multisig.notice": "keri/identity/thresholds",
-    "cli.commands.multisig.update": "keri/identity/thresholds",
-    "cli.commands.multisig.continue_": "keri/identity/thresholds",
+    "cli.commands.multisig": "identity/thresholds",
+    "cli.commands.multisig.incept": "identity/thresholds",
+    "cli.commands.multisig.rotate": "identity/thresholds",
+    "cli.commands.multisig.interact": "identity/thresholds",
+    "cli.commands.multisig.join": "identity/thresholds",
+    "cli.commands.multisig.shell": "identity/thresholds",
+    "cli.commands.multisig.demo": "identity/thresholds",
+    "cli.commands.multisig.notice": "identity/thresholds",
+    "cli.commands.multisig.update": "identity/thresholds",
+    "cli.commands.multisig.continue_": "identity/thresholds",
 
     # Key commitment (challenge-response)
-    "cli.commands.challenge": "keri/identity/key-commitment",
-    "cli.commands.challenge.generate": "keri/identity/key-commitment",
-    "cli.commands.challenge.respond": "keri/identity/key-commitment",
-    "cli.commands.challenge.verify": "keri/identity/key-commitment",
+    "cli.commands.challenge": "identity/key-commitment",
+    "cli.commands.challenge.generate": "identity/key-commitment",
+    "cli.commands.challenge.respond": "identity/key-commitment",
+    "cli.commands.challenge.verify": "identity/key-commitment",
 
     # Delegation
-    "cli.commands.delegate": "keri/delegation",
-    "cli.commands.delegate.confirm": "keri/delegation/authorization",
-    "cli.commands.delegate.request": "keri/delegation/lifecycle",
+    "cli.commands.delegate": "delegation",
+    "cli.commands.delegate.confirm": "delegation/authorization",
+    "cli.commands.delegate.request": "delegation/lifecycle",
 
     # Accountability (witnesses)
-    "cli.commands.witness": "keri/accountability",
-    "cli.commands.witness.start": "keri/accountability/receipting",
-    "cli.commands.witness.demo": "keri/accountability",
-    "cli.commands.witness.authenticate": "keri/accountability",
-    "cli.commands.witness.list": "keri/accountability",
-    "cli.commands.witness.submit": "keri/accountability/dissemination",
+    "cli.commands.witness": "accountability",
+    "cli.commands.witness.start": "accountability/receipting",
+    "cli.commands.witness.demo": "accountability",
+    "cli.commands.witness.authenticate": "accountability",
+    "cli.commands.witness.list": "accountability",
+    "cli.commands.witness.submit": "accountability/dissemination",
 
     # Integrity (watchers)
-    "cli.commands.watcher": "keri/integrity",
-    "cli.commands.watcher.add": "keri/integrity/detection",
-    "cli.commands.watcher.adjudicate": "keri/integrity/evidence",
-    "cli.commands.watcher.list": "keri/integrity",
+    "cli.commands.watcher": "integrity",
+    "cli.commands.watcher.add": "integrity/detection",
+    "cli.commands.watcher.adjudicate": "integrity/evidence",
+    "cli.commands.watcher.list": "integrity",
 
     # Credential lifecycle
-    "cli.commands.vc": "acdc/credential-lifecycle",
-    "cli.commands.vc.create": "acdc/credential-lifecycle/status",
-    "cli.commands.vc.revoke": "acdc/credential-lifecycle/status",
-    "cli.commands.vc.list": "acdc/credential-lifecycle",
-    "cli.commands.vc.export": "acdc/credential-lifecycle",
-    "cli.commands.vc.import_": "acdc/credential-lifecycle",
-    "cli.commands.vc.registry": "acdc/credential-lifecycle/registry",
-    "cli.commands.vc.registry.incept": "acdc/credential-lifecycle/registry",
-    "cli.commands.vc.registry.list": "acdc/credential-lifecycle/registry",
-    "cli.commands.vc.registry.status": "acdc/credential-lifecycle/registry",
+    "cli.commands.vc": "credential-lifecycle",
+    "cli.commands.vc.create": "credential-lifecycle/status",
+    "cli.commands.vc.revoke": "credential-lifecycle/status",
+    "cli.commands.vc.list": "credential-lifecycle",
+    "cli.commands.vc.export": "credential-lifecycle",
+    "cli.commands.vc.import_": "credential-lifecycle",
+    "cli.commands.vc.registry": "credential-lifecycle/registry",
+    "cli.commands.vc.registry.incept": "credential-lifecycle/registry",
+    "cli.commands.vc.registry.list": "credential-lifecycle/registry",
+    "cli.commands.vc.registry.status": "credential-lifecycle/registry",
 
     # Credential exchange (IPEX)
-    "cli.commands.ipex": "acdc/credential-exchange",
-    "cli.commands.ipex.grant": "acdc/credential-exchange/negotiation",
-    "cli.commands.ipex.admit": "acdc/credential-exchange/negotiation",
-    "cli.commands.ipex.offer": "acdc/credential-exchange/negotiation",
-    "cli.commands.ipex.agree": "acdc/credential-exchange/negotiation",
-    "cli.commands.ipex.apply": "acdc/credential-exchange/negotiation",
-    "cli.commands.ipex.spurn": "acdc/credential-exchange/negotiation",
-    "cli.commands.ipex.list": "acdc/credential-exchange",
-    "cli.commands.ipex.join": "acdc/credential-exchange/negotiation",
+    "cli.commands.ipex": "credential-exchange",
+    "cli.commands.ipex.grant": "credential-exchange/negotiation",
+    "cli.commands.ipex.admit": "credential-exchange/negotiation",
+    "cli.commands.ipex.offer": "credential-exchange/negotiation",
+    "cli.commands.ipex.agree": "credential-exchange/negotiation",
+    "cli.commands.ipex.apply": "credential-exchange/negotiation",
+    "cli.commands.ipex.spurn": "credential-exchange/negotiation",
+    "cli.commands.ipex.list": "credential-exchange",
+    "cli.commands.ipex.join": "credential-exchange/negotiation",
 
     # Discovery (OOBI)
     "cli.commands.oobi": "discovery",
@@ -194,7 +194,7 @@ MODULE_HINTS = {
     # Cloud-agent-service (mailbox, notifications)
     "cli.commands.mailbox": "cloud-agent-service/api",
     "cli.commands.notifications": "cloud-agent-service/api",
-    "cli.commands.exn": "acdc/credential-exchange/negotiation",
+    "cli.commands.exn": "credential-exchange/negotiation",
 
     # Signify (passcode)
     "cli.commands.passcode": "signify-client/key-management",
@@ -217,7 +217,7 @@ MODULE_HINTS = {
     "cli.commands.time": "local-agent/api",
 
     # Other
-    "cli.commands.did": "keri/identity/state",
+    "cli.commands.did": "identity/state",
     "cli.commands.ssh": "cesr/primitives",
     "cli.commands.local": "local-agent",
 
@@ -237,34 +237,34 @@ MODULE_HINTS = {
 # Per-symbol overrides for cross-cutting modules (e.g., eventing.py)
 SYMBOL_OVERRIDES = {
     # core.eventing symbols that belong to specific domains
-    "core.eventing.Kever": "keri/identity/state",
-    "core.eventing.Kevery": "keri/identity/establishment",
-    "core.eventing.incept": "keri/identity/establishment",
-    "core.eventing.rotate": "keri/identity/establishment",
-    "core.eventing.interact": "keri/identity/anchoring",
-    "core.eventing.receipt": "keri/accountability/receipting",
-    "core.eventing.query": "keri/identity/state",
-    "core.eventing.reply": "keri/identity/state",
-    "core.eventing.exchange": "acdc/credential-exchange/negotiation",
+    "core.eventing.Kever": "identity/state",
+    "core.eventing.Kevery": "identity/establishment",
+    "core.eventing.incept": "identity/establishment",
+    "core.eventing.rotate": "identity/establishment",
+    "core.eventing.interact": "identity/anchoring",
+    "core.eventing.receipt": "accountability/receipting",
+    "core.eventing.query": "identity/state",
+    "core.eventing.reply": "identity/state",
+    "core.eventing.exchange": "credential-exchange/negotiation",
     "core.eventing.messagize": "cesr/composition",
-    "core.eventing.verifySigs": "keri/identity/state",
-    "core.eventing.validateSigs": "keri/identity/state",
-    "core.eventing.delcept": "keri/delegation/authorization",
-    "core.eventing.deltate": "keri/delegation/authorization",
+    "core.eventing.verifySigs": "identity/state",
+    "core.eventing.validateSigs": "identity/state",
+    "core.eventing.delcept": "delegation/authorization",
+    "core.eventing.deltate": "delegation/authorization",
 
     # core.coring symbols
-    "core.coring.Tholder": "keri/identity/thresholds",
+    "core.coring.Tholder": "identity/thresholds",
     "core.coring.Saider": "cesr/primitives",
     "core.coring.Sadder": "cesr/composition",
 
     # vdr
-    "vdr.eventing.Tever": "acdc/credential-lifecycle/status",
-    "vdr.eventing.Tevery": "acdc/credential-lifecycle/verification",
-    "vdr.credentialing.Regery": "acdc/credential-lifecycle/registry",
-    "vdr.credentialing.Registrar": "acdc/credential-lifecycle/status",
-    "vdr.credentialing.Credentialer": "acdc/credential-lifecycle/status",
-    "vdr.credentialing.Registry": "acdc/credential-lifecycle/registry",
-    "vdr.credentialing.SignifyRegistry": "acdc/credential-lifecycle/registry",
+    "vdr.eventing.Tever": "credential-lifecycle/status",
+    "vdr.eventing.Tevery": "credential-lifecycle/verification",
+    "vdr.credentialing.Regery": "credential-lifecycle/registry",
+    "vdr.credentialing.Registrar": "credential-lifecycle/status",
+    "vdr.credentialing.Credentialer": "credential-lifecycle/status",
+    "vdr.credentialing.Registry": "credential-lifecycle/registry",
+    "vdr.credentialing.SignifyRegistry": "credential-lifecycle/registry",
 }
 
 

@@ -2,66 +2,9 @@
 # Extracted: 18 files, 71 classes, 19 functions, 138 public methods
 # Auto-mapped by module/symbol heuristics — review UNMAPPED items
 
-acdc/credential-exchange:  # 2 items
-  - app.messaging.MessageCollectionEnd  # class @ keria/app/messaging.py:20
-    # .on_get (L23)
-  - app.messaging.loadEnds  # fn @ keria/app/messaging.py:15
-
-acdc/credential-exchange/negotiation:  # 5 items
-  - app.presenting.PresentationCollectionEnd  # class @ keria/app/presenting.py:23
-    # .on_post (L30)
-  - app.presenting.PresentationRequestsCollectionEnd  # class @ keria/app/presenting.py:113
-    # .on_post (L116)
-  - app.presenting.loadEnds  # fn @ keria/app/presenting.py:16
-  - peer.exchanging.ExchangeCollectionEnd  # class @ keria/peer/exchanging.py:20
-    # .on_post (L23)
-  - peer.exchanging.loadEnds  # fn @ keria/peer/exchanging.py:15
-
-acdc/credential-lifecycle:  # 6 items
-  - app.credentialing.CredentialQueryCollectionEnd  # class @ keria/app/credentialing.py:248
-    # .on_post (L260)
-  - app.credentialing.SchemaCollectionEnd  # class @ keria/app/credentialing.py:219
-    # .on_get (L222)
-  - app.credentialing.SchemaResourceEnd  # class @ keria/app/credentialing.py:180
-    # .on_get (L183)
-  - app.credentialing.loadEnds  # fn @ keria/app/credentialing.py:22
-  - app.credentialing.signPaths  # fn @ keria/app/credentialing.py:629
-  - db.basing.Seeker  # class @ keria/db/basing.py:105
-    # .reopen (L153)
-    # .createIndex (L176)
-    # .index (L181)
-    # .generateIndexes (L205)
-    # .find (L278)
-
-acdc/credential-lifecycle/registry:  # 1 items
-  - app.credentialing.RegistryCollectionEnd  # class @ keria/app/credentialing.py:41
-    # .on_get (L57)
-    # .on_post (L96)
-
-acdc/credential-lifecycle/status:  # 4 items
-  - app.credentialing.CredentialCollectionEnd  # class @ keria/app/credentialing.py:345
-    # .on_post (L356)
-  - app.credentialing.CredentialResourceEnd  # class @ keria/app/credentialing.py:460
-    # .on_get (L471)
-    # .outputCred (L530)
-    # .on_delete (L579)
-  - app.credentialing.Credentialer  # class @ keria/app/credentialing.py:955
-    # .validate (L966)
-    # .issue (L990)
-    # .processCredentialMissingSigEscrow (L1015)
-    # .complete (L1032)
-    # .processEscrows (L1035)
-  - app.credentialing.Registrar  # class @ keria/app/credentialing.py:652
-    # .incept (L664)
-    # .issue (L693)
-    # .revoke (L729)
-    # .multisigIxn (L766)
-    # .complete (L779)
-    # .processEscrows (L784)
-    # .processWitnessEscrow (L793)
-    # .processMultisigEscrow (L824)
-    # .processDiseminationEscrow (L849)
-    # .sendToRecipients (L874)
+accountability/receipting:  # 1 items
+  - app.agenting.Witnesser  # class @ keria/app/agenting.py:379
+    # .recur (L386)
 
 cloud-agent-service:  # 3 items
   - app.cli.commands.start.launch  # fn @ keria/app/cli/commands/start.py:59
@@ -188,6 +131,71 @@ cloud-agent-service/provisioning:  # 18 items
   - db.basing.IndexRecord  # class @ keria/db/basing.py:22
   - db.basing.operators  # fn @ keria/db/basing.py:448
 
+credential-exchange:  # 2 items
+  - app.messaging.MessageCollectionEnd  # class @ keria/app/messaging.py:20
+    # .on_get (L23)
+  - app.messaging.loadEnds  # fn @ keria/app/messaging.py:15
+
+credential-exchange/negotiation:  # 5 items
+  - app.presenting.PresentationCollectionEnd  # class @ keria/app/presenting.py:23
+    # .on_post (L30)
+  - app.presenting.PresentationRequestsCollectionEnd  # class @ keria/app/presenting.py:113
+    # .on_post (L116)
+  - app.presenting.loadEnds  # fn @ keria/app/presenting.py:16
+  - peer.exchanging.ExchangeCollectionEnd  # class @ keria/peer/exchanging.py:20
+    # .on_post (L23)
+  - peer.exchanging.loadEnds  # fn @ keria/peer/exchanging.py:15
+
+credential-lifecycle:  # 6 items
+  - app.credentialing.CredentialQueryCollectionEnd  # class @ keria/app/credentialing.py:248
+    # .on_post (L260)
+  - app.credentialing.SchemaCollectionEnd  # class @ keria/app/credentialing.py:219
+    # .on_get (L222)
+  - app.credentialing.SchemaResourceEnd  # class @ keria/app/credentialing.py:180
+    # .on_get (L183)
+  - app.credentialing.loadEnds  # fn @ keria/app/credentialing.py:22
+  - app.credentialing.signPaths  # fn @ keria/app/credentialing.py:629
+  - db.basing.Seeker  # class @ keria/db/basing.py:105
+    # .reopen (L153)
+    # .createIndex (L176)
+    # .index (L181)
+    # .generateIndexes (L205)
+    # .find (L278)
+
+credential-lifecycle/registry:  # 1 items
+  - app.credentialing.RegistryCollectionEnd  # class @ keria/app/credentialing.py:41
+    # .on_get (L57)
+    # .on_post (L96)
+
+credential-lifecycle/status:  # 4 items
+  - app.credentialing.CredentialCollectionEnd  # class @ keria/app/credentialing.py:345
+    # .on_post (L356)
+  - app.credentialing.CredentialResourceEnd  # class @ keria/app/credentialing.py:460
+    # .on_get (L471)
+    # .outputCred (L530)
+    # .on_delete (L579)
+  - app.credentialing.Credentialer  # class @ keria/app/credentialing.py:955
+    # .validate (L966)
+    # .issue (L990)
+    # .processCredentialMissingSigEscrow (L1015)
+    # .complete (L1032)
+    # .processEscrows (L1035)
+  - app.credentialing.Registrar  # class @ keria/app/credentialing.py:652
+    # .incept (L664)
+    # .issue (L693)
+    # .revoke (L729)
+    # .multisigIxn (L766)
+    # .complete (L779)
+    # .processEscrows (L784)
+    # .processWitnessEscrow (L793)
+    # .processMultisigEscrow (L824)
+    # .processDiseminationEscrow (L849)
+    # .sendToRecipients (L874)
+
+delegation/lifecycle:  # 1 items
+  - app.agenting.Delegator  # class @ keria/app/agenting.py:403
+    # .recur (L411)
+
 discovery:  # 4 items
   - app.aiding.EndRoleCollectionEnd  # class @ keria/app/aiding.py:684
     # .on_get (L687)
@@ -198,32 +206,24 @@ discovery:  # 4 items
     # .on_get (L40)
   - end.ending.loadEnds  # fn @ keria/end/ending.py:14
 
-keri/accountability/receipting:  # 1 items
-  - app.agenting.Witnesser  # class @ keria/app/agenting.py:379
-    # .recur (L386)
-
-keri/delegation/lifecycle:  # 1 items
-  - app.agenting.Delegator  # class @ keria/app/agenting.py:403
-    # .recur (L411)
-
-keri/identity:  # 1 items
+identity:  # 1 items
   - app.aiding.RpyEscrowCollectionEnd  # class @ keria/app/aiding.py:784
     # .on_get (L787)
 
-keri/identity/establishment:  # 1 items
+identity/establishment:  # 1 items
   - app.aiding.IdentifierCollectionEnd  # class @ keria/app/aiding.py:240
     # .on_options (L244)
     # .on_get (L249)
     # .on_post (L294)
 
-keri/identity/key-commitment:  # 2 items
+identity/key-commitment:  # 2 items
   - app.aiding.ChallengeCollectionEnd  # class @ keria/app/aiding.py:803
     # .on_get (L807)
   - app.aiding.ChallengeResourceEnd  # class @ keria/app/aiding.py:853
     # .on_post (L857)
     # .on_put (L916)
 
-keri/identity/state:  # 2 items
+identity/state:  # 2 items
   - app.agenting.Querier  # class @ keria/app/agenting.py:484
     # .recur (L494)
   - app.aiding.IdentifierResourceEnd  # class @ keria/app/aiding.py:430
@@ -232,7 +232,7 @@ keri/identity/state:  # 2 items
     # .rotate (L480)
     # .interact (L552)
 
-keri/identity/thresholds:  # 4 items
+identity/thresholds:  # 4 items
   - app.agenting.GroupRequester  # class @ keria/app/agenting.py:452
     # .recur (L463)
   - app.grouping.MultisigRequestCollectionEnd  # class @ keria/app/grouping.py:23
