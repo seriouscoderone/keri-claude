@@ -8415,34 +8415,6 @@ const RDOD_DATA = {
       ],
       "contracts": [
         {
-          "port_ref": "port://cloud-agent-service/api/inbound/admin-api",
-          "preconditions": [
-            {
-              "formal": {
-                "language": "python",
-                "expression": "lambda request: has_valid_kram_signature(request)"
-              },
-              "description": "All admin API requests must carry valid KRAM authentication"
-            },
-            {
-              "formal": {
-                "language": "python",
-                "expression": "lambda request: agent_exists(extract_controller_aid(request))"
-              },
-              "description": "The authenticated controller must have a provisioned agent instance"
-            }
-          ],
-          "postconditions": [
-            {
-              "formal": {
-                "language": "python",
-                "expression": "lambda request, response:\n    (response.status_code == 202 and 'name' in response.json())\n    or (response.status_code == 200)\n    or (response.status_code >= 400)\n"
-              },
-              "description": "Mutating async operations return 202 with operation handle; reads return 200; errors return 4xx/5xx"
-            }
-          ]
-        },
-        {
           "port_ref": "port://cloud-agent-service/api/inbound/message-router",
           "preconditions": [
             {
@@ -8501,27 +8473,6 @@ const RDOD_DATA = {
               "formal": {
                 "language": "pseudocode",
                 "expression": "auth_failed implies response.status == 401 AND no_state_change"
-              }
-            }
-          ]
-        },
-        {
-          "port_ref": "port://cloud-agent-service/provisioning/inbound/agent-lifecycle",
-          "preconditions": [
-            {
-              "description": "POST body must contain valid inception event",
-              "formal": {
-                "language": "pseudocode",
-                "expression": "body.icp != null AND is_valid_inception(body.icp)"
-              }
-            }
-          ],
-          "postconditions": [
-            {
-              "description": "On success: agent provisioned and ready for authenticated requests",
-              "formal": {
-                "language": "pseudocode",
-                "expression": "agency.get(controller_aid) != null AND response.status == 202"
               }
             }
           ]
@@ -19837,7 +19788,7 @@ const RDOD_DATA = {
           "technique": "property-based",
           "formal": {
             "language": "python",
-            "expression": "@given(endpoint_authorization())\ndef test_endpoint_auth_structure(auth):\n    assert auth.role in ('witness', 'controller', 'agent', 'watcher', 'mediator')\n    assert auth.endpoint.startswith('http://') or auth.endpoint.startswith('https://')\n    # endpoint_aid is optional\n    if auth.endpoint_aid is not None:\n        assert len(auth.endpoint_aid) >= 44\n"
+            "expression": "@given(endpoint_authorization())\ndef test_endpoint_auth_structure(auth):\n    assert auth.role in ('witness', 'controller', 'agent', 'watcher', 'mailbox')\n    assert auth.endpoint.startswith('http://') or auth.endpoint.startswith('https://')\n    # endpoint_aid is optional\n    if auth.endpoint_aid is not None:\n        assert len(auth.endpoint_aid) >= 44\n"
           },
           "strategy": "endpoint_authorization()",
           "notes": "Every endpoint authorization specifies at minimum a role and URL."
@@ -19892,7 +19843,7 @@ const RDOD_DATA = {
           "technique": "property-based",
           "formal": {
             "language": "python",
-            "expression": "@given(st.sampled_from(['witness', 'controller', 'agent', 'watcher', 'mediator']))\ndef test_role_operations(role):\n    allowed_ops = get_allowed_operations(role)\n    assert len(allowed_ops) > 0\n    if role == 'witness':\n        assert 'receipt' in allowed_ops\n    elif role == 'agent':\n        assert 'manage' in allowed_ops\n    elif role == 'watcher':\n        assert 'observe' in allowed_ops\n"
+            "expression": "@given(st.sampled_from(['witness', 'controller', 'agent', 'watcher', 'mailbox']))\ndef test_role_operations(role):\n    allowed_ops = get_allowed_operations(role)\n    assert len(allowed_ops) > 0\n    if role == 'witness':\n        assert 'receipt' in allowed_ops\n    elif role == 'agent':\n        assert 'manage' in allowed_ops\n    elif role == 'watcher':\n        assert 'observe' in allowed_ops\n"
           },
           "strategy": "sampled_from valid roles",
           "notes": "Each role has a distinct set of permitted operations."
@@ -19923,7 +19874,7 @@ const RDOD_DATA = {
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda aid, role=None: (\n    isinstance(aid, str) and\n    len(aid) >= 44 and\n    (role is None or role in ('witness', 'controller', 'agent', 'watcher', 'mediator'))\n)\n"
+                "expression": "lambda aid, role=None: (\n    isinstance(aid, str) and\n    len(aid) >= 44 and\n    (role is None or role in ('witness', 'controller', 'agent', 'watcher', 'mailbox'))\n)\n"
               },
               "description": "AID is a valid CESR-qualified identifier, role is optional but must be valid"
             }
@@ -20597,7 +20548,7 @@ const RDOD_DATA = {
               "description": "OOBI URL (e.g., http://witness.example.com/oobi/{aid}/{role}/{eid})",
               "types": [
                 {
-                  "ref": "types://discovery#OOBI/witness",
+                  "ref": "types://discovery#OOBI/role-based",
                   "fields": [
                     "url",
                     "aid",
@@ -21134,15 +21085,15 @@ const RDOD_DATA = {
           "notes": "Anchor list: ordered, may be empty, order affects SAID."
         },
         {
-          "invariant": "EO enforcement: when an identifier has the EO (Establishment Only) configuration trait, validators MUST reject interaction events (ixn) with error EstablishmentOnlyViolation (ref: errors://identity/anchoring#EstablishmentOnlyViolation). The rejection is immediate — the event is NOT escrowed, it is discarded. The EO trait is checked before any signature verification.",
+          "invariant": "EO enforcement: when an identifier has the EO (Establishment Only) configuration trait, validators MUST reject interaction events (ixn) with error AnchoringNotPermittedError (ref: errors://identity/anchoring#AnchoringNotPermittedError). The rejection is immediate — the event is NOT escrowed, it is discarded. The EO trait is checked before any signature verification.",
           "term": "Interaction Event",
           "technique": "property-based",
           "formal": {
             "language": "python",
-            "expression": "@given(aid=aid_with_config_strategy(),\n       ixn=interaction_event_strategy())\ndef test_eo_enforcement(aid, ixn):\n    ixn_for_aid = set_aid(ixn, aid.prefix)\n    if 'EO' in aid.config:\n        result = validate_event(ixn_for_aid, aid.key_state)\n        # Rejection is immediate\n        assert result.is_rejected(), (\n            f\"Identifier {aid.prefix} has EO trait — \"\n            f\"MUST reject ixn events immediately\"\n        )\n        assert result.error_type == 'EstablishmentOnlyViolation', (\n            \"Rejection error MUST be EstablishmentOnlyViolation\"\n        )\n        # Event is NOT escrowed — it is discarded\n        assert not result.is_escrowed, (\n            \"EO-rejected event MUST NOT be escrowed — it is discarded\"\n        )\n        # EO trait is checked before signature verification\n        assert result.checked_before_sig_verify, (\n            \"EO trait MUST be checked before any signature verification\"\n        )\n    else:\n        # Without EO, ixn events are permitted\n        pass\n"
+            "expression": "@given(aid=aid_with_config_strategy(),\n       ixn=interaction_event_strategy())\ndef test_eo_enforcement(aid, ixn):\n    ixn_for_aid = set_aid(ixn, aid.prefix)\n    if 'EO' in aid.config:\n        result = validate_event(ixn_for_aid, aid.key_state)\n        # Rejection is immediate\n        assert result.is_rejected(), (\n            f\"Identifier {aid.prefix} has EO trait — \"\n            f\"MUST reject ixn events immediately\"\n        )\n        assert result.error_type == 'AnchoringNotPermittedError', (\n            \"Rejection error MUST be AnchoringNotPermittedError\"\n        )\n        # Event is NOT escrowed — it is discarded\n        assert not result.is_escrowed, (\n            \"EO-rejected event MUST NOT be escrowed — it is discarded\"\n        )\n        # EO trait is checked before signature verification\n        assert result.checked_before_sig_verify, (\n            \"EO trait MUST be checked before any signature verification\"\n        )\n    else:\n        # Without EO, ixn events are permitted\n        pass\n"
           },
           "strategy": "aid_with_config_strategy() (with/without EO), interaction_event_strategy()",
-          "notes": "EO enforcement: immediate rejection (not escrowed), EstablishmentOnlyViolation error, checked before sig verification."
+          "notes": "EO enforcement: immediate rejection (not escrowed), AnchoringNotPermittedError error, checked before sig verification."
         },
         {
           "invariant": "Interaction event anchoring uses identical seal types as establishment event anchoring: DigestSeal (d field only), EventSeal (i, s, d fields), EventLocationSeal (i, s, t, p fields). The only difference is operational context — establishment events advance key state while interaction events do not. Seal verification (digest comparison, referenced event lookup) is identical in both cases.",
@@ -25512,7 +25463,13 @@ const RDOD_DATA = {
                 "description": "Escrow queue identifier",
                 "constraints": {
                   "enum": [
-                    "OOE"
+                    "OOE",
+                    "PSE",
+                    "PWE",
+                    "PDE",
+                    "LDE",
+                    "MDE",
+                    "MFE"
                   ]
                 }
               },

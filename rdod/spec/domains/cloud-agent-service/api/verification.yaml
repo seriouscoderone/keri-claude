@@ -149,26 +149,6 @@ properties:
 
 # Formalized port contracts
 contracts:
-  - port_ref: "port://cloud-agent-service/api/inbound/admin-api"
-    preconditions:
-      - formal:
-          language: python
-          expression: "lambda request: has_valid_kram_signature(request)"
-        description: "All admin API requests must carry valid KRAM authentication"
-      - formal:
-          language: python
-          expression: "lambda request: agent_exists(extract_controller_aid(request))"
-        description: "The authenticated controller must have a provisioned agent instance"
-    postconditions:
-      - formal:
-          language: python
-          expression: |
-            lambda request, response:
-                (response.status_code == 202 and 'name' in response.json())
-                or (response.status_code == 200)
-                or (response.status_code >= 400)
-        description: "Mutating async operations return 202 with operation handle; reads return 200; errors return 4xx/5xx"
-
   - port_ref: "port://cloud-agent-service/api/inbound/message-router"
     preconditions:
       - formal:
@@ -206,18 +186,6 @@ contracts:
         formal:
           language: "pseudocode"
           expression: "auth_failed implies response.status == 401 AND no_state_change"
-
-  - port_ref: "port://cloud-agent-service/provisioning/inbound/agent-lifecycle"
-    preconditions:
-      - description: "POST body must contain valid inception event"
-        formal:
-          language: "pseudocode"
-          expression: "body.icp != null AND is_valid_inception(body.icp)"
-    postconditions:
-      - description: "On success: agent provisioned and ready for authenticated requests"
-        formal:
-          language: "pseudocode"
-          expression: "agency.get(controller_aid) != null AND response.status == 202"
 
 # No state machine for the API subdomain — it is stateless request/response
 # The lifecycle state machines live in provisioning (agent lifecycle) and processing (operation lifecycle)
