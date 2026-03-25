@@ -1,13 +1,13 @@
 # keri-claude
 
-A Claude Code **plugin** and **domain-driven design specification** for the KERI (Key Event Receipt Infrastructure) ecosystem. Provides 16 skills for protocol implementation and a complete 46-domain DDD spec designed for AI-driven development in any language.
+A Claude Code **plugin** and **domain-driven design specification** for the KERI (Key Event Receipt Infrastructure) ecosystem. Provides 16 skills for protocol implementation and a complete 47-domain DDD spec designed for AI-driven development in any language.
 
 ## What's Here
 
 **Two things in one repo:**
 
 1. **Skills Plugin** — 16 Claude Code skills covering protocol specs, implementation APIs, coding conventions, and architecture planning
-2. **DDD Specification** — A complete domain-driven design specification of the KERI ecosystem (46 domains — every one buildable, no "word-only" containers) — designed to be the input for AI-assisted implementation in any language
+2. **DDD Specification** — A complete domain-driven design specification of the KERI ecosystem (47 domains — every one buildable, no "word-only" containers) — designed to be the input for AI-assisted implementation in any language
 
 ## DDD Specification
 
@@ -29,8 +29,9 @@ The `rdod/spec/domains/` directory contains a complete DDD decomposition of the 
 
 ```mermaid
 graph TB
-    subgraph Kernel["Kernel (Shared Language)"]
+    subgraph Kernel["Kernels (Shared Language)"]
         CESR["cesr/<br/>Encoding"]
+        KM["keri-messaging/<br/>exn, qry, rpy, KRAM"]
     end
 
     subgraph Domains["Buildable Domains"]
@@ -140,10 +141,11 @@ stateDiagram-v2
 ### Domain Map
 
 ```
-KERNEL
+KERNELS
   cesr/                              How data is encoded
     primitives/                        Self-describing crypto types
     composition/                       Composing primitives into messages
+  keri-messaging/                    How domains communicate (exn, qry, rpy, KRAM)
 
 DOMAINS
   identity/                          Create and manage identifiers
@@ -201,14 +203,15 @@ Each domain directory contains up to 8 spec files:
 
 | File | Purpose | Coverage |
 |------|---------|----------|
-| `domain.yaml` | Identity, relationships, published language, guidance | 46/46 |
-| `ubiquitous-language.yaml` | Detailed terms with invariants, examples, imports, specializes | 46/46 |
-| `ports.yaml` | Inbound/outbound interfaces with contracts | 46/46 |
-| `verification.yaml` | Formal properties, port contracts, state machines | 46/46 |
-| `errors.yaml` | Typed error taxonomy with cause, recovery, context | 42/46 |
-| `types.yaml` | Formal data structures with field constraints and variants | 22/46 |
-| `protocols.yaml` | Cross-domain orchestration flows with typed references | 7/46 |
-| `context-map.html` | Interactive Cytoscape visualization of all 46 domains | 1 |
+| `domain.yaml` | Identity, relationships, published language, guidance | 47/47 |
+| `ubiquitous-language.yaml` | Detailed terms with invariants, examples, imports, specializes | 47/47 |
+| `ports.yaml` | Inbound/outbound interfaces with contracts | 47/47 |
+| `verification.yaml` | Formal properties, port contracts, state machines | 47/47 |
+| `errors.yaml` | Typed error taxonomy with cause, recovery, context | 42/47 |
+| `types.yaml` | Formal data structures with field constraints and variants | 23/47 |
+| `protocols.yaml` | Cross-domain orchestration flows with typed references | 7/47 |
+| `integration-scenarios.yaml` | Cross-domain end-state assertions for protocols | 1 (14 scenarios) |
+| `context-map.html` | Interactive Cytoscape visualization of all 47 domains | 1 |
 
 ### Key Design Decisions
 
