@@ -206,7 +206,7 @@ Each domain directory contains up to 8 spec files:
 | `ports.yaml` | Inbound/outbound interfaces with contracts | 46/46 |
 | `verification.yaml` | Formal properties, port contracts, state machines | 46/46 |
 | `errors.yaml` | Typed error taxonomy with cause, recovery, context | 42/46 |
-| `types.yaml` | Formal data structures with field constraints and variants | 24/46 |
+| `types.yaml` | Formal data structures with field constraints and variants | 22/46 |
 | `protocols.yaml` | Cross-domain orchestration flows with typed references | 7/46 |
 | `context-map.html` | Interactive Cytoscape visualization of all 46 domains | 1 |
 
