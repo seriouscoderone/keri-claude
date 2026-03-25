@@ -1,16 +1,5 @@
 # errors.yaml
-domain_ref: "identity"
-
-# Error catalog for the identity domain.
-# These are protocol-level errors that occur during initial message parsing
-# and dispatch, BEFORE any subdomain (establishment, key-commitment, thresholds,
-# state, anchoring) processes the message. Subdomains define their own errors
-# for domain-specific validation (e.g., threshold checks, delegation seals).
-#
-# Severity levels:
-#   transient  — condition may self-resolve (escrow and retry)
-#   recoverable — requires operator or protocol-level action
-#   fatal      — unrecoverable; message is permanently rejected
+domain_ref: "keri-messaging"
 
 errors:
   - name: "ProtocolVersionMismatchError"
@@ -25,7 +14,7 @@ errors:
       - field: "supported_versions"
         type: "array[string]"
         description: "List of protocol versions this implementation supports"
-    related_port: "port://identity/inbound/event-processing"
+    related_port: "port://keri-messaging/inbound/message-parsing"
 
   - name: "UnsupportedEventTypeError"
     description: "Message type (ilk) is not recognized by the KERI protocol"
@@ -39,7 +28,7 @@ errors:
       - field: "known_ilks"
         type: "array[string]"
         description: "List of recognized ilks"
-    related_port: "port://identity/inbound/event-processing"
+    related_port: "port://keri-messaging/inbound/message-parsing"
 
   - name: "InvalidPrefixError"
     description: "AID prefix in the message is malformed or uses an unsupported CESR code"
@@ -53,7 +42,7 @@ errors:
       - field: "reason"
         type: "string"
         description: "Why it's invalid (unsupported code, wrong length, not Base64url)"
-    related_port: "port://identity/inbound/event-processing"
+    related_port: "port://keri-messaging/inbound/message-parsing"
 
   - name: "SAIDVerificationError"
     description: "Message SAID (d field) does not match the computed digest of the message body"
@@ -67,7 +56,7 @@ errors:
       - field: "computed_said"
         type: "string"
         description: "The SAID computed from the message body"
-    related_port: "port://identity/inbound/event-processing"
+    related_port: "port://keri-messaging/inbound/message-parsing"
 
   - name: "FieldOrderingError"
     description: "Message fields are not in canonical insertion order"
@@ -84,4 +73,4 @@ errors:
       - field: "received_order"
         type: "array[string]"
         description: "The actual field order received"
-    related_port: "port://identity/inbound/event-processing"
+    related_port: "port://keri-messaging/inbound/message-parsing"

@@ -1,0 +1,60 @@
+# ubiquitous-language.yaml
+domain_ref: "keri-messaging"
+
+imports: []
+
+terms:
+  - term: "Exchange Message (exn)"
+    definition: "Generic routed message envelope for peer-to-peer communication between KERI controllers. Any domain can communicate by constructing an exn with a route field and registering a handler for inbound routes via the Exchanger. The exn message type is the standard carrier for IPEX credential exchange, multisig coordination, endpoint authorization, and any future peer protocol."
+    invariants:
+      - "Route (r) field determines which domain protocol handles the message"
+      - "Known route prefixes: /ipex/* (credential exchange), /multisig/* (group coordination), /end/role and /loc/scheme (discovery), /watcher/* (integrity), /ksn (key state), /tsn/* (credential status)"
+      - "Every exn is signed by the sender's AID — provides non-repudiable attribution"
+      - "Subject to KRAM replay protection before domain dispatch"
+      - "Prior (p) field links messages in multi-step conversations"
+    examples:
+      - "IPEX grant: exn with route=/ipex/grant, payload=credential data, embeds=ACDC+TEL+seal"
+      - "Multisig inception: exn with route=/multisig/icp, payload=inception parameters"
+      - "Endpoint authorization: exn with route=/end/role, payload=endpoint data"
+    related_terms: ["Exchanger", "KRAM"]
+
+  - term: "Exchanger"
+    definition: "Generic message router that dispatches inbound exchange (exn) messages to handlers registered by route prefix. Domains register their route handlers at startup. The Exchanger validates message signatures before dispatching to the appropriate handler. Any domain can participate in peer-to-peer communication by registering a route handler."
+    invariants:
+      - "Routes incoming exn messages to the handler registered for the message's route field"
+      - "Validates message signatures before dispatching"
+      - "Escrows messages awaiting prerequisites — never silently drops"
+      - "Multiple domains can register handlers simultaneously"
+    related_terms: ["Exchange Message (exn)"]
+
+  - term: "KERI Field Map"
+    definition: "The ordered key-value structure of a KERI message body. Field maps use short field labels (v, t, d, i, s, etc.) for wire efficiency, but each field represents a specific domain concept. The presence or absence of optional fields signals semantic meaning — for example, the di field signals delegation, the n field signals transferability. Implementations SHOULD provide domain-typed construction interfaces that map human-readable concepts to field labels."
+    invariants:
+      - "Field order is canonical per message type — deviations invalidate the SAID"
+      - "Required fields MUST always be present; optional fields signal semantic variation"
+      - "The d field is always a SAID (self-addressing identifier) computed over the field map"
+      - "The v field is always first — enables protocol and version detection"
+      - "The t field identifies the message type (ilk)"
+    related_terms: ["SAID", "Identifier Type Dimensions"]
+
+  - term: "KERI Message Types"
+    synonyms: ["Ilks", "Protocol Messages"]
+    definition: "The complete set of KERI protocol message types, identified by the 't' (type/ilk) field. Organized into key events, receipts, queries/replies, and exchanges. Each type is dispatched to the appropriate handler by the Message Parser."
+    invariants:
+      - "Key Events (-> Event Processor): icp (inception), rot (rotation), ixn (interaction), dip (delegated inception), drt (delegated rotation)"
+      - "Receipts (-> Witness Agreement): rct (non-transferable receipt), vrc (transferable receipt)"
+      - "Queries & Replies (-> query handler): qry (query), rpy (reply), pro (prod/probe), bar (bare reply)"
+      - "Exchanges (-> Exchanger): exn (exchange message — carries IPEX, multi-sig coordination, challenge-response), xip (exchange inception — first message in a multi-exchange transaction set, all subsequent exn messages reference the xip SAID)"
+      - "TEL Events (-> TEL Processor): vcp (registry inception), vrt (registry rotation), iss (issuance), rev (revocation), bis (backed issuance), brv (backed revocation), rip (TEL registry inception), bup (blindable update), upd (public update)"
+      - "ACDC Types (-> ACDC Processor): acm (ACDC field map — default labeled message type), act (ACDC fixed field with attribute section — CESR native), acg (ACDC fixed field with aggregate section — CESR native), ace (ACDC with extra fields — experimental), sch (schema)"
+      - "The ilk field determines which processing pipeline handles the message"
+    examples:
+      - "t='icp' -> Kevery.processEvent()"
+      - "t='rct' -> Kevery.processReceipt()"
+      - "t='exn' -> Exchanger.processEvent() (routes by inner 'r' field to IPEX, multisig, etc.)"
+      - "t='iss' -> Tevery.processEvent()"
+    related_terms: ["Message Parser", "Event Processor", "Key Event", "Witness", "IPEX"]
+
+events:
+
+rules:

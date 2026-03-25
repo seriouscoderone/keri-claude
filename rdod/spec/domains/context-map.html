@@ -528,7 +528,7 @@ const RDOD_DATA = {
       "proper-kerl",
       "accountability"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/accountability/consensus/domain.yaml",
+    "_source": "rdod/spec/domains/accountability/consensus/domain.yaml",
     "_events": [
       {
         "name": "AccountabilityThresholdMet",
@@ -1045,7 +1045,7 @@ const RDOD_DATA = {
       "direct-mode",
       "indirect-mode"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/accountability/dissemination/domain.yaml",
+    "_source": "rdod/spec/domains/accountability/dissemination/domain.yaml",
     "_events": [
       {
         "name": "ReceiptDisseminated",
@@ -1531,7 +1531,7 @@ const RDOD_DATA = {
       "availability",
       "indirect-mode"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/accountability/domain.yaml",
+    "_source": "rdod/spec/domains/accountability/domain.yaml",
     "_events": [
       {
         "name": "WitnessAgreementComplete",
@@ -2153,7 +2153,7 @@ const RDOD_DATA = {
       "witness-receipt",
       "receipt-types"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/accountability/receipting/domain.yaml",
+    "_source": "rdod/spec/domains/accountability/receipting/domain.yaml",
     "_events": [
       {
         "name": "EventReceipted",
@@ -3359,7 +3359,7 @@ const RDOD_DATA = {
       "cold-start",
       "composition"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/cesr/composition/domain.yaml",
+    "_source": "rdod/spec/domains/cesr/composition/domain.yaml",
     "_events": [
       {
         "name": "StreamStarted",
@@ -5277,7 +5277,7 @@ const RDOD_DATA = {
       "cryptographic-primitives",
       "streaming"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/cesr/domain.yaml",
+    "_source": "rdod/spec/domains/cesr/domain.yaml",
     "_events": [
       {
         "name": "PrimitiveEncoded",
@@ -6781,7 +6781,7 @@ const RDOD_DATA = {
       "encoding",
       "qualification"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/cesr/primitives/domain.yaml",
+    "_source": "rdod/spec/domains/cesr/primitives/domain.yaml",
     "_events": [
       {
         "name": "PrimitiveQualified",
@@ -8077,7 +8077,7 @@ const RDOD_DATA = {
       "end-role",
       "kram"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/cloud-agent-service/api/domain.yaml",
+    "_source": "rdod/spec/domains/cloud-agent-service/api/domain.yaml",
     "_events": [
       {
         "name": "NotificationQueued",
@@ -8709,6 +8709,11 @@ const RDOD_DATA = {
         "ref": "kernel://cesr",
         "source": "domain://cesr",
         "relationship": "Conformist — all events and messages encoded in CESR format"
+      },
+      {
+        "ref": "kernel://keri-messaging",
+        "source": "domain://keri-messaging",
+        "relationship": "KERI messaging primitives (exn, qry, rpy) adopted natively"
       }
     ],
     "adjacents": [
@@ -8775,7 +8780,7 @@ const RDOD_DATA = {
       "multi-tenant",
       "signify"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/cloud-agent-service/domain.yaml",
+    "_source": "rdod/spec/domains/cloud-agent-service/domain.yaml",
     "_events": [
       {
         "name": "AgentProvisioned",
@@ -8802,12 +8807,12 @@ const RDOD_DATA = {
       },
       {
         "term": "KRAM",
-        "from": "domain://identity",
+        "from": "domain://keri-messaging",
         "usage": "Admin API uses KRAM for replay protection on authenticated requests"
       },
       {
         "term": "Exchange Message (exn)",
-        "from": "domain://identity",
+        "from": "domain://keri-messaging",
         "usage": "Message router processes inbound exn messages"
       }
     ],
@@ -9323,7 +9328,7 @@ const RDOD_DATA = {
       "monitor",
       "async"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/cloud-agent-service/processing/domain.yaml",
+    "_source": "rdod/spec/domains/cloud-agent-service/processing/domain.yaml",
     "_events": [
       {
         "name": "OperationCreated",
@@ -9928,7 +9933,7 @@ const RDOD_DATA = {
       "agent-lifecycle",
       "boot"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/cloud-agent-service/provisioning/domain.yaml",
+    "_source": "rdod/spec/domains/cloud-agent-service/provisioning/domain.yaml",
     "_events": [
       {
         "name": "AgentProvisioned",
@@ -10411,7 +10416,13 @@ const RDOD_DATA = {
         "relationship": "Cryptographic proof mechanics — PoI, PoD, credential artifacts, KRAM"
       }
     ],
-    "kernels": [],
+    "kernels": [
+      {
+        "ref": "kernel://keri-messaging",
+        "source": "domain://keri-messaging",
+        "relationship": "KERI messaging primitives (exn, qry, rpy) adopted natively"
+      }
+    ],
     "adjacents": [],
     "externals": [],
     "implementation_guidance": {
@@ -10428,7 +10439,7 @@ const RDOD_DATA = {
       "protocol",
       "orchestration"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/credential-exchange/domain.yaml",
+    "_source": "rdod/spec/domains/credential-exchange/domain.yaml",
     "_events": [
       {
         "name": "ExchangeCompleted",
@@ -11077,7 +11088,13 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [],
+    "kernels": [
+      {
+        "ref": "kernel://keri-messaging",
+        "source": "domain://keri-messaging",
+        "relationship": "KERI messaging primitives (exn, qry, rpy) adopted natively"
+      }
+    ],
     "adjacents": [],
     "externals": [
       {
@@ -11105,7 +11122,7 @@ const RDOD_DATA = {
       "direct-issuance",
       "messaging"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/credential-exchange/negotiation/domain.yaml",
+    "_source": "rdod/spec/domains/credential-exchange/negotiation/domain.yaml",
     "_events": [
       {
         "name": "ExchangeInitiated",
@@ -12275,7 +12292,7 @@ const RDOD_DATA = {
       "kram",
       "credential-artifacts"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/credential-exchange/proof/domain.yaml",
+    "_source": "rdod/spec/domains/credential-exchange/proof/domain.yaml",
     "_events": [
       {
         "name": "IssuanceProofVerified",
@@ -12308,7 +12325,7 @@ const RDOD_DATA = {
     "_imports": [
       {
         "term": "KRAM",
-        "from": "domain://identity",
+        "from": "domain://keri-messaging",
         "usage": "Exchange messages are authenticated via KRAM — signature validity checked before processing any IPEX content"
       }
     ],
@@ -13389,7 +13406,7 @@ const RDOD_DATA = {
       "issuance",
       "credential-lifecycle"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/credential-lifecycle/domain.yaml",
+    "_source": "rdod/spec/domains/credential-lifecycle/domain.yaml",
     "_events": [
       {
         "name": "RegistryCreated",
@@ -14812,7 +14829,7 @@ const RDOD_DATA = {
       "regid",
       "credential-lifecycle"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/credential-lifecycle/registry/domain.yaml",
+    "_source": "rdod/spec/domains/credential-lifecycle/registry/domain.yaml",
     "_events": [
       {
         "name": "RegistryIncepted",
@@ -15403,7 +15420,7 @@ const RDOD_DATA = {
       "registry-state",
       "state-reconstruction"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/credential-lifecycle/status/domain.yaml",
+    "_source": "rdod/spec/domains/credential-lifecycle/status/domain.yaml",
     "_events": [
       {
         "name": "CredentialStateChanged",
@@ -16305,7 +16322,7 @@ const RDOD_DATA = {
       "seal-verification",
       "kel-anchor"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/credential-lifecycle/verification/domain.yaml",
+    "_source": "rdod/spec/domains/credential-lifecycle/verification/domain.yaml",
     "_events": [
       {
         "name": "TelValidationPassed",
@@ -16999,7 +17016,7 @@ const RDOD_DATA = {
       "two-way-peg",
       "source-seal"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/delegation/authorization/domain.yaml",
+    "_source": "rdod/spec/domains/delegation/authorization/domain.yaml",
     "_events": [
       {
         "name": "DelegationSealAnchored",
@@ -17704,7 +17721,7 @@ const RDOD_DATA = {
       "key-management",
       "recovery"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/delegation/domain.yaml",
+    "_source": "rdod/spec/domains/delegation/domain.yaml",
     "_events": [
       {
         "name": "DelegatedInceptionCreated",
@@ -18254,7 +18271,7 @@ const RDOD_DATA = {
       "approved-seals",
       "pipeline"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/delegation/lifecycle/domain.yaml",
+    "_source": "rdod/spec/domains/delegation/lifecycle/domain.yaml",
     "_events": [
       {
         "name": "DelegatedEventEscrowed",
@@ -18783,7 +18800,7 @@ const RDOD_DATA = {
       "security",
       "combined-arms"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/delegation/recovery/domain.yaml",
+    "_source": "rdod/spec/domains/delegation/recovery/domain.yaml",
     "_events": [
       {
         "name": "DelegatedRecoveryPerformed",
@@ -19277,7 +19294,13 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [],
+    "kernels": [
+      {
+        "ref": "kernel://keri-messaging",
+        "source": "domain://keri-messaging",
+        "relationship": "KERI messaging primitives (exn, qry, rpy) adopted natively"
+      }
+    ],
     "adjacents": [
       {
         "ref": "domain://identity",
@@ -19305,7 +19328,7 @@ const RDOD_DATA = {
       "bootstrap",
       "endpoints"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/discovery/domain.yaml",
+    "_source": "rdod/spec/domains/discovery/domain.yaml",
     "_events": [
       {
         "name": "OOBIResolved",
@@ -20653,7 +20676,7 @@ const RDOD_DATA = {
       "digest-seal",
       "event-seal"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/identity/anchoring/domain.yaml",
+    "_source": "rdod/spec/domains/identity/anchoring/domain.yaml",
     "_events": [
       {
         "name": "InteractionCreated",
@@ -21577,54 +21600,6 @@ const RDOD_DATA = {
         ]
       },
       {
-        "term": "Exchange Message (exn)",
-        "definition": "Generic routed message envelope for peer-to-peer communication between KERI controllers. Any domain can communicate by constructing an exn with a route field and registering a handler for inbound routes via the Exchanger. The exn message type is the standard carrier for IPEX credential exchange, multisig coordination, endpoint authorization, and any future peer protocol.",
-        "invariants": [
-          "Route (r) field determines which domain protocol handles the message",
-          "Known route prefixes: /ipex/* (credential exchange), /multisig/* (group coordination), /end/role and /loc/scheme (discovery), /watcher/* (integrity), /ksn (key state), /tsn/* (credential status)",
-          "Every exn is signed by the sender's AID — provides non-repudiable attribution",
-          "Subject to KRAM replay protection before domain dispatch",
-          "Prior (p) field links messages in multi-step conversations"
-        ],
-        "examples": [
-          "IPEX grant: exn with route=/ipex/grant, payload=credential data, embeds=ACDC+TEL+seal",
-          "Multisig inception: exn with route=/multisig/icp, payload=inception parameters",
-          "Endpoint authorization: exn with route=/end/role, payload=endpoint data"
-        ],
-        "related_terms": [
-          "Exchanger",
-          "KRAM"
-        ]
-      },
-      {
-        "term": "Exchanger",
-        "definition": "Generic message router that dispatches inbound exchange (exn) messages to handlers registered by route prefix. Domains register their route handlers at startup. The Exchanger validates message signatures before dispatching to the appropriate handler. Any domain can participate in peer-to-peer communication by registering a route handler.",
-        "invariants": [
-          "Routes incoming exn messages to the handler registered for the message's route field",
-          "Validates message signatures before dispatching",
-          "Escrows messages awaiting prerequisites — never silently drops",
-          "Multiple domains can register handlers simultaneously"
-        ],
-        "related_terms": [
-          "Exchange Message (exn)"
-        ]
-      },
-      {
-        "term": "KERI Field Map",
-        "definition": "The ordered key-value structure of a KERI message body. Field maps use short field labels (v, t, d, i, s, etc.) for wire efficiency, but each field represents a specific domain concept. The presence or absence of optional fields signals semantic meaning — for example, the di field signals delegation, the n field signals transferability. Implementations SHOULD provide domain-typed construction interfaces that map human-readable concepts to field labels.",
-        "invariants": [
-          "Field order is canonical per message type — deviations invalidate the SAID",
-          "Required fields MUST always be present; optional fields signal semantic variation",
-          "The d field is always a SAID (self-addressing identifier) computed over the field map",
-          "The v field is always first — enables protocol and version detection",
-          "The t field identifies the message type (ilk)"
-        ],
-        "related_terms": [
-          "SAID",
-          "Identifier Type Dimensions"
-        ]
-      },
-      {
         "term": "Event Database",
         "synonyms": [
           "Baser"
@@ -21666,36 +21641,6 @@ const RDOD_DATA = {
           "Event Database",
           "Message Parser"
         ]
-      },
-      {
-        "term": "KERI Message Types",
-        "synonyms": [
-          "Ilks",
-          "Protocol Messages"
-        ],
-        "definition": "The complete set of KERI protocol message types, identified by the 't' (type/ilk) field. Organized into key events, receipts, queries/replies, and exchanges. Each type is dispatched to the appropriate handler by the Message Parser.",
-        "invariants": [
-          "Key Events (-> Event Processor): icp (inception), rot (rotation), ixn (interaction), dip (delegated inception), drt (delegated rotation)",
-          "Receipts (-> Witness Agreement): rct (non-transferable receipt), vrc (transferable receipt)",
-          "Queries & Replies (-> query handler): qry (query), rpy (reply), pro (prod/probe), bar (bare reply)",
-          "Exchanges (-> Exchanger): exn (exchange message — carries IPEX, multi-sig coordination, challenge-response), xip (exchange inception — first message in a multi-exchange transaction set, all subsequent exn messages reference the xip SAID)",
-          "TEL Events (-> TEL Processor): vcp (registry inception), vrt (registry rotation), iss (issuance), rev (revocation), bis (backed issuance), brv (backed revocation), rip (TEL registry inception), bup (blindable update), upd (public update)",
-          "ACDC Types (-> ACDC Processor): acm (ACDC field map — default labeled message type), act (ACDC fixed field with attribute section — CESR native), acg (ACDC fixed field with aggregate section — CESR native), ace (ACDC with extra fields — experimental), sch (schema)",
-          "The ilk field determines which processing pipeline handles the message"
-        ],
-        "examples": [
-          "t='icp' -> Kevery.processEvent()",
-          "t='rct' -> Kevery.processReceipt()",
-          "t='exn' -> Exchanger.processEvent() (routes by inner 'r' field to IPEX, multisig, etc.)",
-          "t='iss' -> Tevery.processEvent()"
-        ],
-        "related_terms": [
-          "Message Parser",
-          "Event Processor",
-          "Key Event",
-          "Witness",
-          "IPEX"
-        ]
       }
     ],
     "published_language": [
@@ -21706,14 +21651,6 @@ const RDOD_DATA = {
       {
         "term": "Controller",
         "description": "Entity controlling an AID — referenced by all domains that authenticate"
-      },
-      {
-        "term": "Exchange Message (exn)",
-        "description": "Generic routed message envelope — used by IPEX, multisig coordination, discovery"
-      },
-      {
-        "term": "KRAM",
-        "description": "Replay protection mechanism — used by cloud-agent-service and any message-receiving service"
       }
     ],
     "domain_clients": [],
@@ -21754,6 +21691,11 @@ const RDOD_DATA = {
         "ref": "kernel://cryptographic-algorithms",
         "source": "Ed25519 (event signing), Blake3-256/SHA-256 (SAID computation, prior event digest, seal digests, next key commitments)",
         "relationship": "Cryptographic algorithm types appear directly in event fields and key state structures — signatures, digests, public keys, and threshold expressions are kernel types"
+      },
+      {
+        "ref": "kernel://keri-messaging",
+        "source": "domain://keri-messaging",
+        "relationship": "KERI messaging primitives (exn, qry, rpy) adopted natively"
       }
     ],
     "adjacents": [
@@ -21803,7 +21745,7 @@ const RDOD_DATA = {
       "thresholds",
       "anchoring"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/identity/domain.yaml",
+    "_source": "rdod/spec/domains/identity/domain.yaml",
     "_events": [
       {
         "name": "InceptionCreated",
@@ -22125,113 +22067,7 @@ const RDOD_DATA = {
       ],
       "state_machines": []
     },
-    "_errors": [
-      {
-        "name": "ProtocolVersionMismatchError",
-        "description": "Message version string indicates an unsupported protocol version",
-        "cause": "The v field's protocol version (Mmm segment) does not match any version supported by this implementation",
-        "recovery": "abort",
-        "severity": "fatal",
-        "context": [
-          {
-            "field": "received_version",
-            "type": "string",
-            "description": "The version string from the message"
-          },
-          {
-            "field": "supported_versions",
-            "type": "array[string]",
-            "description": "List of protocol versions this implementation supports"
-          }
-        ],
-        "related_port": "port://identity/inbound/event-processing"
-      },
-      {
-        "name": "UnsupportedEventTypeError",
-        "description": "Message type (ilk) is not recognized by the KERI protocol",
-        "cause": "The t field contains an ilk that is not in the set of known KERI message types (icp, rot, ixn, dip, drt, rct, qry, rpy, exn, xip, pro, bar)",
-        "recovery": "abort",
-        "severity": "fatal",
-        "context": [
-          {
-            "field": "ilk",
-            "type": "string",
-            "description": "The unrecognized message type"
-          },
-          {
-            "field": "known_ilks",
-            "type": "array[string]",
-            "description": "List of recognized ilks"
-          }
-        ],
-        "related_port": "port://identity/inbound/event-processing"
-      },
-      {
-        "name": "InvalidPrefixError",
-        "description": "AID prefix in the message is malformed or uses an unsupported CESR code",
-        "cause": "The i field does not parse as a valid CESR-qualified identifier prefix",
-        "recovery": "abort",
-        "severity": "fatal",
-        "context": [
-          {
-            "field": "prefix",
-            "type": "string",
-            "description": "The invalid prefix value"
-          },
-          {
-            "field": "reason",
-            "type": "string",
-            "description": "Why it's invalid (unsupported code, wrong length, not Base64url)"
-          }
-        ],
-        "related_port": "port://identity/inbound/event-processing"
-      },
-      {
-        "name": "SAIDVerificationError",
-        "description": "Message SAID (d field) does not match the computed digest of the message body",
-        "cause": "The d field value does not equal the SAID computed over the message with d as placeholder — the message has been tampered with or incorrectly constructed",
-        "recovery": "abort",
-        "severity": "fatal",
-        "context": [
-          {
-            "field": "claimed_said",
-            "type": "string",
-            "description": "The d field value in the message"
-          },
-          {
-            "field": "computed_said",
-            "type": "string",
-            "description": "The SAID computed from the message body"
-          }
-        ],
-        "related_port": "port://identity/inbound/event-processing"
-      },
-      {
-        "name": "FieldOrderingError",
-        "description": "Message fields are not in canonical insertion order",
-        "cause": "The serialized field map has fields in an order that does not match the canonical order defined for this message type — SAID computation would produce a different result",
-        "recovery": "abort",
-        "severity": "fatal",
-        "context": [
-          {
-            "field": "ilk",
-            "type": "string",
-            "description": "The message type"
-          },
-          {
-            "field": "expected_order",
-            "type": "array[string]",
-            "description": "The canonical field order for this ilk"
-          },
-          {
-            "field": "received_order",
-            "type": "array[string]",
-            "description": "The actual field order received"
-          }
-        ],
-        "related_port": "port://identity/inbound/event-processing"
-      }
-    ],
+    "_errors": [],
     "_types": [
       {
         "name": "InceptionEvent",
@@ -22863,236 +22699,6 @@ const RDOD_DATA = {
               "next_key_digests correspond to the latest establishment event's n field",
               "If next_key_digests is empty and sn > 0, identifier is abandoned",
               "If next_key_digests is empty and sn == 0, identifier is non-transferable"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "ExchangeMessage",
-        "description": "Generic routed message envelope for peer-to-peer communication. Used by IPEX (credential exchange), multisig coordination, endpoint authorization, and any future peer protocol. The route field determines which domain handles the message.",
-        "variants": [
-          {
-            "name": "default",
-            "fields": [
-              {
-                "name": "v",
-                "type": "string",
-                "required": true,
-                "description": "Version string"
-              },
-              {
-                "name": "t",
-                "type": "string",
-                "required": true,
-                "constraints": {
-                  "enum": [
-                    "exn"
-                  ]
-                },
-                "description": "Message type — exchange"
-              },
-              {
-                "name": "d",
-                "type": "string",
-                "required": true,
-                "description": "SAID"
-              },
-              {
-                "name": "i",
-                "type": "string",
-                "required": true,
-                "description": "Sender AID — the controller initiating this exchange"
-              },
-              {
-                "name": "rp",
-                "type": "string",
-                "required": true,
-                "description": "Replay protection — nonce or reference for anti-replay (v1) or x field (v2)"
-              },
-              {
-                "name": "p",
-                "type": "string",
-                "required": true,
-                "description": "Prior message SAID — links messages in a conversation thread. Empty for first message."
-              },
-              {
-                "name": "dt",
-                "type": "string",
-                "required": true,
-                "description": "Datetime — ISO 8601, subject to KRAM timeliness check"
-              },
-              {
-                "name": "r",
-                "type": "string",
-                "required": true,
-                "description": "Route — determines which domain protocol handles this message"
-              },
-              {
-                "name": "q",
-                "type": "map",
-                "required": true,
-                "description": "Query/modifier data"
-              },
-              {
-                "name": "a",
-                "type": "map",
-                "required": true,
-                "description": "Payload — the domain-specific data for this exchange"
-              },
-              {
-                "name": "e",
-                "type": "map",
-                "required": true,
-                "description": "Embedded messages — nested SADs (credentials, events, etc.)"
-              }
-            ],
-            "invariants": [
-              "Route (r) determines the handling domain — implementations dispatch by route prefix",
-              "Known route prefixes: /ipex/* (credential exchange), /multisig/* (group coordination), /end/role (discovery), /watcher/* (integrity)",
-              "Prior (p) field links to the previous message's SAID in a conversation — empty string for first message",
-              "Subject to KRAM replay protection — dt must be monotonically increasing per sender",
-              "Must be signed by sender's current keys — provides non-repudiable attribution"
-            ]
-          }
-        ],
-        "construction_defaults": {
-          "p": "",
-          "q": "{}",
-          "e": "{}"
-        },
-        "encoding": [
-          {
-            "format": "json",
-            "notes": "Standard KERI serialization. Fields in canonical insertion order."
-          }
-        ]
-      },
-      {
-        "name": "QueryMessage",
-        "description": "Request for information from another controller or service. Routes determine what is being queried.",
-        "variants": [
-          {
-            "name": "default",
-            "fields": [
-              {
-                "name": "v",
-                "type": "string",
-                "required": true,
-                "description": "Version string"
-              },
-              {
-                "name": "t",
-                "type": "string",
-                "required": true,
-                "constraints": {
-                  "enum": [
-                    "qry"
-                  ]
-                },
-                "description": "Message type — query"
-              },
-              {
-                "name": "d",
-                "type": "string",
-                "required": true,
-                "description": "SAID"
-              },
-              {
-                "name": "dt",
-                "type": "string",
-                "required": true,
-                "description": "Datetime"
-              },
-              {
-                "name": "r",
-                "type": "string",
-                "required": true,
-                "description": "Route — what is being queried",
-                "constraints": {
-                  "enum": [
-                    "logs",
-                    "ksn",
-                    "mbx",
-                    "tels",
-                    "tsn"
-                  ]
-                }
-              },
-              {
-                "name": "rr",
-                "type": "string",
-                "required": true,
-                "description": "Reply route — where to send the response"
-              },
-              {
-                "name": "q",
-                "type": "map",
-                "required": true,
-                "description": "Query parameters (prefix, sn, SAID filters)"
-              }
-            ],
-            "invariants": [
-              "Routes logs/ksn/mbx handled by identity domain",
-              "Routes tels/tsn handled by credential-lifecycle domain",
-              "Subject to KRAM replay protection"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "ReplyMessage",
-        "description": "Response to a query or unsolicited state notification. Route determines the content type.",
-        "variants": [
-          {
-            "name": "default",
-            "fields": [
-              {
-                "name": "v",
-                "type": "string",
-                "required": true,
-                "description": "Version string"
-              },
-              {
-                "name": "t",
-                "type": "string",
-                "required": true,
-                "constraints": {
-                  "enum": [
-                    "rpy"
-                  ]
-                },
-                "description": "Message type — reply"
-              },
-              {
-                "name": "d",
-                "type": "string",
-                "required": true,
-                "description": "SAID"
-              },
-              {
-                "name": "dt",
-                "type": "string",
-                "required": true,
-                "description": "Datetime"
-              },
-              {
-                "name": "r",
-                "type": "string",
-                "required": true,
-                "description": "Route — what type of reply this is"
-              },
-              {
-                "name": "a",
-                "type": "map",
-                "required": true,
-                "description": "Reply data payload"
-              }
-            ],
-            "invariants": [
-              "Routes /end/role and /loc/scheme handled by discovery domain",
-              "Route /ksn handled by identity/state domain",
-              "Subject to BADA (Best Available Data Accepted) acceptance policy",
-              "Subject to KRAM replay protection"
             ]
           }
         ]
@@ -24205,7 +23811,7 @@ const RDOD_DATA = {
       "delegation",
       "pipeline"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/identity/establishment/domain.yaml",
+    "_source": "rdod/spec/domains/identity/establishment/domain.yaml",
     "_events": [
       {
         "name": "ValidationPassed",
@@ -25758,7 +25364,7 @@ const RDOD_DATA = {
       "commitment",
       "key-lifecycle"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/identity/key-commitment/domain.yaml",
+    "_source": "rdod/spec/domains/identity/key-commitment/domain.yaml",
     "_events": [
       {
         "name": "PreRotationCommitted",
@@ -26687,7 +26293,7 @@ const RDOD_DATA = {
       "configuration-traits",
       "state-reconstruction"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/identity/state/domain.yaml",
+    "_source": "rdod/spec/domains/identity/state/domain.yaml",
     "_events": [
       {
         "name": "KeyEventVerifierCreated",
@@ -27870,7 +27476,7 @@ const RDOD_DATA = {
       "weighted-threshold",
       "dual-threshold"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/identity/thresholds/domain.yaml",
+    "_source": "rdod/spec/domains/identity/thresholds/domain.yaml",
     "_events": [
       {
         "name": "SigningThresholdSatisfied",
@@ -29219,7 +28825,7 @@ const RDOD_DATA = {
       "ambient-verifiability",
       "eclipse-attack"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/integrity/detection/domain.yaml",
+    "_source": "rdod/spec/domains/integrity/detection/domain.yaml",
     "_events": [
       {
         "name": "DuplicityDetected",
@@ -29903,7 +29509,7 @@ const RDOD_DATA = {
       "watcher",
       "monitoring"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/integrity/domain.yaml",
+    "_source": "rdod/spec/domains/integrity/domain.yaml",
     "_events": [
       {
         "name": "DuplicityDetected",
@@ -30771,7 +30377,7 @@ const RDOD_DATA = {
       "ldes",
       "dels"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/integrity/evidence/domain.yaml",
+    "_source": "rdod/spec/domains/integrity/evidence/domain.yaml",
     "_events": [
       {
         "name": "ForkDetected",
@@ -31386,7 +30992,7 @@ const RDOD_DATA = {
       "disputed-branch",
       "protocol-logic"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/integrity/recovery/domain.yaml",
+    "_source": "rdod/spec/domains/integrity/recovery/domain.yaml",
     "_events": [
       {
         "name": "SupersedingRecoveryApplied",
@@ -31734,6 +31340,520 @@ const RDOD_DATA = {
       }
     ]
   },
+  "keri-messaging": {
+    "template_version": "1.0",
+    "id": "keri-messaging",
+    "name": "KERI Messaging",
+    "description": "Kernel domain providing the cross-cutting messaging primitives used by every domain that communicates over the KERI protocol. Defines the exchange message envelope (exn), query/reply message types (qry/rpy), the Exchanger routing pattern, KRAM replay protection, and KERI field map conventions.\nThis is a kernel — adopted natively by all communicating domains, like CESR is adopted for encoding. Domains reference it via kernel://keri-messaging.\n",
+    "version": "0.1.0",
+    "source_material": [
+      {
+        "type": "document",
+        "reference": "keri-specification.md — sections: Exchange Message, Query Message, Reply Message, KRAM"
+      },
+      {
+        "type": "implementation",
+        "reference": "keripy — src/keri/core/eventing.py (exchange, query, reply), src/keri/core/kraming.py (Kramer), src/keri/peer/exchanging.py (Exchanger)"
+      }
+    ],
+    "published_language": [
+      {
+        "term": "Exchange Message (exn)",
+        "description": "Generic routed message envelope for peer-to-peer communication"
+      },
+      {
+        "term": "Exchanger",
+        "description": "Generic message router dispatching exn messages by route prefix"
+      },
+      {
+        "term": "KRAM",
+        "description": "Replay protection mechanism for non-KEL messages"
+      },
+      {
+        "term": "Query Message (qry)",
+        "description": "Request for information from another controller or service"
+      },
+      {
+        "term": "Reply Message (rpy)",
+        "description": "Response to a query or unsolicited state notification"
+      },
+      {
+        "term": "KERI Field Map",
+        "description": "Ordered key-value message structure with short field labels"
+      }
+    ],
+    "domain_clients": [],
+    "subdomains": [],
+    "kernels": [
+      {
+        "ref": "kernel://cesr",
+        "source": "domain://cesr",
+        "relationship": "All KERI protocol messages are CESR-encoded"
+      }
+    ],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "module",
+      "language_affinity": "any",
+      "notes": "This kernel provides the messaging primitives that all communicating domains adopt natively. In keripy: eventing.py (exchange, query, reply functions), kraming.py (Kramer class), exchanging.py (Exchanger). Every domain that sends or receives exn/qry/rpy messages depends on this kernel.\n"
+    },
+    "issues": [],
+    "tags": [
+      "kernel",
+      "messaging",
+      "exn",
+      "qry",
+      "rpy",
+      "kram"
+    ],
+    "_source": "rdod/spec/domains/keri-messaging/domain.yaml",
+    "_events": null,
+    "_rules": null,
+    "_imports": null,
+    "ubiquitous_language": [
+      {
+        "term": "Exchange Message (exn)",
+        "definition": "Generic routed message envelope for peer-to-peer communication between KERI controllers. Any domain can communicate by constructing an exn with a route field and registering a handler for inbound routes via the Exchanger. The exn message type is the standard carrier for IPEX credential exchange, multisig coordination, endpoint authorization, and any future peer protocol.",
+        "invariants": [
+          "Route (r) field determines which domain protocol handles the message",
+          "Known route prefixes: /ipex/* (credential exchange), /multisig/* (group coordination), /end/role and /loc/scheme (discovery), /watcher/* (integrity), /ksn (key state), /tsn/* (credential status)",
+          "Every exn is signed by the sender's AID — provides non-repudiable attribution",
+          "Subject to KRAM replay protection before domain dispatch",
+          "Prior (p) field links messages in multi-step conversations"
+        ],
+        "examples": [
+          "IPEX grant: exn with route=/ipex/grant, payload=credential data, embeds=ACDC+TEL+seal",
+          "Multisig inception: exn with route=/multisig/icp, payload=inception parameters",
+          "Endpoint authorization: exn with route=/end/role, payload=endpoint data"
+        ],
+        "related_terms": [
+          "Exchanger",
+          "KRAM"
+        ]
+      },
+      {
+        "term": "Exchanger",
+        "definition": "Generic message router that dispatches inbound exchange (exn) messages to handlers registered by route prefix. Domains register their route handlers at startup. The Exchanger validates message signatures before dispatching to the appropriate handler. Any domain can participate in peer-to-peer communication by registering a route handler.",
+        "invariants": [
+          "Routes incoming exn messages to the handler registered for the message's route field",
+          "Validates message signatures before dispatching",
+          "Escrows messages awaiting prerequisites — never silently drops",
+          "Multiple domains can register handlers simultaneously"
+        ],
+        "related_terms": [
+          "Exchange Message (exn)"
+        ]
+      },
+      {
+        "term": "KERI Field Map",
+        "definition": "The ordered key-value structure of a KERI message body. Field maps use short field labels (v, t, d, i, s, etc.) for wire efficiency, but each field represents a specific domain concept. The presence or absence of optional fields signals semantic meaning — for example, the di field signals delegation, the n field signals transferability. Implementations SHOULD provide domain-typed construction interfaces that map human-readable concepts to field labels.",
+        "invariants": [
+          "Field order is canonical per message type — deviations invalidate the SAID",
+          "Required fields MUST always be present; optional fields signal semantic variation",
+          "The d field is always a SAID (self-addressing identifier) computed over the field map",
+          "The v field is always first — enables protocol and version detection",
+          "The t field identifies the message type (ilk)"
+        ],
+        "related_terms": [
+          "SAID",
+          "Identifier Type Dimensions"
+        ]
+      },
+      {
+        "term": "KERI Message Types",
+        "synonyms": [
+          "Ilks",
+          "Protocol Messages"
+        ],
+        "definition": "The complete set of KERI protocol message types, identified by the 't' (type/ilk) field. Organized into key events, receipts, queries/replies, and exchanges. Each type is dispatched to the appropriate handler by the Message Parser.",
+        "invariants": [
+          "Key Events (-> Event Processor): icp (inception), rot (rotation), ixn (interaction), dip (delegated inception), drt (delegated rotation)",
+          "Receipts (-> Witness Agreement): rct (non-transferable receipt), vrc (transferable receipt)",
+          "Queries & Replies (-> query handler): qry (query), rpy (reply), pro (prod/probe), bar (bare reply)",
+          "Exchanges (-> Exchanger): exn (exchange message — carries IPEX, multi-sig coordination, challenge-response), xip (exchange inception — first message in a multi-exchange transaction set, all subsequent exn messages reference the xip SAID)",
+          "TEL Events (-> TEL Processor): vcp (registry inception), vrt (registry rotation), iss (issuance), rev (revocation), bis (backed issuance), brv (backed revocation), rip (TEL registry inception), bup (blindable update), upd (public update)",
+          "ACDC Types (-> ACDC Processor): acm (ACDC field map — default labeled message type), act (ACDC fixed field with attribute section — CESR native), acg (ACDC fixed field with aggregate section — CESR native), ace (ACDC with extra fields — experimental), sch (schema)",
+          "The ilk field determines which processing pipeline handles the message"
+        ],
+        "examples": [
+          "t='icp' -> Kevery.processEvent()",
+          "t='rct' -> Kevery.processReceipt()",
+          "t='exn' -> Exchanger.processEvent() (routes by inner 'r' field to IPEX, multisig, etc.)",
+          "t='iss' -> Tevery.processEvent()"
+        ],
+        "related_terms": [
+          "Message Parser",
+          "Event Processor",
+          "Key Event",
+          "Witness",
+          "IPEX"
+        ]
+      }
+    ],
+    "_ports": [
+      {
+        "id": "port://keri-messaging/inbound/message-parsing",
+        "type": "inbound",
+        "name": "Message Parsing",
+        "contract": "parse(raw_bytes) -> (MessageType, FieldMap, Attachments); validate_version(version_string) -> ProtocolVersion; validate_said(field_map) -> bool",
+        "protocol": "method-call",
+        "refs": []
+      },
+      {
+        "id": "port://keri-messaging/inbound/message-construction",
+        "type": "inbound",
+        "name": "Message Construction",
+        "contract": "exchange(route, payload, sender, embeds?) -> ExchangeMessage; query(route, query_params) -> QueryMessage; reply(route, data) -> ReplyMessage",
+        "protocol": "method-call",
+        "refs": []
+      }
+    ],
+    "_verification": {
+      "properties": [],
+      "contracts": [],
+      "state_machines": []
+    },
+    "_errors": [
+      {
+        "name": "ProtocolVersionMismatchError",
+        "description": "Message version string indicates an unsupported protocol version",
+        "cause": "The v field's protocol version (Mmm segment) does not match any version supported by this implementation",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "received_version",
+            "type": "string",
+            "description": "The version string from the message"
+          },
+          {
+            "field": "supported_versions",
+            "type": "array[string]",
+            "description": "List of protocol versions this implementation supports"
+          }
+        ],
+        "related_port": "port://keri-messaging/inbound/message-parsing"
+      },
+      {
+        "name": "UnsupportedEventTypeError",
+        "description": "Message type (ilk) is not recognized by the KERI protocol",
+        "cause": "The t field contains an ilk that is not in the set of known KERI message types (icp, rot, ixn, dip, drt, rct, qry, rpy, exn, xip, pro, bar)",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "ilk",
+            "type": "string",
+            "description": "The unrecognized message type"
+          },
+          {
+            "field": "known_ilks",
+            "type": "array[string]",
+            "description": "List of recognized ilks"
+          }
+        ],
+        "related_port": "port://keri-messaging/inbound/message-parsing"
+      },
+      {
+        "name": "InvalidPrefixError",
+        "description": "AID prefix in the message is malformed or uses an unsupported CESR code",
+        "cause": "The i field does not parse as a valid CESR-qualified identifier prefix",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "prefix",
+            "type": "string",
+            "description": "The invalid prefix value"
+          },
+          {
+            "field": "reason",
+            "type": "string",
+            "description": "Why it's invalid (unsupported code, wrong length, not Base64url)"
+          }
+        ],
+        "related_port": "port://keri-messaging/inbound/message-parsing"
+      },
+      {
+        "name": "SAIDVerificationError",
+        "description": "Message SAID (d field) does not match the computed digest of the message body",
+        "cause": "The d field value does not equal the SAID computed over the message with d as placeholder — the message has been tampered with or incorrectly constructed",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "claimed_said",
+            "type": "string",
+            "description": "The d field value in the message"
+          },
+          {
+            "field": "computed_said",
+            "type": "string",
+            "description": "The SAID computed from the message body"
+          }
+        ],
+        "related_port": "port://keri-messaging/inbound/message-parsing"
+      },
+      {
+        "name": "FieldOrderingError",
+        "description": "Message fields are not in canonical insertion order",
+        "cause": "The serialized field map has fields in an order that does not match the canonical order defined for this message type — SAID computation would produce a different result",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "ilk",
+            "type": "string",
+            "description": "The message type"
+          },
+          {
+            "field": "expected_order",
+            "type": "array[string]",
+            "description": "The canonical field order for this ilk"
+          },
+          {
+            "field": "received_order",
+            "type": "array[string]",
+            "description": "The actual field order received"
+          }
+        ],
+        "related_port": "port://keri-messaging/inbound/message-parsing"
+      }
+    ],
+    "_types": [
+      {
+        "name": "ExchangeMessage",
+        "description": "Generic routed message envelope for peer-to-peer communication. Used by IPEX (credential exchange), multisig coordination, endpoint authorization, and any future peer protocol. The route field determines which domain handles the message.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "v",
+                "type": "string",
+                "required": true,
+                "description": "Version string"
+              },
+              {
+                "name": "t",
+                "type": "string",
+                "required": true,
+                "constraints": {
+                  "enum": [
+                    "exn"
+                  ]
+                },
+                "description": "Message type — exchange"
+              },
+              {
+                "name": "d",
+                "type": "string",
+                "required": true,
+                "description": "SAID"
+              },
+              {
+                "name": "i",
+                "type": "string",
+                "required": true,
+                "description": "Sender AID — the controller initiating this exchange"
+              },
+              {
+                "name": "rp",
+                "type": "string",
+                "required": true,
+                "description": "Replay protection — nonce or reference for anti-replay (v1) or x field (v2)"
+              },
+              {
+                "name": "p",
+                "type": "string",
+                "required": true,
+                "description": "Prior message SAID — links messages in a conversation thread. Empty for first message."
+              },
+              {
+                "name": "dt",
+                "type": "string",
+                "required": true,
+                "description": "Datetime — ISO 8601, subject to KRAM timeliness check"
+              },
+              {
+                "name": "r",
+                "type": "string",
+                "required": true,
+                "description": "Route — determines which domain protocol handles this message"
+              },
+              {
+                "name": "q",
+                "type": "map",
+                "required": true,
+                "description": "Query/modifier data"
+              },
+              {
+                "name": "a",
+                "type": "map",
+                "required": true,
+                "description": "Payload — the domain-specific data for this exchange"
+              },
+              {
+                "name": "e",
+                "type": "map",
+                "required": true,
+                "description": "Embedded messages — nested SADs (credentials, events, etc.)"
+              }
+            ],
+            "invariants": [
+              "Route (r) determines the handling domain — implementations dispatch by route prefix",
+              "Known route prefixes: /ipex/* (credential exchange), /multisig/* (group coordination), /end/role (discovery), /watcher/* (integrity)",
+              "Prior (p) field links to the previous message's SAID in a conversation — empty string for first message",
+              "Subject to KRAM replay protection — dt must be monotonically increasing per sender",
+              "Must be signed by sender's current keys — provides non-repudiable attribution"
+            ]
+          }
+        ],
+        "construction_defaults": {
+          "p": "",
+          "q": "{}",
+          "e": "{}"
+        },
+        "encoding": [
+          {
+            "format": "json",
+            "notes": "Standard KERI serialization. Fields in canonical insertion order."
+          }
+        ]
+      },
+      {
+        "name": "QueryMessage",
+        "description": "Request for information from another controller or service. Routes determine what is being queried.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "v",
+                "type": "string",
+                "required": true,
+                "description": "Version string"
+              },
+              {
+                "name": "t",
+                "type": "string",
+                "required": true,
+                "constraints": {
+                  "enum": [
+                    "qry"
+                  ]
+                },
+                "description": "Message type — query"
+              },
+              {
+                "name": "d",
+                "type": "string",
+                "required": true,
+                "description": "SAID"
+              },
+              {
+                "name": "dt",
+                "type": "string",
+                "required": true,
+                "description": "Datetime"
+              },
+              {
+                "name": "r",
+                "type": "string",
+                "required": true,
+                "description": "Route — what is being queried",
+                "constraints": {
+                  "enum": [
+                    "logs",
+                    "ksn",
+                    "mbx",
+                    "tels",
+                    "tsn"
+                  ]
+                }
+              },
+              {
+                "name": "rr",
+                "type": "string",
+                "required": true,
+                "description": "Reply route — where to send the response"
+              },
+              {
+                "name": "q",
+                "type": "map",
+                "required": true,
+                "description": "Query parameters (prefix, sn, SAID filters)"
+              }
+            ],
+            "invariants": [
+              "Routes logs/ksn/mbx handled by identity domain",
+              "Routes tels/tsn handled by credential-lifecycle domain",
+              "Subject to KRAM replay protection"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "ReplyMessage",
+        "description": "Response to a query or unsolicited state notification. Route determines the content type.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "v",
+                "type": "string",
+                "required": true,
+                "description": "Version string"
+              },
+              {
+                "name": "t",
+                "type": "string",
+                "required": true,
+                "constraints": {
+                  "enum": [
+                    "rpy"
+                  ]
+                },
+                "description": "Message type — reply"
+              },
+              {
+                "name": "d",
+                "type": "string",
+                "required": true,
+                "description": "SAID"
+              },
+              {
+                "name": "dt",
+                "type": "string",
+                "required": true,
+                "description": "Datetime"
+              },
+              {
+                "name": "r",
+                "type": "string",
+                "required": true,
+                "description": "Route — what type of reply this is"
+              },
+              {
+                "name": "a",
+                "type": "map",
+                "required": true,
+                "description": "Reply data payload"
+              }
+            ],
+            "invariants": [
+              "Routes /end/role and /loc/scheme handled by discovery domain",
+              "Route /ksn handled by identity/state domain",
+              "Subject to BADA (Best Available Data Accepted) acceptance policy",
+              "Subject to KRAM replay protection"
+            ]
+          }
+        ]
+      }
+    ]
+  },
   "local-agent/api": {
     "template_version": "1.0",
     "id": "local-agent/api",
@@ -31862,7 +31982,7 @@ const RDOD_DATA = {
       "All operations execute locally — no cloud agent dependency",
       "CLI commands map to domain operations (each kli command serves a specific domain)"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/local-agent/api/domain.yaml",
+    "_source": "rdod/spec/domains/local-agent/api/domain.yaml",
     "_events": [
       {
         "name": "APIOperationInvoked",
@@ -32302,6 +32422,11 @@ const RDOD_DATA = {
         "ref": "kernel://cesr",
         "source": "domain://cesr",
         "relationship": "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly for all encoding"
+      },
+      {
+        "ref": "kernel://keri-messaging",
+        "source": "domain://keri-messaging",
+        "relationship": "KERI messaging primitives (exn, qry, rpy) adopted natively"
       }
     ],
     "adjacents": [
@@ -32370,7 +32495,7 @@ const RDOD_DATA = {
       "standalone",
       "application"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/local-agent/domain.yaml",
+    "_source": "rdod/spec/domains/local-agent/domain.yaml",
     "_events": [
       {
         "name": "HabitatCreated",
@@ -33125,7 +33250,7 @@ const RDOD_DATA = {
       "anyof",
       "selective-disclosure"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/privacy/aggregation/domain.yaml",
+    "_source": "rdod/spec/domains/privacy/aggregation/domain.yaml",
     "_events": [
       {
         "name": "AGIDComputed",
@@ -33710,7 +33835,7 @@ const RDOD_DATA = {
       "decorrelation",
       "uuid-derivation"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/privacy/blinding/domain.yaml",
+    "_source": "rdod/spec/domains/privacy/blinding/domain.yaml",
     "_events": [
       {
         "name": "BlindUpdatePublished",
@@ -34373,7 +34498,7 @@ const RDOD_DATA = {
       "chain-link-confidentiality",
       "oneof"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/privacy/disclosure/domain.yaml",
+    "_source": "rdod/spec/domains/privacy/disclosure/domain.yaml",
     "_events": [
       {
         "name": "DisclosureModeSelected",
@@ -34930,7 +35055,7 @@ const RDOD_DATA = {
       "blinding",
       "bulk-issuance"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/privacy/domain.yaml",
+    "_source": "rdod/spec/domains/privacy/domain.yaml",
     "_events": [
       {
         "name": "GraduatedDisclosurePerformed",
@@ -35592,6 +35717,11 @@ const RDOD_DATA = {
         "ref": "kernel://cesr",
         "source": "domain://cesr",
         "relationship": "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly"
+      },
+      {
+        "ref": "kernel://keri-messaging",
+        "source": "domain://keri-messaging",
+        "relationship": "KERI messaging primitives (exn, qry, rpy) adopted natively"
       }
     ],
     "adjacents": [
@@ -35639,7 +35769,7 @@ const RDOD_DATA = {
       "controller",
       "application"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/signify-client/domain.yaml",
+    "_source": "rdod/spec/domains/signify-client/domain.yaml",
     "_events": [
       {
         "name": "SigningRequested",
@@ -35676,7 +35806,7 @@ const RDOD_DATA = {
       },
       {
         "term": "KRAM",
-        "from": "domain://identity",
+        "from": "domain://keri-messaging",
         "usage": "Signify clients must produce KRAM-compatible timestamps and signatures for cloud agent authentication"
       }
     ],
@@ -36274,7 +36404,7 @@ const RDOD_DATA = {
       "edge-signing",
       "security"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/signify-client/key-management/domain.yaml",
+    "_source": "rdod/spec/domains/signify-client/key-management/domain.yaml",
     "_events": [
       {
         "name": "SessionStarted",
@@ -37091,7 +37221,7 @@ const RDOD_DATA = {
       "registry",
       "operation"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/signify-client/resources/domain.yaml",
+    "_source": "rdod/spec/domains/signify-client/resources/domain.yaml",
     "_events": [
       {
         "name": "IdentifierCreated",
@@ -37476,7 +37606,7 @@ const RDOD_DATA = {
       "Must cross-check collected KELs for fork detection",
       "Must report duplicity evidence when detected"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/watcher-service/api/domain.yaml",
+    "_source": "rdod/spec/domains/watcher-service/api/domain.yaml",
     "_events": [
       {
         "name": "KELQueryServed",
@@ -37843,7 +37973,7 @@ const RDOD_DATA = {
       "detection",
       "infrastructure"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/watcher-service/domain.yaml",
+    "_source": "rdod/spec/domains/watcher-service/domain.yaml",
     "_events": [
       {
         "name": "KELPolled",
@@ -38359,7 +38489,7 @@ const RDOD_DATA = {
       "Signatures must be verified against current key state before accepting events",
       "First-seen rule must be applied to all key events"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/witness-service/api/domain.yaml",
+    "_source": "rdod/spec/domains/witness-service/api/domain.yaml",
     "_events": [
       {
         "name": "EventSubmitted",
@@ -38755,7 +38885,7 @@ const RDOD_DATA = {
       "first-seen",
       "infrastructure"
     ],
-    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/witness-service/domain.yaml",
+    "_source": "rdod/spec/domains/witness-service/domain.yaml",
     "_events": [
       {
         "name": "EventReceived",

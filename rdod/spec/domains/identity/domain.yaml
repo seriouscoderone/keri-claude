@@ -56,11 +56,6 @@ published_language:
     description: "Key Event Log — the append-only identity ledger referenced by credential and service domains"
   - term: "Controller"
     description: "Entity controlling an AID — referenced by all domains that authenticate"
-  - term: "Exchange Message (exn)"
-    description: "Generic routed message envelope — used by IPEX, multisig coordination, discovery"
-  - term: "KRAM"
-    description: "Replay protection mechanism — used by cloud-agent-service and any message-receiving service"
-
 domain_clients: []
 
 subdomains:
@@ -87,6 +82,9 @@ kernels:
   - ref: "kernel://cryptographic-algorithms"
     source: "Ed25519 (event signing), Blake3-256/SHA-256 (SAID computation, prior event digest, seal digests, next key commitments)"
     relationship: "Cryptographic algorithm types appear directly in event fields and key state structures — signatures, digests, public keys, and threshold expressions are kernel types"
+  - ref: "kernel://keri-messaging"
+    source: "domain://keri-messaging"
+    relationship: "KERI messaging primitives (exn, qry, rpy) adopted natively"
 
 adjacents:
   - ref: "domain://accountability"
