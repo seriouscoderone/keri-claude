@@ -32765,7 +32765,7 @@ const RDOD_DATA = {
     "template_version": "1.0",
     "id": "local-agent",
     "name": "Local Agent (Full-Stack KERI Application)",
-    "description": "Application-tier domain for fat wallet KERI applications. The complete KERI stack runs on the controller's device: private keys, event processing, database, and direct witness communication all in one process. No cloud agent dependency. The Hab/Habery pattern is the primary API. Implementations: keripy (direct usage), keriox (standalone mode).\n",
+    "description": "Application-tier domain for fat wallet KERI applications. The complete KERI stack runs on the controller's device: private keys, event processing, database, and direct witness communication all in one process. No cloud agent dependency. The Hab/Habery pattern is the primary API. Implementations: keripy (direct usage), keriox (standalone mode).\nCohesion note — this domain defines 8 terms spanning key management, event processing, database, witness/watcher communication, and credentials. These are NOT decomposable subdomains — they are facets of a single unified runtime (Habery) that shares one database, one key manager, and one event processing pipeline. Splitting them would create artificial boundaries between components that share a single process instance. Compare with cloud-agent-service which HAS genuine subdomains (api, provisioning, processing) because those serve different consumers over different ports.\n",
     "version": "0.1.0",
     "source_material": [
       {

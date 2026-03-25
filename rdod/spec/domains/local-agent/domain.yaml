@@ -7,6 +7,14 @@ description: >
   on the controller's device: private keys, event processing, database, and direct witness
   communication all in one process. No cloud agent dependency. The Hab/Habery pattern is
   the primary API. Implementations: keripy (direct usage), keriox (standalone mode).
+
+  Cohesion note — this domain defines 8 terms spanning key management, event processing,
+  database, witness/watcher communication, and credentials. These are NOT decomposable
+  subdomains — they are facets of a single unified runtime (Habery) that shares one
+  database, one key manager, and one event processing pipeline. Splitting them would
+  create artificial boundaries between components that share a single process instance.
+  Compare with cloud-agent-service which HAS genuine subdomains (api, provisioning,
+  processing) because those serve different consumers over different ports.
 version: "0.1.0"
 
 source_material:
