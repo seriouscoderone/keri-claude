@@ -58,7 +58,7 @@ graph TB
     ID -->|"kernel"| CESR
     CL -->|"kernel"| CESR
     ID -->|"partnership"| DISC
-    CL -->|"partnership"| ID
+    CL -->|"conformist"| ID
 
     CAS -->|"conformist"| ID
     CAS -->|"conformist"| CL
