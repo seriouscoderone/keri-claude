@@ -14,16 +14,6 @@ errors:
         type: "string"
         description: "The AID of the already-provisioned agent"
 
-  - name: "InvalidBootInceptionError"
-    description: "The inception event in the boot request is malformed or invalid"
-    cause: "Boot request body contains an inception event that fails structural validation"
-    recovery: "abort"
-    severity: "fatal"
-    context:
-      - field: "reason"
-        type: "string"
-        description: "Specific inception validation failure"
-
   - name: "AgentInitializationError"
     description: "Agent was created but failed to initialize its internal components"
     cause: "Database creation, key store initialization, or processor startup failed"
@@ -39,19 +29,6 @@ errors:
       - field: "reason"
         type: "string"
         description: "Initialization failure details"
-
-  - name: "AgentNotFoundError"
-    description: "Requested agent does not exist for the given controller"
-    cause: "Lookup by controller AID or agent AID returns no match"
-    recovery: "abort"
-    severity: "fatal"
-    context:
-      - field: "lookup_key"
-        type: "string"
-        description: "The AID used for lookup"
-      - field: "lookup_type"
-        type: "string"
-        description: "controller_aid or agent_aid"
 
   - name: "AgentDeletionError"
     description: "Agent could not be cleanly torn down"

@@ -10368,20 +10368,6 @@ const RDOD_DATA = {
         ]
       },
       {
-        "name": "InvalidBootInceptionError",
-        "description": "The inception event in the boot request is malformed or invalid",
-        "cause": "Boot request body contains an inception event that fails structural validation",
-        "recovery": "abort",
-        "severity": "fatal",
-        "context": [
-          {
-            "field": "reason",
-            "type": "string",
-            "description": "Specific inception validation failure"
-          }
-        ]
-      },
-      {
         "name": "AgentInitializationError",
         "description": "Agent was created but failed to initialize its internal components",
         "cause": "Database creation, key store initialization, or processor startup failed",
@@ -10402,25 +10388,6 @@ const RDOD_DATA = {
             "field": "reason",
             "type": "string",
             "description": "Initialization failure details"
-          }
-        ]
-      },
-      {
-        "name": "AgentNotFoundError",
-        "description": "Requested agent does not exist for the given controller",
-        "cause": "Lookup by controller AID or agent AID returns no match",
-        "recovery": "abort",
-        "severity": "fatal",
-        "context": [
-          {
-            "field": "lookup_key",
-            "type": "string",
-            "description": "The AID used for lookup"
-          },
-          {
-            "field": "lookup_type",
-            "type": "string",
-            "description": "controller_aid or agent_aid"
           }
         ]
       },
@@ -11964,7 +11931,7 @@ const RDOD_DATA = {
         "keripy_raise_site": "exchanging.py:Exchanger.processEvent — 'at least one essr attachment is required', 'essr diger is invalid', 'Missing exn escrowed event datetime'"
       },
       {
-        "name": "MissingRegistryError",
+        "name": "GrantMissingRegistryError",
         "keripy_class": "kering.MissingRegistryError",
         "description": "Credential in exchange message references a registry that has not been received",
         "cause": "The ACDC embedded in a grant message references a registry REGID not in the local Tevers — the registry inception has not been processed",
@@ -16979,7 +16946,7 @@ const RDOD_DATA = {
         "related_port": "port://credential-lifecycle/verification/inbound/validate-tel-event"
       },
       {
-        "name": "MissingRegistryError",
+        "name": "RegistryStateUnavailableError",
         "description": "The registry's VCP/management TEL is not yet available",
         "cause": "TEL validation pipeline step 2 failed — registry state cannot be computed because the registry inception event has not been received",
         "recovery": "escrow",
