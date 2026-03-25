@@ -213,7 +213,7 @@ terms:
     definition: "Subdatabases for credential data and multi-dimensional credential indexing. Stores serialized ACDCs and provides lookup by credential SAID, issuer AID, subject AID, and schema SAID."
     invariants:
       - "Credential store [.creds in keripy]: serialized ACDC bytes indexed by credential SAID -- the primary credential store"
-      - "Processed credential index [.saved in keripy]: marks credentials that have been fully validated and stored"
+      - "Fully-validated credential index [.saved in keripy]: marks credentials that have completed the verification pipeline and are stored for presentation"
       - "Issuer index [.issus in keripy]: credential index by issuer AID -- enables lookup of all credentials issued by a given AID"
       - "Subject index [.subjs in keripy]: credential index by subject AID -- enables lookup of all credentials targeting a given issuee"
       - "Schema index [.schms in keripy]: credential index by schema SAID -- enables lookup of all credentials conforming to a given schema"

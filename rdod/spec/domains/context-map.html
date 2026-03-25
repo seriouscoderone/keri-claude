@@ -13217,7 +13217,7 @@ const RDOD_DATA = {
         "definition": "Subdatabases for credential data and multi-dimensional credential indexing. Stores serialized ACDCs and provides lookup by credential SAID, issuer AID, subject AID, and schema SAID.",
         "invariants": [
           "Credential store [.creds in keripy]: serialized ACDC bytes indexed by credential SAID -- the primary credential store",
-          "Processed credential index [.saved in keripy]: marks credentials that have been fully validated and stored",
+          "Fully-validated credential index [.saved in keripy]: marks credentials that have completed the verification pipeline and are stored for presentation",
           "Issuer index [.issus in keripy]: credential index by issuer AID -- enables lookup of all credentials issued by a given AID",
           "Subject index [.subjs in keripy]: credential index by subject AID -- enables lookup of all credentials targeting a given issuee",
           "Schema index [.schms in keripy]: credential index by schema SAID -- enables lookup of all credentials conforming to a given schema"
@@ -15733,7 +15733,7 @@ const RDOD_DATA = {
         "definition": "Holds credentials whose edge section references chained credentials that have not yet been received or verified. The credential chain cannot be validated until all referenced credentials are available.",
         "invariants": [
           "Triggered when a credential in the edge (e) section has not been received or its status cannot be confirmed",
-          "Reprocessed when chained credentials arrive and are processed"
+          "Reprocessed when the blocking credential chain dependency resolves — the chained credential is accepted to the TEL"
         ],
         "related_terms": [
           "TEL Event Verifier",
@@ -27023,7 +27023,7 @@ const RDOD_DATA = {
           "notes": "Both initialization paths must produce equivalent state."
         },
         {
-          "invariant": "lastEst MUST be updated each time an establishment event is processed: lastEst.s = event.sn, lastEst.d = event.said; interaction events MUST NOT modify lastEst",
+          "invariant": "lastEst MUST be updated each time an establishment event is accepted to the KEL: lastEst.s = event.sn, lastEst.d = event.said; interaction events MUST NOT modify lastEst",
           "term": "Last Establishment Data",
           "technique": "property-based",
           "formal": {

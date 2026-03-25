@@ -141,7 +141,7 @@ properties:
     notes: "Both initialization paths must produce equivalent state."
 
   # Last Establishment Data invariants
-  - invariant: "lastEst MUST be updated each time an establishment event is processed: lastEst.s = event.sn, lastEst.d = event.said; interaction events MUST NOT modify lastEst"
+  - invariant: "lastEst MUST be updated each time an establishment event is accepted to the KEL: lastEst.s = event.sn, lastEst.d = event.said; interaction events MUST NOT modify lastEst"
     term: "Last Establishment Data"
     technique: property-based
     formal:

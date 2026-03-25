@@ -135,7 +135,7 @@ terms:
     definition: "Holds credentials whose edge section references chained credentials that have not yet been received or verified. The credential chain cannot be validated until all referenced credentials are available."
     invariants:
       - "Triggered when a credential in the edge (e) section has not been received or its status cannot be confirmed"
-      - "Reprocessed when chained credentials arrive and are processed"
+      - "Reprocessed when the blocking credential chain dependency resolves — the chained credential is accepted to the TEL"
     related_terms: ["TEL Event Verifier", "Credential State"]
 
 events:
