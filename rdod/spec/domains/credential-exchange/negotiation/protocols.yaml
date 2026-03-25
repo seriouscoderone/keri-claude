@@ -35,7 +35,7 @@ protocols:
         depends_on: [1]
         on_failure:
           - error: "MissingKELAnchorError"
-            ref: "errors://credential-lifecycle/verification#MissingIssuerError"
+            ref: "errors://credential-lifecycle/verification#IssuerKELUnavailableError"
             action: "escrow"
             compensation: "Await issuer's KEL events"
       - seq: 3

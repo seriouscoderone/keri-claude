@@ -12152,7 +12152,7 @@ const RDOD_DATA = {
             "on_failure": [
               {
                 "error": "MissingKELAnchorError",
-                "ref": "errors://credential-lifecycle/verification#MissingIssuerError",
+                "ref": "errors://credential-lifecycle/verification#IssuerKELUnavailableError",
                 "action": "escrow",
                 "compensation": "Await issuer's KEL events"
               }
@@ -16997,7 +16997,7 @@ const RDOD_DATA = {
         "related_port": "port://credential-lifecycle/verification/inbound/validate-tel-event"
       },
       {
-        "name": "MissingIssuerError",
+        "name": "IssuerKELUnavailableError",
         "description": "The issuer's KEL event at the anchor seal point has not been received",
         "cause": "TEL validation pipeline step 3 failed — the issuer's KEL event at the sequence number stated in the attached seal is not yet available",
         "recovery": "escrow",
