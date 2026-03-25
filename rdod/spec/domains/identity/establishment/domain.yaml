@@ -10,6 +10,15 @@ description: >
   delegator's anchoring seal. Each validation step either passes (advancing to the next step)
   or fails with a typed error that routes the event to the appropriate escrow queue for later
   reprocessing.
+
+  Cohesion note — this domain is large (15+ UL terms, 14-state FSM, multiple escrow types)
+  because the validation pipeline is one atomic sequential operation. Each step depends on
+  the output of the previous: you can't check witness threshold without first verifying
+  signatures, and you can't check delegation without first confirming thresholds. In keripy
+  this is a single method chain (Kever.update → valSigsWigsDel). Factoring out "seal types"
+  or "event serialization" would create artificial boundaries — seal structure lives in
+  cesr/primitives, serialization lives in cesr/composition, and threshold satisfaction
+  imports from identity/thresholds. This domain owns the pipeline, not the primitives.
 version: "0.1.0"
 
 source_material:
