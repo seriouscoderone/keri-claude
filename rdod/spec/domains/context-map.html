@@ -37054,15 +37054,15 @@ const RDOD_DATA = {
     "_verification": {
       "properties": [
         {
-          "invariant": "Minimum 21 characters (>=128 bits entropy after stretching)",
+          "invariant": "Minimum 21 characters provides 126 bits raw entropy",
           "term": "Passcode",
           "technique": "smt",
           "formal": {
             "language": "z3",
-            "expression": "passcode_len = Int('passcode_len')\nchars_per_base64 = 6  # bits per base64 character\nentropy_bits = Int('entropy_bits')\nmin_entropy = 128\ns = Solver()\ns.add(entropy_bits == passcode_len * chars_per_base64)\ns.add(passcode_len >= 21)\n# Prove: 21 chars always provides >= 128 bits\ns.add(entropy_bits < min_entropy)\nassert s.check() == unsat  # 21 * 6 = 126, but argon2 stretching adds margin\n"
+            "expression": "passcode_len = Int('passcode_len')\nbits_per_base64_char = 6\nraw_entropy = Int('raw_entropy')\ns = Solver()\ns.add(raw_entropy == passcode_len * bits_per_base64_char)\ns.add(passcode_len >= 21)\n# Prove: 21 base64 chars always provides >= 126 bits raw entropy\ns.add(raw_entropy < 126)\nassert s.check() == unsat  # 21 * 6 = 126 >= 126 ✓\n"
           },
           "strategy": "",
-          "notes": "SMT proof that 21-character base64 passcode provides sufficient entropy after argon2 stretching. Raw: 21*6=126 bits, but argon2 provides computational hardening equivalent to >= 128 bits."
+          "notes": "Raw passcode entropy is 126 bits (21*6). This is 2 bits short of 128, but the next proof shows argon2 stretching adds >= 2 bits of computational hardening even at the lowest tier, bringing effective entropy to >= 128."
         },
         {
           "invariant": "Passcode entropy >= 128 bits after stretching",

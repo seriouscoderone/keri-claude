@@ -7,24 +7,23 @@ domain_ref: "signify-client/key-management"
 
 # Formalized invariants from ubiquitous_language terms
 properties:
-  - invariant: "Minimum 21 characters (>=128 bits entropy after stretching)"
+  - invariant: "Minimum 21 characters provides 126 bits raw entropy"
     term: "Passcode"
     technique: smt
     formal:
       language: z3
       expression: |
         passcode_len = Int('passcode_len')
-        chars_per_base64 = 6  # bits per base64 character
-        entropy_bits = Int('entropy_bits')
-        min_entropy = 128
+        bits_per_base64_char = 6
+        raw_entropy = Int('raw_entropy')
         s = Solver()
-        s.add(entropy_bits == passcode_len * chars_per_base64)
+        s.add(raw_entropy == passcode_len * bits_per_base64_char)
         s.add(passcode_len >= 21)
-        # Prove: 21 chars always provides >= 128 bits
-        s.add(entropy_bits < min_entropy)
-        assert s.check() == unsat  # 21 * 6 = 126, but argon2 stretching adds margin
+        # Prove: 21 base64 chars always provides >= 126 bits raw entropy
+        s.add(raw_entropy < 126)
+        assert s.check() == unsat  # 21 * 6 = 126 >= 126 ✓
     strategy: ""
-    notes: "SMT proof that 21-character base64 passcode provides sufficient entropy after argon2 stretching. Raw: 21*6=126 bits, but argon2 provides computational hardening equivalent to >= 128 bits."
+    notes: "Raw passcode entropy is 126 bits (21*6). This is 2 bits short of 128, but the next proof shows argon2 stretching adds >= 2 bits of computational hardening even at the lowest tier, bringing effective entropy to >= 128."
 
   - invariant: "Passcode entropy >= 128 bits after stretching"
     term: "Passcode"
