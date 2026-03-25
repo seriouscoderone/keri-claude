@@ -7690,7 +7690,7 @@ const RDOD_DATA = {
       },
       {
         "name": "SigningThreshold",
-        "description": "Threshold expression for multi-signature requirements. Determines how many (or which combination of) keys must sign.",
+        "description": "CESR-encoded threshold expression. Three encoding variants for representing signing quorum requirements.",
         "variants": [
           {
             "name": "simple",
@@ -7699,16 +7699,14 @@ const RDOD_DATA = {
                 "name": "value",
                 "type": "integer",
                 "required": true,
-                "description": "Simple M-of-N threshold — M keys must sign",
+                "description": "Integer threshold value",
                 "constraints": {
                   "min": 1
                 }
               }
             ],
             "invariants": [
-              "value >= 1",
-              "value <= number of signing keys",
-              "satisfied when len(verified_indices) >= value"
+              "Encoded as a hex string in the kt/nt/bt field"
             ]
           },
           {
@@ -7718,13 +7716,12 @@ const RDOD_DATA = {
                 "name": "weights",
                 "type": "array[string]",
                 "required": true,
-                "description": "Fractional weight per key position — e.g., ['1/2', '1/2', '1/2']"
+                "description": "Array of fractional weight strings — e.g., ['1/2', '1/2', '1/2']"
               }
             ],
             "invariants": [
-              "Each weight is a fraction (numerator/denominator)",
-              "len(weights) must equal number of signing keys",
-              "satisfied when sum of weights at verified indices >= 1.0"
+              "Each weight is a fraction string (numerator/denominator)",
+              "Encoded as a JSON array of strings"
             ]
           },
           {
@@ -7734,19 +7731,19 @@ const RDOD_DATA = {
                 "name": "clauses",
                 "type": "array[array[string]]",
                 "required": true,
-                "description": "List of weighted clauses — each clause is a weight list, any clause satisfied = threshold satisfied"
+                "description": "Array of arrays of fractional weight strings"
               }
             ],
             "invariants": [
-              "Each clause is independently evaluated as a weighted threshold",
-              "Overall threshold satisfied if ANY clause is satisfied (OR semantics across clauses)"
+              "Encoded as a JSON array of arrays",
+              "Satisfaction semantics defined by identity/thresholds domain, not by CESR encoding"
             ]
           }
         ]
       },
       {
         "name": "Seal",
-        "description": "Cryptographic commitment binding external data to a KEL event via the anchors (a) field.",
+        "description": "CESR-encoded reference structure appearing in the anchors (a) field of events. Three structural variants with different field sets.",
         "variants": [
           {
             "name": "digest",
@@ -7755,11 +7752,11 @@ const RDOD_DATA = {
                 "name": "d",
                 "type": "string",
                 "required": true,
-                "description": "Digest (SAID) of the anchored data"
+                "description": "CESR qb64 encoded digest"
               }
             ],
             "invariants": [
-              "Binds a single data item by its content hash"
+              "Single-field seal containing one SAID"
             ]
           },
           {
@@ -7769,24 +7766,24 @@ const RDOD_DATA = {
                 "name": "i",
                 "type": "string",
                 "required": true,
-                "description": "AID prefix of the referenced event"
+                "description": "CESR qb64 identifier prefix"
               },
               {
                 "name": "s",
                 "type": "string",
                 "required": true,
-                "description": "Sequence number of the referenced event"
+                "description": "Hex-encoded sequence number"
               },
               {
                 "name": "d",
                 "type": "string",
                 "required": true,
-                "description": "SAID of the referenced event"
+                "description": "CESR qb64 encoded SAID"
               }
             ],
             "invariants": [
-              "References a specific event in another identifier's KEL",
-              "Used for delegation seals and cross-KEL anchoring"
+              "Three-field seal: (prefix, sequence number, SAID)",
+              "Semantic binding (delegation, cross-KEL anchoring) defined by consuming domains"
             ]
           },
           {
@@ -7796,36 +7793,36 @@ const RDOD_DATA = {
                 "name": "i",
                 "type": "string",
                 "required": true,
-                "description": "AID prefix"
+                "description": "CESR qb64 identifier prefix"
               },
               {
                 "name": "s",
                 "type": "string",
                 "required": true,
-                "description": "Sequence number"
+                "description": "Hex-encoded sequence number"
               },
               {
                 "name": "t",
                 "type": "string",
                 "required": true,
-                "description": "Event type (ilk)"
+                "description": "Event type string (ilk)"
               },
               {
                 "name": "p",
                 "type": "string",
                 "required": true,
-                "description": "Prior event SAID"
+                "description": "CESR qb64 prior event SAID"
               }
             ],
             "invariants": [
-              "Locates an event by its position and type in another KEL"
+              "Four-field seal: (prefix, sequence number, type, prior SAID)"
             ]
           }
         ]
       },
       {
         "name": "AID",
-        "description": "Autonomic Identifier — a CESR-qualified self-certifying identifier prefix. The AID is the SAID of the inception event for transferable identifiers, or the qualified public key for non-transferable identifiers.",
+        "description": "CESR-qualified identifier prefix string. Two encoding variants distinguished by CESR code prefix. Identity semantics (transferability, rotation, self-certification) defined by the identity domain.",
         "variants": [
           {
             "name": "transferable",
@@ -7834,7 +7831,7 @@ const RDOD_DATA = {
                 "name": "prefix",
                 "type": "string",
                 "required": true,
-                "description": "CESR qb64 encoded — the SAID of the inception event",
+                "description": "CESR qb64 encoded identifier prefix",
                 "constraints": {
                   "pattern": "^[A-Za-z0-9_-]+$",
                   "min_length": 44,
@@ -7843,9 +7840,8 @@ const RDOD_DATA = {
               }
             ],
             "invariants": [
-              "Prefix is a SAID (content digest) of the inception event body",
-              "CESR code prefix determines the digest algorithm: E=Blake3-256 (44 chars), I=SHA2-256, 0D=Blake3-512, etc.",
-              "Transferable AIDs can produce rotation events"
+              "CESR code prefix determines the derivation: E=Blake3-256 SAID (44 chars), I=SHA2-256, 0D=Blake3-512, etc.",
+              "Encoding is a digest — the prefix is derived from serialized data, not a raw key"
             ]
           },
           {
@@ -7855,7 +7851,7 @@ const RDOD_DATA = {
                 "name": "prefix",
                 "type": "string",
                 "required": true,
-                "description": "CESR qb64 encoded — the qualified public key",
+                "description": "CESR qb64 encoded identifier prefix",
                 "constraints": {
                   "pattern": "^[A-Za-z0-9_-]+$",
                   "min_length": 44,
@@ -7864,10 +7860,8 @@ const RDOD_DATA = {
               }
             ],
             "invariants": [
-              "Prefix IS the public key (qualified with CESR code)",
-              "CESR code prefix determines the key algorithm: B/D=Ed25519 (44 chars), 1AAB/1AAD=ECDSA (88 chars), etc.",
-              "Non-transferable AIDs cannot rotate — the key IS the identifier",
-              "Commonly used for witnesses"
+              "CESR code prefix determines the key algorithm: B=Ed25519-NT (44 chars), 1AAA=secp256k1-NT, 1AAI=secp256r1-NT, 1AAC=Ed448-NT",
+              "Encoding is a qualified public key — the prefix IS the key material"
             ]
           }
         ]
