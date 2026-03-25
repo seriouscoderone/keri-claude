@@ -183,7 +183,7 @@ contracts:
           expression: "lambda receipt, db_name, result: result.is_ok() implies load_receipts(receipt.aid, receipt.sn, db_name).contains(receipt)"
         description: "After successful store, the receipt is retrievable from the same database"
 
-  - port_ref: "port://accountability/receipting/inbound/receipt-processing"
+  - port_ref: "port://accountability/receipting/inbound/receipt-lifecycle"
     preconditions:
       - description: "Receipt must reference an event that exists in the local KEL"
         formal:

@@ -340,7 +340,7 @@ contracts:
             )
         description: "HTTP response includes a status code"
 
-  - port_ref: "port://discovery/inbound/oobi-resolution"
+  - port_ref: "port://discovery/inbound/discovery"
     preconditions:
       - description: "OOBI URL must be well-formed HTTP(S) URL with AID path component"
         formal:
@@ -356,7 +356,7 @@ contracts:
           language: "pseudocode"
           expression: "failed implies key_state(remote_aid) == key_state_before"
 
-  - port_ref: "port://discovery/inbound/endpoint-authorization"
+  - port_ref: "port://discovery/inbound/discovery"
     preconditions:
       - description: "Reply must be signed by the AID that owns the endpoint"
         formal:

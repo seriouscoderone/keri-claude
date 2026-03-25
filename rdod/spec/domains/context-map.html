@@ -2407,7 +2407,7 @@ const RDOD_DATA = {
           ]
         },
         {
-          "port_ref": "port://accountability/receipting/inbound/receipt-processing",
+          "port_ref": "port://accountability/receipting/inbound/receipt-lifecycle",
           "preconditions": [
             {
               "description": "Receipt must reference an event that exists in the local KEL",
@@ -11683,7 +11683,7 @@ const RDOD_DATA = {
           ]
         },
         {
-          "port_ref": "port://credential-exchange/negotiation/inbound/exchange-processing",
+          "port_ref": "port://credential-exchange/negotiation/inbound/negotiate",
           "preconditions": [
             {
               "description": "Exchange message must be a valid exn with IPEX route",
@@ -16022,7 +16022,7 @@ const RDOD_DATA = {
           ]
         },
         {
-          "port_ref": "port://credential-lifecycle/status/inbound/tel-event-processing",
+          "port_ref": "port://credential-lifecycle/status/inbound/state-query",
           "preconditions": [
             {
               "description": "TEL event must reference an existing registry",
@@ -19984,7 +19984,7 @@ const RDOD_DATA = {
           ]
         },
         {
-          "port_ref": "port://discovery/inbound/oobi-resolution",
+          "port_ref": "port://discovery/inbound/discovery",
           "preconditions": [
             {
               "description": "OOBI URL must be well-formed HTTP(S) URL with AID path component",
@@ -20012,7 +20012,7 @@ const RDOD_DATA = {
           ]
         },
         {
-          "port_ref": "port://discovery/inbound/endpoint-authorization",
+          "port_ref": "port://discovery/inbound/discovery",
           "preconditions": [
             {
               "description": "Reply must be signed by the AID that owns the endpoint",
@@ -24949,7 +24949,7 @@ const RDOD_DATA = {
           ]
         },
         {
-          "port_ref": "port://identity/establishment/inbound/event-processing",
+          "port_ref": "port://identity/establishment/inbound/validate-event",
           "preconditions": [
             {
               "description": "Event must be a valid KERI establishment event (icp, rot, dip, drt) or non-establishment event (ixn)",
@@ -33113,7 +33113,7 @@ const RDOD_DATA = {
       {
         "name": "Network Transport",
         "abstraction": "Adapter",
-        "ref": "port://local-agent/outbound/network-transport",
+        "ref": "port://local-agent/outbound/witness-comms",
         "implementation_notes": "HTTP/TCP for direct witness and watcher communication. No cloud agent proxy — the controller's process connects directly"
       }
     ],
