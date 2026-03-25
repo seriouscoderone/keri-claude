@@ -962,7 +962,7 @@ const RDOD_DATA = {
         "invariants": [
           "First verified version of an event is witnessed (signed, stored, acknowledged)",
           "All other versions at the same location are discarded",
-          "Exception: correctly reconcilable superseding events may replace first-seen events",
+          "Exception: a superseding rotation event (per rules A0/B1-B3) may replace a previously first-seen event at the same sn — this is the ONLY case where first-seen ordering changes",
           "Consistent receipts from other witnesses are appended to the KERL entry",
           "Inconsistent receipts (different event version at same location) are discarded from KERL"
         ],
@@ -7246,8 +7246,8 @@ const RDOD_DATA = {
           "term": "MtrDex",
           "technique": "property-based",
           "formal": {
-            "language": "python/pytest",
-            "expression": "def test_mtrdex_immutability():\n    original = {k: v for k, v in MtrDex.__dict__.items() if not k.startswith('_')}\n    # Attempt mutation should fail (frozen dataclass)\n    for name, code in original.items():\n        assert isinstance(code, str)\n        with pytest.raises((AttributeError, FrozenInstanceError)):\n            setattr(MtrDex, name, 'X')\n    # Values unchanged\n    for name, code in original.items():\n        assert getattr(MtrDex, name) == code\n"
+            "language": "pseudocode",
+            "expression": "Code table entries MUST be immutable after initialization — no insertion,\ndeletion, or modification of code mappings at runtime. For every named\nentry in the master code table constant:\n  1. The value MUST be a string (the CESR code).\n  2. Attempting to overwrite the entry MUST raise an error (frozen/immutable).\n  3. After any attempted mutation, the original value MUST be unchanged.\n"
           },
           "strategy": "exhaustive — enumerate all MtrDex attributes",
           "notes": "Code table constants must be frozen/immutable."
@@ -7257,8 +7257,8 @@ const RDOD_DATA = {
           "term": "MtrDex",
           "technique": "property-based",
           "formal": {
-            "language": "python",
-            "expression": "def test_mtrdex_in_code_table():\n    for name in dir(MtrDex):\n        if name.startswith('_'):\n            continue\n        code = getattr(MtrDex, name)\n        if isinstance(code, str):\n            assert code in MATTER_CODE_TABLE, f\"MtrDex.{name}={code} not in code table\"\n"
+            "language": "pseudocode",
+            "expression": "Every code defined in the master code table constant MUST have a\ncorresponding entry in the runtime code table — no orphaned or missing\ncodes. For each named entry in MtrDex whose value is a string:\n  assert that the code string exists as a key in MATTER_CODE_TABLE.\nAny code present in MtrDex but absent from MATTER_CODE_TABLE is a\nspecification violation.\n"
           },
           "strategy": "exhaustive",
           "notes": "Every MtrDex constant must correspond to a valid code table entry."
@@ -9203,7 +9203,7 @@ const RDOD_DATA = {
           "Items automatically complete when missing data arrives",
           "Multiple escrow types: partial signature, out-of-order event, unverified receipt",
           "Each component (Identity Event Processor [Kevery in keripy], Credential Event Processor [Tevery in keripy], Exchanger, Verifier, Registrar, Credentialer) maintains its own escrows",
-          "Escrows processed periodically by the Escrow Processing Worker in the async processing loop"
+          "Escrows are swept once per work cycle by the processing loop — each domain's escrow queue is checked for items whose blocking conditions have resolved or whose timeout has expired"
         ],
         "examples": [
           "A multi-sig event with 1 of 3 required signatures is escrowed until others arrive",
@@ -9470,7 +9470,7 @@ const RDOD_DATA = {
           "notes": "Message Queue (Deck in HIO/keripy) is a FIFO deque — items come out in the order they were appended"
         },
         {
-          "invariant": "Escrowed items MUST be discarded when their age exceeds the configured timeout; items where age < timeout MUST remain active; items where age >= timeout MUST be pruned and MUST NOT be processed further",
+          "invariant": "Escrowed items with age >= configured timeout MUST be pruned: OOE timeout=1200s, PSE/PWE timeout=3600s, PDE timeout=86400s. Pruned items are permanently discarded and cannot re-enter any escrow.",
           "term": "Escrow",
           "technique": "smt",
           "formal": {
@@ -12416,8 +12416,8 @@ const RDOD_DATA = {
           "term": "Credential Artifacts in Grant",
           "technique": "property-based",
           "formal": {
-            "language": "python",
-            "expression": "lambda grant: (\n  grant.kel_seal is not None\n  and is_valid_said(grant.kel_seal.d)\n  and isinstance(grant.kel_seal.s, int)\n)\n"
+            "language": "pseudocode",
+            "expression": "A valid grant bundle MUST contain all three artifacts:\n  1. ACDC — non-null\n  2. TEL event — non-null with valid SAID\n  3. KEL seal — non-null with valid prefix, sn >= 0, valid SAID\nMissing any artifact → reject grant.\n"
           },
           "strategy": "Generate grants with and without seals; verify seal presence required",
           "notes": ""
@@ -13245,7 +13245,7 @@ const RDOD_DATA = {
         "invariants": [
           "Must validate that the protocol identifier is 'ACDC' on construction",
           "Provides typed accessors for all top-level ACDC fields (i, s, a, e, r, rd, u)",
-          "The .issuee accessor extracts the i field from the nested attribute section (a.i)",
+          "The issuee field (a.i) accessor extracts the i field from the nested attribute section",
           "Inherits SAID verification and serialization from the base SAD serializer"
         ],
         "related_terms": [
@@ -13264,7 +13264,7 @@ const RDOD_DATA = {
         "invariants": [
           "Performs full end-to-end verification: signatures, schema, TEL state, and edge chains",
           "Escrows credentials that cannot yet be verified due to missing dependencies",
-          "Four escrow types: missing registry events [.mre], missing chain links [.mce], missing schema [.mse], missing signatures [.cmse]",
+          "Four escrow types: Missing Registry Escrow [.mre in keripy], Missing Chain Escrow [.mce in keripy], Missing Schema Escrow [.mse in keripy], Missing Credential Schema Escrow [.cmse in keripy]",
           "Each escrow type has a 3600-second timeout before the escrowed credential is discarded"
         ],
         "related_terms": [
@@ -16398,8 +16398,8 @@ const RDOD_DATA = {
           "term": "Transaction Event Seal",
           "technique": "property-based",
           "formal": {
-            "language": "python",
-            "expression": "lambda seal: (\n  isinstance(seal.s, int) and seal.s >= 0\n  and is_valid_said(seal.d)\n)\n"
+            "language": "pseudocode",
+            "expression": "A transaction event seal MUST have:\n  1. Sequence number — integer >= 0\n  2. Valid SAID — a verifiable digest\n  3. Valid prefix — a CESR-qualified AID\nInvalid seals (missing or malformed fields) → reject TEL event.\n"
           },
           "strategy": "Generate seals with valid and invalid fields",
           "notes": ""
@@ -17147,10 +17147,10 @@ const RDOD_DATA = {
           "term": "di Field",
           "technique": "property-based",
           "formal": {
-            "language": "python",
-            "expression": "lambda event: (event.type == 'dip') == hasattr(event, 'di')"
+            "language": "pseudocode",
+            "expression": "Delegated inception events (type='dip') MUST have a di field containing the\ndelegator's AID. Non-delegated inception events (type='icp') MUST NOT have a\ndi field. Delegated rotation events (type='drt') MUST NOT have a di field.\nThe presence of di and the event type must be consistent:\n  if event.type == 'dip' then di field MUST be present\n  if event.type in ('icp', 'drt') then di field MUST be absent\n"
           },
-          "strategy": "st.from_type(KeyEvent).filter(lambda e: e.type in ('dip', 'drt'))",
+          "strategy": "All delegated event types (dip, drt) plus non-delegated (icp)",
           "notes": "Strict presence/absence constraint — di in dip, no di in drt"
         },
         {
@@ -21292,7 +21292,7 @@ const RDOD_DATA = {
         "definition": "The defined sequence in which escrow queues are drained during each processing sweep. Order matters because resolving one escrow type may produce events that enter another escrow type.",
         "invariants": [
           "Order: OOE first, then receipt/witness escrows, then PSE, then PWE, then PDE",
-          "OOE is processed first because it may release events that then need signature/witness/delegation checks",
+          "Escrow processing order MUST be: OOE first (releases sequence-gapped events), then PSE (releases signature-deficient events), then PWE (releases witness-deficient events), then PDE (releases delegation-pending events). Order matters because each resolution may cascade into the next escrow type.",
           "Each sweep iterates the full queue for each escrow type before moving to the next type",
           "In keriox, the notification bus pattern replaces explicit sweep ordering -- each escrow listens for relevant notifications and processes asynchronously"
         ],
@@ -32211,7 +32211,7 @@ const RDOD_DATA = {
         "invariants": [
           "Controller registers watchers for its own AIDs and AIDs it wants to monitor",
           "Controller submits KELs to watchers for independent verification",
-          "Watcher duplicity reports received and processed locally",
+          "Watcher duplicity reports are received via direct HTTP connection and stored in the local DEL — no cloud agent intermediary",
           "Watchers provide an independent view of key state — a second opinion beyond witnesses",
           "Watcher endpoints discovered via OOBI resolution or configuration"
         ],
@@ -32240,7 +32240,7 @@ const RDOD_DATA = {
           "Credential revocation via TEL revocation event, anchored to KEL",
           "Received credentials validated by local Verifier against issuer's KEL and registry TEL",
           "Credential storage in local database — no cloud wallet",
-          "IPEX exchange protocol (grant/admit/offer/agree) handled locally"
+          "IPEX exchange messages (apply, offer, agree, grant, admit, spurn) are constructed and dispatched directly from the local agent — no cloud agent intermediary for credential exchange"
         ],
         "examples": [
           "regery = Regery(hby=habery, name='myregistry', temp=False) → local registry",
@@ -33050,7 +33050,7 @@ const RDOD_DATA = {
         ],
         "definition": "Hierarchical graduated partial disclosure engine for nested field maps. Traverses the credential tree, computing SAIDs at each branch. Supports degrees of partial disclosure: full compact (SAIDs only), partial uncompaction (reveal selected branches), full expansion (all data).",
         "invariants": [
-          ".leaves property provides mappers at each leaf node with computed SAIDs",
+          "leaf SAIDs property provides mappers at each leaf node with computed SAIDs",
           ".partials property provides partially disclosable variants of the credential",
           ".iscompact property indicates whether the current form has leaf-level SAIDs",
           "Depth-first traversal computes SAIDs bottom-up through the credential tree"

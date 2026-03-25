@@ -644,18 +644,14 @@ properties:
     term: "MtrDex"
     technique: "property-based"
     formal:
-      language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion
+      language: "pseudocode"
       expression: |
-        def test_mtrdex_immutability():
-            original = {k: v for k, v in MtrDex.__dict__.items() if not k.startswith('_')}
-            # Attempt mutation should fail (frozen dataclass)
-            for name, code in original.items():
-                assert isinstance(code, str)
-                with pytest.raises((AttributeError, FrozenInstanceError)):
-                    setattr(MtrDex, name, 'X')
-            # Values unchanged
-            for name, code in original.items():
-                assert getattr(MtrDex, name) == code
+        Code table entries MUST be immutable after initialization — no insertion,
+        deletion, or modification of code mappings at runtime. For every named
+        entry in the master code table constant:
+          1. The value MUST be a string (the CESR code).
+          2. Attempting to overwrite the entry MUST raise an error (frozen/immutable).
+          3. After any attempted mutation, the original value MUST be unchanged.
     strategy: "exhaustive — enumerate all MtrDex attributes"
     notes: "Code table constants must be frozen/immutable."
 
@@ -663,15 +659,14 @@ properties:
     term: "MtrDex"
     technique: "property-based"
     formal:
-      language: "python"
+      language: "pseudocode"
       expression: |
-        def test_mtrdex_in_code_table():
-            for name in dir(MtrDex):
-                if name.startswith('_'):
-                    continue
-                code = getattr(MtrDex, name)
-                if isinstance(code, str):
-                    assert code in MATTER_CODE_TABLE, f"MtrDex.{name}={code} not in code table"
+        Every code defined in the master code table constant MUST have a
+        corresponding entry in the runtime code table — no orphaned or missing
+        codes. For each named entry in MtrDex whose value is a string:
+          assert that the code string exists as a key in MATTER_CODE_TABLE.
+        Any code present in MtrDex but absent from MATTER_CODE_TABLE is a
+        specification violation.
     strategy: "exhaustive"
     notes: "Every MtrDex constant must correspond to a valid code table entry."
 

@@ -44,7 +44,7 @@ terms:
     invariants:
       - "First verified version of an event is witnessed (signed, stored, acknowledged)"
       - "All other versions at the same location are discarded"
-      - "Exception: correctly reconcilable superseding events may replace first-seen events"
+      - "Exception: a superseding rotation event (per rules A0/B1-B3) may replace a previously first-seen event at the same sn — this is the ONLY case where first-seen ordering changes"
       - "Consistent receipts from other witnesses are appended to the KERL entry"
       - "Inconsistent receipts (different event version at same location) are discarded from KERL"
     examples:

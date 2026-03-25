@@ -372,7 +372,7 @@ terms:
     invariants:
       - "Must validate that the protocol identifier is 'ACDC' on construction"
       - "Provides typed accessors for all top-level ACDC fields (i, s, a, e, r, rd, u)"
-      - "The .issuee accessor extracts the i field from the nested attribute section (a.i)"
+      - "The issuee field (a.i) accessor extracts the i field from the nested attribute section"
       - "Inherits SAID verification and serialization from the base SAD serializer"
     related_terms: ["ACDC", "SAD", "SAID", "Version String"]
 
@@ -382,7 +382,7 @@ terms:
     invariants:
       - "Performs full end-to-end verification: signatures, schema, TEL state, and edge chains"
       - "Escrows credentials that cannot yet be verified due to missing dependencies"
-      - "Four escrow types: missing registry events [.mre], missing chain links [.mce], missing schema [.mse], missing signatures [.cmse]"
+      - "Four escrow types: Missing Registry Escrow [.mre in keripy], Missing Chain Escrow [.mce in keripy], Missing Schema Escrow [.mse in keripy], Missing Credential Schema Escrow [.cmse in keripy]"
       - "Each escrow type has a 3600-second timeout before the escrowed credential is discarded"
     related_terms: ["Edge Section", "Edge Operator", "Registry SAID", "Schema"]
 

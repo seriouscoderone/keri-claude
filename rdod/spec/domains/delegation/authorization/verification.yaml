@@ -169,9 +169,15 @@ properties:
     term: "di Field"
     technique: property-based
     formal:
-      language: python
-      expression: "lambda event: (event.type == 'dip') == hasattr(event, 'di')"
-    strategy: "st.from_type(KeyEvent).filter(lambda e: e.type in ('dip', 'drt'))"
+      language: pseudocode
+      expression: |
+        Delegated inception events (type='dip') MUST have a di field containing the
+        delegator's AID. Non-delegated inception events (type='icp') MUST NOT have a
+        di field. Delegated rotation events (type='drt') MUST NOT have a di field.
+        The presence of di and the event type must be consistent:
+          if event.type == 'dip' then di field MUST be present
+          if event.type in ('icp', 'drt') then di field MUST be absent
+    strategy: "All delegated event types (dip, drt) plus non-delegated (icp)"
     notes: "Strict presence/absence constraint — di in dip, no di in drt"
 
   - invariant: "Both references must exist for a valid delegation"

@@ -45,7 +45,7 @@ properties:
     strategy: "st.lists(st.integers()) for work items — FIFO ordering must be preserved"
     notes: "Message Queue (Deck in HIO/keripy) is a FIFO deque — items come out in the order they were appended"
 
-  - invariant: "Escrowed items MUST be discarded when their age exceeds the configured timeout; items where age < timeout MUST remain active; items where age >= timeout MUST be pruned and MUST NOT be processed further"
+  - invariant: "Escrowed items with age >= configured timeout MUST be pruned: OOE timeout=1200s, PSE/PWE timeout=3600s, PDE timeout=86400s. Pruned items are permanently discarded and cannot re-enter any escrow."
     term: "Escrow"
     technique: smt
     formal:

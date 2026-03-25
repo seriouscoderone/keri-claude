@@ -87,13 +87,13 @@ properties:
     term: "Credential Artifacts in Grant"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        lambda grant: (
-          grant.kel_seal is not None
-          and is_valid_said(grant.kel_seal.d)
-          and isinstance(grant.kel_seal.s, int)
-        )
+        A valid grant bundle MUST contain all three artifacts:
+          1. ACDC — non-null
+          2. TEL event — non-null with valid SAID
+          3. KEL seal — non-null with valid prefix, sn >= 0, valid SAID
+        Missing any artifact → reject grant.
     strategy: "Generate grants with and without seals; verify seal presence required"
     notes: ""
 

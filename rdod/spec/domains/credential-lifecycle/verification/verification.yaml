@@ -21,12 +21,13 @@ properties:
     term: "Transaction Event Seal"
     technique: property-based
     formal:
-      language: python
+      language: pseudocode
       expression: |
-        lambda seal: (
-          isinstance(seal.s, int) and seal.s >= 0
-          and is_valid_said(seal.d)
-        )
+        A transaction event seal MUST have:
+          1. Sequence number — integer >= 0
+          2. Valid SAID — a verifiable digest
+          3. Valid prefix — a CESR-qualified AID
+        Invalid seals (missing or malformed fields) → reject TEL event.
     strategy: "Generate seals with valid and invalid fields"
     notes: ""
 

@@ -184,7 +184,7 @@ terms:
     definition: "The defined sequence in which escrow queues are drained during each processing sweep. Order matters because resolving one escrow type may produce events that enter another escrow type."
     invariants:
       - "Order: OOE first, then receipt/witness escrows, then PSE, then PWE, then PDE"
-      - "OOE is processed first because it may release events that then need signature/witness/delegation checks"
+      - "Escrow processing order MUST be: OOE first (releases sequence-gapped events), then PSE (releases signature-deficient events), then PWE (releases witness-deficient events), then PDE (releases delegation-pending events). Order matters because each resolution may cascade into the next escrow type."
       - "Each sweep iterates the full queue for each escrow type before moving to the next type"
       - "In keriox, the notification bus pattern replaces explicit sweep ordering -- each escrow listens for relevant notifications and processes asynchronously"
     examples:

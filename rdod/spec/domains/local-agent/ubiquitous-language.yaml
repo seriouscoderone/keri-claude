@@ -106,7 +106,7 @@ terms:
     invariants:
       - "Controller registers watchers for its own AIDs and AIDs it wants to monitor"
       - "Controller submits KELs to watchers for independent verification"
-      - "Watcher duplicity reports received and processed locally"
+      - "Watcher duplicity reports are received via direct HTTP connection and stored in the local DEL — no cloud agent intermediary"
       - "Watchers provide an independent view of key state — a second opinion beyond witnesses"
       - "Watcher endpoints discovered via OOBI resolution or configuration"
     examples:
@@ -124,7 +124,7 @@ terms:
       - "Credential revocation via TEL revocation event, anchored to KEL"
       - "Received credentials validated by local Verifier against issuer's KEL and registry TEL"
       - "Credential storage in local database — no cloud wallet"
-      - "IPEX exchange protocol (grant/admit/offer/agree) handled locally"
+      - "IPEX exchange messages (apply, offer, agree, grant, admit, spurn) are constructed and dispatched directly from the local agent — no cloud agent intermediary for credential exchange"
     examples:
       - "regery = Regery(hby=habery, name='myregistry', temp=False) → local registry"
       - "regery.issue(hab=hab, said=acdc_said) → issue credential, anchor to KEL"

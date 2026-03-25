@@ -57,7 +57,7 @@ terms:
       - "Items automatically complete when missing data arrives"
       - "Multiple escrow types: partial signature, out-of-order event, unverified receipt"
       - "Each component (Identity Event Processor [Kevery in keripy], Credential Event Processor [Tevery in keripy], Exchanger, Verifier, Registrar, Credentialer) maintains its own escrows"
-      - "Escrows processed periodically by the Escrow Processing Worker in the async processing loop"
+      - "Escrows are swept once per work cycle by the processing loop — each domain's escrow queue is checked for items whose blocking conditions have resolved or whose timeout has expired"
     examples:
       - "A multi-sig event with 1 of 3 required signatures is escrowed until others arrive"
       - "An out-of-order event escrowed until its predecessor is received"
