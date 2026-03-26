@@ -13,7 +13,6 @@ domain_ref: "delegation/authorization"
 
 errors:
   - name: "MissingDelegatorSealError"
-    keripy_class: "kering.MissingDelegationError"
     description: "Delegator has not anchored a seal approving this delegated event"
     cause: "No interaction or rotation event in the delegator's KEL contains an anchor seal matching the delegated event's (prefix, sn, SAID) — the delegator has not yet approved the delegation"
     recovery: "escrow"
@@ -33,10 +32,8 @@ errors:
         type: "integer"
         description: "The sequence number of the delegated event"
     related_port: "port://delegation/authorization/inbound/binding-lifecycle"
-    keripy_raise_site: "eventing.py:Kever.validateDelegation — multiple raise sites when seal not found in delegator's KEL"
 
   - name: "MissingDelegableApprovalError"
-    keripy_class: "kering.MissingDelegableApprovalError"
     description: "Delegation source seal present but cannot be verified against the delegator's KEL"
     cause: "The delegated event carries a delegation source seal attachment (delnum, deldiger) but the referenced delegating event cannot be found or confirmed in the delegator's KEL"
     recovery: "escrow"
@@ -56,10 +53,8 @@ errors:
         type: "string"
         description: "The digest from the delegation source seal couple"
     related_port: "port://delegation/authorization/inbound/binding-lifecycle"
-    keripy_raise_site: "eventing.py:Kever.valSigsWigsDel — delegable approval check; also escrow MDE processing"
 
   - name: "InvalidDelegatorError"
-    keripy_class: "kering.ValidationError"
     description: "The delegator AID does not exist or has no key state"
     cause: "Delegator prefix specified in the di field is not found in kevers — the delegator's inception event has not been received or processed"
     recovery: "escrow"
@@ -72,10 +67,8 @@ errors:
         type: "string"
         description: "The delegated identifier that references this delegator"
     related_port: "port://delegation/authorization/inbound/binding-lifecycle"
-    keripy_raise_site: "eventing.py:Kever.validateDelegation — delegator prefix lookup in kevers"
 
   - name: "DelegationNotAllowedError"
-    keripy_class: "kering.ConfigurationError"
     description: "The target identifier has the DND (Do Not Delegate) configuration trait"
     cause: "The delegator identifier was created with the 'DND' configuration trait in its inception event — this permanently forbids creating delegated identifiers under it"
     recovery: "abort"
@@ -88,10 +81,8 @@ errors:
         type: "array[string]"
         description: "The configuration traits on the delegator's inception event"
     related_port: "port://delegation/authorization/inbound/binding-lifecycle"
-    keripy_raise_site: "eventing.py:Kever — doNotDelegate trait check during delegation processing"
 
   - name: "SealMismatchError"
-    keripy_class: "kering.ValidationError"
     description: "Delegation seal fields do not match the delegated event"
     cause: "The anchor seal found in the delegator's KEL has a prefix, sn, or SAID that does not match the delegated event being validated — the seal does not authorize this specific event"
     recovery: "abort"
@@ -116,10 +107,8 @@ errors:
         type: "string"
         description: "The delegated event's SAID"
     related_port: "port://delegation/authorization/inbound/seal-construction"
-    keripy_raise_site: "eventing.py:Kever.validateDelegation — seal field comparison"
 
   - name: "SupersedingDelegationError"
-    keripy_class: "kering.MissingDelegationError"
     description: "A potentially superseding delegation was detected but the superseding event's own delegation cannot be verified"
     cause: "During cooperative delegation recovery, a newer delegating event was found in the delegator's KEL but the corresponding superseding delegated event or its delegation seal cannot be fully validated"
     recovery: "escrow"
@@ -139,4 +128,3 @@ errors:
         type: "string"
         description: "The delegator's AID"
     related_port: "port://delegation/authorization/inbound/binding-lifecycle"
-    keripy_raise_site: "eventing.py:Kever.validateDelegation — superseding delegation chain validation"

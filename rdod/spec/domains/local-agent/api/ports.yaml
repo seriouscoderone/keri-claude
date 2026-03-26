@@ -2,6 +2,15 @@
 domain_ref: "local-agent/api"
 
 ports:
+  - id: "port://local-agent/api/inbound/tcp-protocol"
+    type: inbound
+    name: "TCP Protocol Interface"
+    contract: >
+      receive(stream: bytes) -> [Message];
+      dispatch(message: Message) -> Result
+    protocol: "TCP"
+    refs: []
+
   - id: "port://local-agent/api/inbound/hab-operations"
     type: inbound
     name: "Hab/Habery Operations"
@@ -38,4 +47,13 @@ ports:
       verify_credential(said) -> VerificationResult;
       list_credentials(aid) -> [Credential]
     protocol: "method-call"
+    refs: []
+
+  - id: "port://local-agent/api/outbound/tcp-transport"
+    type: outbound
+    name: "TCP Transport"
+    contract: >
+      connect(host, port) -> Connection;
+      send(connection, stream) -> Result
+    protocol: "TCP"
     refs: []

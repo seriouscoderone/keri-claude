@@ -2,6 +2,19 @@
 domain_ref: "local-agent/api"
 
 terms:
+  - term: "Directant"
+    synonyms: ["TCP Protocol Server", "Direct Mode"]
+    definition: "TCP server that accepts direct CESR stream connections from other KERI agents. The local agent's network interface — receives raw CESR-encoded protocol messages over persistent TCP sockets, parses the stream, and dispatches to the appropriate processor. No HTTP overhead, no REST semantics — just CESR bytes on a socket."
+    invariants:
+      - "Accepts persistent TCP connections — not request/response, but continuous stream"
+      - "Parses inbound CESR stream into discrete messages (key events, receipts, queries, exchanges)"
+      - "Dispatches parsed messages to the same processors as any other transport"
+      - "The TCP and HTTP transports are interchangeable — domain logic is transport-agnostic"
+    examples:
+      - "Controller connects to witness at tcp://witness1:5631 and streams inception event + signatures"
+      - "Witness sends receipt back on the same TCP connection"
+    related_terms: ["Hab/Habery API", "CLI Interface"]
+
   - term: "Hab/Habery API"
     synonyms: ["Habery Interface", "Programmatic API"]
     definition: "The direct function interface through which application code interacts with the local KERI stack. The Identifier Repository (Habery in keripy) manages the collection; Hab represents a single AID with signing capability."
@@ -13,7 +26,7 @@ terms:
     examples:
       - "habery = Habery(name='controller', salt=salt)"
       - "hab = habery.makeHab('myaid', icount=1, ncount=1, wits=[wit1, wit2])"
-    related_terms: ["CLI Interface", "Credential Operations"]
+    related_terms: ["Directant", "CLI Interface", "Credential Operations"]
 
   # Inherits: "CLI Interface" from domain://local-agent
   - term: "CLI Interface"
@@ -51,5 +64,6 @@ events:
 
 rules:
   - "CLI is a thin layer — each kli command maps directly to a domain operation"
-  - "All API operations are synchronous and in-process — no network dependency for core operations"
+  - "Core API operations are synchronous and in-process — the Directant adds asynchronous TCP transport"
   - "Private keys never leave the process boundary — the API boundary enforces this"
+  - "TCP (Directant) and HTTP are interchangeable transports — domain logic is transport-agnostic"

@@ -114,54 +114,6 @@ properties:
     strategy: "kel_with_ixn_strategy() generates KELs containing interaction events"
     notes: "Interaction events advance sn but never touch key state fields."
 
-contracts:
-  - port_ref: "port://identity/inbound/identity-management"
-    preconditions:
-      - formal:
-          language: python
-          expression: "lambda config: config.keys is not None and len(config.keys) >= 1"
-        description: "create_inception requires at least one signing key"
-      - formal:
-          language: python
-          expression: "lambda aid, new_keys, new_next: aid is not None and len(new_keys) >= 1"
-        description: "create_rotation requires valid AID and new keys"
-    postconditions:
-      - formal:
-          language: python
-          expression: "lambda config, result: result.t == 'icp' and result.sn == 0 and result.said is not None"
-        description: "create_inception returns icp at sn=0 with SAID"
-      - formal:
-          language: python
-          expression: "lambda aid, new_keys, new_next, result: result.t == 'rot' and result.i == aid"
-        description: "create_rotation returns rot for the given AID"
-
-  - port_ref: "port://identity/inbound/event-processing"
-    preconditions:
-      - formal:
-          language: python
-          expression: "lambda event, sigs, rcts: event is not None and len(sigs) >= 1"
-        description: "At least one signature required"
-    postconditions:
-      - formal:
-          language: python
-          expression: |
-            lambda event, sigs, rcts, result: (
-                isinstance(result, EventValidated) or isinstance(result, ValidationError)
-            )
-        description: "Returns validated or error"
-
-  - port_ref: "port://identity/inbound/state-query"
-    preconditions:
-      - formal:
-          language: python
-          expression: "lambda aid: aid is not None"
-        description: "AID required for all queries"
-    postconditions:
-      - formal:
-          language: python
-          expression: "lambda aid, kel: len(kel.events) >= 1 and kel.events[0].t in ('icp', 'dip')"
-        description: "KEL always starts with inception"
-
   # Escrow Type Pattern invariants
   - invariant: "Escrow reprocessing outcomes: when an escrowed event is reprocessed, exactly one of four outcomes MUST occur: (1) ACCEPTED — blocking condition resolved, event moves to KEL; (2) SAME-ESCROW — blocking condition still unresolved, event stays in current escrow; (3) CASCADE — one blocking condition resolved but another discovered, event moves to a different escrow type; (4) PRUNED — timeout exceeded, event discarded permanently."
     term: "Escrow Type Pattern"
@@ -314,6 +266,54 @@ contracts:
             assert misfit.said not in [r.said for r in resolved]
     strategy: "misfit_event_strategy()"
     notes: "Misfits require manual re-submission."
+
+contracts:
+  - port_ref: "port://identity/inbound/identity-management"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda config: config.keys is not None and len(config.keys) >= 1"
+        description: "create_inception requires at least one signing key"
+      - formal:
+          language: python
+          expression: "lambda aid, new_keys, new_next: aid is not None and len(new_keys) >= 1"
+        description: "create_rotation requires valid AID and new keys"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda config, result: result.t == 'icp' and result.sn == 0 and result.said is not None"
+        description: "create_inception returns icp at sn=0 with SAID"
+      - formal:
+          language: python
+          expression: "lambda aid, new_keys, new_next, result: result.t == 'rot' and result.i == aid"
+        description: "create_rotation returns rot for the given AID"
+
+  - port_ref: "port://identity/inbound/event-processing"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda event, sigs, rcts: event is not None and len(sigs) >= 1"
+        description: "At least one signature required"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda event, sigs, rcts, result: (
+                isinstance(result, EventValidated) or isinstance(result, ValidationError)
+            )
+        description: "Returns validated or error"
+
+  - port_ref: "port://identity/inbound/state-query"
+    preconditions:
+      - formal:
+          language: python
+          expression: "lambda aid: aid is not None"
+        description: "AID required for all queries"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda aid, kel: len(kel.events) >= 1 and kel.events[0].t in ('icp', 'dip')"
+        description: "KEL always starts with inception"
 
 state_machines: []
 

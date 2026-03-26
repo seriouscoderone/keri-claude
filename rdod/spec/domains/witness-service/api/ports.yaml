@@ -5,20 +5,41 @@ ports:
   - id: "port://witness-service/api/inbound/event-submission"
     type: inbound
     name: "Event Submission"
-    contract: "submit_event(cesr_message) -> Receipt | Rejection — accepts CESR-encoded key events, verifies signatures, applies first-seen rule"
-    protocol: "HTTP"
+    contract: "submit_event(cesr_message) -> Receipt | Escrow | Rejection — accepts CESR-encoded key events, returns receipt"
+    protocol: "REST"
+    refs: ["domain://cloud-agent-service", "domain://local-agent"]
+
+  - id: "port://witness-service/api/inbound/receipting"
+    type: inbound
+    name: "Receipting"
+    contract: "receipt(pre, sn?, said?) -> Receipt — submit event for receipting or retrieve existing receipt"
+    protocol: "REST"
     refs: ["domain://cloud-agent-service", "domain://local-agent"]
 
   - id: "port://witness-service/api/inbound/kerl-query"
     type: inbound
     name: "KERL Query"
-    contract: "query_kerl(aid, sn_range?) -> CESR Stream — returns receipted key event log as CESR stream"
-    protocol: "HTTP"
+    contract: "query(typ, pre?, sn?, reg?, vcid?) -> CESR Stream — returns KEL or TEL events"
+    protocol: "REST"
     refs: ["domain://watcher-service"]
 
   - id: "port://witness-service/api/inbound/oobi-resolution"
     type: inbound
     name: "OOBI Resolution"
-    contract: "resolve_oobi(aid, role, eid) -> OOBIResponse — serves witness OOBI at /.well-known/keri/oobi/{aid}/{role}/{eid}"
-    protocol: "HTTP"
+    contract: "resolve_oobi(aid?, role?, eid?) -> CESR Reply — serves witness OOBI as CESR reply messages + KEL replay"
+    protocol: "REST"
     refs: []
+
+  - id: "port://witness-service/api/inbound/endpoint-management"
+    type: inbound
+    name: "Endpoint Management"
+    contract: "manage_endpoints(aid, role, endpoint_data) -> Result — service endpoint registration"
+    protocol: "REST"
+    refs: []
+
+  - id: "port://witness-service/api/outbound/http-server"
+    type: outbound
+    name: "HTTP Server"
+    contract: "listen(port) -> Server"
+    protocol: "method-call"
+    refs: ["transport"]

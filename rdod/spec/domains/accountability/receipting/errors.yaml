@@ -14,7 +14,6 @@ domain_ref: "accountability/receipting"
 
 errors:
   - name: "UnverifiedReceiptError"
-    keripy_class: "kering.UnverifiedReceiptError"
     description: "Non-transferable receipt cannot be verified because the receipted event is not yet in the KEL"
     cause: "Receipt references an event at (prefix, sn) that has not yet been accepted into the local KEL — the receipted event must arrive before the receipt can be verified"
     recovery: "escrow"
@@ -31,10 +30,8 @@ errors:
         type: "string"
         description: "The digest/SAID in the receipt"
     related_port: "port://accountability/receipting/inbound/receipt-lifecycle"
-    keripy_raise_site: "eventing.py:Kevery.processReceipt, Kevery.processReceiptCouples — escrowUReceipt then raise"
 
   - name: "UnverifiedWitnessReceiptError"
-    keripy_class: "kering.UnverifiedWitnessReceiptError"
     description: "Witness receipt cannot be verified because the receipted event is not yet in the KEL"
     cause: "A witness receipt (wiger) references an event that has not yet been accepted — the receipt arrived before the event it covers"
     recovery: "escrow"
@@ -51,10 +48,8 @@ errors:
         type: "string"
         description: "The witness AID that signed the receipt"
     related_port: "port://accountability/receipting/inbound/receipt-lifecycle"
-    keripy_raise_site: "eventing.py:Kevery.escrow processing — UWE escrow when receipted event missing"
 
   - name: "UnverifiedTransferableReceiptError"
-    keripy_class: "kering.UnverifiedTransferableReceiptError"
     description: "Transferable receipt cannot be verified because the receipter's establishment event or the receipted event is missing"
     cause: "A transferable receipt quadruple (Prefixer, Seqner, Saider, Siger) references either a receipted event not yet in the local KEL or a receipter establishment event that has not been received"
     recovery: "escrow"
@@ -77,10 +72,8 @@ errors:
         type: "integer"
         description: "The sequence number of the receipted event"
     related_port: "port://accountability/receipting/inbound/receipt-lifecycle"
-    keripy_raise_site: "eventing.py:Kevery.processReceiptQuadruples, escrowTReceipts — missing establishment event of transferable receipter"
 
   - name: "StaleReceiptError"
-    keripy_class: "kering.ValidationError"
     description: "Receipt references an event that has been superseded"
     cause: "Receipt's SAID does not match the accepted event at the given (prefix, sn) — the receipt covers a stale or replaced event"
     recovery: "abort"
@@ -99,10 +92,8 @@ errors:
         type: "string"
         description: "The SAID of the currently accepted event at this sn"
     related_port: "port://accountability/receipting/inbound/receipt-lifecycle"
-    keripy_raise_site: "eventing.py:Kevery.processReceipt — 'Stale receipt at sn'"
 
   - name: "UnknownWitnessError"
-    keripy_class: "kering.ValidationError"
     description: "Receipt signed by an AID not in the current witness set"
     cause: "The signing AID is not in the event's witness list (b field) — receipt from a non-witness cannot contribute to accountability"
     recovery: "abort"
@@ -118,10 +109,8 @@ errors:
         type: "array[string]"
         description: "The current witness set for this identifier"
     related_port: "port://accountability/receipting/inbound/kerl-assembly"
-    keripy_raise_site: "eventing.py:Kevery — witness receipt processing when AID not in wit list"
 
   - name: "EscrowTimeoutError"
-    keripy_class: "kering.ValidationError"
     description: "Escrowed receipt exceeded the maximum escrow duration"
     cause: "Receipt has been in escrow longer than the timeout (default 3600 seconds) without the blocking condition resolving"
     recovery: "abort"
@@ -140,4 +129,3 @@ errors:
         type: "integer"
         description: "How long the receipt was escrowed before timeout"
     related_port: "port://accountability/receipting/inbound/receipt-lifecycle"
-    keripy_raise_site: "eventing.py:Kevery escrow processing — timeout pruning across URE, UWE, VRE"

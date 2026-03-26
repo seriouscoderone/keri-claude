@@ -13,7 +13,6 @@ domain_ref: "credential-exchange/negotiation"
 
 errors:
   - name: "MissingSignatureError"
-    keripy_class: "kering.MissingSignatureError"
     description: "Exchange message signatures do not satisfy the signing threshold"
     cause: "Verified signature indices do not satisfy tholder.satisfy() — insufficient controller or group signatures on the exn message"
     recovery: "escrow"
@@ -33,10 +32,8 @@ errors:
         type: "string"
         description: "The SAID of the partially-signed exchange message"
     related_port: "port://credential-exchange/negotiation/inbound/dispatch-message"
-    keripy_raise_site: "exchanging.py:Exchanger.processEvent — escrowPSEvent then raise MissingSignatureError"
 
   - name: "MissingDestinationError"
-    keripy_class: "kering.MissingDestinationError"
     description: "Exchange message is missing the destination (recipient) field"
     cause: "The 'i' field (destination AID) is missing from the exn message body — cannot route the exchange"
     recovery: "abort"
@@ -49,10 +46,8 @@ errors:
         type: "string"
         description: "The exchange route (/ipex/apply, /ipex/grant, etc.)"
     related_port: "port://credential-exchange/negotiation/inbound/dispatch-message"
-    keripy_raise_site: "exchanging.py:Exchanger.processEvent — destination field check"
 
   - name: "ValidationError"
-    keripy_class: "kering.ValidationError"
     description: "Exchange message failed structural validation"
     cause: "The exn message body is malformed, missing required essr attachments, has invalid essr digest, expired datetime, or duplicate route registration"
     recovery: "abort"
@@ -68,10 +63,8 @@ errors:
         type: "string"
         description: "The SAID of the invalid exchange message"
     related_port: "port://credential-exchange/negotiation/inbound/dispatch-message"
-    keripy_raise_site: "exchanging.py:Exchanger.processEvent — 'at least one essr attachment is required', 'essr diger is invalid', 'Missing exn escrowed event datetime'"
 
   - name: "GrantMissingRegistryError"
-    keripy_class: "kering.MissingRegistryError"
     description: "Credential in exchange message references a registry that has not been received"
     cause: "The ACDC embedded in a grant message references a registry REGID not in the local Tevers — the registry inception has not been processed"
     recovery: "escrow"
@@ -87,10 +80,8 @@ errors:
         type: "string"
         description: "The SAID of the exchange message"
     related_port: "port://credential-exchange/negotiation/inbound/dispatch-message"
-    keripy_raise_site: "verifying.py:Verifier.processCredential — triggered during grant processing"
 
   - name: "MissingSchemaError"
-    keripy_class: "kering.MissingSchemaError"
     description: "Credential schema referenced in exchange not found in local cache"
     cause: "The JSON schema SAID referenced by the ACDC in a grant message has not been resolved via data OOBI"
     recovery: "escrow"
@@ -103,10 +94,8 @@ errors:
         type: "string"
         description: "The SAID of the credential referencing the schema"
     related_port: "port://credential-exchange/negotiation/inbound/dispatch-message"
-    keripy_raise_site: "verifying.py:Verifier.processCredential — 'schema {} not in cache'"
 
   - name: "ExchangeEscrowTimeoutError"
-    keripy_class: "N/A (timeout-based eviction)"
     description: "Escrowed exchange message expired before prerequisites were met"
     cause: "The partially-signed exchange message sat in escrow beyond TimeoutPSE (10 seconds) without collecting sufficient signatures or resolving dependencies"
     recovery: "abort"
@@ -122,10 +111,8 @@ errors:
         type: "integer"
         description: "Duration before expiry (default: 10)"
     related_port: "port://credential-exchange/negotiation/inbound/dispatch-message"
-    keripy_raise_site: "exchanging.py:Exchanger.processEscrows — TimeoutPSE eviction"
 
   - name: "ConfigurationError"
-    keripy_class: "kering.ConfigurationError"
     description: "Credential schema validation or configuration error during exchange"
     cause: "The credential schema was not found or the credential fails schema validation when the exchange is being constructed by KERIA"
     recovery: "abort"
@@ -138,4 +125,3 @@ errors:
         type: "string"
         description: "Configuration failure details"
     related_port: "port://credential-exchange/negotiation/inbound/construct-message"
-    keripy_raise_site: "keria/app/credentialing.py — 'Credential schema {} not found', 'Credential schema validation failed'"

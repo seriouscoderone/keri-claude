@@ -2,7 +2,15 @@
 domain_ref: "cloud-agent-service/api"
 
 ports:
-  # Inbound — what clients call
+  # === PORT 3903: BOOT ===
+  - id: "port://cloud-agent-service/api/inbound/boot"
+    type: inbound
+    name: "Boot API"
+    contract: "provision_agent(icp, sig, key_params) -> Operation — creates cloud agent for a controller AID"
+    protocol: "REST"
+    refs: ["domain://signify-client"]
+
+  # === PORT 3901: ADMIN API ===
   - id: "port://cloud-agent-service/api/inbound/admin-api"
     type: inbound
     name: "Admin API"
@@ -21,6 +29,7 @@ ports:
     protocol: "REST"
     refs: ["domain://signify-client", "domain://cloud-agent-service"]
 
+  # === PORT 3902: MESSAGE ROUTER ===
   - id: "port://cloud-agent-service/api/inbound/message-router"
     type: inbound
     name: "Message Router"
@@ -28,10 +37,4 @@ ports:
     protocol: "REST"
     refs: []
 
-  # Outbound — what the API layer calls
-  - id: "port://cloud-agent-service/api/outbound/http-server"
-    type: outbound
-    name: "HTTP Server"
-    contract: "listen(admin_port, router_port) -> Server"
-    protocol: "method-call"
-    refs: ["transport"]
+  # Outbound HTTP server defined at parent: port://cloud-agent-service/outbound/http-server

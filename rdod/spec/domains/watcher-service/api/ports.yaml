@@ -6,19 +6,33 @@ ports:
     type: inbound
     name: "KEL State Query"
     contract: "query_kel(aid) -> KELState — validators query for current key state of a monitored AID"
-    protocol: "HTTP"
+    protocol: "REST"
     refs: ["domain://cloud-agent-service", "domain://local-agent"]
 
   - id: "port://watcher-service/api/inbound/duplicity-query"
     type: inbound
     name: "Duplicity Query"
     contract: "query_duplicity(aid) -> DuplicityStatus — validators query for duplicity alerts on an AID"
-    protocol: "HTTP"
+    protocol: "REST"
     refs: ["domain://cloud-agent-service", "domain://local-agent"]
 
   - id: "port://watcher-service/api/inbound/oobi-resolution"
     type: inbound
     name: "OOBI Resolution"
-    contract: "resolve_oobi(aid, role, eid) -> OOBIResponse — serves watcher OOBI for discovery"
-    protocol: "HTTP"
+    contract: "resolve_oobi(aid?, role?, eid?) -> CESR Reply — serves watcher OOBI for discovery"
+    protocol: "REST"
     refs: []
+
+  - id: "port://watcher-service/api/outbound/http-server"
+    type: outbound
+    name: "HTTP Server"
+    contract: "listen(port) -> Server"
+    protocol: "method-call"
+    refs: ["transport"]
+
+  - id: "port://watcher-service/api/outbound/witness-query"
+    type: outbound
+    name: "Witness Query"
+    contract: "fetch_kel(witness_url, aid) -> KEL — query witnesses for independent KEL collection"
+    protocol: "REST"
+    refs: ["domain://witness-service/api"]

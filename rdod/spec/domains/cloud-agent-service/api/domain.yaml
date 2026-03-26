@@ -13,8 +13,20 @@ version: "0.1.0"
 source_material:
   - type: document
     reference: "keridoc-llms-full.md — KERIA architecture documentation, API endpoints"
-  - type: document
-    reference: "keria — app.py: createHttpEndpoints(), agenting.py: AdminHandler, ProtocolMessageRouter"
+  - type: source-code
+    reference: "keria/src/keria/app/agenting.py — boot endpoint (BootEnd), agent management (AgentResourceEnd), HTTP server setup"
+  - type: source-code
+    reference: "keria/src/keria/app/aiding.py — identifier CRUD (IdentifierCollectionEnd, IdentifierResourceEnd), end roles, OOBIs, group members"
+  - type: source-code
+    reference: "keria/src/keria/app/credentialing.py — registries, credential issuance/revocation, schemas, presentations"
+  - type: source-code
+    reference: "keria/src/keria/app/ipexing.py — IPEX exchange endpoints"
+  - type: source-code
+    reference: "keria/src/keria/app/notifying.py — notification collection/resource endpoints"
+  - type: source-code
+    reference: "keria/src/keria/core/authing.py — KRAM signature validation middleware (SignatureValidationComponent)"
+  - type: source-code
+    reference: "keria/src/keria/app/specing.py — OpenAPI 3.1.0 spec generation (/spec.yaml on port 3902)"
   - type: user-input
     reference: "CLAUDE.md — KERIA service architecture (ports 3901/3902/3903)"
 
@@ -32,7 +44,7 @@ adjacents: []
 externals:
   - name: "HTTP Server"
     abstraction: "Adapter"
-    ref: "port://cloud-agent-service/api/outbound/http-server"
+    ref: "port://cloud-agent-service/outbound/http-server"
     implementation_notes: "Exposes admin (3901) and message router (3902) endpoints. Implementations: Falcon/hio (keria), API Gateway+Lambda (serious-keri)"
 
 implementation_guidance:

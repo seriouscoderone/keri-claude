@@ -13,7 +13,6 @@ domain_ref: "identity/state"
 
 errors:
   - name: "QueryNotFoundError"
-    keripy_class: "kering.QueryNotFoundError"
     description: "Requested key state, event log, or mailbox not found"
     cause: "Query for a prefix, sequence number, or SAID that does not exist in the local database — the target AID's KEL has not been received or the requested sn/said does not match any stored event"
     recovery: "retry"
@@ -32,10 +31,8 @@ errors:
         type: "string"
         description: "The requested SAID, if applicable"
     related_port: "port://identity/state/inbound/state-query"
-    keripy_raise_site: "eventing.py:Kevery.processQuery — multiple sites when prefix not in kevers or sn/said not found"
 
   - name: "OutOfOrderKeyStateError"
-    keripy_class: "kering.OutOfOrderKeyStateError"
     description: "Referenced event missing from log so the key state notice cannot be verified"
     cause: "A key state notice references an establishment event at a sequence number that is not yet in the local KEL — the notice arrived before its supporting events"
     recovery: "escrow"
@@ -51,10 +48,8 @@ errors:
         type: "integer"
         description: "The highest sequence number available locally"
     related_port: "port://identity/state/inbound/state-tracking"
-    keripy_raise_site: "eventing.py:Kevery — key state notice processing when referenced event missing"
 
   - name: "StaleKeyStateError"
-    keripy_class: "kering.ValidationError"
     description: "Key state is outdated relative to a more recent establishment event"
     cause: "Cached key state sn < latest accepted establishment event sn — state reconstruction is needed"
     recovery: "retry"
@@ -70,10 +65,8 @@ errors:
         type: "integer"
         description: "Sequence number of the latest establishment event"
     related_port: "port://identity/state/inbound/state-reconstruction"
-    keripy_raise_site: "eventing.py:Kever — stale event check during state update"
 
   - name: "MissingEntryError"
-    keripy_class: "kering.MissingEntryError"
     description: "Expected database entry not found during state lookup"
     cause: "An event digest, key state record, or escrow entry that should exist in the database was not found — possible database corruption or incomplete sync"
     recovery: "abort"
@@ -89,10 +82,8 @@ errors:
         type: "string"
         description: "The database key that was not found"
     related_port: "port://identity/state/outbound/persistence"
-    keripy_raise_site: "kering.MissingEntryError — raised across database access paths"
 
   - name: "UnverifiedReplyError"
-    keripy_class: "kering.UnverifiedReplyError"
     description: "Key state notice reply message could not be verified"
     cause: "Reply message signatures do not verify — the key state notice was not signed by a trusted source or the signing key state is not yet available"
     recovery: "escrow"
@@ -108,4 +99,3 @@ errors:
         type: "string"
         description: "The reply route (/ksn, /end/role, /loc/scheme)"
     related_port: "port://identity/state/inbound/state-tracking"
-    keripy_raise_site: "eventing.py:Kevery.processReplyKeyStateNotice — when reply sigs do not verify"

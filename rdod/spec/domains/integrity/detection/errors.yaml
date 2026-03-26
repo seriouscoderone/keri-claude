@@ -18,7 +18,6 @@ domain_ref: "integrity/detection"
 
 errors:
   - name: "LikelyDuplicitousError"
-    keripy_class: "kering.LikelyDuplicitousError"
     description: "Two different events with different SAIDs exist for the same (prefix, sequence number)"
     cause: "An event arrived at (prefix, sn) with a SAID different from the already-accepted event at that (prefix, sn) — this is the primary duplicity detection trigger indicating possible key compromise or Byzantine controller behavior"
     recovery: "escrow"
@@ -38,10 +37,8 @@ errors:
         type: "string"
         description: "SAID of the newly received conflicting event"
     related_port: "port://integrity/detection/inbound/monitoring-lifecycle"
-    keripy_raise_site: "eventing.py:Kevery.processEvent — both inception and post-inception duplicity paths"
 
   - name: "DuplicitousInceptionError"
-    keripy_class: "kering.LikelyDuplicitousError"
     description: "A second inception event with a different SAID was received for an already-incepted prefix"
     cause: "An icp or dip event arrived for a prefix that already has an accepted inception event, and the new inception has a different SAID — this is duplicity at the root of the KEL"
     recovery: "escrow"
@@ -58,10 +55,8 @@ errors:
         type: "string"
         description: "SAID of the new conflicting inception event"
     related_port: "port://integrity/detection/inbound/monitoring-lifecycle"
-    keripy_raise_site: "eventing.py:Kevery.processEvent — inception duplicity check: 'Likely duplicitous event'"
 
   - name: "KELForkDetectedError"
-    keripy_class: "kering.LikelyDuplicitousError"
     description: "A fork in the KEL has been detected — two divergent event sequences from the same prefix"
     cause: "Events diverge at some sequence number, creating two incompatible KEL branches — detected via comparison of event SAIDs at the same (prefix, sn) across multiple sources (witnesses, watchers)"
     recovery: "escalate"
@@ -86,10 +81,8 @@ errors:
         type: "string"
         description: "The source (witness/watcher AID) reporting branch B"
     related_port: "port://integrity/detection/outbound/kel-sources"
-    keripy_raise_site: "eventing.py:cross-source KERL comparison — detected when polling multiple witnesses/watchers"
 
   - name: "FirstSeenReplayError"
-    keripy_class: "kering.ValidationError"
     description: "An event at a previously-seen (prefix, sn) arrived with the same SAID but from a different source"
     cause: "The event is an idempotent duplicate (same SAID) — not duplicitous, but if the first-seen ordering differs across sources, it may indicate timing manipulation"
     recovery: "abort"
@@ -108,10 +101,8 @@ errors:
         type: "integer"
         description: "The first-seen ordering number from the local database"
     related_port: "port://integrity/detection/inbound/monitoring-lifecycle"
-    keripy_raise_site: "eventing.py:Kevery.processEvent — accepted duplicate at same sn with same SAID (no-op path)"
 
   - name: "DuplicityEscrowTimeoutError"
-    keripy_class: "kering.ValidationError"
     description: "Likely-duplicitous event exceeded the escrow timeout without resolution"
     cause: "An event in the LDE escrow (Likely Duplicitous Events) has exceeded the maximum escrow duration without the duplicity being resolved through recovery rotation or operator decision"
     recovery: "abort"
@@ -130,4 +121,3 @@ errors:
         type: "integer"
         description: "How long the event was escrowed before timeout"
     related_port: "port://integrity/detection/inbound/trust-decisions"
-    keripy_raise_site: "eventing.py:Kevery — LDE escrow timeout processing"
