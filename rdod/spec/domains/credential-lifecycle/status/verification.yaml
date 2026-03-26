@@ -262,3 +262,31 @@ state_machines:
       - "All credentials under this registry remain in their current state during rotation"
       - "VRT events are only valid for registries with backers (not NoBackers)"
       - "Config traits set at inception cannot be changed by VRT events"
+
+# TEL event acceptance as a composable constraint graph.
+# An AI reads this as a DAG: C1 → C2 → C3 → C4 → C5 (sequential with escrow at each stage).
+validation_constraints:
+  - id: "C1_registry_exists"
+    constraint: "Registry identified by ri (or ra.i) must exist and be in Active or Rotated state"
+    depends_on: []
+    on_failure: "escrow to MRE — missing registry escrow"
+
+  - id: "C2_issuer_key_state"
+    constraint: "Issuer's current key state must be available and event signatures must verify"
+    depends_on: ["C1_registry_exists"]
+    on_failure: "escrow — missing issuer key state"
+
+  - id: "C3_kel_anchor"
+    constraint: "TEL event must be anchored in the issuer's KEL via a seal"
+    depends_on: ["C2_issuer_key_state"]
+    on_failure: "escrow to MCE — missing KEL anchor event"
+
+  - id: "C4_sequence_valid"
+    constraint: "Event sequence number must equal current_sn + 1 with p field matching prior event SAID"
+    depends_on: ["C3_kel_anchor"]
+    on_failure: "escrow to OOT — out-of-order TEL event"
+
+  - id: "C5_state_transition_valid"
+    constraint: "State transition must be valid per credential FSM (NotIssued→Issued or Issued→Revoked)"
+    depends_on: ["C4_sequence_valid"]
+    on_failure: "reject — invalid state transition"

@@ -219,3 +219,26 @@ contracts:
           language: python
           expression: "lambda result: result.is_ok() or result.is_transport_error()"
         description: "Result is either success or a transport-layer error — no silent failures"
+
+# KAWA receipt processing as a composable constraint graph.
+# An AI reads this as a DAG: C1 → C2 → C3 → C4 (sequential — controller submits, witnesses receipt, threshold checked).
+validation_constraints:
+  - id: "C1_event_signed"
+    constraint: "Controller must submit a signed event with valid signatures against current key state"
+    depends_on: []
+    on_failure: "reject — controller signatures invalid"
+
+  - id: "C2_witness_receipt"
+    constraint: "Each witness independently verifies the event and produces a signed receipt"
+    depends_on: ["C1_event_signed"]
+    on_failure: "escrow to PWE — witness receipt pending"
+
+  - id: "C3_toad_satisfied"
+    constraint: "Collected witness receipt count must meet or exceed TOAD threshold"
+    depends_on: ["C2_witness_receipt"]
+    on_failure: "escrow to PWE — below TOAD threshold"
+
+  - id: "C4_event_accepted"
+    constraint: "All constraints satisfied — event accepted into KEL with full accountability"
+    depends_on: ["C3_toad_satisfied"]
+    on_failure: null

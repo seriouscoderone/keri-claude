@@ -941,3 +941,26 @@ contracts:
 
 # State machines — primitives is stateless (pure transforms)
 state_machines: []
+
+# The Saidify algorithm as a composable constraint graph.
+# An AI reads this as a DAG: C1 → C2 → C3 → C4 (strictly sequential).
+validation_constraints:
+  - id: "C1_replace_d_with_dummy"
+    constraint: "Replace d field with dummy string of length equal to target digest code's qb64 length"
+    depends_on: []
+    on_failure: "reject — cannot compute SAID without placeholder"
+
+  - id: "C2_serialize"
+    constraint: "Serialize the field map with dummy d field in insertion order (not lexicographic)"
+    depends_on: ["C1_replace_d_with_dummy"]
+    on_failure: "reject — serialization failure"
+
+  - id: "C3_digest"
+    constraint: "Compute cryptographic digest of serialized bytes using target algorithm (e.g., Blake3-256 for code E)"
+    depends_on: ["C2_serialize"]
+    on_failure: "reject — digest computation failure"
+
+  - id: "C4_inject_said"
+    constraint: "Encode digest as qb64 and replace dummy d field with computed SAID — result is self-referential"
+    depends_on: ["C3_digest"]
+    on_failure: "reject — SAID injection failure"

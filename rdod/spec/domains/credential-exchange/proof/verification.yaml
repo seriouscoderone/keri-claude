@@ -184,3 +184,26 @@ contracts:
           expression: |
             (result == True) == verify_signature(exn_message.signature, exn_message.d, sender_key_state)
         description: "Authentication passes iff the message signature verifies against sender's key state"
+
+# Credential proof verification as a composable constraint graph.
+# An AI reads this as a DAG: C1 → C2 → C3 → C4 (strictly sequential — three-link chain).
+validation_constraints:
+  - id: "C1_kram_authenticate"
+    constraint: "KRAM authentication must verify sender's signature against current key state before any content processing"
+    depends_on: []
+    on_failure: "reject — unauthenticated message"
+
+  - id: "C2_acdc_said_verify"
+    constraint: "ACDC SAID must verify — expanded form hashes to the committed SAID"
+    depends_on: ["C1_kram_authenticate"]
+    on_failure: "reject — ACDC integrity failure"
+
+  - id: "C3_tel_anchor_verify"
+    constraint: "TEL issuance event must reference the ACDC SAID (tel_event.ta == acdc.d) and be anchored in the issuer's KEL via seal"
+    depends_on: ["C2_acdc_said_verify"]
+    on_failure: "escrow — missing TEL or KEL anchor"
+
+  - id: "C4_proof_of_issuance"
+    constraint: "Issuer's commitment (signature or seal) must verify against the most compact form's SAID"
+    depends_on: ["C3_tel_anchor_verify"]
+    on_failure: "reject — invalid proof of issuance"
