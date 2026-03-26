@@ -300,3 +300,29 @@ state_machines:
       - "Escrow timeout (3600s) transitions both escrowed-pde and escrowed-delegable to an implicit pruned state"
     initial_state: "received"
     terminal_states: ["approved", "rejected"]
+
+validation_constraints:
+  - id: "C1_delegate_sigs_valid"
+    constraint: "Delegate's signatures on the delegated event (dip/drt) must verify against the delegate's current key state"
+    depends_on: []
+    on_failure: "reject — InvalidSignatureError"
+
+  - id: "C2_delegator_identified"
+    constraint: "di field must reference a known delegator AID with established key state"
+    depends_on: ["C1_delegate_sigs_valid"]
+    on_failure: "escrow to PDE — delegator's KEL not yet available"
+
+  - id: "C3_delegator_seal_exists"
+    constraint: "Delegator's KEL must contain an event with a seal whose digest matches the delegated event's SAID"
+    depends_on: ["C2_delegator_identified"]
+    on_failure: "escrow to PDE — seal not yet anchored"
+
+  - id: "C4_seal_digest_matches"
+    constraint: "seal.d in delegator's anchor MUST equal SAID(delegated event)"
+    depends_on: ["C3_delegator_seal_exists"]
+    on_failure: "reject — DelegatorSealMismatchError"
+
+  - id: "C5_accept"
+    constraint: "All constraints satisfied — delegated event accepted to delegate's KEL"
+    depends_on: ["C4_seal_digest_matches"]
+    on_failure: null

@@ -149,3 +149,32 @@ contracts:
             (result is not None and result.sn == sn and result.aid == issuer_aid)
             or result is None  # NotFound
         description: "Returned KEL event matches the requested AID and sequence number, or NotFound"
+
+# Declarative validation constraints with dependencies.
+# An AI can compose these as a constraint graph rather than
+# implementing a hard-coded procedural pipeline.
+validation_constraints:
+  - id: "C1_registry_exists"
+    constraint: "Registry identified by REGID must have a known management TEL"
+    depends_on: []
+    on_failure: "escrow to Missing Registry Escrow (MRE)"
+
+  - id: "C2_issuer_kel_available"
+    constraint: "Issuer's KEL must be available and contain the anchor seal at the stated (sn, said) position"
+    depends_on: ["C1_registry_exists"]
+    on_failure: "escrow to Missing Issuer Escrow (MIE)"
+
+  - id: "C3_seal_matches"
+    constraint: "The KEL event's anchor (a) field must contain a seal matching the TEL event's sn and SAID"
+    depends_on: ["C2_issuer_kel_available"]
+    on_failure: "reject — seal mismatch is fatal, not escrowed"
+
+  - id: "C4_state_valid"
+    constraint: "Current credential state must permit the requested transition (NotIssued→Issued, Issued→Revoked)"
+    depends_on: ["C1_registry_exists"]
+    on_failure: "reject — InvalidCredentialStateTransition"
+
+  - id: "C5_accept"
+    constraint: "All constraints satisfied — TEL event accepted, state updated"
+    depends_on: ["C3_seal_matches", "C4_state_valid"]
+    on_failure: null
