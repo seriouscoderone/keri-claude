@@ -725,3 +725,57 @@ state_machines:
       - "Escrowed events re-enter the pipeline at 'received' when their blocking condition resolves"
     initial_state: "received"
     terminal_states: ["accepted", "rejected", "escrowed_ooe", "escrowed_pse", "escrowed_pwe", "escrowed_pde", "escrowed_lde", "escrowed_misfit"]
+
+# Declarative validation constraints with dependencies.
+# The establishment pipeline as a composable constraint graph.
+# An AI can derive evaluation order from depends_on rather than
+# hard-coding the 8-step sequence from the UL description.
+validation_constraints:
+  - id: "C1_prefix_valid"
+    constraint: "Event prefix must be a valid CESR-qualified AID"
+    depends_on: []
+    on_failure: "reject — InvalidPrefixError"
+
+  - id: "C2_sequence_valid"
+    constraint: "Event sn must equal expected next sn (sno) for in-order events, or sn > sno for out-of-order"
+    depends_on: ["C1_prefix_valid"]
+    on_failure: "escrow to OOE if sn > expected, reject as duplicitous if different SAID at same sn"
+
+  - id: "C3_misfit_check"
+    constraint: "Remote events for locally-owned, locally-witnessed, or locally-delegated AIDs must be rejected as misfit"
+    depends_on: ["C1_prefix_valid"]
+    on_failure: "escrow to Misfit Event Escrow (MFE)"
+
+  - id: "C4_sigs_verified"
+    constraint: "At least one controller signature must cryptographically verify against the current signing key list"
+    depends_on: ["C2_sequence_valid", "C3_misfit_check"]
+    on_failure: "reject — no valid signatures, event dropped (not escrowed)"
+
+  - id: "C5_signing_threshold_met"
+    constraint: "Verified signature indices must satisfy the signing threshold (kt) expression"
+    depends_on: ["C4_sigs_verified"]
+    on_failure: "escrow to PSE — accumulate signatures until threshold met"
+
+  - id: "C6_rotation_threshold_met"
+    constraint: "For rotation events: verified signatures must ALSO satisfy the prior next threshold (nt) with ondex mapping to next key digests"
+    depends_on: ["C5_signing_threshold_met"]
+    on_failure: "escrow to PSE — same escrow as signing threshold failure"
+
+  - id: "C7_witness_threshold_met"
+    constraint: "Witness receipt count must satisfy TOAD (bt) for remote, non-locally-owned events"
+    depends_on: ["C5_signing_threshold_met"]
+    on_failure: "escrow to PWE — accumulate witness receipts until TOAD met"
+
+  - id: "C8_delegation_verified"
+    constraint: "For delegated events (dip/drt): delegator's KEL must contain a seal with digest matching this event's SAID"
+    depends_on: ["C5_signing_threshold_met"]
+    on_failure: "escrow to PDE — await delegator's anchoring event"
+
+  - id: "C9_accept"
+    constraint: "All applicable constraints satisfied — event accepted to KEL, key state updated, first-seen ordinal assigned"
+    depends_on: ["C6_rotation_threshold_met", "C7_witness_threshold_met", "C8_delegation_verified"]
+    on_failure: null
+
+  # Note: C6 only applies to rot/drt events. C7 only applies to remote non-locally-owned events.
+  # C8 only applies to dip/drt events. An implementation checks applicability before evaluating.
+  # C5→C6, C5→C7, C5→C8 can be evaluated in parallel since they're independent branches.

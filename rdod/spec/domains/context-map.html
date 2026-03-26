@@ -32276,6 +32276,20 @@ const RDOD_DATA = {
           "Domain Event Bus",
           "External Messaging"
         ]
+      },
+      {
+        "term": "Message Dispatch Pipeline",
+        "definition": "The sequence of checks applied to every inbound KERI message before domain-specific processing. Deserialization → version validation → SAID verification → ilk classification → domain dispatch.",
+        "invariants": [
+          "Every message passes through the same pipeline regardless of ilk",
+          "KRAM replay protection is applied to non-KEL messages (qry, rpy, exn) after deserialization",
+          "KEL messages (icp, rot, ixn, dip, drt) bypass KRAM — they have built-in ordering via sequence numbers"
+        ],
+        "related_terms": [
+          "KERI Message Types",
+          "KRAM",
+          "KERI Field Map"
+        ]
       }
     ],
     "_ports": [

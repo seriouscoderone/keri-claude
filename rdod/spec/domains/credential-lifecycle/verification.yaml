@@ -145,3 +145,29 @@ contracts:
               for seal in result.anchors
             )
         description: "Returned KEL event contains a seal matching the TEL event's sn and SAID"
+
+validation_constraints:
+  - id: "C1_registry_known"
+    constraint: "Registry REGID must resolve to a known registry with management TEL"
+    depends_on: []
+    on_failure: "escrow — registry VCP not yet received"
+
+  - id: "C2_credential_identified"
+    constraint: "Credential SAID must be extractable from the TEL event"
+    depends_on: ["C1_registry_known"]
+    on_failure: "reject — malformed TEL event"
+
+  - id: "C3_state_transition_valid"
+    constraint: "Requested state transition must be valid per the credential state machine (NotIssued→Issued, Issued→Revoked)"
+    depends_on: ["C1_registry_known", "C2_credential_identified"]
+    on_failure: "reject — InvalidCredentialStateTransition"
+
+  - id: "C4_kel_anchor_verified"
+    constraint: "Issuer's KEL must contain an anchor seal binding this TEL event"
+    depends_on: ["C2_credential_identified"]
+    on_failure: "escrow — issuer's KEL not yet available"
+
+  - id: "C5_accept"
+    constraint: "All constraints satisfied — TEL event accepted, credential state updated"
+    depends_on: ["C3_state_transition_valid", "C4_kel_anchor_verified"]
+    on_failure: null

@@ -316,3 +316,27 @@ contracts:
     notes: "Misfits require manual re-submission."
 
 state_machines: []
+
+# Escrow processing order as declarative constraints.
+# The order matters because resolving one escrow type may cascade events
+# into the next type. These dependencies define the required processing sequence.
+validation_constraints:
+  - id: "E1_ooe_first"
+    constraint: "Out-of-Order Escrow (OOE) processed first — releases sequence-gapped events that may then need signature/witness/delegation checking"
+    depends_on: []
+    on_failure: null
+
+  - id: "E2_pse_second"
+    constraint: "Partially-Signed Escrow (PSE) processed after OOE — events released from OOE may accumulate new signatures here"
+    depends_on: ["E1_ooe_first"]
+    on_failure: null
+
+  - id: "E3_pwe_third"
+    constraint: "Partially-Witnessed Escrow (PWE) processed after PSE — events that pass signing threshold may still need witness receipts"
+    depends_on: ["E2_pse_second"]
+    on_failure: null
+
+  - id: "E4_pde_fourth"
+    constraint: "Partially-Delegated Escrow (PDE) processed after PWE — delegated events need signatures AND witnesses before delegation check"
+    depends_on: ["E3_pwe_third"]
+    on_failure: null

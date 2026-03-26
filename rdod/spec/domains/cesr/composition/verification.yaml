@@ -1091,3 +1091,34 @@ state_machines:
       - "Insufficient bytes during item parsing MUST transition to Error, not hang"
     initial_state: "ReadCounter"
     terminal_states: ["GroupComplete", "UnknownGroup", "Error"]
+
+validation_constraints:
+  - id: "C1_cold_start"
+    constraint: "Classify frame type from first byte tritet (byte >> 5) — O(1) dispatch"
+    depends_on: []
+    on_failure: "reject — unrecognized tritet"
+
+  - id: "C2_version_string"
+    constraint: "If frame is a field map (JSON/CBOR/MGPK/CESR), extract and validate version string from first field"
+    depends_on: ["C1_cold_start"]
+    on_failure: "reject — invalid or unsupported version string"
+
+  - id: "C3_size_extraction"
+    constraint: "Extract total serialization size from version string — determines how many bytes to consume"
+    depends_on: ["C2_version_string"]
+    on_failure: "reject — size exceeds maximum or doesn't match available bytes"
+
+  - id: "C4_body_extraction"
+    constraint: "Extract message body (size bytes) and remaining stream (attachments)"
+    depends_on: ["C3_size_extraction"]
+    on_failure: "wait — insufficient bytes, yield for more input"
+
+  - id: "C5_attachment_parsing"
+    constraint: "Parse attachment groups from remaining stream using count codes"
+    depends_on: ["C4_body_extraction"]
+    on_failure: "reject — malformed count code or truncated attachment"
+
+  - id: "C6_frame_complete"
+    constraint: "Complete frame: message body + parsed attachments ready for domain dispatch"
+    depends_on: ["C5_attachment_parsing"]
+    on_failure: null
