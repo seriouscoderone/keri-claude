@@ -45,16 +45,16 @@ terms:
       - "Receipts (-> Witness Agreement): rct (non-transferable receipt), vrc (transferable receipt)"
       - "Queries & Replies (-> query handler): qry (query), rpy (reply), pro (prod/probe), bar (bare reply)"
       - "Exchanges (-> Exchanger): exn (exchange message — carries IPEX, multi-sig coordination, challenge-response), xip (exchange inception — first message in a multi-exchange transaction set, all subsequent exn messages reference the xip SAID)"
-      - "TEL Events v1 (-> TEL Processor): vcp (registry inception), vrt (registry rotation), iss (backerless issuance), rev (backerless revocation), bis (backed issuance), brv (backed revocation)"
-      - "TEL Events v2 (new in KERI 2.0): rip (registry inception — replaces vcp), bup (blindable update — new), upd (public update — new). V1 types (vcp/vrt/iss/rev/bis/brv) remain valid in v2."
-      - "TEL version mapping: vcp→rip (registry inception), iss/bis remain (issuance), rev/brv remain (revocation), NEW: bup (blindable state update), upd (public state update)"
+      - "TEL Events (normative v2): rip (registry inception), bup (blindable update — issuance or revocation via ts field), upd (non-blindable update — issuance or revocation via ts field)"
+      - "TEL Events v1 (LEGACY — do NOT implement for new systems): vcp, vrt, iss, rev, bis, brv. These exist in keripy/keriox but are superseded by the normative ACDC v2 model."
+      - "TEL v1→v2 migration mapping: vcp→rip, iss→upd(ts=issued), bis→bup(ts=issued), rev→upd(ts=revoked), brv→bup(ts=revoked), vrt→(no equivalent — registry config is immutable in v2)"
       - "ACDC Types (-> ACDC Processor): acm (ACDC field map — default labeled message type), act (ACDC fixed field with attribute section — CESR native), acg (ACDC fixed field with aggregate section — CESR native), ace (ACDC with extra fields — experimental), sch (schema)"
       - "The ilk field determines which processing pipeline handles the message"
     examples:
       - "t='icp' -> Kevery.processEvent()"
       - "t='rct' -> Kevery.processReceipt()"
       - "t='exn' -> Exchanger.processEvent() (routes by inner 'r' field to IPEX, multisig, etc.)"
-      - "t='iss' -> Tevery.processEvent()"
+      - "t='rip' -> Tevery.processEvent(), t='bup' -> Tevery.processEvent(), t='upd' -> Tevery.processEvent()"
     related_terms: ["Message Parser", "Event Processor", "Key Event", "Witness", "IPEX"]
 
   - term: "Domain Event Bus"
