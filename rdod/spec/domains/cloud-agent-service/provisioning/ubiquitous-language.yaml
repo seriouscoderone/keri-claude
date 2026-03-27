@@ -22,7 +22,7 @@ terms:
       - "Bound to exactly one controller AID (the authentication anchor)"
       - "Isolated from other agent instances — no cross-tenant data access"
       - "Persists across KERIA restarts"
-      - "Owns its own AID Repository (Habery in keripy), Registry State Manager (Reger in keripy), Verifier, and processing workers"
+      - "Owns its own AID Repository, Registry State Manager, Verifier, and processing workers"
     examples:
       - "Agent instance for controller EDP1... manages 3 AIDs and 12 credentials"
       - "Agent destruction removes all owned AIDs, credentials, contacts, and mappings"
@@ -32,8 +32,8 @@ terms:
     synonyms: ["Agency Multi-tenancy"]
     definition: "One KERIA process hosts many agent instances. Agency (boot endpoint) provisions new instances. Each instance is isolated — one controller's data inaccessible to others."
     invariants:
-      - "Bidirectional mappings: controller AID <-> agent AID (agent-to-controller and controller-to-agent indexes [.agnt and .ctrl in keripy])"
-      - "Managed AIDs per agent tracked in managed-AID mapping [.aids in keripy]"
+      - "Bidirectional mappings: controller AID <-> agent AID (agent-to-controller and controller-to-agent indexes)"
+      - "Managed AIDs per agent tracked in managed-AID mapping"
       - "Infrastructure concern, not visible to the Signify protocol"
       - "Agency manages the lifecycle of all tenant agent instances"
     examples:
@@ -65,16 +65,16 @@ terms:
     related_terms: ["Agent Instance"]
 
   - term: "Agent Registry"
-    synonyms: ["Agency Database (AgencyBaser in keripy)"]
+    synonyms: ["Agency Database"]
     definition: "The persistent store of all agent-to-controller mappings. Tracks which controller AID owns which agent instance, and which managed AIDs belong to each agent."
     invariants:
-      - "Agent-to-controller index [.agnt in keripy]: agent AID -> controller AID"
-      - "Controller-to-agent index [.ctrl in keripy]: controller AID -> agent AID"
-      - "Managed-AID index [.aids in keripy]: agent AID -> [managed AIDs]"
+      - "Agent-to-controller index: agent AID -> controller AID"
+      - "Controller-to-agent index: controller AID -> agent AID"
+      - "Managed-AID index: agent AID -> [managed AIDs]"
       - "All three mappings updated atomically during provisioning"
     examples:
-      - "Agency.lookup(caid) -> agent instance (via controller-to-agent index [.ctrl in keripy])"
-      - "Agency.get(agent_aid) -> agent instance (via agent-to-controller index [.agnt in keripy])"
+      - "Agency lookup by controller AID -> agent instance (via controller-to-agent index)"
+      - "Agency lookup by agent AID -> agent instance (via agent-to-controller index)"
     related_terms: ["Agency", "Multi-tenancy"]
 
 events:
@@ -88,7 +88,7 @@ events:
 
   - name: "ManagedAIDRegistered"
     payload: "agent_id: string, aid: AID"
-    triggers: "A new AID is created under the agent instance and registered in the managed-AID index [.aids in keripy]"
+    triggers: "A new AID is created under the agent instance and registered in the managed-AID index"
 
 rules:
   - "POST /boot requires a valid controller inception event — no anonymous provisioning"

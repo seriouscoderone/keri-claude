@@ -22,59 +22,58 @@ terms:
     related_terms: ["Credential State Snapshot", "State Transition Rules", "TEL Event Verifier"]
 
   - term: "Credential State Snapshot"
-    synonyms: ["VcStateRecord [keripy]", "TelState enum [keriox]"]
-    definition: "A materialized snapshot of a credential's lifecycle state at a specific point in the TEL. In keripy: VcStateRecord namedtuple with fields vn (version), i (credential SAID), s (sequence number), d (latest event digest), ri (registry SAID), ra (registry anchor), a (KEL anchor), dt (datetime), et (event type that produced this state: upd or bup with ts field indicating issued/revoked). LEGACY (v1 -- do NOT implement): et was one of iss/bis/rev/brv. In keriox: TelState enum with variants NotIssued, Issued(SelfAddressingIdentifier), Revoked -- the Issued variant carries the event digest for hash-chain verification."
+    synonyms: []
+    definition: "A materialized snapshot of a credential's lifecycle state at a specific point in the TEL. Contains credential SAID, registry SAID, sequence number, latest event digest, registry anchor, KEL anchor, datetime, and the event type that produced this state (upd or bup with ts field indicating issued/revoked). LEGACY (v1 -- do NOT implement): et was one of iss/bis/rev/brv. The Issued variant carries the event digest for hash-chain verification."
     invariants:
-      - "In keripy: VcStateRecord includes credential SAID (i), registry SAID (ri), sequence number (s), event digest (d), and the event type (et) that produced this state"
-      - "In keripy: the ra field holds the registry anchor seal and the a field holds the KEL anchor seal"
-      - "In keriox: TelState::Issued carries the SelfAddressingIdentifier (event digest) for hash-chain continuity"
-      - "In keriox: TelState::NotIssued is the default/initial state; TelState::Revoked is terminal"
+      - "Includes credential SAID (i), registry SAID (ri), sequence number (s), event digest (d), and the event type (et) that produced this state"
+      - "Registry anchor seal and KEL anchor seal are both tracked"
+      - "Issued state carries the event digest for hash-chain continuity"
+      - "NotIssued is the default/initial state; Revoked is terminal"
       - "State snapshots are persisted for fast lookup but can be recomputed from the TEL"
       - "State transitions are one-directional only: NotIssued -> Issued -> Revoked, no backtracking"
     examples:
-      - "VcStateRecord with et='upd', ts='issued', s='0', i=credential_SAID, ri=registry_SAID -- credential just issued (non-blindable registry)"
-      - "VcStateRecord with et='upd', ts='revoked', s='1', i=credential_SAID -- credential revoked after issuance"
-      - "VcStateRecord with et='bup', ts='issued', s='0' -- credential issued in a blindable registry"
-      - "TelState::Issued(ELvaU6Z...) -- issued, carrying the upd event digest for chain verification"
-      - "TelState::Revoked -- terminal state after upd(ts='revoked') event processing"
+      - "Snapshot with et='upd', ts='issued', s='0', credential SAID, registry SAID -- credential just issued (non-blindable registry)"
+      - "Snapshot with et='upd', ts='revoked', s='1', credential SAID -- credential revoked after issuance"
+      - "Snapshot with et='bup', ts='issued', s='0' -- credential issued in a blindable registry"
+      - "Issued state carrying event digest ELvaU6Z... for chain verification"
+      - "Revoked -- terminal state after upd(ts='revoked') event processing"
     related_terms: ["Credential State", "Registry State Snapshot", "TEL Event Verifier", "State Reconstruction"]
 
   - term: "Registry State Snapshot"
-    synonyms: ["RegStateRecord [keripy]", "ManagerTelState [keriox]"]
+    synonyms: []
     definition: "A materialized snapshot of a registry's management state. Tracks the registry's management TEL: registry SAID (REGID), current sequence number, latest management event digest, issuer AID, and registry mode (blindable or non-blindable). In TEL v2, registry configuration is immutable after inception (rip) -- there is no registry rotation event. LEGACY (v1 -- do NOT implement): updated by VCP (inception) and VRT (rotation) management events with mutable backer lists."
     invariants:
       - "Tracks the registry's management TEL state: REGID, sequence number, latest event digest"
       - "Includes issuer AID and registry mode (blindable or non-blindable)"
       - "Registry configuration is immutable after inception (rip) in v2 -- no rotation equivalent"
       - "Updated only by the rip (registry inception) event -- credential events (upd/bup) do not affect registry state"
-      - "In keripy: RegStateRecord namedtuple with vn, i (REGID), s (sn), d (digest), ii (issuer AID), dt, et, c (config traits)"
-      - "In keriox: ManagerTelState struct with sn, issuer, and last event digest"
+      - "Fields: version, REGID, sequence number, digest, issuer AID, datetime, event type, config traits"
       - "LEGACY (v1 -- do NOT implement): backer threshold (toad) and backer list (b) fields existed for VCP/VRT rotation"
     examples:
-      - "RegStateRecord after rip inception: sn=0, non-blindable mode, issuer AID set"
+      - "Registry state snapshot after rip inception: sn=0, non-blindable mode, issuer AID set"
       - "Non-blindable registry: credential events use upd (not bup)"
       - "Blindable registry: credential events use bup"
-      - "LEGACY (v1): ManagerTelState after vrt rotation with updated backer list -- not valid in v2"
+      - "LEGACY (v1): registry state after vrt rotation with updated backer list -- not valid in v2"
     related_terms: ["Credential State Snapshot", "TEL Event Verifier", "State Transition Rules"]
 
   - term: "TEL Event Verifier"
-    synonyms: ["Tever [keripy]", "TelState + ManagerTelState [keriox]"]
-    definition: "State machine tracking one registry's complete TEL state: the management TEL (registry configuration, sequence number) and per-credential TELs (issuance/revocation lifecycle). In keripy: the Tever class holds regk (registry prefix), pre (issuer AID), sn (current sequence number), serder (latest event), ilk (last event type), and a per-credential state map accessed via vcState(vcSAID). In keriox: separate TelState enum and ManagerTelState struct, combined by the processor. In v2: registry configuration is immutable after rip -- only credential events (upd/bup) advance per-credential state."
+    synonyms: []
+    definition: "State machine tracking one registry's complete TEL state: the management TEL (registry configuration, sequence number) and per-credential TELs (issuance/revocation lifecycle). Holds registry prefix, issuer AID, current sequence number, latest event, last event type, and a per-credential state map. In v2: registry configuration is immutable after rip -- only credential events (upd/bup) advance per-credential state."
     invariants:
       - "One TEL Event Verifier instance per registry, keyed by REGID"
       - "Maintains the current management sequence number and latest management event digest"
-      - "Tracks issuer AID (pre) and registry mode (blindable or non-blindable)"
-      - "In keripy: exposes per-credential state via vcState(vcSAID) keyed by credential SAID"
-      - "In keripy: state() method returns the full RegStateRecord snapshot"
-      - "In keriox: TelState enum enforces NotIssued -> Issued(digest) -> Revoked transition only"
-      - "In keriox: ManagerTelState struct tracks sn and issuer for the management TEL"
+      - "Tracks issuer AID and registry mode (blindable or non-blindable)"
+      - "Exposes per-credential state keyed by credential SAID"
+      - "Provides a full Registry State Snapshot on request"
+      - "Enforces NotIssued -> Issued(digest) -> Revoked transition only"
+      - "Tracks sequence number and issuer for the management TEL"
       - "Registry inception (rip) establishes registry-level state; credential events (upd/bup) update per-credential state"
       - "LEGACY (v1 -- do NOT implement): management events VCP/VRT updated registry state; credential events iss/bis/rev/brv updated per-credential state"
     examples:
-      - "Tever initialized from a rip event: sn=0, non-blindable mode, no credentials yet"
-      - "Tever.vcState('ELvaU6Z...') returning VcStateRecord with et='upd', ts='issued' for a specific credential"
-      - "keriox ManagerTelState set at rip: sn=0, issuer bound, configuration immutable"
-      - "LEGACY (v1): Tever advancing management sn after vrt event -- not valid in v2"
+      - "TEL Event Verifier initialized from a rip event: sn=0, non-blindable mode, no credentials yet"
+      - "Querying credential state for 'ELvaU6Z...' returning snapshot with et='upd', ts='issued'"
+      - "Management state set at rip: sn=0, issuer bound, configuration immutable"
+      - "LEGACY (v1): TEL Event Verifier advancing management sn after vrt event -- not valid in v2"
     related_terms: ["Credential State Snapshot", "Registry State Snapshot", "State Transition Rules", "State Reconstruction"]
 
   - term: "State Transition Rules"
@@ -116,11 +115,11 @@ terms:
       - "Reconstructing credential state: replay rip -> upd(ts='issued') -> result is Issued"
       - "Reconstructing registry state: replay rip -> result is ManagerTelState with immutable configuration"
       - "A new validator bootstrapping by replaying the complete TEL from rip to compute all current state"
-      - "In keriox: TelState reconstructed by iterating get_events() for a credential SAID"
+      - "State reconstructed by iterating stored events for a credential SAID"
     related_terms: ["Credential State Snapshot", "Registry State Snapshot", "TEL Event Verifier", "State Transition Rules"]
 
   - term: "Missing Anchor Escrow"
-    synonyms: ["MAE", ".taes [keripy]"]
+    synonyms: ["MAE"]
     definition: "Holds TEL events whose anchor seal in the issuer's KEL has not yet been verified. The issuer's KEL does not yet contain the seal binding the TEL event. Reprocessed when the issuer's KEL is updated with a potential anchoring event."
     invariants:
       - "Triggered when no matching seal is found in the issuer's KEL at the expected position"
@@ -133,11 +132,11 @@ terms:
     invariants:
       - "Triggered when the issuer AID referenced in a credential is not in the local Kevers"
       - "Reprocessed when the issuer's KEL is fetched (typically via OOBI resolution)"
-      - "Default timeout: 3600 seconds (TimeoutMRI in keripy)"
+      - "Default timeout: 3600 seconds"
     related_terms: ["TEL Event Verifier", "Credential State"]
 
   - term: "Missing Chain Escrow"
-    synonyms: ["MCE", ".mce [keripy]"]
+    synonyms: ["MCE"]
     definition: "Holds credentials whose edge section references chained credentials that have not yet been received or verified. The credential chain cannot be validated until all referenced credentials are available."
     invariants:
       - "Triggered when a credential in the edge (e) section has not been received or its status cannot be confirmed"

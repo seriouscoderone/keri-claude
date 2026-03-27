@@ -125,29 +125,29 @@ terms:
     related_terms: ["TEL Registrar", "Validator", "Point of Validation"]
 
   - term: "Registry Collection"
-    synonyms: ["Regery [keripy]"]
-    definition: "Central manager for credential registries. Owns the TEL database (Registry State Manager / Reger in keripy) and TEL Event Processor (Tevery in keripy). Creates, loads, and manages Registry instances. Each registry has a management TEL plus per-credential TELs."
+    synonyms: []
+    definition: "Central manager for credential registries. Owns the TEL database and TEL Event Processor. Creates, loads, and manages Registry instances. Each registry has a management TEL plus per-credential TELs."
     invariants:
-      - "Owns the TEL database (Registry State Manager / Reger in keripy) and TEL Event Processor (Tevery in keripy)"
+      - "Owns the TEL database and TEL Event Processor"
       - "Creates and loads Registry instances by name or REGID"
       - "Each managed registry has one management TEL and zero or more per-credential TELs"
-      - "Key methods: makeRegistry(), registryByName(), processEscrows()"
+      - "Key operations: create registry, look up registry by name, process escrows"
     examples:
-      - "An agent's Regery creating a new registry via makeRegistry() and later retrieving it by name"
-      - "Regery.processEscrows() retrying TEL events that were missing anchors or registry state"
+      - "An agent's Registry Collection creating a new registry and later retrieving it by name"
+      - "Registry Collection retrying escrowed TEL events that were missing anchors or registry state"
     related_terms: ["Registry", "TEL Database", "TEL Event Processor", "TEL Event Verifier"]
 
   - term: "TEL Event Processor"
-    synonyms: ["Tevery [keripy]", "TelEventProcessor [keriox]"]
+    synonyms: []
     definition: "Processes incoming TEL events against current registry state. Factory for TEL Event Verifier instances. Escrows out-of-order and missing-anchor events. Triggers escrow reprocessing when blocking conditions resolve."
     invariants:
-      - "Creates and manages TEL Event Verifier (Tever) instances as registries are encountered"
+      - "Creates and manages TEL Event Verifier instances as registries are encountered"
       - "Validates TEL events against the current registry and credential state"
       - "Escrows events that cannot be immediately validated (out-of-order, missing anchor, missing registry)"
       - "Escrowed events are automatically retried when blocking conditions resolve"
     examples:
-      - "Tevery receiving a bup event, finding no registry for it yet, and escrowing it for later"
-      - "TelEventProcessor reprocessing escrowed events after a rip event arrives"
+      - "TEL Event Processor receiving a bup event, finding no registry for it yet, and escrowing it for later"
+      - "TEL Event Processor reprocessing escrowed events after a rip event arrives"
     related_terms: ["TEL Event Verifier", "TEL Escrows", "Registry Collection", "TEL Database"]
 
   - term: "Blindable vs Non-Blindable"
@@ -196,29 +196,29 @@ terms:
     related_terms: ["TEL Event Type Dimensions", "Blindable vs Non-Blindable"]
 
   - term: "TEL Storage Schema"
-    synonyms: ["Reger subdatabases [keripy]"]
-    definition: "The subdatabase organization for the core TEL event data. Separates event serializations, sequence indexes, backer signatures, backer lists, anchor seals, and timestamps into distinct subdatabases, each optimized for its access pattern."
+    synonyms: []
+    definition: "The storage organization for core TEL event data. Separates event serializations, sequence indexes, backer signatures, backer lists, anchor seals, and timestamps into distinct stores, each optimized for its access pattern."
     invariants:
-      - "TEL event store [.tvts in keripy]: serialized TEL event bytes indexed by dgKey (registry_said + event_digest) -- the primary event store"
-      - "TEL sequence index [.tels in keripy]: mapping snKey (registry_said + sn) to event digest -- ordered access by sequence number"
-      - "Backer signature store [.tibs in keripy]: backer indexed signatures (Siger) per event, indexed by dgKey -- IoSet (insertion-ordered, append-only)"
-      - "Backer AID list store [.baks in keripy]: backer AID lists per registry, indexed by registry SAID -- current set of designated backer witnesses"
-      - "Anchor seal store [.ancs in keripy]: anchor seals per event, indexed by dgKey -- the KEL seal that anchors each TEL event"
-      - "Event timestamp store [.tets in keripy]: event datetime timestamps per event, indexed by dgKey -- recorded at first acceptance"
+      - "TEL event store: serialized TEL event bytes indexed by (registry SAID, event digest) -- the primary event store"
+      - "TEL sequence index: mapping (registry SAID, sequence number) to event digest -- ordered access by sequence number"
+      - "Backer signature store: backer indexed signatures (Siger) per event, indexed by (registry SAID, event digest) -- insertion-ordered, append-only"
+      - "Backer AID list store: backer AID lists per registry, indexed by registry SAID -- current set of designated backer witnesses"
+      - "Anchor seal store: anchor seals per event, indexed by (registry SAID, event digest) -- the KEL seal that anchors each TEL event"
+      - "Event timestamp store: event datetime timestamps per event, indexed by (registry SAID, event digest) -- recorded at first acceptance"
     examples:
-      - "Looking up event at sn=3 for registry R: TEL sequence index[snKey(R,3)] -> digest D, then TEL event store[dgKey(R,D)] -> event bytes"
-      - "Accumulating backer signatures: backer signature store[dgKey(R,D)].add(siger) -- appends to set, idempotent if already present"
-    related_terms: ["TEL Database", "Credential Storage", "TEL Key Patterns"]
+      - "Looking up event at sn=3 for registry R: sequence index[(R, 3)] -> digest D, then event store[(R, D)] -> event bytes"
+      - "Accumulating backer signatures: signature store[(R, D)].add(siger) -- appends to set, idempotent if already present"
+    related_terms: ["TEL Database", "Credential Storage"]
 
   - term: "Credential Storage"
-    synonyms: [".creds/.cancs/.saved/.issus/.subjs/.schms [keripy]"]
-    definition: "Subdatabases for credential data and multi-dimensional credential indexing. Stores serialized ACDCs and provides lookup by credential SAID, issuer AID, subject AID, and schema SAID."
+    synonyms: []
+    definition: "Storage for credential data and multi-dimensional credential indexing. Stores serialized ACDCs and provides lookup by credential SAID, issuer AID, subject AID, and schema SAID."
     invariants:
-      - "Credential store [.creds in keripy]: serialized ACDC bytes indexed by credential SAID -- the primary credential store"
-      - "Fully-validated credential index [.saved in keripy]: marks credentials that have completed the verification pipeline and are stored for presentation"
-      - "Issuer index [.issus in keripy]: credential index by issuer AID -- enables lookup of all credentials issued by a given AID"
-      - "Subject index [.subjs in keripy]: credential index by subject AID -- enables lookup of all credentials targeting a given issuee"
-      - "Schema index [.schms in keripy]: credential index by schema SAID -- enables lookup of all credentials conforming to a given schema"
+      - "Credential store: serialized ACDC bytes indexed by credential SAID -- the primary credential store"
+      - "Fully-validated credential index: marks credentials that have completed the verification pipeline and are stored for presentation"
+      - "Issuer index: credential index by issuer AID -- enables lookup of all credentials issued by a given AID"
+      - "Subject index: credential index by subject AID -- enables lookup of all credentials targeting a given issuee"
+      - "Schema index: credential index by schema SAID -- enables lookup of all credentials conforming to a given schema"
     examples:
       - "Looking up credential by SAID: credential store[acdc_said] -> serialized ACDC bytes"
       - "Finding all credentials issued by AID A: issuer index[A] -> [acdc_said_1, acdc_said_2, ...]"
@@ -226,19 +226,19 @@ terms:
     related_terms: ["TEL Storage Schema", "TEL Database"]
 
   - term: "TEL Escrow Storage"
-    synonyms: [".oots/.twes/.taes/.cmse/.mre/.mce/.mse [keripy]"]
-    definition: "Subdatabases for TEL events that cannot be immediately validated. Each escrow type corresponds to a specific missing dependency: out-of-order events, partial witness receipts, missing anchor seals, missing signatures, and missing registry/chain/schema state."
+    synonyms: []
+    definition: "Storage for TEL events that cannot be immediately validated. Each escrow type corresponds to a specific missing dependency: out-of-order events, partial witness receipts, missing anchor seals, missing signatures, and missing registry/chain/schema state."
     invariants:
-      - "Out-of-order escrow [.oots in keripy]: TEL events whose sequence number does not match the expected next sn"
-      - "Partial witness escrow [.twes in keripy]: TEL events with insufficient backer signatures to satisfy the threshold"
-      - "Anchorless escrow [.taes in keripy]: TEL events whose KEL anchor seal has not yet been verified"
-      - "Missing signature escrow [.cmse in keripy]: TEL events with insufficient controller signatures"
-      - "Missing registry escrow [.mre in keripy]: credential events received before the registry's inception"
-      - "Missing chain escrow [.mce in keripy]: credential events referencing an unresolved credential chain"
-      - "Missing schema escrow [.mse in keripy]: credential events referencing an unavailable schema"
+      - "Out-of-order escrow: TEL events whose sequence number does not match the expected next sn"
+      - "Partial witness escrow: TEL events with insufficient backer signatures to satisfy the threshold"
+      - "Anchorless escrow: TEL events whose KEL anchor seal has not yet been verified"
+      - "Missing signature escrow: TEL events with insufficient controller signatures"
+      - "Missing registry escrow: credential events received before the registry's inception"
+      - "Missing chain escrow: credential events referencing an unresolved credential chain"
+      - "Missing schema escrow: credential events referencing an unavailable schema"
     examples:
-      - "An upd event escrowed in out-of-order escrow [.oots in keripy] because a prior event at sn=2 has not yet been processed"
-      - "A credential event escrowed in missing registry escrow [.mre in keripy] because the registry rip has not yet been received"
+      - "An upd event escrowed in the out-of-order escrow because a prior event at sn=2 has not yet been processed"
+      - "A credential event escrowed in the missing registry escrow because the registry rip has not yet been received"
     related_terms: ["TEL Storage Schema", "TEL Database", "Credential Storage"]
 
   - term: "Credentialer"
@@ -354,7 +354,7 @@ terms:
     related_terms: ["Credential Privacy Model", "Credential Targeting Model", "Credential Disclosure Model", "Credential Chaining Model", "Credential Governance Model", "Credential Registry Binding"]
 
   - term: "Credential Construction"
-    synonyms: ["credential() [keripy]"]
+    synonyms: []
     definition: "The domain-driven assembly of an ACDC through its type dimensions. Implementations SHOULD provide typed construction interfaces (Builder pattern, fluent API, factory methods) that make each dimension explicit rather than exposing raw field map manipulation."
     invariants:
       - "Construction MUST set all required fields: v (version), d (SAID), i (issuer), s (schema)"
@@ -369,7 +369,7 @@ terms:
     related_terms: ["ACDC", "SAID", "Schema", "Credential Type Dimensions"]
 
   - term: "Credential Serializer"
-    synonyms: ["SerderACDC [keripy]", "Creder [keripy/keriox]"]
+    synonyms: []
     definition: "Serializer/deserializer for ACDC credential packets. Extends Sadder with ACDC-specific field accessors: issuer (i), schema (s), attribute section (a), edge section (e), rule section (r), registry ID (ri/rd), UUID nonce (u)."
     invariants:
       - "Must validate that the protocol identifier is 'ACDC' on construction"
@@ -379,12 +379,12 @@ terms:
     related_terms: ["ACDC", "SAD", "SAID", "Version String"]
 
   - term: "Credential Verifier"
-    synonyms: ["Verifier [keripy]"]
-    definition: "Validates TEL events and credentials end-to-end. Verifies: schema match, edge chain integrity (verifyChain), TEL state, signature validity. Escrows credentials missing dependencies with 3600s timeout per escrow type."
+    synonyms: []
+    definition: "Validates TEL events and credentials end-to-end. Verifies: schema match, edge chain integrity, TEL state, signature validity. Escrows credentials missing dependencies with 3600s timeout per escrow type."
     invariants:
       - "Performs full end-to-end verification: signatures, schema, TEL state, and edge chains"
       - "Escrows credentials that cannot yet be verified due to missing dependencies"
-      - "Four escrow types: Missing Registry Escrow [.mre in keripy], Missing Chain Escrow [.mce in keripy], Missing Schema Escrow [.mse in keripy], Missing Credential Schema Escrow [.cmse in keripy]"
+      - "Four escrow types: Missing Registry Escrow, Missing Chain Escrow, Missing Schema Escrow, Missing Signature Escrow"
       - "Each escrow type has a 3600-second timeout before the escrowed credential is discarded"
     related_terms: ["Edge Section", "Edge Operator", "Registry SAID", "Schema"]
 

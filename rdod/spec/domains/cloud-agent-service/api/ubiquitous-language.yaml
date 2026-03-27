@@ -62,7 +62,7 @@ terms:
     definition: "A signed declaration authorizing an endpoint to serve a specific role (witness, agent, watcher) for an AID. Published via reply message, tracked as a long-running operation, polled by edge client."
     invariants:
       - "Signed by the AID's controller"
-      - "Stored in db.ends keyed by (cid, role, eid)"
+      - "Stored keyed by (controller AID, role, endpoint AID)"
       - "Must be adopted by the endpoint before it takes effect"
       - "Tracked as OpTypes.endrole long-running operation"
     examples:

@@ -49,7 +49,7 @@ terms:
     related_terms: ["SAID", "Compact Disclosure", "oneOf Composition"]
 
   - term: "Compactor"
-    synonyms: ["Compactor [keripy]"]
+    synonyms: []
     definition: "Hierarchical graduated partial disclosure engine for nested field maps. Traverses the credential tree, computing SAIDs at each branch. Supports degrees of partial disclosure: full compact (SAIDs only), partial uncompaction (reveal selected branches), full expansion (all data)."
     invariants:
       - "leaf SAIDs property provides mappers at each leaf node with computed SAIDs"
@@ -62,11 +62,11 @@ terms:
     related_terms: ["Most Compact Form", "Partial Disclosure", "Nested Partial Disclosure", "SAID"]
 
   - term: "SAD Path Signatures"
-    synonyms: ["SadPathSig groups [parside]", ".spsgs/.spcgs [keripy]"]
-    definition: "Signatures over specific paths within a SAD structure, enabling selective disclosure. Indexed signatures stored in .spsgs (quinkey to Siger), non-indexed in .spcgs (couple to Verfer, Cigar). Used with Pather primitives to prove specific attribute disclosures without revealing the entire credential."
+    synonyms: []
+    definition: "Signatures over specific paths within a SAD structure, enabling selective disclosure. Indexed signatures use quinkey indexing mapped to Siger primitives; non-indexed signatures use couple form mapping Verfer to Cigar. Used with Pather primitives to prove specific attribute disclosures without revealing the entire credential."
     invariants:
-      - "Indexed SAD path signatures (.spsgs) use quinkey indexing mapped to Siger primitives"
-      - "Non-indexed SAD path signatures (.spcgs) use couple form mapping Verfer to Cigar"
+      - "Indexed SAD path signatures use quinkey indexing mapped to Siger primitives"
+      - "Non-indexed SAD path signatures use couple form mapping Verfer to Cigar"
       - "Each signature is bound to a specific path within the SAD tree via a Pather primitive"
       - "Enables proof of specific attribute values without disclosing the full credential"
     examples:
