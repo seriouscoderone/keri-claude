@@ -55,14 +55,9 @@ ports:
     contract: "escrow(escrow_type: EscrowType, registry_said: SAID, sn: int, event: bytes, escrowed_at: DateTime) -> Result; get_escrowed(escrow_type: EscrowType, registry_said: SAID) -> [EscrowedEvent]; remove(escrow_type: EscrowType, registry_said: SAID, sn: int) -> Result"
     protocol: "method-call"
     refs: ["persistence"]
-    escrow_types:
-      - "OutOfOrder — TEL event arrived before its predecessor"
-      - "PartialWitness — insufficient backer signatures collected so far"
-      - "MissingAnchor — KEL anchor seal not yet found"
-      - "MissingSignatures — controller signatures incomplete"
-      - "MissingRegistry — registry inception event not yet received"
-      - "MissingChain — chained ACDC dependency not yet resolved"
-      - "MissingSchema — credential schema not yet available"
+    types:
+      EscrowType: "enum { OutOfOrder, PartialWitness, MissingAnchor, MissingSignatures, MissingRegistry, MissingChain, MissingSchema }"
+      EscrowedEvent: "{ registry_said: SAID, sn: int, event: bytes, escrowed_at: DateTime }"
     invariants:
       - "Escrow is transient: events are removed once the missing dependency is satisfied"
       - "Escrow type partitioning: each escrow type is an independent namespace"

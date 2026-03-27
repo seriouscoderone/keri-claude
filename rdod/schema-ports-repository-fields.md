@@ -2,22 +2,21 @@
 
 ## Summary
 
-The ports.yaml schema needs to allow `invariants`, `escrow_types`, `types`, and `description` fields on port entries to support the DDD Repository interface pattern.
+The ports.yaml schema needs to allow `invariants`, `types`, and `description` fields on port entries to support the DDD Repository interface pattern.
 
 ## Problem
 
 After refactoring all storage outbound ports to proper DDD Repository interfaces, 22 schema warnings fire for fields that carry essential repository contract information:
 
 - `invariants:` — persistence guarantees (append-only, idempotent, ordered, immutable-once-written)
-- `escrow_types:` — enum of escrow categories for generic escrow repositories
-- `types:` — named types used in the repository contract (e.g., EscrowedEvent, EscrowType)
-- `description:` — domain-purpose explanation for the repository
+- `types:` — named types used in the repository contract (e.g., key types, value types, enums)
+- `description:` — domain-purpose explanation for the port
 
 These fields are critical for AI-implementability — a Repository interface without invariants is just a method list. The invariants tell the implementer what guarantees the persistence layer must provide.
 
 ## Proposed Schema Changes
 
-### 1. `ports[].invariants` (22 warnings)
+### 1. `ports[].invariants` (14 warnings)
 
 Repository ports need invariants to describe persistence guarantees:
 
@@ -34,23 +33,9 @@ Repository ports need invariants to describe persistence guarantees:
 
 **Proposed:** Add `invariants` as optional array of strings on port entries.
 
-### 2. `ports[].escrow_types` (1 warning)
+### 2. `ports[].types` (1 warning)
 
-Generic escrow repositories define the set of escrow categories:
-
-```yaml
-- id: "port://credential-lifecycle/outbound/tel-escrow-repository"
-  escrow_types:                        # ← should be allowed
-    - "OutOfOrder"
-    - "PartialWitness"
-    - "MissingAnchor"
-```
-
-**Proposed:** Add `escrow_types` as optional array of strings on port entries.
-
-### 3. `ports[].types` (1 warning)
-
-Repository interfaces may define named types used in their contracts:
+Repository interfaces may define named types used in their contracts. This is the generic mechanism for any domain-specific parameterization (enums, value objects, composite keys):
 
 ```yaml
 - id: "port://identity/outbound/escrow-repository"
@@ -61,9 +46,11 @@ Repository interfaces may define named types used in their contracts:
 
 **Proposed:** Add `types` as optional map on port entries.
 
-### 4. `ports[].description` (8 warnings)
+Note: domain-specific enums (like escrow categories) belong in `types:`, not as special schema fields. The schema should be domain-agnostic.
 
-Repository ports benefit from a description of their domain purpose:
+### 3. `ports[].description` (8 warnings)
+
+Ports benefit from a description of their domain purpose:
 
 ```yaml
 - id: "port://witness-service/outbound/witness-repository"
@@ -72,10 +59,22 @@ Repository ports benefit from a description of their domain purpose:
 
 **Proposed:** Add `description` as optional string on port entries.
 
+## Migration
+
+Any existing `escrow_types:` fields in ports should be moved into `types:` as a named enum. For example:
+
+```yaml
+# Before (domain-specific field)
+escrow_types: ["OutOfOrder", "PartialWitness", "MissingAnchor"]
+
+# After (generic types field)
+types:
+  EscrowType: "enum { OutOfOrder, PartialWitness, MissingAnchor }"
+```
+
 ## Acceptance Criteria
 
 - [ ] `ports[].invariants` added as optional array of strings
-- [ ] `ports[].escrow_types` added as optional array of strings
 - [ ] `ports[].types` added as optional map
 - [ ] `ports[].description` added as optional string
-- [ ] All 22 schema warnings resolved
+- [ ] All schema warnings for these fields resolved
