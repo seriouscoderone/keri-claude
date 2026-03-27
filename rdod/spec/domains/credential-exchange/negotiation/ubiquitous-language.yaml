@@ -173,11 +173,11 @@ terms:
     invariants:
       - "Each function produces a complete EXN message with the appropriate '/ipex/*' route"
       - "All functions require the sending Hab (identifier context) and recipient AID"
-      - "ipexGrantExn() bundles the ACDC, issuance TEL event (iss/bis), and KEL anchor seal"
+      - "ipexGrantExn() bundles the ACDC, issuance TEL event (upd or bup with ts='issued'), and KEL anchor seal"
       - "ipexAdmitExn() references the grant message by its SAID"
       - "ipexSpurnExn() references the rejected message by its SAID"
     examples:
-      - "ipexGrantExn(hab, recp, message, acdc, iss, anc) building a grant with full credential artifacts"
+      - "ipexGrantExn(hab, recp, message, acdc, tel_event, anc) building a grant with full credential artifacts"
       - "ipexAdmitExn(hab, recp, message, grant_said) building an admit referencing the grant"
     related_terms: ["IPEX Handler", "Exchange Message", "Exchanger"]
 

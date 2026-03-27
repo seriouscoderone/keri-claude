@@ -119,7 +119,7 @@ terms:
     synonyms: ["Regery", "Local Verifier", "Local Credentialer"]
     definition: "Full TEL (Transaction Event Log) processing and credential storage running locally on the controller's device. The Regery manages registry TELs, the Verifier validates received credentials, and the Credentialer issues credentials — all in-process, no cloud agent needed."
     invariants:
-      - "Registry TEL events (vcp, iss, rev, bis, brv) created and stored in the local Event Database (Baser in keripy)"
+      - "Registry TEL events (rip, upd, bup) created and stored in the local Event Database (Baser in keripy)"
       - "Credential issuance anchors ACDC SAID to the controller's KEL via interaction event"
       - "Credential revocation via TEL revocation event, anchored to KEL"
       - "Received credentials validated by local Verifier against issuer's KEL and registry TEL"

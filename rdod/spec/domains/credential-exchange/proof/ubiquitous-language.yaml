@@ -31,15 +31,15 @@ terms:
 
   - term: "Credential Artifacts in Grant"
     synonyms: []
-    definition: "The grant message embeds all artifacts needed for the recipient to verify the credential: the ACDC itself, the issuance TEL event (iss/bis), and the KEL anchor seal. This bundle enables the recipient to independently verify the credential's authenticity, chain, and revocation status."
+    definition: "The grant message embeds all artifacts needed for the recipient to verify the credential: the ACDC itself, the issuance TEL update event (upd or bup with ts='issued'), and the KEL anchor seal. This bundle enables the recipient to independently verify the credential's authenticity, chain, and revocation status."
     invariants:
       - "Grant contains the full ACDC (or selective disclosure variant)"
-      - "Grant contains the issuance TEL event (iss for backerless, bis for backed registries)"
+      - "Grant contains the issuance TEL event (upd for non-blindable, bup for blindable registries)"
       - "Grant contains the KEL anchor seal binding the TEL event to the issuer's KEL"
       - "Recipient can independently verify the credential without additional round-trips to the issuer"
     examples:
-      - "Grant message carrying an ACDC, its iss event from the TEL, and the seal from the issuer's KEL interaction event"
-      - "Recipient verifying the grant by checking: ACDC SAID matches iss event, iss event digest matches KEL seal"
+      - "Grant message carrying an ACDC, its upd(ts='issued') event from the TEL, and the seal from the issuer's KEL interaction event"
+      - "Recipient verifying the grant by checking: ACDC SAID matches TEL event ta field, TEL event digest matches KEL seal"
     related_terms: ["Proof of Issuance", "Proof of Disclosure", "Transaction Event Seal", "TEL"]
 
 events:
@@ -62,6 +62,6 @@ events:
 rules:
   - "Discloser must provide both Proof of Issuance (PoI) and Proof of Disclosure (PoD)"
   - "A signature on the most compact form SAID provides PoI for all schema-authorized variants"
-  - "Credential artifact verification requires ACDC SAID to match iss event, and iss event digest to match KEL seal"
+  - "Credential artifact verification requires ACDC SAID to match TEL event ta field, and TEL event digest to match KEL seal"
   - "KRAM authentication is checked before processing any IPEX exchange message content"
   - "Verification is stateless given a key state snapshot — it takes artifacts and returns valid/invalid"
