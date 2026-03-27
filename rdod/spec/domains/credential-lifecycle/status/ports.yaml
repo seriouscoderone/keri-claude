@@ -18,9 +18,13 @@ ports:
     refs: ["domain://credential-lifecycle"]
 
   # Outbound -- what state calls
-  - id: "port://credential-lifecycle/status/outbound/state-store"
+  - id: "port://credential-lifecycle/status/outbound/state-snapshot-repository"
     type: outbound
-    name: "State Snapshot Persistence"
-    contract: "save_credential_state(regid: REGID, acdc_said: SAID, snapshot: CredentialStateSnapshot) -> Result; load_credential_state(regid: REGID, acdc_said: SAID) -> Option<CredentialStateSnapshot>; save_registry_state(regid: REGID, snapshot: RegistryStateSnapshot) -> Result; load_registry_state(regid: REGID) -> Option<RegistryStateSnapshot>"
+    name: "State Snapshot Repository"
+    contract: "save_credential_state(registry_said: SAID, credential_said: SAID, snapshot: CredentialStateSnapshot) -> Result; load_credential_state(registry_said: SAID, credential_said: SAID) -> Option<CredentialStateSnapshot>; save_registry_state(registry_said: SAID, snapshot: RegistryStateSnapshot) -> Result; load_registry_state(registry_said: SAID) -> Option<RegistryStateSnapshot>"
     protocol: "method-call"
     refs: ["persistence"]
+    invariants:
+      - "Last-write-wins: saving a snapshot overwrites any previous snapshot for the same key"
+      - "Snapshot is a materialized view: it can always be reconstructed from the underlying TEL events"
+      - "Registry keyed by SAID: all lookups use the registry's self-addressing identifier"

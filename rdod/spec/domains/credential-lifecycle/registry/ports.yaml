@@ -11,9 +11,13 @@ ports:
     refs: ["domain://credential-lifecycle"]
 
   # Outbound -- what registry calls
-  - id: "port://credential-lifecycle/registry/outbound/registry-store"
+  - id: "port://credential-lifecycle/registry/outbound/registry-repository"
     type: outbound
-    name: "Registry Persistence"
-    contract: "save_registry(name: str, record: RegistryRecord) -> Result; load_registry(name: str) -> RegistryRecord?; save_state(regid: REGID, state: RegistryStateSnapshot) -> Result; load_state(regid: REGID) -> RegistryStateSnapshot?"
+    name: "Registry Repository"
+    contract: "save_registry(name: str, record: RegistryRecord) -> Result; load_registry_by_name(name: str) -> Option<RegistryRecord>; load_registry_by_said(registry_said: SAID) -> Option<RegistryRecord>; save_state(registry_said: SAID, state: RegistryStateSnapshot) -> Result; load_state(registry_said: SAID) -> Option<RegistryStateSnapshot>"
     protocol: "method-call"
     refs: ["persistence"]
+    invariants:
+      - "Name uniqueness: each registry name maps to exactly one registry record"
+      - "SAID uniqueness: each registry SAID maps to exactly one registry record"
+      - "State is a materialized view: can be reconstructed from the registry's TEL events"

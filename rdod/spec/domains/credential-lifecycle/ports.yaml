@@ -26,26 +26,44 @@ ports:
     protocol: "method-call"
     refs: ["domain://identity"]
 
-  - id: "port://credential-lifecycle/outbound/tel-storage"
+  - id: "port://credential-lifecycle/outbound/tel-event-repository"
     type: outbound
-    name: "TEL Storage Schema"
-    contract: "put_tvts(key: dgKey, val: bytes) -> bool; get_tvts(key: dgKey) -> bytes?; put_tels(key: snKey, val: bytes) -> bool; get_tels(key: snKey) -> [bytes]; append_tibs(key: dgKey, sigs: [Siger]) -> bool; get_tibs(key: dgKey) -> [Siger]; put_baks(key: REGID, val: [AID]) -> bool; get_baks(key: REGID) -> [AID]; put_ancs(key: dgKey, val: Seal) -> bool; get_ancs(key: dgKey) -> Seal?; put_tets(key: dgKey, val: Dater) -> bool; get_tets(key: dgKey) -> Dater?"
+    name: "TEL Event Repository"
+    contract: "append_tel_event(registry_said: SAID, event: TELEvent) -> Result — append-only, rejects duplicates by sequence number; get_tel_event_by_sn(registry_said: SAID, sn: int) -> Option<TELEvent>; get_tel_event_by_said(event_said: SAID) -> Option<TELEvent>; get_tel(registry_said: SAID) -> [TELEvent] — full TEL ordered by sequence number; get_anchor_seal(registry_said: SAID, event_said: SAID) -> Option<Seal>; put_timestamp(registry_said: SAID, event_said: SAID, datetime: DateTime) -> Result — immutable once set, subsequent writes for same key are no-ops"
     protocol: "method-call"
     refs: ["persistence"]
-    notes: "Subdatabase schema: .tvts (TEL event bytes, dgKey, append-only), .tels (sequence index, snKey), .tibs (backer sigs, dgKey, IoSet), .baks (backer list, REGID), .ancs (anchor seals, dgKey), .tets (timestamps, dgKey, immutable)"
+    invariants:
+      - "Append-only: events for a registry are ordered by sequence number and never modified or deleted"
+      - "Idempotent append: re-appending an event with the same registry SAID and sequence number is a no-op"
+      - "Timestamp immutability: once a timestamp is recorded for an event, it cannot be overwritten"
+      - "Sequence continuity: get_tel returns events in unbroken ascending sequence number order"
 
-  - id: "port://credential-lifecycle/outbound/credential-store"
+  - id: "port://credential-lifecycle/outbound/credential-repository"
     type: outbound
-    name: "Credential Storage"
-    contract: "put_creds(key: SAID, val: bytes) -> bool; get_creds(key: SAID) -> bytes?; put_issus(issuer: AID, acdc_said: SAID) -> bool; get_issus(issuer: AID) -> [SAID]; put_subjs(subject: AID, acdc_said: SAID) -> bool; get_subjs(subject: AID) -> [SAID]; put_schms(schema: SAID, acdc_said: SAID) -> bool; get_schms(schema: SAID) -> [SAID]; mark_saved(acdc_said: SAID) -> bool; is_saved(acdc_said: SAID) -> bool"
+    name: "Credential Repository"
+    contract: "store_credential(credential_said: SAID, credential: bytes) -> Result — stores ACDC bytes keyed by SAID; get_credential(credential_said: SAID) -> Option<bytes>; find_by_issuer(issuer_aid: AID) -> [SAID]; find_by_subject(subject_aid: AID) -> [SAID]; find_by_schema(schema_said: SAID) -> [SAID]; mark_processed(credential_said: SAID) -> Result — idempotent marker indicating credential has been fully processed"
     protocol: "method-call"
     refs: ["persistence"]
-    notes: "Credential subdatabases: .creds (ACDC bytes, by SAID), .issus (index by issuer AID), .subjs (index by subject AID), .schms (index by schema SAID), .saved (processed marker)"
+    invariants:
+      - "Credential immutability: once stored, credential bytes for a SAID cannot be modified"
+      - "Index consistency: storing a credential automatically indexes it by issuer, subject, and schema"
+      - "Idempotent processing marker: calling mark_processed multiple times for the same SAID is a no-op"
 
-  - id: "port://credential-lifecycle/outbound/tel-escrow-store"
+  - id: "port://credential-lifecycle/outbound/tel-escrow-repository"
     type: outbound
-    name: "TEL Escrow Storage"
-    contract: "escrow_oot(regid: REGID, sn: int, event: bytes) -> Result; escrow_twe(regid: REGID, sn: int, event: bytes) -> Result; escrow_tae(regid: REGID, sn: int, event: bytes) -> Result; escrow_cmse(regid: REGID, sn: int, event: bytes) -> Result; escrow_mre(regid: REGID, event: bytes) -> Result; escrow_mce(acdc_said: SAID, event: bytes) -> Result; escrow_mse(schema_said: SAID, event: bytes) -> Result; get_escrowed(escrow_type: str, key: bytes) -> Iterator<bytes>; remove_escrowed(escrow_type: str, key: bytes) -> Result"
+    name: "TEL Escrow Repository"
+    contract: "escrow(escrow_type: EscrowType, registry_said: SAID, sn: int, event: bytes, escrowed_at: DateTime) -> Result; get_escrowed(escrow_type: EscrowType, registry_said: SAID) -> [EscrowedEvent]; remove(escrow_type: EscrowType, registry_said: SAID, sn: int) -> Result"
     protocol: "method-call"
     refs: ["persistence"]
-    notes: "TEL escrow subdatabases: .oots (out-of-order TEL), .twes (partial witness TEL), .taes (anchorless TEL), .cmse (missing sigs), .mre (missing registry), .mce (missing chain), .mse (missing schema)"
+    escrow_types:
+      - "OutOfOrder — TEL event arrived before its predecessor"
+      - "PartialWitness — insufficient backer signatures collected so far"
+      - "MissingAnchor — KEL anchor seal not yet found"
+      - "MissingSignatures — controller signatures incomplete"
+      - "MissingRegistry — registry inception event not yet received"
+      - "MissingChain — chained ACDC dependency not yet resolved"
+      - "MissingSchema — credential schema not yet available"
+    invariants:
+      - "Escrow is transient: events are removed once the missing dependency is satisfied"
+      - "Escrow type partitioning: each escrow type is an independent namespace"
+      - "Temporal ordering: escrowed events within a type are retrievable in escrowed_at order"
