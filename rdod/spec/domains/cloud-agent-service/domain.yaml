@@ -75,14 +75,14 @@ adjacents:
     is_cross_cutting: false
 
 externals:
-  - name: "Agent Persistence"
+  - name: "Agent Repository"
     abstraction: "Repository"
-    ref: "port://cloud-agent-service/outbound/agent-store"
-    implementation_notes: "Stores agent instances, credential wallets, contact books, pending operations. Implementations: LMDB (keria), DynamoDB (serious-keri)"
+    ref: "port://cloud-agent-service/outbound/agent-repository"
+    implementation_notes: "Manages agent instances, credential wallets, contact books, and pending operations per provisioned controller."
   - name: "HTTP Server"
     abstraction: "Adapter"
     ref: "port://cloud-agent-service/outbound/http-server"
-    implementation_notes: "Exposes boot (3903), admin (3901), and message router (3902) endpoints. Implementations: Falcon/hio (keria), API Gateway+Lambda (serious-keri)"
+    implementation_notes: "Exposes boot, admin, and message router endpoints on separate ports."
 
 implementation_guidance:
   suggested_type: "service"

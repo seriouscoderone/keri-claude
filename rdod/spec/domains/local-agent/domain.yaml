@@ -73,14 +73,22 @@ adjacents:
     is_cross_cutting: false
 
 externals:
-  - name: "Local Storage"
+  - name: "Event Log Repository"
     abstraction: "Repository"
-    ref: "port://local-agent/outbound/local-storage"
-    implementation_notes: "LMDB (keripy) or redb (keriox) on device — Baser subdatabases for events, signatures, receipts, escrows, and credential TELs"
+    ref: "port://local-agent/outbound/event-log-repository"
+    implementation_notes: "Append-only store for the controller's own key event logs and associated signatures."
+  - name: "Escrow Repository"
+    abstraction: "Repository"
+    ref: "port://local-agent/outbound/escrow-repository"
+    implementation_notes: "Temporary holding area for events that cannot yet be fully verified."
+  - name: "Credential Repository"
+    abstraction: "Repository"
+    ref: "port://local-agent/outbound/credential-repository"
+    implementation_notes: "Stores issued and received ACDC credentials and their associated TEL events."
   - name: "Network Transport"
     abstraction: "Adapter"
     ref: "port://local-agent/outbound/witness-comms"
-    implementation_notes: "HTTP/TCP for direct witness and watcher communication. No cloud agent proxy — the controller's process connects directly"
+    implementation_notes: "Direct HTTP communication with witnesses and watchers — no cloud agent proxy."
 
 implementation_guidance:
   suggested_type: "application"

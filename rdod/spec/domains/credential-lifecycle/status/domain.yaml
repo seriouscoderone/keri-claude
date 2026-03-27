@@ -36,10 +36,10 @@ kernels: []
 adjacents: []
 
 externals:
-  - name: "Persistence (state snapshots)"
+  - name: "State Snapshot Repository"
     abstraction: "Repository"
-    ref: "port://credential-lifecycle/status/outbound/state-store"
-    implementation_notes: "Read/write credential and registry state snapshots. Implementations: LMDB subdbs (.tets, .twes) in keripy Reger, TelEventDatabase trait in keriox"
+    ref: "port://credential-lifecycle/status/outbound/state-snapshot-repository"
+    implementation_notes: "Read/write credential and registry state snapshots — materialized views reconstructable from TEL events."
 
 implementation_guidance:
   suggested_type: "module"

@@ -35,22 +35,19 @@ kernels:
 adjacents: []
 
 externals:
-  - name: "Persistence"
-    abstraction: "Adapter"
+  - name: "Receipt Repository"
+    abstraction: "Repository"
     ref: "port://accountability/receipting/outbound/persistence"
-    implementation_notes: "Receipt storage across typed databases: .rcts (non-transferable receipt couples), .vrcs (transferable receipt quadruples), .wigs (witness indexed receipts), .uwes (unverified witness escrow), .ures (unverified non-transferable escrow), .vres (unverified transferable escrow)"
+    implementation_notes: "Typed receipt storage — verified receipts (non-transferable, transferable, witness-indexed) and unverified receipt escrows."
 
 implementation_guidance:
   suggested_type: "module"
   language_affinity: "any"
   notes: >
-    In keripy, the Receiptor class processes cues from Kevery to generate receipts for
-    witnessed events. Receipt escrows are drained by Kevery.processEscrowUnverWitness(),
-    processEscrowUnverNonTrans(), and processEscrowUnverTrans(). In keriox, the
-    WitnessReceiptGenerator subscribes to KeyEventAdded notifications via internal
-    coordination and creates non-transferable receipts using the witness's signing keys.
-    Receipt type selection depends on the signer's AID type (transferable vs. non-transferable)
-    and role (witness vs. validator).
+    Receipts are generated after witnessing a key event. Premature receipts (arriving before
+    the receipted event) are escrowed and drained when the event arrives. Receipt type
+    selection depends on the signer's AID type (transferable vs. non-transferable) and role
+    (witness vs. validator). Internal coordination for escrow reprocessing is implementation-defined.
 
 issues: []
 

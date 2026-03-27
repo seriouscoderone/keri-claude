@@ -40,10 +40,10 @@ kernels:
 adjacents: []
 
 externals:
-  - name: "Persistence"
+  - name: "State Persistence Repository"
     abstraction: "Repository"
     ref: "port://identity/state/outbound/persistence"
-    implementation_notes: "State cache (.states subdatabase) for fast key state lookup by prefix, and KEL access for state reconstruction via replay. In keripy, the Kever holds a reference to db (Baser) for reading events and caching state. In keriox, EventStorage wraps the EventDatabase trait. The tracking subdomain reads from the KEL and writes to the state cache."
+    implementation_notes: "State cache for fast key state lookup by prefix, and KEL access for state reconstruction via replay."
 
 implementation_guidance:
   suggested_type: "module"

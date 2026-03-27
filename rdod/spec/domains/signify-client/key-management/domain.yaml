@@ -33,10 +33,10 @@ kernels:
 adjacents: []
 
 externals:
-  - name: "Key Storage"
+  - name: "Key Repository"
     abstraction: "Repository"
-    ref: "port://signify-client/key-management/outbound/key-storage"
-    implementation_notes: "Encrypted key material at rest. Implementations: browser localStorage (signify-browser-extension), filesystem (signify-ts/signifypy), secure enclave (mobile). Stores encrypted salt (sxlt) and encrypted private key proxies (prxs)"
+    ref: "port://signify-client/key-management/outbound/key-repository"
+    implementation_notes: "Encrypted key material at rest — backend is implementation-defined."
 
 implementation_guidance:
   suggested_type: "module"

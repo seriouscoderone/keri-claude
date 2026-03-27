@@ -47,14 +47,14 @@ adjacents:
     is_cross_cutting: false
 
 externals:
-  - name: "Witness Storage"
+  - name: "Witness Repository"
     abstraction: "Repository"
-    ref: "port://witness-service/outbound/witness-store"
-    implementation_notes: "KERL persistence — event logs and receipts per monitored AID. Implementations: redb (keriox), LMDB (keripy)"
+    ref: "port://witness-service/outbound/witness-repository"
+    implementation_notes: "Append-only KERL persistence — event logs and receipts per monitored AID."
   - name: "HTTP Server"
     abstraction: "Adapter"
     ref: "port://witness-service/outbound/http-server"
-    implementation_notes: "Event receipt endpoint, OOBI endpoint (/.well-known/keri/oobi/{aid}/{role}/{eid}), query endpoint. Implementations: axum (keriox), Falcon/hio (keripy)"
+    implementation_notes: "Event receipt endpoint, OOBI endpoint (/.well-known/keri/oobi/{aid}/{role}/{eid}), and query endpoint."
 
 implementation_guidance:
   suggested_type: "service"

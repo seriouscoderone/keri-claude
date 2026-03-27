@@ -33,10 +33,10 @@ kernels: []
 adjacents: []
 
 externals:
-  - name: "Persistence"
+  - name: "Delegation Escrow Repository"
     abstraction: "Repository"
     ref: "port://delegation/lifecycle/outbound/escrow-store"
-    implementation_notes: "Escrow storage for delegation-specific queues. Implementations: LMDB subdatabases .pdes (partially-delegated), .delegables (delegable events), .aess (approved seals), .udes (unverified seals) in keripy; DelegationEscrow in keriox. The validation subdomain defines the escrow lifecycle; the persistence engine provides the physical storage."
+    implementation_notes: "Escrow storage for delegation-specific queues — partially-delegated events, delegable events, approved seals, and unverified seals."
 
 implementation_guidance:
   suggested_type: "module"

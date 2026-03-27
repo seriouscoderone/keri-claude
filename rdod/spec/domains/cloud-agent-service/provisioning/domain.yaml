@@ -33,16 +33,15 @@ externals:
   - name: "Agent Registry"
     abstraction: "Repository"
     ref: "port://cloud-agent-service/provisioning/outbound/agent-registry"
-    implementation_notes: "Stores agent instances and bidirectional caid<->agent mappings. Implementations: AgencyBaser with .agnt, .ctrl, .aids sudb mappings (keria/LMDB), DynamoDB (serious-keri)"
+    implementation_notes: "Stores agent instances and bidirectional controller-AID to agent-AID mappings."
 
 implementation_guidance:
   suggested_type: "module"
   language_affinity: "any"
   notes: >
-    In keria, the Agency class (agenting.py) handles provisioning via POST /boot. Agent
-    instances are created with their own Habery, Reger, Verifier, and processing doers.
-    AgencyBaser stores the registry of agent-to-controller mappings in LMDB sub-databases.
-    In serious-keri, provisioning maps to a Lambda handler backed by DynamoDB.
+    Provisioning is triggered via POST /boot. Each provisioned agent gets its own isolated
+    set of identifiers, credentials, and processing state. The agent registry enforces
+    the one-agent-per-controller invariant and provides bidirectional lookup.
 
 issues: []
 

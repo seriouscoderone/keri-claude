@@ -33,14 +33,22 @@ kernels: []
 adjacents: []
 
 externals:
-  - name: "Persistence"
+  - name: "Escrow Repository"
     abstraction: "Repository"
-    ref: "port://cloud-agent-service/processing/outbound/processing-store"
-    implementation_notes: "Stores escrow queues, operation tracking records, credential indexes. Implementations: LMDB sub-databases (keria), DynamoDB (serious-keri)"
+    ref: "port://cloud-agent-service/processing/outbound/escrow-repository"
+    implementation_notes: "Time-bounded escrow of partially-complete protocol exchanges."
+  - name: "Operation Repository"
+    abstraction: "Repository"
+    ref: "port://cloud-agent-service/processing/outbound/operation-repository"
+    implementation_notes: "Tracks long-running operations so clients can poll for completion."
+  - name: "Credential Index Repository"
+    abstraction: "Repository"
+    ref: "port://cloud-agent-service/processing/outbound/credential-index-repository"
+    implementation_notes: "Searchable index over credential attributes for client queries."
   - name: "Timer"
     abstraction: "Service"
     ref: "port://cloud-agent-service/processing/outbound/timer"
-    implementation_notes: "Provides escrow timeouts and operation timeouts. Implementations: HIO scheduler (keria/keripy), Lambda timeout + DynamoDB TTL (serious-keri)"
+    implementation_notes: "Provides escrow timeouts and operation expiration."
 
 implementation_guidance:
   suggested_type: "module"

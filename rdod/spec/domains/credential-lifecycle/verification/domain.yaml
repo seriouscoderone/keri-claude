@@ -47,23 +47,21 @@ kernels:
 adjacents: []
 
 externals:
-  - name: "Persistence (read KEL and registry state)"
+  - name: "KEL and State Lookup"
     abstraction: "Repository (read-only)"
     ref: "port://credential-lifecycle/verification/outbound/kel-and-state-lookup"
-    implementation_notes: "Reads issuer's KEL to verify anchor seals, reads registry state and credential state for validation context. Implementations: Reger + Baser (keripy), TelEventDatabase + EventStorage (keriox)"
+    implementation_notes: "Reads issuer's KEL to verify anchor seals, and reads registry and credential state for validation context."
 
 implementation_guidance:
   suggested_type: "module"
   language_affinity: "any"
   notes: >
-    In keripy, the validation pipeline spans Verifier (src/keri/vdr/verifying.py) and
-    Tevery.processEvent() (src/keri/vdr/eventing.py). The Verifier class manages cues
-    and escrow processing. In keriox, TelEventProcessor.process()
-    in src/processor.rs implements the pipeline. The pipeline is stateless given a registry
-    state snapshot and the issuer's KEL -- it takes a VerifiableEvent and returns
-    accept/reject/escrow-reason.
+    The validation pipeline is stateless given a registry state snapshot and the issuer's
+    KEL — it takes a VerifiableEvent and returns accept/reject/escrow-reason. Events that
+    cannot be immediately validated are placed in typed escrow queues and reprocessed when
+    the blocking condition resolves.
 
-    Internal coordination: keripy uses cues for signaling TEL escrow reprocessing. keriox uses TelNotificationBus. This is implementation-specific — the spec requires escrow reprocessing when blocking conditions resolve, but doesn't prescribe the dispatch mechanism.
+    Internal coordination for escrow reprocessing is implementation-defined — the spec requires it occurs but does not prescribe the dispatch mechanism.
 
 issues: []
 

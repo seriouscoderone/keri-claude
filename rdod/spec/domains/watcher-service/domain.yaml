@@ -50,14 +50,14 @@ adjacents:
     is_cross_cutting: false
 
 externals:
-  - name: "Watcher Storage"
+  - name: "Watcher Repository"
     abstraction: "Repository"
-    ref: "port://watcher-service/outbound/watcher-store"
-    implementation_notes: "Cached KEL copies from multiple witness sources, DEL (Duplicitous Event Log) for duplicity evidence. Implementation: redb (keriox)"
+    ref: "port://watcher-service/outbound/watcher-repository"
+    implementation_notes: "Cached KEL copies from multiple witness sources and permanent duplicity evidence records."
   - name: "HTTP Server"
     abstraction: "Adapter"
     ref: "port://watcher-service/outbound/http-server"
-    implementation_notes: "Query endpoint for validators, OOBI resolution. Implementation: axum (keriox)"
+    implementation_notes: "Query endpoint for validators and OOBI resolution."
 
 implementation_guidance:
   suggested_type: "service"

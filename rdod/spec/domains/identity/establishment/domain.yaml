@@ -14,11 +14,10 @@ description: >
   Cohesion note — this domain is large (15+ UL terms, 14-state FSM, multiple escrow types)
   because the validation pipeline is one atomic sequential operation. Each step depends on
   the output of the previous: you can't check witness threshold without first verifying
-  signatures, and you can't check delegation without first confirming thresholds. In keripy
-  this is a single method chain (Kever.update → valSigsWigsDel). Factoring out "seal types"
-  or "event serialization" would create artificial boundaries — seal structure lives in
-  cesr/primitives, serialization lives in cesr/composition, and threshold satisfaction
-  imports from identity/thresholds. This domain owns the pipeline, not the primitives.
+  signatures, and you can't check delegation without first confirming thresholds. Factoring
+  out "seal types" or "event serialization" would create artificial boundaries — seal
+  structure lives in cesr/primitives, serialization lives in cesr/composition, and threshold
+  satisfaction imports from identity/thresholds. This domain owns the pipeline, not the primitives.
 version: "0.1.0"
 
 source_material:
@@ -48,19 +47,19 @@ kernels:
 adjacents: []
 
 externals:
-  - name: "Persistence (read)"
+  - name: "Key State and KEL Lookup"
     abstraction: "Repository (read-only)"
     ref: "port://identity/establishment/outbound/state-lookup"
-    implementation_notes: "Reads current key state and KEL to provide validation context. Implementations: Kever cache (keripy), EventStorage.get_state() (keriox)"
+    implementation_notes: "Reads current key state and KEL to provide validation context for incoming events."
 
 implementation_guidance:
   suggested_type: "module"
   language_affinity: "any"
   notes: >
-    In keripy, validation logic lives in Kever.valSigsWigsDel() and Kevery.processEvent().
-    In keriox, it is EventValidator.validate_event() in processor/validator.rs.
-    The pipeline is stateless given a key state snapshot -- it takes an event, its signatures,
-    and the current key state, and returns accept/reject/escrow-reason.
+    The validation pipeline is stateless given a key state snapshot — it takes an event,
+    its signatures, and the current key state, and returns accept/reject/escrow-reason.
+    Each validation step either advances to the next or routes the event to the appropriate
+    escrow queue for later reprocessing.
 
 issues: []
 

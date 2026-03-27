@@ -6,8 +6,8 @@ description: >
   Detection and storage of duplicitous events — fork detection, evidence collection, the Likely
   Duplicitous Escrow (temporary holding), and the Duplicitous Event Log (permanent forensic evidence).
   When an incoming event conflicts with an already-accepted event at the same (prefix, sn), this
-  subdomain detects the fork, stages the evidence in the Likely Duplicitous Escrow [.ldes in keripy],
-  promotes confirmed duplicity to the Duplicitous Event Log store [.dels in keripy], and triggers
+  subdomain detects the fork, stages the evidence in the Likely Duplicitous Escrow,
+  promotes confirmed duplicity to the Duplicitous Event Log, and triggers
   reprocessing of dependent components.
 version: "0.1.0"
 
@@ -37,19 +37,19 @@ adjacents: []
 
 externals:
   - ref: "external://persistence"
-    source: "Escrow storage (Likely Duplicitous Escrow [.ldes in keripy] temporary, Duplicitous Event Log store [.dels in keripy] permanent)"
+    source: "Escrow storage (Likely Duplicitous Escrow temporary, Duplicitous Event Log permanent)"
     relationship: "Evidence lifecycle requires persistent storage — temporary escrow with timeout for likely duplicitous events, permanent append-only storage for confirmed duplicity evidence"
 
 implementation_guidance:
   suggested_type: "module"
   language_affinity: "any"
   notes: >
-    In keripy, fork detection occurs in Kevery when an incoming event at an occupied sn has a
-    different digest. Likely duplicitous events are stored in the Likely Duplicitous Escrow and processed by
-    the escrow processing loop with a 3600s timeout. Confirmed duplicity is promoted
-    to the Duplicitous Event Log store. In keriox, the DuplicitousEvents escrow serves the same role.
+    Fork detection occurs when an incoming event at an occupied (prefix, sn) has a different
+    digest than the accepted event. Likely duplicitous events are stored in a temporary escrow
+    and processed by the escrow processing loop with a configurable timeout. Confirmed duplicity
+    is promoted to the permanent Duplicitous Event Log.
 
-    Internal coordination: keripy uses a cues deque (processCues pattern) for signaling escrow reprocessing. keriox uses a NotificationBus with observer pattern. This is an implementation choice, not a spec requirement — the spec only requires that escrow reprocessing occurs when blocking conditions resolve.
+    Internal coordination for escrow reprocessing is implementation-defined — the spec only requires that escrow reprocessing occurs when blocking conditions resolve.
 
 issues: []
 
