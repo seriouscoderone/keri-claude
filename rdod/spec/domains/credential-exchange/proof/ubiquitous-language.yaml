@@ -42,6 +42,61 @@ terms:
       - "Recipient verifying the grant by checking: ACDC SAID matches TEL event ta field, TEL event digest matches KEL seal"
     related_terms: ["Proof of Issuance", "Proof of Disclosure", "Transaction Event Seal", "TEL"]
 
+  - term: "Most Compact Form"
+    synonyms: ["MCF", "Most Compact Form SAID"]
+    definition: "The canonical form of an ACDC (or any SAIDed block) used to compute its single unambiguous SAID. Computed by a depth-first algorithm: expand leaf blocks, compute their SAIDs, compact them into their enclosing blocks, compute those SAIDs, and repeat up to the root. The result is a representation where every SAIDed subblock is replaced by its SAID. This is what the issuer signs — one commitment that covers all schema-authorized disclosure variants."
+    invariants:
+      - "Every SAIDed block has exactly one Most Compact Form regardless of how many oneOf variants its schema allows"
+      - "Algorithm: depth-first — SAIDify leaves first, compact them, SAIDify parents, repeat to root"
+      - "The SAID of the Most Compact Form is used for all references: edge nodes, PoI commitment, ACDC identification"
+      - "Non-SAIDed subblocks with oneOf variants use the most fully expanded variant for SAID computation"
+      - "Verification reverses the process: expand a block, verify its SAID, recurse into nested blocks"
+    examples:
+      - "ACDC with attribute section and edge section: compute a.d on expanded attributes, compact a to a.d, compute e.d on expanded edges, compact e to e.d, then compute top-level d"
+      - "Leaf block with no nested SAIDed subblocks: SAID computed on the fully expanded representation"
+    related_terms: ["Proof of Issuance", "SAID", "Graduated Disclosure"]
+
+  - term: "Credential Hash Tree"
+    synonyms: ["SAID Tree", "Verification Tree"]
+    definition: "The implicit hash tree formed by an ACDC's nested SAIDed blocks. The top-level SAID is the tree root; each section SAID (attributes, edges, rules) is a branch; leaf blocks are the terminal nodes. A commitment (signature or seal) to the root SAID is a commitment to the entire tree — any branch can be independently verified by expanding it and checking its SAID against its compact form in the parent."
+    invariants:
+      - "Commitment to the top-level SAID is equivalent to commitment to the hash tree root"
+      - "Verifying a nested block is verifying proof of inclusion in the tree"
+      - "Any schema-authorized variant corresponds to a different expansion path through the same tree"
+      - "One PoI (signature on root SAID) provides issuance proof for all disclosure variants"
+    examples:
+      - "Root: ACDC SAID → branches: a.d (attributes), e.d (edges), r.d (rules) → leaves: individual attribute SAIDs"
+      - "Verifier expands a.d → checks SAID → expands nested blocks within attributes → checks their SAIDs"
+    related_terms: ["Most Compact Form", "Proof of Issuance", "Proof of Disclosure"]
+
+  - term: "Three-Link Verification Chain"
+    synonyms: ["ACDC → TEL → KEL Chain"]
+    definition: "The full verification chain for a credential in a grant: (1) the ACDC itself, verified by its SAID; (2) the TEL issuance event, whose ta field must match the ACDC SAID; (3) the KEL anchor seal, whose digest must match the TEL event SAID. This three-link chain binds the credential to the issuer's key state at the time of issuance."
+    invariants:
+      - "Link 1: ACDC SAID verifies the credential's content integrity"
+      - "Link 2: TEL event ta field == ACDC SAID — binds issuance to this specific credential"
+      - "Link 3: KEL seal digest == TEL event SAID — binds the TEL event to the issuer's key authority"
+      - "All three links must verify for the grant to be accepted"
+      - "Stateless: verification requires only the artifacts and the issuer's key state — no round-trips"
+    examples:
+      - "Grant carries ACDC(d=X), upd(ta=X, d=Y), seal(d=Y) — verifier checks X==ta, Y==seal.d"
+    related_terms: ["Credential Artifacts in Grant", "Proof of Issuance"]
+
+  - term: "Bespoke Issued ACDC"
+    synonyms: ["Disclosure-Specific ACDC"]
+    definition: "A credential issued by the Discloser (not the original Issuer) that chains to one or more existing ACDCs via edges. Enables disclosure-specific contractual terms, contextual attribute augmentation, and rich presentations without new tooling — just reuse the standard ACDC issuance and verification pipeline."
+    invariants:
+      - "Issuer of the bespoke ACDC is the Discloser; Issuee is the Disclosee"
+      - "Edges reference the original ACDC(s) being disclosed"
+      - "Rules section carries context-specific contractual language (e.g., one-time use, venue-specific)"
+      - "Attributes may be empty or may include context-specific properties supporting the contractual terms"
+      - "Signing the bespoke ACDC consummates a contract between the named Issuer (Discloser) and named Issuee (Disclosee)"
+      - "Standard ACDC verification applies — no special presentation protocol needed"
+    examples:
+      - "Restaurant admittance: Discloser issues a bespoke ACDC with edge→coupon_ACDC, rules→one-time-use anti-assimilation clause, issuee→restaurant_AID"
+      - "Rich presentation: bespoke ACDC edges reference multiple source ACDCs, each contributing different attributes"
+    related_terms: ["Credential Artifacts in Grant", "Proof of Issuance", "Chain-Link Confidentiality"]
+
 events:
   - name: "IssuanceProofVerified"
     payload: "acdc_said: SAID, issuer_aid: AID, compact_said: SAID"
