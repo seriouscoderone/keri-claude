@@ -13,6 +13,6 @@ ports:
   - id: "port://accountability/consensus/inbound/first-seen-check"
     type: inbound
     name: "First-seen Check"
-    contract: "is_first_seen(witness_id: WitnessAID, aid: AID, sn: int) -> bool; apply_first_seen(witness_id: WitnessAID, aid: AID, sn: int, event_said: SAID) -> Result<Accepted, AlreadySeen>; verify_proper_kerl(kerl: KERL) -> Result<Proper, DuplicateEventError>"
+    contract: "is_first_seen(witness_id: WitnessAID, aid: AID, sn: int) -> bool; apply_first_seen(witness_id: WitnessAID, aid: AID, sn: int, event_said: SAID) -> Result<Accepted, AlreadySeen>; verify_proper_kerl(kerl: KERL) -> Result<Proper, FirstSeenConflictError>"
     protocol: "method-call"
     refs: ["domain://accountability"]
