@@ -6,14 +6,14 @@ ports:
   - id: "port://accountability/dissemination/inbound/event-propagation"
     type: inbound
     name: "Event Propagation"
-    contract: "disseminate_event(event: KeyEvent, receipts: [Receipt], witnesses: [WitnessEndpoint], strategy: DisseminationStrategy) -> Result<DisseminationReport, DisseminationError>; get_witness_set(aid: AID, sn: int) -> {witnesses: [WitnessAID], tally: int}; select_mode(witness_count: int) -> Mode"
+    contract: "disseminate_event(event: KeyEvent, receipts: [Receipt], witnesses: [ServiceEndpoint], strategy: DisseminationStrategy) -> Result<DisseminationReport, DisseminationError>; get_witness_set(aid: AID, sn: int) -> {witnesses: [WitnessAID], tally: int}; select_mode(witness_count: int) -> Mode"
     protocol: "method-call"
     refs: ["domain://accountability"]
 
   - id: "port://accountability/dissemination/inbound/witness-management"
     type: inbound
     name: "Witness Management"
-    contract: "designate_witnesses(witnesses: [WitnessAID], tally: int) -> WitnessConfig; amend_witnesses(prune: [WitnessAID], graft: [WitnessAID], new_tally: int) -> WitnessConfig; resolve_witness_endpoints(witnesses: [WitnessAID]) -> [WitnessEndpoint]"
+    contract: "designate_witnesses(witnesses: [WitnessAID], tally: int) -> WitnessConfig; amend_witnesses(prune: [WitnessAID], graft: [WitnessAID], new_tally: int) -> WitnessConfig; resolve_witness_endpoints(witnesses: [WitnessAID]) -> [ServiceEndpoint]"
     protocol: "method-call"
     refs: ["domain://accountability"]
 
