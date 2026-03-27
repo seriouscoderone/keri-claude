@@ -19,7 +19,7 @@ protocols:
         input:
           description: "Credential SAID, recipient AID, embedded ACDC + TEL event + KEL seal"
           types:
-            - ref: "types://credential-lifecycle#IssuanceEvent"
+            - ref: "types://credential-lifecycle#TELEvent"
         output:
           description: "exn with route=/ipex/grant containing credential bundle"
         preconditions:
@@ -106,7 +106,7 @@ protocols:
         input:
           description: "Issuer creates ACDC and TEL issuance event"
           types:
-            - ref: "types://credential-lifecycle#IssuanceEvent"
+            - ref: "types://credential-lifecycle#TELEvent"
         output:
           description: "Issued credential with TEL entry"
           type: "types://credential-lifecycle#CredentialState"
@@ -118,7 +118,7 @@ protocols:
         input:
           description: "Issued credential + TEL event + KEL seal"
           types:
-            - ref: "types://credential-lifecycle#IssuanceEvent"
+            - ref: "types://credential-lifecycle#TELEvent"
         output:
           description: "exn with route=/ipex/grant with full credential bundle"
         depends_on: [4]
