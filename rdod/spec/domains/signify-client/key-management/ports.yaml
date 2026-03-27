@@ -17,14 +17,18 @@ ports:
     refs: ["domain://signify-client"]
 
   # Outbound — encrypted key material persistence
-  - id: "port://signify-client/key-management/outbound/key-storage"
+  - id: "port://signify-client/key-management/outbound/key-repository"
     type: outbound
-    name: "Key Storage"
-    contract: >
-      store_encrypted_salt(sxlt: Cipher) -> Result;
-      load_encrypted_salt() -> Cipher;
-      store_encrypted_proxies(prxs: [Cipher], nxts: [Cipher]) -> Result;
-      load_encrypted_proxies(aid) -> {prxs: [Cipher], nxts: [Cipher]};
-      destroy() -> Result
+    name: "Key Repository"
+    description: >
+      Persists encrypted key material for edge signing. Supports two keeper strategies:
+      salty (salt-based derivation) and randy (random key generation). All stored material
+      is encrypted — the repository never sees plaintext private keys.
+    contract:
+      - "store_encrypted_salt(aid: AID, encrypted_salt: EncryptedSalt) -> Result — persist encrypted salt for salty keeper derivation"
+      - "get_encrypted_salt(aid: AID) -> EncryptedSalt — retrieve encrypted salt for an identifier"
+      - "store_encrypted_keys(aid: AID, encrypted_private: [EncryptedKey], encrypted_next: [EncryptedKey]) -> Result — persist encrypted current and next private keys for randy keeper"
+      - "get_encrypted_keys(aid: AID) -> EncryptedKeyPair — retrieve encrypted private and next key sets"
+      - "destroy(aid: AID) -> Result — permanently remove all encrypted key material for an identifier"
     protocol: "method-call"
-    refs: ["key-storage"]
+    refs: ["persistence"]

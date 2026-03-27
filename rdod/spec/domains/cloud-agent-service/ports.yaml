@@ -7,11 +7,24 @@ ports:
   #   - api: port://cloud-agent-service/api/inbound/admin-api (admin API)
   #   - api: port://cloud-agent-service/api/inbound/message-router (message routing)
 
-  # Outbound — persistence, HTTP server, witness/watcher interaction
-  - id: "port://cloud-agent-service/outbound/agent-store"
+  # Outbound — repository, HTTP server, witness/watcher interaction
+  - id: "port://cloud-agent-service/outbound/agent-repository"
     type: outbound
-    name: "Agent Persistence"
-    contract: "store_agent(agent) -> Result; get_agent(id) -> Agent; store_credential(cred) -> Result; list_credentials(aid) -> [Credential]; store_contact(contact) -> Result; enqueue_notification(notification) -> Result; get_escrowed(aid, type) -> [EscrowedItem]"
+    name: "Agent Repository"
+    description: >
+      Manages agent lifecycle, credential storage, contacts, and notifications for
+      cloud-hosted identifiers. Each agent represents one provisioned Signify client
+      session with its associated state.
+    contract:
+      - "store_agent(agent: Agent) -> Result — persist a provisioned agent and its configuration"
+      - "get_agent(agent_id: AgentID) -> Agent — retrieve an agent by its identifier"
+      - "remove_agent(agent_id: AgentID) -> Result — deprovision an agent and remove its state"
+      - "store_credential(aid: AID, credential: Credential) -> Result — store an issued or received credential"
+      - "list_credentials(aid: AID) -> [Credential] — list all credentials held by an identifier"
+      - "store_contact(contact: Contact) -> Result — store a contact (known external identifier)"
+      - "get_contacts(aid: AID) -> [Contact] — list known contacts for an identifier"
+      - "enqueue_notification(notification: Notification) -> Result — queue a notification for client pickup"
+      - "get_notifications(agent_id: AgentID, since?: Timestamp) -> [Notification] — retrieve pending notifications"
     protocol: "method-call"
     refs: ["persistence"]
 

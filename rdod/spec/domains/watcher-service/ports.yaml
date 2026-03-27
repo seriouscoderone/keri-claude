@@ -15,10 +15,18 @@ ports:
     protocol: "HTTP"
     refs: ["domain://witness-service"]
 
-  - id: "port://watcher-service/outbound/watcher-store"
+  - id: "port://watcher-service/outbound/watcher-repository"
     type: outbound
-    name: "Watcher Storage"
-    contract: "cache_kel(aid, source_witness, events) -> Result; get_cached_kel(aid, source_witness?) -> [Event]; store_duplicity(aid, sn, evidence) -> Result; get_duplicity(aid) -> [DuplicityAlert]"
+    name: "Watcher Repository"
+    description: >
+      Stores observed KEL copies from multiple witnesses and permanent duplicity alerts.
+      A watcher cross-checks KEL copies to detect equivocation. Duplicity alerts are
+      append-only and never deleted — they are permanent evidence of misbehavior.
+    contract:
+      - "store_observed_kel(aid: AID, source_witness: AID, kel: KEL) -> Result — store or update a KEL copy received from a specific witness"
+      - "get_observed_kels(aid: AID) -> Map<WitnessAID, KEL> — retrieve all KEL copies for an identifier, keyed by the witness that provided them"
+      - "store_duplicity_alert(aid: AID, alert: DuplicityAlert) -> Result — permanently record a duplicity detection (append-only, never deleted)"
+      - "get_duplicity_alerts(aid: AID) -> [DuplicityAlert] — retrieve all duplicity alerts for an identifier"
     protocol: "method-call"
     refs: ["persistence"]
 

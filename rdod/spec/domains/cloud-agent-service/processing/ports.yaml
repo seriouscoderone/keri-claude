@@ -25,10 +25,42 @@ ports:
     refs: ["domain://cloud-agent-service"]
 
   # Outbound — what processing calls
-  - id: "port://cloud-agent-service/processing/outbound/processing-store"
+  - id: "port://cloud-agent-service/processing/outbound/escrow-repository"
     type: outbound
-    name: "Processing Persistence"
-    contract: "store_escrow(type: EscrowType, key: string, item: object, timeout: Duration) -> Result; get_escrowed(type: EscrowType) -> [EscrowedItem]; remove_escrow(type: EscrowType, key: string) -> Result; store_operation(op: Operation) -> Result; get_operation(name: string) -> Operation; store_credential_index(said: SAID, field: string, value: string) -> Result; search_index(filter: object) -> [SAID]"
+    name: "Escrow Repository"
+    description: >
+      Manages time-bounded escrow of partially-complete protocol exchanges (e.g.,
+      partial signatures awaiting threshold, credentials pending presentation).
+      Items expire after a configurable timeout.
+    contract:
+      - "store_escrow(escrow_type: EscrowType, key: EscrowKey, item: EscrowedItem, timeout: Duration) -> Result — place an item in escrow with a timeout"
+      - "get_escrowed(escrow_type: EscrowType) -> [EscrowedItem] — retrieve all items in a given escrow category"
+      - "remove_escrow(escrow_type: EscrowType, key: EscrowKey) -> Result — remove an item from escrow (completed or expired)"
+    protocol: "method-call"
+    refs: ["persistence"]
+
+  - id: "port://cloud-agent-service/processing/outbound/operation-repository"
+    type: outbound
+    name: "Operation Repository"
+    description: >
+      Tracks long-running operations so clients can poll for completion.
+      Operations represent async workflows like witness receipting or credential issuance.
+    contract:
+      - "store_operation(operation: Operation) -> Result — persist an operation's current state"
+      - "get_operation(operation_name: OperationName) -> Operation — retrieve an operation by name"
+      - "list_operations(operation_type: OperationType) -> [Operation] — list operations filtered by type"
+    protocol: "method-call"
+    refs: ["persistence"]
+
+  - id: "port://cloud-agent-service/processing/outbound/credential-index-repository"
+    type: outbound
+    name: "Credential Index Repository"
+    description: >
+      Searchable index over credential attributes. Allows clients to find credentials
+      by schema, issuer, issuee, or any indexed attribute field.
+    contract:
+      - "index_credential(credential_said: SAID, field: string, value: string) -> Result — add a searchable attribute entry for a credential"
+      - "search_credentials(filter: CredentialFilter) -> [SAID] — find credentials matching attribute criteria"
     protocol: "method-call"
     refs: ["persistence"]
 
