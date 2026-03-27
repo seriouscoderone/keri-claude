@@ -6,7 +6,7 @@ ports:
   - id: "port://accountability/receipting/inbound/receipt-lifecycle"
     type: inbound
     name: "Receipt Lifecycle"
-    contract: "create_receipt(event: KeyEvent, witness_keys: SigningKeys) -> Receipt; classify_receipt(signer_aid: AID, signer_role: Role) -> ReceiptType; escrow_receipt(receipt: Receipt, escrow_type: EscrowType) -> Result<Escrowed, EscrowError>; drain_escrow(aid: AID, sn: int, event_said: SAID) -> [Receipt]"
+    contract: "create_receipt(event: KeyEvent, witness_keys: SigningKeys) -> Receipt; classify_receipt(signer_aid: AID, signer_role: Role) -> ReceiptType; escrow_receipt(receipt: Receipt, escrow_type: EscrowType) -> Result<Escrowed, UnverifiedReceiptError>; drain_escrow(aid: AID, sn: int, event_said: SAID) -> [Receipt]"
     protocol: "method-call"
     refs: ["domain://accountability"]
 

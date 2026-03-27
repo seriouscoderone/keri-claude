@@ -6,7 +6,7 @@ ports:
   - id: "port://delegation/lifecycle/inbound/delegation-validation"
     type: inbound
     name: "Delegation Validation"
-    contract: "validate_delegated_event(event: SignedEstablishmentEvent, delegator_kel: KEL?) -> Result<Validated, ValidationFailure>; process_escrow_partial_dels() -> [PromotedEvent]; process_escrow_delegables() -> [PromotedEvent]"
+    contract: "validate_delegated_event(event: SignedEstablishmentEvent, delegator_kel: KEL?) -> Result<Validated, ValidationError>; process_escrow_partial_dels() -> [PromotedEvent]; process_escrow_delegables() -> [PromotedEvent]"
     protocol: "method-call"
     refs: ["domain://delegation"]
 

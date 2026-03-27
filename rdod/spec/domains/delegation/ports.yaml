@@ -13,7 +13,7 @@ ports:
   - id: "port://delegation/inbound/delegation-verification"
     type: inbound
     name: "Delegation Verification"
-    contract: "verify_delegation(delegated_event: EstablishmentEvent) -> Result<Verified, DelegationError>; find_delegation_seal(delegator_aid: AID, delegatee_aid: AID, sn: int) -> Result<DelegationSeal, NotFound>; verify_delegation_chain(aid: AID) -> Result<Verified, DelegationChainError>"
+    contract: "verify_delegation(delegated_event: EstablishmentEvent) -> Result<Verified, MissingDelegationError>; find_delegation_seal(delegator_aid: AID, delegatee_aid: AID, sn: int) -> Result<DelegationSeal, NotFound>; verify_delegation_chain(aid: AID) -> Result<Verified, DelegationChainError>"
     protocol: "method-call"
     refs: ["domain://identity"]
 

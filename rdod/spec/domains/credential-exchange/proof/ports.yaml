@@ -6,7 +6,7 @@ ports:
   - id: "port://credential-exchange/proof/inbound/verify-disclosure"
     type: inbound
     name: "Disclosure Verification"
-    contract: "verify_proof_of_issuance(acdc_said: SAID, issuer_commitment: Signature, issuer_key_state: KeyState) -> Result<bool, VerificationError>; verify_proof_of_disclosure(compact_sad: SAD, expanded_sad: SAD) -> Result<bool, VerificationError>; verify_credential_artifacts(acdc: ACDC, tel_event: TELEvent, kel_seal: EventSeal) -> Result<bool, VerificationError>"
+    contract: "verify_proof_of_issuance(acdc_said: SAID, issuer_commitment: Signature, issuer_key_state: KeyState) -> Result<bool, ProofChainVerificationError>; verify_proof_of_disclosure(compact_sad: SAD, expanded_sad: SAD) -> Result<bool, ProofChainVerificationError>; verify_credential_artifacts(acdc: ACDC, tel_event: TELEvent, kel_seal: EventSeal) -> Result<bool, ProofChainVerificationError>"
     protocol: "method-call"
     refs: ["domain://credential-exchange"]
 

@@ -6,7 +6,7 @@ ports:
   - id: "port://accountability/inbound/receipting"
     type: inbound
     name: "Receipting"
-    contract: "submit_event(event: KeyEvent, controller_signatures: [Signature]) -> Result<Receipt, WitnessError>; get_receipts(aid: AID, sn: int) -> [Receipt]; check_accountability(aid: AID, sn: int) -> {met: bool, count: int, threshold: int}"
+    contract: "submit_event(event: KeyEvent, controller_signatures: [Signature]) -> Result<Receipt, UnverifiedWitnessReceiptError>; get_receipts(aid: AID, sn: int) -> [Receipt]; check_accountability(aid: AID, sn: int) -> {met: bool, count: int, threshold: int}"
     protocol: "method-call"
     refs: ["domain://identity"]
 

@@ -27,6 +27,20 @@ errors:
         type: "string"
         description: "Which link is broken (acdc_to_tel, tel_to_kel)"
 
+  - name: "AuthenticationError"
+    description: "KRAM authentication failed — message signature does not verify against sender's current key state"
+    cause: "Invalid signature, expired timestamp, or unknown sender AID"
+    recovery: "reject"
+    severity: "error"
+    context:
+      - field: "sender_aid"
+        type: "string"
+        description: "The AID of the message sender"
+      - field: "reason"
+        type: "string"
+        description: "Why authentication failed (invalid signature, expired timestamp, unknown AID)"
+    related_port: "port://credential-exchange/proof/inbound/authenticate-message"
+
   - name: "ProofOfDisclosureError"
     description: "Disclosed credential form does not match the committed compact form"
     cause: "The expanded credential's SAID does not match the SAID committed in the compact form — the credential was tampered with after commitment"

@@ -66,6 +66,23 @@ errors:
         description: "Sequence number of the latest establishment event"
     related_port: "port://identity/state/inbound/state-reconstruction"
 
+  - name: "ReconstructionError"
+    description: "Key state reconstruction from KEL replay failed"
+    cause: "Corrupted or incomplete KEL, missing events in sequence"
+    recovery: "re-fetch KEL from witnesses"
+    severity: "error"
+    context:
+      - field: "prefix"
+        type: "string"
+        description: "The AID prefix whose state could not be reconstructed"
+      - field: "target_sn"
+        type: "integer"
+        description: "The target sequence number for reconstruction"
+      - field: "reason"
+        type: "string"
+        description: "Why reconstruction failed (gap in sequence, corrupted event, missing inception)"
+    related_port: "port://identity/state/inbound/state-reconstruction"
+
   - name: "MissingEntryError"
     description: "Expected database entry not found during state lookup"
     cause: "An event digest, key state record, or escrow entry that should exist in the database was not found — possible database corruption or incomplete sync"

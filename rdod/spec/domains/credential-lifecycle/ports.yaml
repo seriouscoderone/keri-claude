@@ -22,7 +22,7 @@ ports:
   - id: "port://credential-lifecycle/outbound/kel-sealing"
     type: outbound
     name: "KEL Sealing"
-    contract: "anchor_tel_seal(issuer_aid, event_sn, event_said) -> InteractionEvent; verify_tel_seal(issuer_aid, key_event_sn, seal) -> Result<Valid, SealError>"
+    contract: "anchor_tel_seal(issuer_aid, event_sn, event_said) -> InteractionEvent; verify_tel_seal(issuer_aid, key_event_sn, seal) -> Result<Valid, MissingKELSealError>"
     protocol: "method-call"
     refs: ["domain://identity"]
 

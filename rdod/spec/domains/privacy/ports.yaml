@@ -6,7 +6,7 @@ ports:
   - id: "port://privacy/inbound/privacy-management"
     type: inbound
     name: "Privacy and Graduated Disclosure Orchestration"
-    contract: "disclose(acdc, mode: DisclosureMode, options: DisclosureOptions) -> DisclosedVariant; classify(acdc) -> DisclosureMode; classify_privacy_level(acdc) -> PublicOrPrivateOrMetadata; verify_disclosure(disclosed_variant, issuer_kel) -> Result<Valid, VerificationError>; bulk_issue(acdc, count) -> [BulkInstance]"
+    contract: "disclose(acdc, mode: DisclosureMode, options: DisclosureOptions) -> DisclosedVariant; classify(acdc) -> DisclosureMode; classify_privacy_level(acdc) -> PublicOrPrivateOrMetadata; verify_disclosure(disclosed_variant, issuer_kel) -> Result<Valid, SAIDVerificationError>; bulk_issue(acdc, count) -> [BulkInstance]"
     protocol: "method-call"
     refs: ["domain://credential-lifecycle"]
 

@@ -1,0 +1,29 @@
+# errors.yaml
+domain_ref: "delegation"
+
+# Error catalog for the Delegation domain.
+# Covers top-level delegation verification failures that span
+# subdomains (authorization, lifecycle, recovery).
+#
+# Severity levels:
+#   transient  — condition may self-resolve (escrow and retry)
+#   recoverable — requires operator or protocol-level action
+#   fatal      — unrecoverable; event is permanently rejected
+
+errors:
+  - name: "DelegationChainError"
+    description: "Delegation chain verification failed — could not trace delegation authority to a valid root"
+    cause: "Missing intermediate delegator KEL, broken seal chain, or unauthorized delegation"
+    recovery: "escrow or reject"
+    severity: "error"
+    context:
+      - field: "aid"
+        type: "string"
+        description: "The AID whose delegation chain could not be verified"
+      - field: "broken_at"
+        type: "string"
+        description: "The delegator AID where the chain breaks"
+      - field: "reason"
+        type: "string"
+        description: "Why the chain verification failed (missing KEL, broken seal, unauthorized)"
+    related_port: "port://delegation/inbound/delegation-verification"

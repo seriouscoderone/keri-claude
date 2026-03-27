@@ -6,21 +6,21 @@ ports:
   - id: "port://identity/establishment/inbound/validate-event"
     type: inbound
     name: "Event Validation"
-    contract: "validate_event(event: SignedEventMessage, key_state: KeyState) -> Result<ValidationPassed, ValidationFailure>; validate_signatures(raw: bytes, sigers: [Siger], verfers: [Verfer]) -> [int]; check_threshold(tholder: Tholder, indices: [int]) -> bool"
+    contract: "validate_event(event: SignedEventMessage, key_state: KeyState) -> Result<ValidationPassed, ValidationError>; validate_signatures(raw: bytes, sigers: [Siger], verfers: [Verfer]) -> [int]; check_threshold(tholder: Tholder, indices: [int]) -> bool"
     protocol: "method-call"
     refs: ["domain://identity"]
 
   - id: "port://identity/establishment/inbound/validate-rotation"
     type: inbound
     name: "Rotation Validation"
-    contract: "validate_pre_rotation(sigers: [Siger], new_keys: [PublicKey], prior_next_digests: [Digest], ntholder: Tholder) -> Result<[int], PreRotationError>; validate_dual_threshold(tholder: Tholder, ntholder: Tholder, indices: [int], ondices: [int]) -> Result<bool, ThresholdError>"
+    contract: "validate_pre_rotation(sigers: [Siger], new_keys: [PublicKey], prior_next_digests: [Digest], ntholder: Tholder) -> Result<[int], PreRotationBindingError>; validate_dual_threshold(tholder: Tholder, ntholder: Tholder, indices: [int], ondices: [int]) -> Result<bool, InvalidThresholdError>"
     protocol: "method-call"
     refs: ["domain://identity"]
 
   - id: "port://identity/establishment/inbound/validate-delegation"
     type: inbound
     name: "Delegation Validation"
-    contract: "validate_delegation(delegated_event: SignedEventMessage, delegator_aid: AID) -> Result<bool, DelegationError>"
+    contract: "validate_delegation(delegated_event: SignedEventMessage, delegator_aid: AID) -> Result<bool, MissingDelegationError>"
     protocol: "method-call"
     refs: ["domain://identity"]
 

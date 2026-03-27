@@ -14,7 +14,7 @@ ports:
   - id: "port://integrity/inbound/recovery"
     type: inbound
     name: "Superseding Recovery"
-    contract: "apply_superseding_event(aid: AID, event: RotationEvent) -> Result<RecoveryApplied, SupersedingError>; reconcile(aid: AID) -> Result<Trunk, IrreconcilableError>"
+    contract: "apply_superseding_event(aid: AID, event: RotationEvent) -> Result<RecoveryApplied, SupersedingConflictError>; reconcile(aid: AID) -> Result<Trunk, IrreconcilableError>"
     protocol: "method-call"
     delegates_to: ["port://integrity/recovery/inbound/superseding-rules", "port://integrity/recovery/inbound/reconciliation"]
     refs: ["domain://identity"]

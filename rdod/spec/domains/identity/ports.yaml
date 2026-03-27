@@ -13,7 +13,7 @@ ports:
   - id: "port://identity/inbound/event-processing"
     type: inbound
     name: "Event Processing"
-    contract: "process_event(event: KeyEvent, signatures: [Signature], receipts: [Receipt]) -> Result<EventValidated, ValidationError>; escrow_event(event: KeyEvent) -> Result<Escrowed, EscrowError>"
+    contract: "process_event(event: KeyEvent, signatures: [Signature], receipts: [Receipt]) -> Result<EventValidated, ValidationError>; escrow_event(event: KeyEvent) -> Result<Escrowed, OutOfOrderError>"
     protocol: "method-call"
     refs: ["domain://identity"]
 
@@ -29,7 +29,7 @@ ports:
   - id: "port://identity/outbound/event-repository"
     type: outbound
     name: "Event Repository"
-    contract: "append_event(aid: AID, event: KeyEvent, first_seen_number: int) -> Result<void, DuplicateError>; get_event_by_sn(aid: AID, sn: int) -> KeyEvent?; get_event_by_said(said: SAID) -> KeyEvent?; get_kel(aid: AID) -> [KeyEvent]; get_first_seen_ordinal(aid: AID, event_said: SAID) -> int?; append_signatures(aid: AID, event_said: SAID, signatures: [Signature]) -> void; get_signatures(aid: AID, event_said: SAID) -> [Signature]; append_witness_receipts(aid: AID, event_said: SAID, receipts: [Receipt]) -> void; get_witness_receipts(aid: AID, event_said: SAID) -> [Receipt]; put_key_state(aid: AID, key_state: KeyState) -> void; get_key_state(aid: AID) -> KeyState?"
+    contract: "append_event(aid: AID, event: KeyEvent, first_seen_number: int) -> Result<void, LikelyDuplicitousError>; get_event_by_sn(aid: AID, sn: int) -> KeyEvent?; get_event_by_said(said: SAID) -> KeyEvent?; get_kel(aid: AID) -> [KeyEvent]; get_first_seen_ordinal(aid: AID, event_said: SAID) -> int?; append_signatures(aid: AID, event_said: SAID, signatures: [Signature]) -> void; get_signatures(aid: AID, event_said: SAID) -> [Signature]; append_witness_receipts(aid: AID, event_said: SAID, receipts: [Receipt]) -> void; get_witness_receipts(aid: AID, event_said: SAID) -> [Receipt]; put_key_state(aid: AID, key_state: KeyState) -> void; get_key_state(aid: AID) -> KeyState?"
     protocol: "repository"
     refs: ["persistence"]
     invariants:

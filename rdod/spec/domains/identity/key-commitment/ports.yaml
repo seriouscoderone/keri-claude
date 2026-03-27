@@ -6,7 +6,7 @@ ports:
   - id: "port://identity/key-commitment/inbound/key-commitment"
     type: inbound
     name: "Key Commitment Management"
-    contract: "build_key_config(signing_keys: [PublicKey], next_digests: [Digest]) -> KeyConfiguration; verify_pre_rotation(new_keys: [PublicKey], prior_next_digests: [Digest]) -> Result<[MatchedIndex], PreRotationError>; compute_next_digest(public_key: PublicKey, algorithm: DigestAlgorithm) -> Digest"
+    contract: "build_key_config(signing_keys: [PublicKey], next_digests: [Digest]) -> KeyConfiguration; verify_pre_rotation(new_keys: [PublicKey], prior_next_digests: [Digest]) -> Result<[MatchedIndex], PreRotationBindingError>; compute_next_digest(public_key: PublicKey, algorithm: DigestAlgorithm) -> Digest"
     protocol: "method-call"
     refs: ["domain://identity"]
 
@@ -20,6 +20,6 @@ ports:
   - id: "port://identity/key-commitment/inbound/partial-rotation"
     type: inbound
     name: "Partial Rotation"
-    contract: "validate_partial_rotation(new_keys: [PublicKey], prior_next_digests: [Digest], prior_next_threshold: Threshold) -> Result<{promoted: [int], discarded: [int]}, PartialRotationError>"
+    contract: "validate_partial_rotation(new_keys: [PublicKey], prior_next_digests: [Digest], prior_next_threshold: Threshold) -> Result<{promoted: [int], discarded: [int]}, PartialRotationThresholdError>"
     protocol: "method-call"
     refs: ["domain://identity"]
