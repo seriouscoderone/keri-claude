@@ -25,7 +25,25 @@ terms:
       - "Validates message signatures before dispatching"
       - "Escrows messages awaiting prerequisites — never silently drops"
       - "Multiple domains can register handlers simultaneously"
-    related_terms: ["Exchange Message (exn)"]
+    related_terms: ["Exchange Message (exn)", "KRAM"]
+
+  - term: "KRAM"
+    synonyms: ["KERI Request Authentication Method", "Replay Attack Protection"]
+    definition: "The authentication mechanism for non-KEL KERI messages (exn, qry, rpy). KRAM ensures that every message is signed by the sender's current keys and is fresh — preventing replay attacks. Verification requires checking the sender's signature against their current key state and validating that the message timestamp falls within an acceptable freshness window."
+    invariants:
+      - "Every non-KEL message MUST include a signature by the sender's current signing keys"
+      - "Signature scope covers the entire message body (SAID + content) — not just a header"
+      - "Freshness window: message datetime (dt field) MUST be within an acceptable delta of the verifier's current time"
+      - "Monotonic timestamps: each message from a given AID MUST have a datetime >= all previously seen datetimes from that AID"
+      - "Stale messages (outside freshness window) MUST be rejected — they may be replays"
+      - "Duplicate detection: messages with the same SAID from the same sender MUST be idempotently ignored"
+      - "KEL messages (icp, rot, ixn, dip, drt) bypass KRAM — they use sequence numbers for ordering instead"
+      - "Verification is stateless given (message, sender_key_state, current_time) — no session state"
+    examples:
+      - "Signify client signs admin API request with KRAM: timestamp + request body signed by controller keys"
+      - "KERIA validates inbound exn: check sender AID key state, verify signature, check dt freshness"
+      - "Stale replay rejected: message dt is 5 minutes old, freshness window is 2 minutes"
+    related_terms: ["Exchange Message (exn)", "Exchanger", "Key State"]
 
   - term: "KERI Field Map"
     definition: "The ordered key-value structure of a KERI message body. Field maps use short field labels (v, t, d, i, s, etc.) for wire efficiency, but each field represents a specific domain concept. The presence or absence of optional fields signals semantic meaning — for example, the di field signals delegation, the n field signals transferability. Implementations SHOULD provide domain-typed construction interfaces that map human-readable concepts to field labels."
