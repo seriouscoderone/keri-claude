@@ -75,9 +75,11 @@ terms:
     invariants:
       - "EstOnly (EO): only establishment events allowed — interaction events are rejected by the state machine"
       - "DoNotDelegate (DND): the AID cannot serve as a delegator for other AIDs"
-      - "NoBackers: no backers/witnesses required for this AID"
       - "DID (Delegated Identifier Delegator): validators may treat delegates as the AID itself"
-      - "Traits are cumulative and irreversible — once set, they cannot be removed by subsequent establishment events"
+      - "RegistrarBackers (RB): this AID uses registrar backers for its TEL events"
+      - "NoRegistrarBackers (NRB): this AID does not use registrar backers — last-wins toggleable with RB"
+      - "The five defined traits are: EO, DND, DID, RB, NRB"
+      - "Traits are cumulative and irreversible — once set, they cannot be removed by subsequent establishment events (exception: RB/NRB toggle via last-wins rule)"
       - "In keripy: Kever.config() method checks serder.traits (ked['c']), sets self.estOnly and self.doNotDelegate booleans; once True, stays True"
       - "In keripy: Kever.state() serializes active traits back to the c list for KeyStateRecord"
       - "Enforcement: Kever.update() checks self.estOnly before allowing interaction events"
