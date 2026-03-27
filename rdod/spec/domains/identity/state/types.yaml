@@ -1,6 +1,64 @@
 domain_ref: "identity/state"
 
 types:
+  - name: "TraitCode"
+    description: "Configuration trait enum controlling operational constraints on an identifier."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "The configuration trait code"
+            constraints:
+              enum: ["EstOnly", "DoNotDelegate", "DID", "RegistrarBackers", "NoRegistrarBackers"]
+        invariants:
+          - "EstOnly (EO) restricts the identifier to establishment events only — no interaction events"
+          - "DoNotDelegate (DND) prevents the identifier from acting as a delegator"
+          - "Traits are set at inception and are immutable for the lifetime of the identifier"
+
+  - name: "LastEstablishmentData"
+    description: "Cached snapshot of the most recent establishment event's key configuration, used for efficient state queries without replaying the KEL."
+    variants:
+      - name: "default"
+        fields:
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the last establishment event"
+          - name: "event_said"
+            type: "string"
+            required: true
+            description: "SAID of the last establishment event"
+          - name: "signing_keys"
+            type: "array[PublicKey]"
+            required: true
+            description: "Current signing public keys from the last establishment event"
+          - name: "signing_threshold"
+            type: "string"
+            required: true
+            description: "Current signing threshold expression"
+          - name: "next_digests"
+            type: "array[Digest]"
+            required: true
+            description: "Pre-rotation commitments for next keys"
+          - name: "next_threshold"
+            type: "string"
+            required: true
+            description: "Next key threshold expression"
+          - name: "witnesses"
+            type: "array[AID]"
+            required: true
+            description: "Current witness set after applying adds and removes"
+          - name: "toad"
+            type: "integer"
+            required: true
+            description: "Witness threshold (TOAD) from the last establishment event"
+        invariants:
+          - "Derived from the most recent icp, rot, dip, or drt event — never from ixn"
+          - "Updated each time a new establishment event is accepted"
+          - "Interaction events do not change this data — only the overall sn advances"
+
   - name: "KeyStateNotice"
     description: "A signed reply message containing the current key state for an identifier. Used in key state queries (qry route=ksn) and key state notifications."
     variants:

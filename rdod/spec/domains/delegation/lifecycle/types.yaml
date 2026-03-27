@@ -1,0 +1,49 @@
+domain_ref: "delegation/lifecycle"
+
+types:
+  - name: "PromotedEvent"
+    description: "An event promoted from a delegation escrow queue into the KEL after its blocking condition resolved."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "AID of the promoted event's identifier"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the promoted event"
+          - name: "event_said"
+            type: "string"
+            required: true
+            description: "SAID of the promoted event"
+          - name: "promoted_from"
+            type: "string"
+            required: true
+            description: "Which escrow queue the event was promoted from"
+            constraints:
+              enum: ["PDE", "MDE"]
+        invariants:
+          - "PDE (partially-delegated) events are promoted when the delegator's anchor seal is confirmed"
+          - "MDE (missing-delegable) events are promoted when the delegator approves locally"
+          - "After promotion, the event is removed from the escrow and appended to the KEL"
+
+  - name: "SignedEstablishmentEvent"
+    description: "An establishment event bundled with its controller signatures, used in delegation validation."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event"
+            type: "types://identity#KeyEvent"
+            required: true
+            description: "The establishment key event body (icp, rot, dip, or drt)"
+          - name: "signatures"
+            type: "array[Signature]"
+            required: true
+            description: "Controller signatures over the event"
+            constraints:
+              min_length: 1
+        invariants:
+          - "Event must be an establishment type — never ixn"
+          - "Signatures must satisfy the signing threshold for the event to be promotable"

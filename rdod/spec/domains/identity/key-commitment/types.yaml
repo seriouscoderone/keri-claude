@@ -60,6 +60,99 @@ types:
           - "Set via rotation event (not inception) — signals permanent retirement"
           - "No further events of any type are permitted"
 
+  - name: "KeyConfiguration"
+    description: "A complete set of current signing keys, threshold, and next key commitments for an identifier."
+    variants:
+      - name: "default"
+        fields:
+          - name: "keys"
+            type: "array[PublicKey]"
+            required: true
+            description: "Current signing public keys"
+            constraints:
+              min_length: 1
+          - name: "threshold"
+            type: "string"
+            required: true
+            description: "Signing threshold expression for current keys"
+          - name: "next_keys"
+            type: "array[Digest]"
+            required: true
+            description: "Pre-rotation digest commitments for next signing keys"
+          - name: "next_threshold"
+            type: "string"
+            required: true
+            description: "Signing threshold expression for next keys"
+        invariants:
+          - "len(keys) >= integer(threshold) for simple integer thresholds"
+          - "If next_keys is empty and next_threshold is '0', no further rotation is possible"
+
+  - name: "MatchedIndex"
+    description: "A verified key-to-digest index match confirming a rotation key satisfies its pre-rotation commitment."
+    variants:
+      - name: "default"
+        fields:
+          - name: "key_index"
+            type: "integer"
+            required: true
+            description: "Index of the new key in the rotation event's k array"
+          - name: "digest_index"
+            type: "integer"
+            required: true
+            description: "Index of the matching digest in the prior event's n array"
+          - name: "verified"
+            type: "boolean"
+            required: true
+            description: "Whether the key's digest matches the committed digest"
+        invariants:
+          - "A verified=true match means hash(key[key_index]) == prior_n[digest_index]"
+          - "All new rotation keys must have a verified match for the rotation to be valid"
+
+  - name: "DigestAlgorithm"
+    description: "Cryptographic hash algorithm used for computing key digests in pre-rotation commitments."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "The digest algorithm identifier"
+            constraints:
+              enum: ["Blake3_256", "Blake2b_256", "Blake2s_256", "SHA3_256", "SHA2_256"]
+        invariants:
+          - "Blake3_256 (E prefix in CESR) is the default algorithm"
+          - "Same algorithm must be used consistently within a key commitment set"
+
+  - name: "PrefixCode"
+    description: "CESR code that determines AID type based on the inception key's derivation code."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "The CESR prefix code for AID derivation"
+            constraints:
+              enum: ["Ed25519", "Ed25519N", "ECDSA_256k1", "ECDSA_256k1N", "Blake3_256"]
+        invariants:
+          - "Codes ending in N indicate non-transferable (B prefix vs D prefix for Ed25519)"
+          - "Blake3_256 indicates a self-addressing AID derived from the event SAID"
+
+  - name: "TransferabilityKind"
+    description: "Classification of whether an AID can rotate its keys."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "The transferability classification"
+            constraints:
+              enum: ["Transferable", "NonTransferable"]
+        invariants:
+          - "Transferable AIDs have non-empty next key commitments at inception"
+          - "NonTransferable AIDs have empty next key commitments — the public key IS the identifier"
+
   - name: "BindingVerification"
     description: "The result of checking new rotation keys against prior next key digest commitments."
     variants:

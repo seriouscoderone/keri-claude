@@ -567,4 +567,25 @@ types:
           - "If next_key_digests is empty, identifier is non-transferable"
           - "If delegator is present, inception uses dip ilk"
 
+  - name: "EventValidated"
+    description: "Result of successfully processing and accepting a key event into the KEL."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The AID whose KEL was updated"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the accepted event"
+          - name: "event_said"
+            type: "string"
+            required: true
+            description: "SAID of the accepted event"
+        invariants:
+          - "Event has passed signature, witness, and delegation validation"
+          - "Key state has been updated to reflect this event"
+
   # ExchangeMessage, QueryMessage, ReplyMessage moved to kernel://keri-messaging

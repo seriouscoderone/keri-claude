@@ -1,0 +1,114 @@
+domain_ref: "delegation/recovery"
+
+types:
+  - name: "DelegatedRotation"
+    description: "A rotation event in delegation context, paired with the delegator AID for superseding evaluation."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event"
+            type: "types://identity#KeyEvent"
+            required: true
+            description: "The rotation key event body (rot or drt)"
+          - name: "delegator_aid"
+            type: "string"
+            required: true
+            description: "AID of the delegator authorizing this rotation"
+        invariants:
+          - "event.t must be 'rot' or 'drt'"
+          - "Used as input to superseding rule evaluation"
+
+  - name: "SupersedingRule"
+    description: "Which superseding rule applies when two conflicting delegated events compete for the same KEL position."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "The applicable superseding rule"
+            constraints:
+              enum: ["A0_RotationSupersedes", "A1_NoRotationSuperseding", "A2_InteractionCannotSupersede", "B1_DelegatedSealOrder", "B2_MultipleDelegatingSameEvent", "B3_DelegateeRecovery", "C_RecursiveDelegation"]
+        invariants:
+          - "Rules are evaluated in order: A rules (non-delegated), B rules (delegated), C (recursive)"
+          - "First applicable rule determines the outcome"
+
+  - name: "NotSuperseding"
+    description: "Result when no superseding rule applies between two candidate events."
+    variants:
+      - name: "default"
+        fields:
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Why no superseding rule applies"
+        invariants:
+          - "The incumbent event remains authoritative — the candidate is rejected"
+
+  - name: "CompromiseRequirement"
+    description: "The minimum key compromise needed for a given attack scenario against a delegated identifier."
+    variants:
+      - name: "default"
+        fields:
+          - name: "minimum_keys"
+            type: "integer"
+            required: true
+            description: "Minimum number of keys that must be compromised"
+          - name: "key_type"
+            type: "string"
+            required: true
+            description: "Which key set must be compromised (current signing, next pre-rotation, or delegator)"
+        invariants:
+          - "Delegated recovery requires compromising both delegatee AND delegator keys"
+          - "Joint compromise threshold is the sum of both identifiers' thresholds"
+
+  - name: "SupersedingOrder"
+    description: "The ordering result when comparing two conflicting events for superseding priority."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "Which event takes priority"
+            constraints:
+              enum: ["FirstSupersedes", "SecondSupersedes", "Neither"]
+        invariants:
+          - "FirstSupersedes means the candidate replaces the incumbent"
+          - "Neither means neither event can supersede the other — both may be duplicitous"
+
+  - name: "EventType"
+    description: "Event type classification used in superseding rule evaluation."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "The KERI event type"
+            constraints:
+              enum: ["Inception", "Rotation", "Interaction", "DelegatedInception", "DelegatedRotation"]
+        invariants:
+          - "Establishment types (Inception, Rotation, DelegatedInception, DelegatedRotation) can supersede"
+          - "Interaction events cannot supersede establishment events (Rule A2)"
+
+  - name: "DelegatingEventRef"
+    description: "A reference to a delegating event in the delegator's KEL, used to compare seal ordering."
+    variants:
+      - name: "default"
+        fields:
+          - name: "delegator_aid"
+            type: "string"
+            required: true
+            description: "AID of the delegator"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the delegating event in the delegator's KEL"
+          - name: "said"
+            type: "string"
+            required: true
+            description: "SAID of the delegating event"
+        invariants:
+          - "Used in Rule B1 — earlier delegating event sn means higher priority"
+          - "Used in Rule B2 — within the same delegating event, earlier seal index wins"

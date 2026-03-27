@@ -1,0 +1,43 @@
+domain_ref: "identity/anchoring"
+
+types:
+  - name: "DigestSeal"
+    description: "A seal containing a single digest, binding external data to the KEL by its hash."
+    variants:
+      - name: "default"
+        fields:
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID — the CESR-qualified digest of the anchored data"
+        invariants:
+          - "The digest algorithm is encoded in the CESR prefix of d"
+          - "Verifier must independently compute the digest over the original data to confirm the seal"
+
+  - name: "LastEstSeal"
+    description: "A seal pointing to the latest establishment event of an identifier, used when the exact sn is not yet known."
+    variants:
+      - name: "default"
+        fields:
+          - name: "i"
+            type: "string"
+            required: true
+            description: "AID prefix of the identifier whose latest establishment event is referenced"
+        invariants:
+          - "Resolved at verification time to the most recent establishment event for this AID"
+          - "Used in delegation and credential issuance when the sealing event sn is determined by the protocol"
+
+  - name: "DigestAlgorithm"
+    description: "Cryptographic hash algorithm used for computing digests and SAIDs."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "The digest algorithm identifier"
+            constraints:
+              enum: ["Blake3_256", "Blake2b_256", "Blake2s_256", "SHA3_256", "SHA2_256"]
+        invariants:
+          - "Blake3_256 (E prefix in CESR) is the default and most common algorithm"
+          - "Algorithm choice is encoded in the CESR code prefix of the resulting digest"

@@ -1,0 +1,78 @@
+domain_ref: "delegation/authorization"
+
+types:
+  - name: "TwoWayBinding"
+    description: "A verified bidirectional delegation binding confirming both delegator seal and delegatee di field agree."
+    variants:
+      - name: "default"
+        fields:
+          - name: "delegator_aid"
+            type: "string"
+            required: true
+            description: "AID of the delegator who anchored the approval seal"
+          - name: "delegatee_aid"
+            type: "string"
+            required: true
+            description: "AID of the delegated identifier"
+          - name: "seal_event_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the delegator's event containing the approval seal"
+          - name: "seal_said"
+            type: "string"
+            required: true
+            description: "SAID of the delegated event referenced by the seal"
+          - name: "di_field"
+            type: "string"
+            required: true
+            description: "Delegator AID from the delegated event's di field"
+        invariants:
+          - "delegator_aid must equal di_field — the two directions must agree"
+          - "seal_said must match the delegated event's computed SAID"
+          - "Both the delegator's sealing event and the delegatee's event must be independently valid"
+
+  - name: "DelegationSealSource"
+    description: "A pointer to the delegating event in the delegator's KEL, attached to the delegated event."
+    variants:
+      - name: "default"
+        fields:
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the delegator's event containing the seal"
+          - name: "said"
+            type: "string"
+            required: true
+            description: "SAID of the delegator's event containing the seal"
+        invariants:
+          - "Used by validators to locate the approval seal without scanning the full delegator KEL"
+          - "Attached as a source seal (couple or quadruple) in the delegated event message"
+
+  - name: "DiFieldValue"
+    description: "The delegator AID reference embedded in a delegated inception event's di field."
+    variants:
+      - name: "default"
+        fields:
+          - name: "delegator_aid"
+            type: "string"
+            required: true
+            description: "AID of the delegator authorizing this delegation"
+        invariants:
+          - "Only present in dip events — drt events inherit the delegator from the inception"
+          - "Immutable once set — the delegator cannot change for the lifetime of the delegated identifier"
+
+  - name: "AnchorPayload"
+    description: "The set of delegation seals to embed in a delegating event's anchor list."
+    variants:
+      - name: "default"
+        fields:
+          - name: "seals"
+            type: "array[Seal]"
+            required: true
+            description: "Delegation seals approving one or more delegated events"
+            constraints:
+              min_length: 1
+        invariants:
+          - "Each seal contains the delegatee's AID, sn, and SAID"
+          - "Multiple delegations can be approved in a single delegating event"
+          - "Placed in the a (anchor) field of the delegator's interaction or establishment event"

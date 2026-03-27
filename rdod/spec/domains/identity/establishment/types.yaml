@@ -1,6 +1,57 @@
 domain_ref: "identity/establishment"
 
 types:
+  - name: "ValidationPassed"
+    description: "Successful validation result confirming an event passed all establishment checks."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The AID whose event was validated"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the validated event"
+          - name: "event_said"
+            type: "string"
+            required: true
+            description: "SAID of the validated event"
+          - name: "event_type"
+            type: "string"
+            required: true
+            description: "Ilk of the validated event (icp, rot, dip, drt, ixn)"
+            constraints:
+              enum: ["icp", "rot", "dip", "drt", "ixn"]
+        invariants:
+          - "Signatures satisfy the signing threshold"
+          - "Witness receipts satisfy the TOAD (if applicable)"
+          - "Delegation seal is confirmed (if delegated)"
+
+  - name: "SignedEventMessage"
+    description: "A key event bundled with its attached controller signatures and witness receipts."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event"
+            type: "types://identity#KeyEvent"
+            required: true
+            description: "The key event body"
+          - name: "signatures"
+            type: "array[Signature]"
+            required: true
+            description: "Controller signatures over the event"
+            constraints:
+              min_length: 1
+          - name: "witness_receipts"
+            type: "array[Receipt]"
+            required: true
+            description: "Witness receipts (non-transferable signatures from witnesses)"
+        invariants:
+          - "At least one controller signature must be present"
+          - "Witness receipts may be empty if the identifier has no witnesses"
+
   - name: "ValidationResult"
     description: "The outcome of processing a key event through the establishment validation pipeline. Either the event is accepted (key state updated) or it is routed to an escrow queue for later reprocessing."
     variants:

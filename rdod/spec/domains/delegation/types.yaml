@@ -1,6 +1,80 @@
 domain_ref: "delegation"
 
 types:
+  - name: "DelegatedInceptionConfig"
+    description: "Construction parameters for creating a delegated identifier, including the delegator reference."
+    variants:
+      - name: "default"
+        fields:
+          - name: "delegator_aid"
+            type: "string"
+            required: true
+            description: "AID of the delegator authorizing this new identifier"
+          - name: "keys"
+            type: "array[PublicKey]"
+            required: true
+            description: "Initial signing public keys for the delegated identifier"
+            constraints:
+              min_length: 1
+          - name: "threshold"
+            type: "string"
+            required: true
+            description: "Signing threshold expression"
+          - name: "next_keys"
+            type: "array[Digest]"
+            required: true
+            description: "Pre-rotation digest commitments for next signing keys"
+          - name: "witnesses"
+            type: "array[AID]"
+            required: true
+            description: "Designated witness AIDs"
+          - name: "toad"
+            type: "integer"
+            required: true
+            description: "Witness threshold (TOAD)"
+            constraints:
+              min: 0
+        invariants:
+          - "delegator_aid must be a transferable identifier with established key state"
+          - "The delegator must not have the DND (DoNotDelegate) trait"
+          - "toad <= len(witnesses)"
+
+  - name: "DelegatedInceptionEvent"
+    description: "A delegated inception event (dip) paired with its delegator AID reference."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event"
+            type: "types://identity#KeyEvent"
+            required: true
+            description: "The dip key event body"
+          - name: "delegator_aid"
+            type: "string"
+            required: true
+            description: "AID of the delegator (matches the di field in the event)"
+        invariants:
+          - "event.t must be 'dip'"
+          - "event.di must equal delegator_aid"
+          - "Requires a corresponding delegation seal in the delegator's KEL to be fully valid"
+
+  - name: "DelegatedRotationEvent"
+    description: "A delegated rotation event (drt) paired with its delegator AID reference."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event"
+            type: "types://identity#KeyEvent"
+            required: true
+            description: "The drt key event body"
+          - name: "delegator_aid"
+            type: "string"
+            required: true
+            description: "AID of the delegator (established at inception via di field)"
+        invariants:
+          - "event.t must be 'drt'"
+          - "Delegator cannot change after inception — delegator_aid is immutable"
+          - "Requires a corresponding delegation seal in the delegator's KEL to be fully valid"
+
   - name: "DelegationSeal"
     description: "The seal a delegator anchors in their own KEL to approve a delegated event. Created via an interaction event in the delegator's KEL."
     variants:
