@@ -28,22 +28,39 @@ terms:
     related_terms: ["Exchange Message (exn)", "KRAM"]
 
   - term: "KRAM"
-    synonyms: ["KERI Request Authentication Method", "Replay Attack Protection"]
-    definition: "The authentication mechanism for non-KEL KERI messages (exn, qry, rpy). KRAM ensures that every message is signed by the sender's current keys and is fresh — preventing replay attacks. Verification requires checking the sender's signature against their current key state and validating that the message timestamp falls within an acceptable freshness window."
+    synonyms: ["KERI Request Authentication Mechanism", "Replay Attack Protection"]
+    definition: "The authentication mechanism for non-KEL KERI messages (exn, qry, rpy, xip, pro, bar). KRAM operates at two layers: (1) Protocol-level KRAM for CESR-encoded messages between KERI nodes, using a monotonic timeliness cache keyed by (sender AID, message SAID); (2) HTTP-level signing (SKRAP) for Signify client-to-agent communication, using RFC 8941 structured HTTP headers. Both layers ensure message freshness, prevent replay, and bind the message to the sender's current key state."
     invariants:
       - "Every non-KEL message MUST include a signature by the sender's current signing keys"
-      - "Signature scope covers the entire message body (SAID + content) — not just a header"
-      - "Freshness window: message datetime (dt field) MUST be within an acceptable delta of the verifier's current time"
-      - "Monotonic timestamps: each message from a given AID MUST have a datetime >= all previously seen datetimes from that AID"
-      - "Stale messages (outside freshness window) MUST be rejected — they may be replays"
-      - "Duplicate detection: messages with the same SAID from the same sender MUST be idempotently ignored"
       - "KEL messages (icp, rot, ixn, dip, drt) bypass KRAM — they use sequence numbers for ordering instead"
-      - "Verification is stateless given (message, sender_key_state, current_time) — no session state"
+      - "Monotonic timestamps: each message from a given AID MUST have a datetime >= all previously seen datetimes from that AID"
+      - "Duplicate detection: messages with the same SAID from the same sender MUST be idempotently ignored"
+      - "Freshness window formula: (receiver_time - drift - lag) <= message_dt <= (receiver_time + drift)"
+      - "Three authentication types determine the lag window: seal-reference (short), single-key signature (short), multi-key signature (long — allows time for multi-sig accumulation)"
+      - "Multi-sig accumulation: for multi-key AIDs, signatures from different group members are accumulated across multiple deliveries of the same message until the signing threshold is satisfied"
+      - "Key state change between deliveries invalidates accumulated signatures — the message MUST be re-signed with the new key state"
+      - "Freshness window is configurable per deployment, per message type, and per route — no universal default"
     examples:
-      - "Signify client signs admin API request with KRAM: timestamp + request body signed by controller keys"
-      - "KERIA validates inbound exn: check sender AID key state, verify signature, check dt freshness"
-      - "Stale replay rejected: message dt is 5 minutes old, freshness window is 2 minutes"
-    related_terms: ["Exchange Message (exn)", "Exchanger", "Key State"]
+      - "Single-key AID sends exn: message dt checked against short lag window, signature verified against current key state, accepted"
+      - "Multi-sig AID sends exn: first delivery has 1-of-3 signatures → cached. Second delivery adds signature 2 → accumulated. Third delivery adds signature 3 → threshold satisfied → accepted"
+      - "Stale replay: message dt is outside (receiver_time - drift - lag) window → rejected"
+    related_terms: ["Exchange Message (exn)", "Exchanger", "Key State", "SKRAP"]
+
+  - term: "SKRAP"
+    synonyms: ["Signify/KERIA Request Authentication Protocol", "HTTP Signed Headers"]
+    definition: "The HTTP-layer authentication protocol between Signify edge clients and KERIA cloud agents. Uses RFC 8941 structured field values to construct a signature base from signed HTTP headers, then attaches the Ed25519 signature as standard HTTP headers. Mutual authentication: client signs requests with Client AID key, agent signs responses with Agent AID key."
+    invariants:
+      - "Signed headers (signature base): Signify-Resource (signer AID), @method (HTTP method), @path (request path), Signify-Timestamp (ISO-8601 with microsecond resolution)"
+      - "Signature-Input header: RFC 8941 dictionary with member 'signify' — inner list of signed field names plus parameters (created, alg=ed25519, keyid=signer_qb64)"
+      - "Signature header: RFC 8941 dictionary with member 'signify' — unindexed signature (Cigar) encoded as unqualified base64"
+      - "Signify-Resource header carries the signer's AID prefix — Client AID on requests, Agent AID on responses"
+      - "Signify-Timestamp format: ISO-8601 with microsecond resolution and explicit UTC offset (e.g., 2024-01-15T12:00:00.000000+00:00)"
+      - "Mutual authentication: client verifies response Signature against Agent AID's current verfer; agent verifies request Signature against Client AID's current key state"
+      - "Algorithm: Ed25519 (specified via alg parameter in Signature-Input)"
+    examples:
+      - "Client request: POST /identifiers with Signify-Resource=<client_aid>, Signify-Timestamp=<now>, Signature-Input='signify=(@method @path signify-resource signify-timestamp);created=...;alg=ed25519;keyid=<client_qb64>', Signature='signify=<base64_sig>'"
+      - "Agent response: 200 OK with Signify-Resource=<agent_aid>, Signify-Timestamp=<now>, Signature-Input and Signature headers for response body"
+    related_terms: ["KRAM", "Signify Client", "Signify Protocol"]
 
   - term: "KERI Field Map"
     definition: "The ordered key-value structure of a KERI message body. Field maps use short field labels (v, t, d, i, s, etc.) for wire efficiency, but each field represents a specific domain concept. The presence or absence of optional fields signals semantic meaning — for example, the di field signals delegation, the n field signals transferability. Implementations SHOULD provide domain-typed construction interfaces that map human-readable concepts to field labels."
