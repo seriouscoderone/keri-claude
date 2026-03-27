@@ -179,7 +179,7 @@ scenarios:
         - domain: "domain://identity/state"
           condition: "Issuer has established KeyState"
         - domain: "domain://credential-lifecycle/registry"
-          condition: "Registry exists (vcp event accepted)"
+          condition: "Registry exists (rip event accepted)"
         - domain: "domain://credential-lifecycle/status"
           condition: "No credential exists with this SAID"
     end_state_assertions:
@@ -213,7 +213,7 @@ scenarios:
     end_state_assertions:
       - domain: "domain://credential-lifecycle/status"
         assertion: "Credential in Revoked state (terminal); TEL revocation event recorded"
-        verifiable_by: "credential state == Revoked; rev event in TEL"
+        verifiable_by: "credential state == Revoked; upd/bup event with ts='revoked' in TEL"
       - domain: "domain://identity/anchoring"
         assertion: "Issuer's KEL contains ixn anchoring the revocation TEL event"
         verifiable_by: "issuer KEL has ixn with revocation seal"
