@@ -2,7 +2,7 @@ domain_ref: "credential-lifecycle"
 
 types:
   - name: "RegistryInceptionEvent"
-    description: "Creates a new credential registry. All credentials issued under this registry reference its REGID."
+    description: "Creates a new credential registry (rip). All credentials issued under this registry reference its REGID. This is the ACDC v2 normative event type."
     variants:
       - name: "default"
         fields:
@@ -14,51 +14,93 @@ types:
             type: "string"
             required: true
             constraints:
-              enum: ["vcp"]
+              enum: ["rip"]
             description: "Message type — registry inception"
           - name: "d"
             type: "string"
             required: true
             description: "SAID — becomes the REGID"
+          - name: "u"
+            type: "string"
+            required: false
+            description: "UUID — blinding nonce for privacy (absent for public registries)"
           - name: "i"
             type: "string"
             required: true
-            description: "Registry identifier — computed as SAID (same as d)"
-          - name: "ii"
-            type: "string"
-            required: true
-            description: "Issuer AID — the identifier that owns this registry"
-          - name: "s"
+            description: "Registry identifier — computed as SAID (same as d for self-addressing)"
+          - name: "n"
             type: "string"
             required: true
             constraints:
               enum: ["0"]
-            description: "Sequence number — always '0' for inception"
-          - name: "c"
-            type: "array[string]"
-            required: true
-            description: "Configuration — registry traits (e.g., NB for no backers)"
-          - name: "bt"
+            description: "Sequence number — hex-encoded, always '0' for inception"
+          - name: "dt"
             type: "string"
             required: true
-            description: "Backer threshold"
-          - name: "b"
-            type: "array[string]"
+            description: "Datetime — ISO 8601 timestamp"
+        invariants:
+          - "Field order: [v, t, d, u, i, n, dt]"
+          - "d and i are both computed as SAID"
+          - "Must be anchored in the issuer's KEL via a seal"
+          - "n is the sequence number field (not s as in legacy vcp events)"
+
+  - name: "BlindableUpdateEvent"
+    description: "A blindable update event (bup) for registries that support blinding. Carries a blinded attribute block with BLID for decorrelation. Used for both issuance and revocation — the transaction state (ts) field determines the state transition."
+    variants:
+      - name: "default"
+        fields:
+          - name: "v"
+            type: "string"
             required: true
-            description: "Backer AIDs"
+            description: "Version string"
+          - name: "t"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["bup"]
+            description: "Message type — blindable update"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID"
+          - name: "rd"
+            type: "string"
+            required: true
+            description: "Registry delegation — REGID of the managing registry"
           - name: "n"
             type: "string"
             required: true
-            description: "Nonce — for privacy"
+            description: "Sequence number — hex-encoded, must equal prior sn + 1"
+          - name: "p"
+            type: "string"
+            required: true
+            description: "Prior TEL event SAID — hash chain linkage"
+          - name: "dt"
+            type: "string"
+            required: true
+            description: "Datetime — ISO 8601 timestamp"
+          - name: "ta"
+            type: "string"
+            required: true
+            description: "Transaction ACDC SAID — the credential this event applies to"
+          - name: "ts"
+            type: "string"
+            required: true
+            description: "Transaction state — the target state after this update"
+            constraints:
+              enum: ["issued", "revoked"]
         invariants:
-          - "d and i are both computed as SAID"
-          - "ii must reference an AID with established key state"
+          - "Field order: [v, t, d, rd, n, p, dt, ta, ts]"
+          - "Each bup event carries a fresh BLID with new UUID for decorrelation"
+          - "An observer cannot distinguish state-changing updates from no-op decorrelation updates"
+          - "ts determines the credential state transition — not the event type"
           - "Must be anchored in the issuer's KEL via a seal"
+          - "Builder: UpdateEvent.builder().blindable().registry(regid).credential(said).state('issued').build()"
 
-  - name: "IssuanceEvent"
-    description: "Records the issuance of a credential in the TEL."
+  - name: "NonBlindableUpdateEvent"
+    description: "A non-blindable update event (upd) for registries without blinding. Used for both issuance and revocation — the transaction state (ts) field determines the state transition."
     variants:
-      - name: "backerless"
+      - name: "default"
         fields:
           - name: "v"
             type: "string"
@@ -68,158 +110,44 @@ types:
             type: "string"
             required: true
             constraints:
-              enum: ["iss"]
-            description: "Message type — backerless issuance"
+              enum: ["upd"]
+            description: "Message type — non-blindable update"
           - name: "d"
             type: "string"
             required: true
             description: "SAID"
-          - name: "i"
+          - name: "rd"
             type: "string"
             required: true
-            description: "Credential SAID — the ACDC being issued"
-          - name: "s"
+            description: "Registry delegation — REGID of the managing registry"
+          - name: "n"
             type: "string"
             required: true
-            description: "Sequence number"
-          - name: "ri"
-            type: "string"
-            required: true
-            description: "Registry SAID (REGID)"
-          - name: "dt"
-            type: "string"
-            required: true
-            description: "Issuance datetime — ISO 8601"
-        invariants:
-          - "Registry ri must exist and be owned by the issuer"
-          - "Credential i must not already be issued in this registry"
-          - "Must be anchored in the issuer's KEL"
-        examples:
-          - format: "json"
-            description: "Backerless TEL issuance event"
-            value: |
-              {"v":"KERI10JSON0000ed_","t":"iss","d":"ECUw7AdWEE3fvr7dgbFDXj0CEZuJTTa_H8-iLLAmIUPO","i":"EElymNmgs1u0mSaoCeOtSsNOROLuqOz103V3-4E-ClXH","s":"0","ri":"EB-u4VAF7A7_GR8PXJoAVHv5X9vjtXew8Yo6Z3w9mQUQ","dt":"2021-06-27T21:26:21.233257+00:00"}
-            notes: "i = credential SAID (not issuer). ri = registry SAID. From keripy test_protocoling.py"
-      - name: "backed"
-        fields:
-          - name: "v"
-            type: "string"
-            required: true
-            description: "Version string"
-          - name: "t"
-            type: "string"
-            required: true
-            constraints:
-              enum: ["bis"]
-            description: "Message type — backed issuance"
-          - name: "d"
-            type: "string"
-            required: true
-            description: "SAID"
-          - name: "i"
-            type: "string"
-            required: true
-            description: "Credential SAID"
-          - name: "ii"
-            type: "string"
-            required: true
-            description: "Issuer AID"
-          - name: "s"
-            type: "string"
-            required: true
-            description: "Sequence number"
-          - name: "ra"
-            type: "map"
-            required: true
-            description: "Registry anchor — seal linking to the registry"
-          - name: "dt"
-            type: "string"
-            required: true
-            description: "Issuance datetime"
-        invariants:
-          - "Requires backer signatures meeting the registry's backer threshold"
-
-  - name: "RevocationEvent"
-    description: "Records the revocation of a previously issued credential."
-    variants:
-      - name: "backerless"
-        fields:
-          - name: "v"
-            type: "string"
-            required: true
-            description: "Version string"
-          - name: "t"
-            type: "string"
-            required: true
-            constraints:
-              enum: ["rev"]
-            description: "Message type — backerless revocation"
-          - name: "d"
-            type: "string"
-            required: true
-            description: "SAID"
-          - name: "i"
-            type: "string"
-            required: true
-            description: "Credential SAID being revoked"
-          - name: "s"
-            type: "string"
-            required: true
-            description: "Sequence number — must follow the issuance event"
-          - name: "ri"
-            type: "string"
-            required: true
-            description: "Registry SAID"
+            description: "Sequence number — hex-encoded, must equal prior sn + 1"
           - name: "p"
             type: "string"
             required: true
-            description: "Prior TEL event SAID"
+            description: "Prior TEL event SAID — hash chain linkage"
           - name: "dt"
             type: "string"
             required: true
-            description: "Revocation datetime"
-        invariants:
-          - "Credential must be in Issued state — cannot revoke NotIssued or already Revoked"
-          - "Prior p must reference the issuance event's SAID"
-          - "Must be anchored in the issuer's KEL"
-      - name: "backed"
-        fields:
-          - name: "v"
+            description: "Datetime — ISO 8601 timestamp"
+          - name: "ta"
             type: "string"
             required: true
-            description: "Version string"
-          - name: "t"
+            description: "Transaction ACDC SAID — the credential this event applies to"
+          - name: "ts"
             type: "string"
             required: true
+            description: "Transaction state — the target state after this update"
             constraints:
-              enum: ["brv"]
-            description: "Message type — backed revocation"
-          - name: "d"
-            type: "string"
-            required: true
-            description: "SAID"
-          - name: "i"
-            type: "string"
-            required: true
-            description: "Credential SAID"
-          - name: "s"
-            type: "string"
-            required: true
-            description: "Sequence number"
-          - name: "p"
-            type: "string"
-            required: true
-            description: "Prior TEL event SAID"
-          - name: "ra"
-            type: "map"
-            required: true
-            description: "Registry anchor"
-          - name: "dt"
-            type: "string"
-            required: true
-            description: "Revocation datetime"
+              enum: ["issued", "revoked"]
         invariants:
-          - "Requires backer signatures"
+          - "Field order: [v, t, d, rd, n, p, dt, ta, ts]"
+          - "No blinding — credential state transitions are publicly observable"
+          - "ts determines the credential state transition — not the event type"
+          - "Must be anchored in the issuer's KEL via a seal"
+          - "Builder: UpdateEvent.builder().nonBlindable().registry(regid).credential(said).state('revoked').build()"
 
   - name: "CredentialState"
     description: "The state machine for a credential's lifecycle within a registry."
@@ -253,11 +181,11 @@ types:
             required: false
             description: "ISO 8601 datetime of revocation (absent if not Revoked)"
         invariants:
-          - "State transitions: NotIssued → Issued (via iss/bis) → Revoked (via rev/brv)"
+          - "State transitions: NotIssued → Issued (via bup/upd with ts='issued') → Revoked (via bup/upd with ts='revoked')"
           - "No reverse transitions — Revoked is terminal"
           - "Cannot skip states — must issue before revoking"
 
-  # ACDC credential types (from parent acdc domain)
+  # ACDC credential types
   - name: "Credential"
     description: "An Authentic Chained Data Container (ACDC). Formal verifiable credential with six orthogonal type dimensions expressed through field presence/absence."
     variants:
@@ -436,7 +364,7 @@ types:
           - "Links this credential to a TEL registry for status tracking (issuance/revocation)"
 
   - name: "REGID"
-    description: "Registry Identifier — the SAID of a registry inception event (vcp). Uniquely identifies a credential registry."
+    description: "Registry Identifier — the SAID of a registry inception event (rip). Uniquely identifies a credential registry."
     variants:
       - name: "default"
         fields:
@@ -445,8 +373,8 @@ types:
             required: true
             description: "CESR-qualified registry SAID"
         invariants:
-          - "Computed as the SAID of the registry inception (vcp) event"
-          - "Immutable — does not change across registry rotations"
+          - "Computed as the SAID of the registry inception (rip) event"
+          - "Immutable — does not change across registry updates"
 
   - name: "CredentialStateSnapshot"
     description: "The current state of a credential at a point in time — derived from processing TEL events."
@@ -480,7 +408,7 @@ types:
           - "State transitions: NotIssued → Issued → Revoked (no reverse)"
 
   - name: "RegistryStateSnapshot"
-    description: "The current state of a credential registry — backer list, thresholds, and configuration."
+    description: "The current state of a credential registry — derived from processing rip and update events."
     variants:
       - name: "default"
         fields:
@@ -496,41 +424,37 @@ types:
             type: "integer"
             required: true
             description: "Registry sequence number"
-          - name: "backers"
-            type: "array[string]"
+          - name: "blindable"
+            type: "boolean"
             required: true
-            description: "Current backer AIDs (witnesses for backed registries)"
-          - name: "backer_threshold"
-            type: "integer"
-            required: true
-            description: "Backer threshold"
+            description: "Whether this registry supports blinding (bup events) or not (upd events)"
         invariants:
-          - "Derived from processing vcp/vrt events"
+          - "Derived from processing rip event and subsequent updates"
 
   - name: "TELEvent"
     description: "Union type for any event in a Transaction Event Log. Discriminated by the t field."
     variants:
-      - name: "issuance"
-        fields:
-          - name: "event"
-            type: "types://credential-lifecycle#IssuanceEvent"
-            required: true
-            description: "Issuance event (iss or bis)"
-        invariants:
-          - "t field is 'iss' (backerless) or 'bis' (backed)"
-      - name: "revocation"
-        fields:
-          - name: "event"
-            type: "types://credential-lifecycle#RevocationEvent"
-            required: true
-            description: "Revocation event (rev or brv)"
-        invariants:
-          - "t field is 'rev' (backerless) or 'brv' (backed)"
       - name: "registry_inception"
         fields:
           - name: "event"
             type: "types://credential-lifecycle#RegistryInceptionEvent"
             required: true
-            description: "Registry inception event (vcp)"
+            description: "Registry inception event (rip)"
         invariants:
-          - "t field is 'vcp'"
+          - "t field is 'rip'"
+      - name: "blindable_update"
+        fields:
+          - name: "event"
+            type: "types://credential-lifecycle#BlindableUpdateEvent"
+            required: true
+            description: "Blindable update event (bup)"
+        invariants:
+          - "t field is 'bup'"
+      - name: "non_blindable_update"
+        fields:
+          - name: "event"
+            type: "types://credential-lifecycle#NonBlindableUpdateEvent"
+            required: true
+            description: "Non-blindable update event (upd)"
+        invariants:
+          - "t field is 'upd'"
