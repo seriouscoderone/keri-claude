@@ -46,11 +46,6 @@ ports:
     contract: "escrow(escrow_type: EscrowType, aid: AID, sn: int, event: KeyEvent, escrowed_at: datetime) -> void; get_escrowed(escrow_type: EscrowType, aid: AID) -> [EscrowedEvent]; remove(escrow_type: EscrowType, aid: AID, sn: int) -> void; get_all_by_type(escrow_type: EscrowType) -> [EscrowedEvent]"
     protocol: "repository"
     refs: ["persistence"]
-    types:
-      EscrowType:
-        enum: [OutOfOrder, PartiallySigned, PartiallyWitnessed, PartiallyDelegated, LikelyDuplicitous, Misfit]
-      EscrowedEvent:
-        fields: {escrow_type: EscrowType, aid: AID, sn: int, event: KeyEvent, escrowed_at: datetime}
     invariants:
       - "Escrowed events are temporary — they are promoted to the KEL or pruned at timeout"
       - "Each event is in exactly one escrow type at a time"

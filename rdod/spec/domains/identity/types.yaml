@@ -588,4 +588,51 @@ types:
           - "Event has passed signature, witness, and delegation validation"
           - "Key state has been updated to reflect this event"
 
+  - name: "EscrowType"
+    description: "Classification of escrow queues for events awaiting different blocking conditions."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["OutOfOrder", "PartiallySigned", "PartiallyWitnessed", "PartiallyDelegated", "LikelyDuplicitous", "Misfit"]
+        invariants:
+          - "OutOfOrder — event sn > expected, prior event not yet received"
+          - "PartiallySigned — insufficient controller signatures for threshold"
+          - "PartiallyWitnessed — insufficient witness receipts for TOAD"
+          - "PartiallyDelegated — delegator's anchoring seal not yet found"
+          - "LikelyDuplicitous — conflicting event detected, held as evidence"
+          - "Misfit — remote event targeting a local AID, requires local re-sourcing"
+
+  - name: "EscrowedEvent"
+    description: "An event held in escrow awaiting resolution of its blocking condition."
+    variants:
+      - name: "default"
+        fields:
+          - name: "escrow_type"
+            type: "types://identity#EscrowType"
+            required: true
+            description: "Which escrow queue holds this event"
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "AID prefix of the escrowed event"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the escrowed event"
+          - name: "event"
+            type: "KeyEvent"
+            required: true
+            description: "The escrowed event data"
+          - name: "escrowed_at"
+            type: "datetime"
+            required: true
+            description: "When the event was escrowed — used for timeout pruning"
+        invariants:
+          - "Each event is in exactly one escrow type at a time"
+          - "Escrowed events are temporary — promoted to KEL or pruned at timeout"
+
   # ExchangeMessage, QueryMessage, ReplyMessage moved to kernel://keri-messaging

@@ -487,3 +487,47 @@ types:
             description: "Non-blindable update event (upd)"
         invariants:
           - "t field is 'upd'"
+
+  - name: "TELEscrowType"
+    description: "Classification of TEL escrow queues for credential events awaiting different blocking conditions."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["OutOfOrder", "PartialWitness", "MissingAnchor", "MissingSignatures", "MissingRegistry", "MissingChain", "MissingSchema"]
+        invariants:
+          - "OutOfOrder — TEL event sn > expected, prior event not yet received"
+          - "PartialWitness — insufficient backer signatures for threshold"
+          - "MissingAnchor — KEL anchor seal not yet found"
+          - "MissingSignatures — controller signatures incomplete"
+          - "MissingRegistry — registry inception event not yet received"
+          - "MissingChain — chained ACDC dependency not yet resolved"
+          - "MissingSchema — credential schema not yet available"
+
+  - name: "TELEscrowedEvent"
+    description: "A TEL event held in escrow awaiting resolution of its blocking condition."
+    variants:
+      - name: "default"
+        fields:
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID of the registry this event belongs to"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "TEL sequence number"
+          - name: "event"
+            type: "bytes"
+            required: true
+            description: "Serialized TEL event data"
+          - name: "escrowed_at"
+            type: "datetime"
+            required: true
+            description: "When the event was escrowed — used for timeout pruning"
+        invariants:
+          - "Escrow is transient — events are promoted or pruned"
+          - "Each event is in exactly one escrow type at a time"

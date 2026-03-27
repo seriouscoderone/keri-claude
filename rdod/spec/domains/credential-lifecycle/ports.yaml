@@ -52,12 +52,9 @@ ports:
   - id: "port://credential-lifecycle/outbound/tel-escrow-repository"
     type: outbound
     name: "TEL Escrow Repository"
-    contract: "escrow(escrow_type: EscrowType, registry_said: SAID, sn: int, event: bytes, escrowed_at: DateTime) -> Result; get_escrowed(escrow_type: EscrowType, registry_said: SAID) -> [EscrowedEvent]; remove(escrow_type: EscrowType, registry_said: SAID, sn: int) -> Result"
+    contract: "escrow(escrow_type: TELEscrowType, registry_said: SAID, sn: int, event: bytes, escrowed_at: DateTime) -> Result; get_escrowed(escrow_type: TELEscrowType, registry_said: SAID) -> [TELEscrowedEvent]; remove(escrow_type: TELEscrowType, registry_said: SAID, sn: int) -> Result"
     protocol: "method-call"
     refs: ["persistence"]
-    types:
-      EscrowType: "enum { OutOfOrder, PartialWitness, MissingAnchor, MissingSignatures, MissingRegistry, MissingChain, MissingSchema }"
-      EscrowedEvent: "{ registry_said: SAID, sn: int, event: bytes, escrowed_at: DateTime }"
     invariants:
       - "Escrow is transient: events are removed once the missing dependency is satisfied"
       - "Escrow type partitioning: each escrow type is an independent namespace"
