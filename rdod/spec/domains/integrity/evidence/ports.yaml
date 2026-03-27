@@ -17,10 +17,20 @@ ports:
     protocol: "pub-sub"
     refs: ["domain://integrity"]
 
-  # Outbound — what this domain calls
+  # Outbound — Repository interface for persistence
   - id: "port://integrity/evidence/outbound/escrow-storage"
     type: outbound
-    name: "Escrow Storage"
-    contract: "put_ldes(aid: AID, sn: int, event: KeyEvent) -> void; get_ldes(aid: AID) -> [KeyEvent]; prune_ldes(timeout_seconds: int) -> int; put_dels(aid: AID, sn: int, evidence: DuplicityEvidence) -> void; get_dels(aid: AID) -> [DuplicityEvidence]"
+    name: "Duplicity Evidence Repository"
+    contract: >
+      escrow_likely_duplicitous(aid: AID, sn: int, event: KeyEvent, escrowed_at: datetime) -> void;
+      get_likely_duplicitous(aid: AID) -> [KeyEvent];
+      prune_expired(max_age_seconds: int) -> int;
+      record_duplicity_evidence(aid: AID, sn: int, evidence: DuplicityEvidence) -> void;
+      get_duplicity_evidence(aid: AID) -> [DuplicityEvidence]
     protocol: "repository"
-    refs: ["external://persistence"]
+    refs: ["persistence"]
+    invariants:
+      - "Likely-duplicitous escrow is temporary — events are promoted to confirmed evidence or pruned at timeout"
+      - "Confirmed duplicity evidence is append-only — once recorded, it is permanent"
+      - "prune_expired removes all escrowed events older than max_age_seconds and returns the count removed"
+      - "Duplicity evidence pairs the conflicting events at the same AID and sequence number"

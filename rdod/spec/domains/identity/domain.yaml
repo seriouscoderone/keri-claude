@@ -79,10 +79,14 @@ adjacents:
     pattern: "Partnership"
 
 externals:
-  - name: "Event Persistence"
+  - name: "Event Repository"
     abstraction: "Repository"
-    ref: "port://identity/outbound/event-store"
-    implementation_notes: "Append-only store for KEL events with first-seen ordering. Implementations: LMDB (keripy), redb (keriox), DynamoDB (serious-keri)"
+    ref: "port://identity/outbound/event-repository"
+    implementation_notes: "Append-only repository for KEL events with first-seen ordering, signature accumulation, and witness receipt accumulation"
+  - name: "Escrow Repository"
+    abstraction: "Repository"
+    ref: "port://identity/outbound/escrow-repository"
+    implementation_notes: "Temporary storage for events pending validation — partitioned by escrow type with timeout-based sweep"
 
 implementation_guidance:
   suggested_type: "package"

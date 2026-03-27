@@ -17,10 +17,20 @@ ports:
     protocol: "method-call"
     refs: ["domain://accountability"]
 
-  # Outbound — what receipting calls
+  # Outbound — Repository interface for persistence
   - id: "port://accountability/receipting/outbound/persistence"
     type: outbound
-    name: "Receipt Persistence"
-    contract: "store_receipt(receipt: Receipt, db_name: str) -> Result; load_receipts(aid: AID, sn: int, db_name: str) -> [Receipt]; store_escrowed(receipt: Receipt, escrow_db: str) -> Result; load_escrowed(aid: AID, sn: int, escrow_db: str) -> [Receipt]; delete_escrowed(aid: AID, sn: int, escrow_db: str) -> Result"
-    protocol: "method-call"
+    name: "Receipt Repository"
+    contract: >
+      store_receipt(aid: AID, sn: int, event_said: SAID, receipt: Receipt) -> void;
+      get_receipts(aid: AID, sn: int, event_said: SAID) -> [Receipt];
+      escrow_receipt(aid: AID, sn: int, event_said: SAID, receipt: Receipt, escrowed_at: datetime) -> void;
+      get_escrowed_receipts(aid: AID, sn: int) -> [Receipt];
+      remove_escrowed_receipts(aid: AID, sn: int, event_said: SAID) -> void
+    protocol: "repository"
     refs: ["persistence"]
+    invariants:
+      - "Stored receipts are append-only — once written, they accumulate and are never overwritten"
+      - "Escrowed receipts are temporary — promoted to stored receipts or discarded"
+      - "Removal of escrowed receipts is idempotent"
+      - "Receipts are keyed by AID, sequence number, and event SAID"

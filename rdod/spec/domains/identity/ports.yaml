@@ -24,26 +24,50 @@ ports:
     protocol: "method-call"
     refs: ["domain://identity"]
 
-  # Outbound — what identity calls
-  - id: "port://identity/outbound/event-store"
-    type: outbound
-    name: "Event Persistence"
-    contract: "append_event(aid: AID, event: KeyEvent, fn: int) -> Result; get_events(aid: AID) -> [KeyEvent]; get_event_by_sn(aid: AID, sn: int) -> KeyEvent; get_event_by_said(said: SAID) -> KeyEvent"
-    protocol: "method-call"
-    refs: ["persistence"]
+  # Outbound — Repository interfaces for persistence
 
-  - id: "port://identity/outbound/kel-storage"
+  - id: "port://identity/outbound/event-repository"
     type: outbound
-    name: "KEL Storage Schema"
-    contract: "put_evts(key: dgKey, val: bytes) -> bool; get_evts(key: dgKey) -> bytes?; put_kels(key: snKey, val: bytes) -> bool; get_kels(key: snKey) -> [bytes]; put_fels(key: prefix+fn, val: bytes) -> bool; get_fels(key: prefix+fn) -> bytes?; append_sigs(key: dgKey, sigs: [Siger]) -> bool; get_sigs(key: dgKey) -> [Siger]; append_wigs(key: dgKey, wigs: [Siger]) -> bool; get_wigs(key: dgKey) -> [Siger]; append_rcts(key: dgKey, rcts: [Receipt]) -> bool; get_rcts(key: dgKey) -> [Receipt]; put_fon(key: dgKey, fn: int) -> bool; get_fon(key: dgKey) -> int?; put_dts(key: dgKey, dater: Dater) -> bool; get_dts(key: dgKey) -> Dater?; put_esr(key: dgKey, local: bool) -> bool; get_esr(key: dgKey) -> EventSourceRecord?; put_state(prefix: AID, ksr: KeyStateRecord) -> bool; get_state(prefix: AID) -> KeyStateRecord?"
-    protocol: "method-call"
+    name: "Event Repository"
+    contract: >
+      append_event(aid: AID, event: KeyEvent, first_seen_number: int) -> Result<void, DuplicateError>;
+      get_event_by_sn(aid: AID, sn: int) -> KeyEvent?;
+      get_event_by_said(said: SAID) -> KeyEvent?;
+      get_kel(aid: AID) -> [KeyEvent];
+      get_first_seen_ordinal(aid: AID, event_said: SAID) -> int?;
+      append_signatures(aid: AID, event_said: SAID, signatures: [Signature]) -> void;
+      get_signatures(aid: AID, event_said: SAID) -> [Signature];
+      append_witness_receipts(aid: AID, event_said: SAID, receipts: [Receipt]) -> void;
+      get_witness_receipts(aid: AID, event_said: SAID) -> [Receipt];
+      put_key_state(aid: AID, key_state: KeyState) -> void;
+      get_key_state(aid: AID) -> KeyState?
+    protocol: "repository"
     refs: ["persistence"]
-    notes: "Subdatabase schema: .evts (event bytes, dgKey, append-only), .kels (sequence index, snKey), .fels (first-seen log, prefix+fn), .sigs (controller sigs, dgKey, IoSet), .wigs (witness sigs, dgKey, IoSet), .rcts (non-trans receipts, dgKey, IoSet), .fons (first-seen ordinal, dgKey, put-if-not-exists), .dtss (timestamps, dgKey, immutable), .esrs (event source record, dgKey, escalation-only), .states (key state cache, prefix, overwrite)"
+    invariants:
+      - "Events are append-only — once written for a given AID and sequence number, immutable"
+      - "First-seen ordinal is assigned exactly once per event and never changes"
+      - "Signatures accumulate — new signatures are appended, never overwrite existing"
+      - "Witness receipts accumulate — new receipts are appended, never overwrite existing"
+      - "Key state cache may be overwritten (it is derived from the KEL, not source-of-truth)"
+      - "get_kel returns events ordered by ascending sequence number"
 
-  - id: "port://identity/outbound/escrow-store"
+  - id: "port://identity/outbound/escrow-repository"
     type: outbound
-    name: "Escrow Storage"
-    contract: "put_ooe(key: bytes, event: bytes, dt: Dater) -> bool; get_ooe(key: bytes) -> Iterator<bytes>; del_ooe(key: bytes) -> bool; put_pse(key: bytes, event: bytes, dt: Dater) -> bool; get_pse(key: bytes) -> Iterator<bytes>; del_pse(key: bytes) -> bool; put_pwe(key: bytes, event: bytes, dt: Dater) -> bool; get_pwe(key: bytes) -> Iterator<bytes>; del_pwe(key: bytes) -> bool; put_pde(key: bytes, event: bytes, dt: Dater) -> bool; get_pde(key: bytes) -> Iterator<bytes>; del_pde(key: bytes) -> bool; put_lde(key: bytes, event: bytes) -> bool; get_lde(key: bytes) -> Iterator<bytes>; put_misfit(key: bytes, event: bytes) -> bool; get_misfit(key: bytes) -> Iterator<bytes>"
-    protocol: "method-call"
+    name: "Escrow Repository"
+    contract: >
+      escrow(escrow_type: EscrowType, aid: AID, sn: int, event: KeyEvent, escrowed_at: datetime) -> void;
+      get_escrowed(escrow_type: EscrowType, aid: AID) -> [EscrowedEvent];
+      remove(escrow_type: EscrowType, aid: AID, sn: int) -> void;
+      get_all_by_type(escrow_type: EscrowType) -> [EscrowedEvent]
+    protocol: "repository"
     refs: ["persistence"]
-    notes: "Escrow subdatabases: .ooes (out-of-order), .pses (partially-signed), .pwes (partially-witnessed), .pdes (partially-delegated), .ldes (likely duplicitous), .misfits (misfit events), .delegables (local delegated)"
+    types:
+      EscrowType:
+        enum: [OutOfOrder, PartiallySigned, PartiallyWitnessed, PartiallyDelegated, LikelyDuplicitous, Misfit]
+      EscrowedEvent:
+        fields: {escrow_type: EscrowType, aid: AID, sn: int, event: KeyEvent, escrowed_at: datetime}
+    invariants:
+      - "Escrowed events are temporary — they are promoted to the KEL or pruned at timeout"
+      - "Each event is in exactly one escrow type at a time"
+      - "Removal is idempotent — removing a non-existent entry is a no-op"
+      - "get_all_by_type supports sweep processing for timeout-based cleanup"

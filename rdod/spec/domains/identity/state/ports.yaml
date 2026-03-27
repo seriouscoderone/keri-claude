@@ -6,14 +6,14 @@ ports:
   - id: "port://identity/state/inbound/state-tracking"
     type: inbound
     name: "State Tracking"
-    contract: "create_kever(aid: AID, inception: InceptionEvent) -> KeyEventVerifier; update_kever(aid: AID, event: Event, sigs: [Siger]) -> Result<KeyState, ValidationError>; get_current_state(aid: AID) -> KeyState?"
+    contract: "initialize_state(aid: AID, inception: InceptionEvent) -> KeyState; update_state(aid: AID, event: KeyEvent, signatures: [Signature]) -> Result<KeyState, ValidationError>; get_current_state(aid: AID) -> KeyState?"
     protocol: "method-call"
     refs: ["domain://identity"]
 
   - id: "port://identity/state/inbound/state-reconstruction"
     type: inbound
     name: "State Reconstruction"
-    contract: "reconstruct_state(aid: AID, target_sn?: int) -> Result<KeyState, ReconstructionError>; reload_from_cache(aid: AID, record: KeyStateRecord) -> KeyEventVerifier"
+    contract: "reconstruct_state(aid: AID, target_sn?: int) -> Result<KeyState, ReconstructionError>; reload_from_cache(aid: AID) -> KeyState?"
     protocol: "method-call"
     refs: ["domain://identity"]
 
@@ -24,10 +24,18 @@ ports:
     protocol: "method-call"
     refs: ["domain://identity"]
 
-  # Outbound — what tracking depends on
+  # Outbound — Repository interface for persistence
   - id: "port://identity/state/outbound/persistence"
     type: outbound
-    name: "Persistence"
-    contract: "get_cached_state(aid: AID) -> KeyStateRecord?; put_cached_state(aid: AID, state: KeyStateRecord); get_event(aid: AID, dig: SAID) -> bytes?; replay_events(aid: AID, start_sn: int, end_sn: int) -> Iterator<Event>"
-    protocol: "method-call"
+    name: "State Persistence Repository"
+    contract: >
+      get_cached_state(aid: AID) -> KeyState?;
+      put_cached_state(aid: AID, state: KeyState) -> void;
+      get_event_by_said(aid: AID, event_said: SAID) -> KeyEvent?;
+      replay_events(aid: AID, start_sn: int, end_sn: int) -> [KeyEvent]
+    protocol: "repository"
     refs: ["persistence"]
+    invariants:
+      - "Cached state may be overwritten — it is derived from the KEL, not source-of-truth"
+      - "replay_events returns events ordered by ascending sequence number within the range"
+      - "Event lookup by SAID is read-only — state reconstruction never writes events"

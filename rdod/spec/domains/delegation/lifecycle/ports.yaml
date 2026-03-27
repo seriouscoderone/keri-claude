@@ -17,10 +17,24 @@ ports:
     protocol: "method-call"
     refs: ["domain://delegation"]
 
-  # Outbound — what validation depends on
+  # Outbound — Repository interface for persistence
   - id: "port://delegation/lifecycle/outbound/escrow-store"
     type: outbound
-    name: "Delegation Escrow Persistence"
-    contract: "put_pde(aid: AID, sn: int, said: SAID, event: SignedEstablishmentEvent, dt: datetime) -> Result; get_pde_iter(aid: AID) -> Iterator<SignedEstablishmentEvent>; rem_pde(aid: AID, sn: int, said: SAID) -> Result; put_delegable(aid: AID, sn: int, said: SAID, event: SignedEstablishmentEvent, dt: datetime) -> Result; get_delegable_iter(aid: AID) -> Iterator<SignedEstablishmentEvent>; rem_delegable(aid: AID, sn: int, said: SAID) -> Result; put_aes(delegator: AID, delegatee: AID, said: SAID) -> Result; get_aes(delegator: AID, delegatee: AID) -> SAID?; rem_aes(delegator: AID, delegatee: AID) -> Result"
-    protocol: "method-call"
+    name: "Delegation Escrow Repository"
+    contract: >
+      escrow_partially_delegated(aid: AID, sn: int, event_said: SAID, event: SignedEstablishmentEvent, escrowed_at: datetime) -> void;
+      get_partially_delegated(aid: AID) -> [SignedEstablishmentEvent];
+      remove_partially_delegated(aid: AID, sn: int, event_said: SAID) -> void;
+      escrow_delegable(aid: AID, sn: int, event_said: SAID, event: SignedEstablishmentEvent, escrowed_at: datetime) -> void;
+      get_delegable(aid: AID) -> [SignedEstablishmentEvent];
+      remove_delegable(aid: AID, sn: int, event_said: SAID) -> void;
+      record_anchor_seal(delegator: AID, delegatee: AID, seal_said: SAID) -> void;
+      get_anchor_seal(delegator: AID, delegatee: AID) -> SAID?;
+      remove_anchor_seal(delegator: AID, delegatee: AID) -> void
+    protocol: "repository"
     refs: ["persistence"]
+    invariants:
+      - "Partially-delegated events await delegator anchor seal confirmation"
+      - "Delegable events await local delegator approval before anchoring"
+      - "Removal is idempotent — removing a non-existent entry is a no-op"
+      - "Anchor seal records link delegator to delegatee via the seal SAID"
