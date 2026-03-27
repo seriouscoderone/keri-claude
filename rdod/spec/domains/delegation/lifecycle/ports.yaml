@@ -21,16 +21,7 @@ ports:
   - id: "port://delegation/lifecycle/outbound/escrow-store"
     type: outbound
     name: "Delegation Escrow Repository"
-    contract: >
-      escrow_partially_delegated(aid: AID, sn: int, event_said: SAID, event: SignedEstablishmentEvent, escrowed_at: datetime) -> void;
-      get_partially_delegated(aid: AID) -> [SignedEstablishmentEvent];
-      remove_partially_delegated(aid: AID, sn: int, event_said: SAID) -> void;
-      escrow_delegable(aid: AID, sn: int, event_said: SAID, event: SignedEstablishmentEvent, escrowed_at: datetime) -> void;
-      get_delegable(aid: AID) -> [SignedEstablishmentEvent];
-      remove_delegable(aid: AID, sn: int, event_said: SAID) -> void;
-      record_anchor_seal(delegator: AID, delegatee: AID, seal_said: SAID) -> void;
-      get_anchor_seal(delegator: AID, delegatee: AID) -> SAID?;
-      remove_anchor_seal(delegator: AID, delegatee: AID) -> void
+    contract: "escrow_partially_delegated(aid: AID, sn: int, event_said: SAID, event: SignedEstablishmentEvent, escrowed_at: datetime) -> void; get_partially_delegated(aid: AID) -> [SignedEstablishmentEvent]; remove_partially_delegated(aid: AID, sn: int, event_said: SAID) -> void; escrow_delegable(aid: AID, sn: int, event_said: SAID, event: SignedEstablishmentEvent, escrowed_at: datetime) -> void; get_delegable(aid: AID) -> [SignedEstablishmentEvent]; remove_delegable(aid: AID, sn: int, event_said: SAID) -> void; record_anchor_seal(delegator: AID, delegatee: AID, seal_said: SAID) -> void; get_anchor_seal(delegator: AID, delegatee: AID) -> SAID?; remove_anchor_seal(delegator: AID, delegatee: AID) -> void"
     protocol: "repository"
     refs: ["persistence"]
     invariants:

@@ -28,11 +28,7 @@ ports:
   - id: "port://identity/state/outbound/persistence"
     type: outbound
     name: "State Persistence Repository"
-    contract: >
-      get_cached_state(aid: AID) -> KeyState?;
-      put_cached_state(aid: AID, state: KeyState) -> void;
-      get_event_by_said(aid: AID, event_said: SAID) -> KeyEvent?;
-      replay_events(aid: AID, start_sn: int, end_sn: int) -> [KeyEvent]
+    contract: "get_cached_state(aid: AID) -> KeyState?; put_cached_state(aid: AID, state: KeyState) -> void; get_event_by_said(aid: AID, event_said: SAID) -> KeyEvent?; replay_events(aid: AID, start_sn: int, end_sn: int) -> [KeyEvent]"
     protocol: "repository"
     refs: ["persistence"]
     invariants:

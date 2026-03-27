@@ -29,18 +29,7 @@ ports:
   - id: "port://identity/outbound/event-repository"
     type: outbound
     name: "Event Repository"
-    contract: >
-      append_event(aid: AID, event: KeyEvent, first_seen_number: int) -> Result<void, DuplicateError>;
-      get_event_by_sn(aid: AID, sn: int) -> KeyEvent?;
-      get_event_by_said(said: SAID) -> KeyEvent?;
-      get_kel(aid: AID) -> [KeyEvent];
-      get_first_seen_ordinal(aid: AID, event_said: SAID) -> int?;
-      append_signatures(aid: AID, event_said: SAID, signatures: [Signature]) -> void;
-      get_signatures(aid: AID, event_said: SAID) -> [Signature];
-      append_witness_receipts(aid: AID, event_said: SAID, receipts: [Receipt]) -> void;
-      get_witness_receipts(aid: AID, event_said: SAID) -> [Receipt];
-      put_key_state(aid: AID, key_state: KeyState) -> void;
-      get_key_state(aid: AID) -> KeyState?
+    contract: "append_event(aid: AID, event: KeyEvent, first_seen_number: int) -> Result<void, DuplicateError>; get_event_by_sn(aid: AID, sn: int) -> KeyEvent?; get_event_by_said(said: SAID) -> KeyEvent?; get_kel(aid: AID) -> [KeyEvent]; get_first_seen_ordinal(aid: AID, event_said: SAID) -> int?; append_signatures(aid: AID, event_said: SAID, signatures: [Signature]) -> void; get_signatures(aid: AID, event_said: SAID) -> [Signature]; append_witness_receipts(aid: AID, event_said: SAID, receipts: [Receipt]) -> void; get_witness_receipts(aid: AID, event_said: SAID) -> [Receipt]; put_key_state(aid: AID, key_state: KeyState) -> void; get_key_state(aid: AID) -> KeyState?"
     protocol: "repository"
     refs: ["persistence"]
     invariants:
@@ -54,11 +43,7 @@ ports:
   - id: "port://identity/outbound/escrow-repository"
     type: outbound
     name: "Escrow Repository"
-    contract: >
-      escrow(escrow_type: EscrowType, aid: AID, sn: int, event: KeyEvent, escrowed_at: datetime) -> void;
-      get_escrowed(escrow_type: EscrowType, aid: AID) -> [EscrowedEvent];
-      remove(escrow_type: EscrowType, aid: AID, sn: int) -> void;
-      get_all_by_type(escrow_type: EscrowType) -> [EscrowedEvent]
+    contract: "escrow(escrow_type: EscrowType, aid: AID, sn: int, event: KeyEvent, escrowed_at: datetime) -> void; get_escrowed(escrow_type: EscrowType, aid: AID) -> [EscrowedEvent]; remove(escrow_type: EscrowType, aid: AID, sn: int) -> void; get_all_by_type(escrow_type: EscrowType) -> [EscrowedEvent]"
     protocol: "repository"
     refs: ["persistence"]
     types:

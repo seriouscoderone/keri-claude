@@ -21,12 +21,7 @@ ports:
   - id: "port://integrity/evidence/outbound/escrow-storage"
     type: outbound
     name: "Duplicity Evidence Repository"
-    contract: >
-      escrow_likely_duplicitous(aid: AID, sn: int, event: KeyEvent, escrowed_at: datetime) -> void;
-      get_likely_duplicitous(aid: AID) -> [KeyEvent];
-      prune_expired(max_age_seconds: int) -> int;
-      record_duplicity_evidence(aid: AID, sn: int, evidence: DuplicityEvidence) -> void;
-      get_duplicity_evidence(aid: AID) -> [DuplicityEvidence]
+    contract: "escrow_likely_duplicitous(aid: AID, sn: int, event: KeyEvent, escrowed_at: datetime) -> void; get_likely_duplicitous(aid: AID) -> [KeyEvent]; prune_expired(max_age_seconds: int) -> int; record_duplicity_evidence(aid: AID, sn: int, evidence: DuplicityEvidence) -> void; get_duplicity_evidence(aid: AID) -> [DuplicityEvidence]"
     protocol: "repository"
     refs: ["persistence"]
     invariants:

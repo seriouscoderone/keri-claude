@@ -21,12 +21,7 @@ ports:
   - id: "port://accountability/receipting/outbound/persistence"
     type: outbound
     name: "Receipt Repository"
-    contract: >
-      store_receipt(aid: AID, sn: int, event_said: SAID, receipt: Receipt) -> void;
-      get_receipts(aid: AID, sn: int, event_said: SAID) -> [Receipt];
-      escrow_receipt(aid: AID, sn: int, event_said: SAID, receipt: Receipt, escrowed_at: datetime) -> void;
-      get_escrowed_receipts(aid: AID, sn: int) -> [Receipt];
-      remove_escrowed_receipts(aid: AID, sn: int, event_said: SAID) -> void
+    contract: "store_receipt(aid: AID, sn: int, event_said: SAID, receipt: Receipt) -> void; get_receipts(aid: AID, sn: int, event_said: SAID) -> [Receipt]; escrow_receipt(aid: AID, sn: int, event_said: SAID, receipt: Receipt, escrowed_at: datetime) -> void; get_escrowed_receipts(aid: AID, sn: int) -> [Receipt]; remove_escrowed_receipts(aid: AID, sn: int, event_said: SAID) -> void"
     protocol: "repository"
     refs: ["persistence"]
     invariants:

@@ -14,18 +14,7 @@ ports:
   - id: "port://cloud-agent-service/api/inbound/admin-api"
     type: inbound
     name: "Admin API"
-    contract: >
-      create_identifier(config) -> AID;
-      rotate(aid) -> RotationEvent;
-      interact(aid, seals) -> InteractionEvent;
-      list_credentials() -> [Credential];
-      get_credential(said) -> Credential;
-      resolve_oobi(url) -> Result;
-      list_contacts() -> [Contact];
-      list_notifications() -> [Notification];
-      mark_notification(id, read) -> Result;
-      get_operation(name) -> Operation;
-      authorize_endrole(aid, role, eid) -> Operation
+    contract: "create_identifier(config) -> AID; rotate(aid) -> RotationEvent; interact(aid, seals) -> InteractionEvent; list_credentials() -> [Credential]; get_credential(said) -> Credential; resolve_oobi(url) -> Result; list_contacts() -> [Contact]; list_notifications() -> [Notification]; mark_notification(id, read) -> Result; get_operation(name) -> Operation; authorize_endrole(aid, role, eid) -> Operation"
     protocol: "REST"
     refs: ["domain://signify-client", "domain://cloud-agent-service"]
 

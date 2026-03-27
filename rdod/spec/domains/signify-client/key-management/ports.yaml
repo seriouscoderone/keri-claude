@@ -6,13 +6,7 @@ ports:
   - id: "port://signify-client/key-management/inbound/key-ops"
     type: inbound
     name: "Key Operations"
-    contract: >
-      unlock(passcode, tier) -> Session;
-      lock() -> void;
-      create_keeper(algo, pidx, config) -> Keeper;
-      get_keeper(aid) -> Keeper;
-      sign(aid, content, indexed) -> [Siger];
-      rotate_keys(aid) -> {verfers: [Verfer], digers: [Diger]}
+    contract: "unlock(passcode, tier) -> Session; lock() -> void; create_keeper(algo, pidx, config) -> Keeper; get_keeper(aid) -> Keeper; sign(aid, content, indexed) -> [Siger]; rotate_keys(aid) -> {verfers: [Verfer], digers: [Diger]}"
     protocol: "method-call"
     refs: ["domain://signify-client"]
 

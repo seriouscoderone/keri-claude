@@ -5,55 +5,34 @@ ports:
   - id: "port://local-agent/api/inbound/tcp-protocol"
     type: inbound
     name: "TCP Protocol Interface"
-    contract: >
-      receive(stream: bytes) -> [Message];
-      dispatch(message: Message) -> Result
+    contract: "receive(stream: bytes) -> [Message]; dispatch(message: Message) -> Result"
     protocol: "TCP"
     refs: []
 
   - id: "port://local-agent/api/inbound/hab-operations"
     type: inbound
     name: "Hab/Habery Operations"
-    contract: >
-      init(name, salt, config) -> Habery;
-      incept(alias, icount, ncount, wits, toad) -> Hab + AID;
-      rotate(aid, cuts, adds, toad) -> RotationEvent;
-      interact(aid, seals) -> InteractionEvent;
-      sign(aid, content) -> [Siger];
-      get_key_state(aid) -> KeyState
+    contract: "init(name, salt, config) -> Habery; incept(alias, icount, ncount, wits, toad) -> Hab + AID; rotate(aid, cuts, adds, toad) -> RotationEvent; interact(aid, seals) -> InteractionEvent; sign(aid, content) -> [Siger]; get_key_state(aid) -> KeyState"
     protocol: "method-call"
     refs: []
 
   - id: "port://local-agent/api/inbound/cli"
     type: inbound
     name: "CLI Interface"
-    contract: >
-      kli_init(name, salt, config) -> Result;
-      kli_incept(name, alias, config_file) -> AID;
-      kli_rotate(name, alias) -> Result;
-      kli_interact(name, alias, data) -> Result;
-      kli_oobi_resolve(name, oobi, alias) -> Result;
-      kli_vc_issue(name, alias, registry, schema, data) -> SAID;
-      kli_status(name, alias) -> KeyState
+    contract: "kli_init(name, salt, config) -> Result; kli_incept(name, alias, config_file) -> AID; kli_rotate(name, alias) -> Result; kli_interact(name, alias, data) -> Result; kli_oobi_resolve(name, oobi, alias) -> Result; kli_vc_issue(name, alias, registry, schema, data) -> SAID; kli_status(name, alias) -> KeyState"
     protocol: "CLI"
     refs: []
 
   - id: "port://local-agent/api/inbound/credential-operations"
     type: inbound
     name: "Credential Operations"
-    contract: >
-      issue_credential(aid, registry, schema, recipient, data) -> SAID;
-      revoke_credential(said, registry) -> Result;
-      verify_credential(said) -> VerificationResult;
-      list_credentials(aid) -> [Credential]
+    contract: "issue_credential(aid, registry, schema, recipient, data) -> SAID; revoke_credential(said, registry) -> Result; verify_credential(said) -> VerificationResult; list_credentials(aid) -> [Credential]"
     protocol: "method-call"
     refs: []
 
   - id: "port://local-agent/api/outbound/tcp-transport"
     type: outbound
     name: "TCP Transport"
-    contract: >
-      connect(host, port) -> Connection;
-      send(connection, stream) -> Result
+    contract: "connect(host, port) -> Connection; send(connection, stream) -> Result"
     protocol: "TCP"
     refs: []
