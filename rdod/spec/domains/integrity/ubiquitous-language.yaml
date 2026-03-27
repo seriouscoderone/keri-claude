@@ -68,13 +68,13 @@ terms:
     related_terms: ["Live Duplicity", "Duplicity"]
 
   - term: "Likely Duplicitous Escrow"
-    synonyms: ["LDE", ".ldes [keripy]", "DuplicitousEvents [keriox]"]
+    synonyms: ["LDE"]
     definition: "Permanent storage for events that appear at the same sequence number as an already-accepted event but with a different SAID. This is evidence of duplicity -- the controller has signed two conflicting events at the same position. These events are never automatically resolved; they serve as forensic evidence for duplicity detection."
     invariants:
       - "Triggered when sn < expected_sn AND the event's SAID differs from the already-accepted event at that sn"
       - "Events are NEVER automatically reprocessed or resolved"
       - "Serves as forensic evidence -- proves the controller signed conflicting events"
-      - "Default timeout: 3600 seconds for pruning old entries (keripy TimeoutLDE), but the evidence is typically preserved"
+      - "Default timeout: 3600 seconds for pruning old entries, but the evidence is typically preserved"
       - "Detection of likely duplicitous events may trigger watchers and jurors to investigate"
     examples:
       - "Event at sn=3 with SAID=X is already accepted. A different event at sn=3 with SAID=Y arrives -> escrowed to LDE as duplicity evidence."

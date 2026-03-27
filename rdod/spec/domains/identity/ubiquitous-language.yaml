@@ -150,19 +150,19 @@ terms:
 
   - term: "Escrow Type Pattern"
     synonyms: ["Escrow Structure"]
-    definition: "The common structure shared by all escrow types. Every escrow is defined by four elements: (1) a trigger condition that causes an event to enter the escrow, (2) a storage location (subdatabase) where the escrowed event is held, (3) a timeout after which the event is pruned, and (4) a reprocessing trigger that causes the event to be re-validated through the pipeline."
+    definition: "The common structure shared by all escrow types. Every escrow is defined by four elements: (1) a trigger condition that causes an event to enter the escrow, (2) a storage location where the escrowed event is held, (3) a timeout after which the event is pruned, and (4) a reprocessing trigger that causes the event to be re-validated through the pipeline."
     invariants:
       - "Trigger condition: the specific validation failure that diverts an event into this escrow (e.g., sn > expected for OOE, insufficient sigs for PSE)"
-      - "Storage: a named subdatabase (out-of-order escrow [.ooes], partially-signed escrow [.pses], partially-witnessed escrow [.pwes], partially-delegated escrow [.pdes], likely duplicitous escrow [.ldes], delegable event escrow [.delegables], misfit event escrow [.misfits] in keripy) indexed by prefix + sn or prefix + digest"
+      - "Storage: a named partition (Out-of-Order, Partially-Signed, Partially-Witnessed, Partially-Delegated, Likely Duplicitous, Delegable Event, Misfit Event) indexed by AID prefix + sn or prefix + digest"
       - "Timeout: a configurable duration (default 1200s for OOE, 3600s for most others) after which the event is pruned"
-      - "Reprocessing trigger: the external event that causes re-validation — either a notification (keriox: KeyEventAdded, PartiallyWitnessed, etc.) or a periodic sweep (keripy: processEscrow*() methods)"
+      - "Reprocessing trigger: the external event that causes re-validation — either a notification or a periodic sweep"
       - "On reprocessing: the event is fully re-validated — not assumed valid. It may be accepted, remain escrowed, or cascade to a different escrow type."
       - "Exception: Likely Duplicitous Escrow has no reprocessing trigger — events are permanent forensic evidence"
       - "Exception: Misfit Event Escrow has no automatic reprocessing — events must be re-submitted from a local source"
     examples:
-      - "OOE pattern: trigger=sn>expected, storage=out-of-order escrow [.ooes in keripy], timeout=1200s, reprocess=when prior event accepted"
-      - "PSE pattern: trigger=insufficient sigs, storage=partially-signed escrow [.pses in keripy], timeout=3600s, reprocess=when new signature arrives for same SAID"
-      - "PWE pattern: trigger=insufficient witness receipts, storage=partially-witnessed escrow [.pwes in keripy], timeout=3600s, reprocess=when witness receipt arrives"
+      - "OOE pattern: trigger=sn>expected, storage=Out-of-Order escrow, timeout=1200s, reprocess=when prior event accepted"
+      - "PSE pattern: trigger=insufficient sigs, storage=Partially-Signed escrow, timeout=3600s, reprocess=when new signature arrives for same SAID"
+      - "PWE pattern: trigger=insufficient witness receipts, storage=Partially-Witnessed escrow, timeout=3600s, reprocess=when witness receipt arrives"
     related_terms: ["Escrow Cascade", "Escrow Timeout", "Escrow Processing Order"]
 
   - term: "Escrow Cascade"
@@ -181,13 +181,13 @@ terms:
     related_terms: ["Escrow Processing Order", "Out-of-Order Escrow", "Partially-Signed Escrow", "Partially-Witnessed Escrow", "Partially-Delegated Escrow", "Likely Duplicitous Escrow"]
 
   - term: "Out-of-Order Escrow"
-    synonyms: ["OOE", ".ooes [keripy]", "MaybeOutOfOrderEscrow [keriox]"]
+    synonyms: ["OOE"]
     definition: "Holds events whose prior event in the KEL has not yet been received. The event's sequence number is greater than the next expected sn, so the hash-chain cannot be verified yet. Events are automatically reprocessed when the missing prior event arrives and is accepted to the KEL."
     invariants:
       - "Triggered when sn > expected_sn for a known prefix, or when the prefix is unknown and the event is not an inception"
-      - "Indexed by prefix + sn in the out-of-order escrow subdatabase [.ooes in keripy] or MaybeOutOfOrderEscrow storage (keriox)"
-      - "Reprocessed when a KeyEventAdded notification fires for the same prefix (keriox) or during processEscrowOutOfOrders sweep (keripy)"
-      - "Default timeout: 1200 seconds (keripy TimeoutOOE), configurable via EscrowConfig.out_of_order_timeout (keriox)"
+      - "Indexed by AID prefix and sequence number in the Out-of-Order escrow"
+      - "Reprocessed when the prior event for the same prefix is accepted into the KEL"
+      - "Default timeout: 1200 seconds (configurable)"
       - "Events are fully re-validated through the pipeline on reprocessing -- not assumed valid"
     examples:
       - "Event at sn=5 arrives but sn=4 is missing -> escrow to OOE. When sn=4 is accepted, sn=5 is reprocessed."
@@ -195,48 +195,48 @@ terms:
     related_terms: ["Escrow Cascade", "Escrow Timeout", "Escrow Processing Order"]
 
   - term: "Escrow Processing Order"
-    synonyms: ["processEscrows() [keripy]"]
+    synonyms: []
     definition: "The defined sequence in which escrow queues are drained during each processing sweep. Order matters because resolving one escrow type may produce events that enter another escrow type."
     invariants:
       - "Order: OOE first, then receipt/witness escrows, then PSE, then PWE, then PDE"
       - "Escrow processing order MUST be: OOE first (releases sequence-gapped events), then PSE (releases signature-deficient events), then PWE (releases witness-deficient events), then PDE (releases delegation-pending events). Order matters because each resolution may cascade into the next escrow type."
       - "Each sweep iterates the full queue for each escrow type before moving to the next type"
-      - "In keriox, internal coordination replaces explicit sweep ordering -- each escrow listens for relevant notifications and processes asynchronously"
+      - "Implementations may use notification-driven processing instead of explicit sweep ordering, provided the dependency order is respected"
     examples:
       - "OOE sweep releases event at sn=4 -> this triggers PSE to re-check sn=4 (if it was also partially signed) -> PSE passes -> PWE check -> all pass -> accepted"
     related_terms: ["Escrow Cascade", "Out-of-Order Escrow", "Partially-Signed Escrow"]
 
   - term: "Escrow Timeout"
-    synonyms: ["TimeoutOOE [keripy]", "TimeoutPSE [keripy]", "TimeoutPWE [keripy]", "TimeoutLDE [keripy]", "EscrowConfig [keriox]"]
+    synonyms: []
     definition: "Configurable per-escrow-type duration after which an unresolved escrowed event is pruned (removed) from its queue. Prevents unbounded escrow growth from events whose dependencies will never resolve."
     invariants:
-      - "OOE default: 1200 seconds (20 minutes) in keripy; configurable in keriox"
-      - "PSE default: 3600 seconds (1 hour) in keripy; configurable in keriox"
-      - "PWE default: 3600 seconds (1 hour) in keripy; configurable in keriox"
-      - "LDE default: 3600 seconds (1 hour) in keripy; typically preserved longer in practice"
+      - "OOE default: 1200 seconds (20 minutes)"
+      - "PSE default: 3600 seconds (1 hour)"
+      - "PWE default: 3600 seconds (1 hour)"
+      - "LDE default: 3600 seconds (1 hour); typically preserved longer in practice"
       - "Timeout is checked during each processing sweep: if (now - escrowed_datetime) > timeout, the entry is pruned"
-      - "keriox defaults to 60 seconds for all types (more aggressive), configurable via EscrowConfig"
+      - "All timeouts are configurable per deployment"
     examples:
-      - "Event escrowed to OOE at T=0. At T=1200 (20 min later), processEscrowOutOfOrders finds it expired -> prune."
-      - "Custom timeout: EscrowConfig { out_of_order_timeout: Duration::from_secs(300) } for a 5-minute OOE timeout"
+      - "Event escrowed to OOE at T=0. At T=1200 (20 min later), the sweep finds it expired and prunes it."
+      - "Deployment with aggressive timeouts: 300 seconds for OOE instead of the default 1200"
     related_terms: ["Out-of-Order Escrow", "Partially-Signed Escrow", "Partially-Witnessed Escrow"]
 
   - term: "KEL Storage Schema"
-    synonyms: ["Baser subdatabases [keripy]", "EventDatabase [keriox]"]
-    definition: "The partitioned database organization for the Key Event Log. Separates events, indexes, signatures, receipts, and metadata into distinct subdatabases, each optimized for its access pattern. The schema provides both content-addressed (by digest) and sequence-ordered (by sn) access."
+    synonyms: ["Event Database"]
+    definition: "The partitioned database organization for the Key Event Log. Separates events, indexes, signatures, receipts, and metadata into distinct stores, each optimized for its access pattern. The schema provides both content-addressed (by digest) and sequence-ordered (by sn) access."
     invariants:
-      - "Event store [.evts in keripy]: serialized event bytes indexed by dgKey (prefix+digest) — the primary event store"
-      - "KEL sequence index [.kels in keripy]: mapping snKey (prefix+sn) to event digest — ordered access by sequence number"
-      - "First-seen log [.fels in keripy]: mapping prefix+fn to event digest — reception-order replay"
-      - "Controller signature store [.sigs in keripy]: indexed signatures (Siger) per event, indexed by dgKey — IoSet (insertion-ordered, append-only)"
-      - "Witness signature store [.wigs in keripy]: indexed signatures (Siger) per event, indexed by dgKey — IoSet"
-      - "Non-transferable receipt store [.rcts in keripy]: witness receipts (Cigar) per event, indexed by dgKey — IoSet"
-      - "Event source record store [.esrs in keripy]: per event, indexed by dgKey — local vs remote classification"
-      - "Timestamp store [.dtss in keripy]: event datetime stamps (Dater) per event, indexed by dgKey"
-      - "Key state cache [.states in keripy]: cached key state snapshots per AID, indexed by prefix — computed from KEL, cached for fast lookup"
+      - "Event store: serialized event bytes indexed by prefix + digest — the primary event store"
+      - "KEL sequence index: mapping prefix + sn to event digest — ordered access by sequence number"
+      - "First-seen log: mapping prefix + fn to event digest — reception-order replay"
+      - "Controller signature store: indexed signatures per event, indexed by prefix + digest — insertion-ordered, append-only"
+      - "Witness signature store: indexed signatures per event, indexed by prefix + digest — insertion-ordered, append-only"
+      - "Non-transferable receipt store: witness receipts per event, indexed by prefix + digest — insertion-ordered, append-only"
+      - "Event source record store: per event, indexed by prefix + digest — local vs remote classification"
+      - "Timestamp store: event datetime stamps per event, indexed by prefix + digest"
+      - "Key state cache: cached key state snapshots per AID, indexed by prefix — computed from KEL, cached for fast lookup"
     examples:
-      - "Looking up event at sn=5 for prefix P: KEL sequence index[snKey(P,5)] -> digest D, then event store[dgKey(P,D)] -> event bytes"
-      - "Accumulating signatures: controller signature store[dgKey(P,D)].add(siger) — appends to set, idempotent if siger already present"
+      - "Looking up event at sn=5 for prefix P: sequence index[P, 5] -> digest D, then event store[P, D] -> event bytes"
+      - "Accumulating signatures: controller signature store[P, D].add(sig) — appends to set, idempotent if signature already present"
     related_terms: ["Database Key Patterns", "First-Seen Ordering", "Idempotent Logging"]
 
   - term: "First-Seen Number"
@@ -254,32 +254,32 @@ terms:
     related_terms: ["KEL Storage Schema", "Sequence Number"]
 
   - term: "Idempotent Logging"
-    synonyms: ["logEvent() [keripy]", "add_kel_finalized_event() [keriox]"]
+    synonyms: []
     definition: "The property that logging an already-accepted event is a safe no-op. Late-arriving signatures, witness receipts, or duplicate event messages merge into the existing log entry without creating duplicates or corrupting the KEL."
     invariants:
-      - "Event store [.evts in keripy] uses put-if-not-exists — writing an existing event is a no-op"
-      - "Signature stores (controller [.sigs] and witness [.wigs] in keripy) append new signatures to the existing set — duplicates are ignored"
-      - "Receipt store [.rcts in keripy] appends new receipts to the existing set — duplicates are ignored"
-      - "First-seen ordinal [.fons in keripy] is assigned only once on initial acceptance"
-      - "Timestamp store [.dtss in keripy] is recorded only on first acceptance"
+      - "Event store uses put-if-not-exists — writing an existing event is a no-op"
+      - "Signature stores (controller and witness) append new signatures to the existing set — duplicates are ignored"
+      - "Receipt store appends new receipts to the existing set — duplicates are ignored"
+      - "First-seen ordinal is assigned only once on initial acceptance"
+      - "Timestamp is recorded only on first acceptance"
       - "Local source record overwrites remote, but never the reverse"
     examples:
-      - "Event accepted with 2-of-3 sigs. Third sig arrives later: logEvent() adds third sig to the controller signature store [.sigs in keripy] but event in the event store [.evts in keripy] is unchanged"
+      - "Event accepted with 2-of-3 sigs. Third sig arrives later: the third sig is appended to the controller signature store but the event bytes are unchanged"
       - "Event reprocessed from escrow after missing witness receipt arrives: signatures already in the controller signature store are not duplicated"
     related_terms: ["KEL Storage Schema", "First-Seen Number"]
 
   - term: "Database Key Patterns"
-    synonyms: ["dgKey [keripy]", "snKey [keripy]"]
-    definition: "The two primary key construction patterns for addressing data in the KEL storage schema. dgKey (digest key) concatenates prefix and event digest for content-addressed lookup. snKey (sequence number key) concatenates prefix and sequence number for sequence-ordered access."
+    synonyms: ["Digest Key", "Sequence Key"]
+    definition: "The two primary key construction patterns for addressing data in the KEL storage schema. A digest key concatenates prefix and event digest for content-addressed lookup. A sequence key concatenates prefix and sequence number for sequence-ordered access."
     invariants:
-      - "dgKey(pre, dig) = pre_bytes + dig_bytes — content-addressed by event identity"
-      - "snKey(pre, sn) = pre_bytes + sn_bytes — sequence-ordered by position in KEL"
-      - "dgKey is used for: event store [.evts], controller signatures [.sigs], witness signatures [.wigs], receipts [.rcts], event source records [.esrs], timestamps [.dtss], first-seen ordinals [.fons] in keripy"
-      - "snKey is used for: KEL sequence index [.kels in keripy]"
+      - "Digest key (prefix + digest) provides content-addressed lookup by event identity"
+      - "Sequence key (prefix + sn) provides sequence-ordered access by position in KEL"
+      - "Digest key is used for: event store, controller signatures, witness signatures, receipts, event source records, timestamps, first-seen ordinals"
+      - "Sequence key is used for: KEL sequence index"
       - "Both patterns produce fixed-length binary keys suitable for B+ tree indexing"
     examples:
-      - "dgKey('EABC...', 'EDEF...') — lookup event bytes, signatures, or receipts for a specific event"
-      - "snKey('EABC...', 5) — lookup the event digest at sequence number 5 for prefix EABC"
+      - "Digest key('EABC...', 'EDEF...') — lookup event bytes, signatures, or receipts for a specific event"
+      - "Sequence key('EABC...', 5) — lookup the event digest at sequence number 5 for prefix EABC"
     related_terms: ["KEL Storage Schema", "First-Seen Number"]
 
   - term: "Identifier Type Dimensions"
@@ -359,11 +359,11 @@ terms:
     related_terms: ["Identifier Type Dimensions"]
 
   - term: "Misfit Event Escrow"
-    synonyms: ["MFE", ".misfits [keripy]"]
+    synonyms: ["MFE"]
     definition: "Holds events received from remote sources that target locally-owned, locally-witnessed, or locally-delegated identifiers. These events are not rejected but held, requiring re-sourcing through a local protected channel before acceptance."
     invariants:
       - "Triggered by Local Source Protection: remote source + local/witnessed/delegated AID"
-      - "Indexed by (prefix, sn) in the misfit event subdatabase [.misfits in keripy]"
+      - "Indexed by AID prefix and sequence number in the Misfit Event escrow"
       - "Events are not automatically reprocessed -- they must be re-submitted from a local source"
       - "Prevents network-based injection attacks against locally controlled identifiers"
     examples:
@@ -374,28 +374,28 @@ terms:
   # Moved to kernel://keri-messaging
 
   - term: "Event Database"
-    synonyms: ["Baser"]
-    definition: "Persistent storage for KELs, escrows, receipts, key state, and application data. Organized as named subdatabases (event store, KEL index, signature store, witness signature store, receipt store, etc. [.evts, .kels, .sigs, .wigs, .rcts in keripy])."
+    synonyms: []
+    definition: "Persistent storage for KELs, escrows, receipts, key state, and application data. Organized as named partitions (event store, KEL index, signature store, witness signature store, receipt store, etc.)."
     invariants:
       - "Provides append-only semantics for KEL events"
       - "Supports indexed access by prefix, sequence number, digest, and first-seen number"
-      - "Named subdatabases partition events, signatures, receipts, and escrow queues"
+      - "Named partitions separate events, signatures, receipts, and escrow queues"
     examples:
-      - "LMDB-based Baser in keripy with subdatabases: .evts (events by prefix+digest), .kels (KEL index), .sigs (controller signatures)"
-      - "DynamoDB-based storage in serious-keri with equivalent partitioning"
+      - "An LMDB-based event database with partitions: events by prefix+digest, KEL index by prefix+sn, controller signatures by prefix+digest"
+      - "A DynamoDB-based event database with equivalent partitioning for serverless environments"
     related_terms: ["KEL", "KEL Storage Schema"]
 
   - term: "Event Processor"
-    synonyms: ["Kevery"]
-    definition: "The event validation and acceptance pipeline. Processes incoming events against current key state, manages escrow queues, and emits cues for receipting and notification. Operates in lax (promiscuous) or strict mode and tracks local vs remote event sources."
+    synonyms: []
+    definition: "The event validation and acceptance pipeline. Processes incoming events against current key state, manages escrow queues, and emits notifications for receipting and downstream processing. Operates in lax (promiscuous) or strict mode and tracks local vs remote event sources."
     invariants:
       - "Validates event signatures against current key state before acceptance"
       - "Escrows events that cannot yet be validated (out-of-order, partially signed, partially witnessed)"
-      - "Emits cues (notifications) for receipting and downstream processing"
+      - "Emits notifications for receipting and downstream processing"
       - "Distinguishes local (trusted) from remote (untrusted) event sources"
     examples:
-      - "A Kevery in lax mode accepting any well-formed event regardless of witness receipts"
-      - "A Kevery in strict mode requiring witness threshold before accepting an event"
+      - "An event processor in lax mode accepting any well-formed event regardless of witness receipts"
+      - "An event processor in strict mode requiring witness threshold before accepting an event"
     related_terms: ["Key Event", "Escrow Architecture", "Event Database", "Message Parser"]
 
   # Moved to kernel://keri-messaging

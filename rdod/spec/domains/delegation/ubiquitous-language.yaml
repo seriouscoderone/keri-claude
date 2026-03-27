@@ -64,13 +64,13 @@ terms:
     related_terms: ["Delegated Inception", "Delegated Rotation", "Partially-Delegated Escrow"]
 
   - term: "Partially-Delegated Escrow"
-    synonyms: ["PDE", ".pdes [keripy]", "DelegationEscrow [keriox]"]
+    synonyms: ["PDE"]
     definition: "Holds delegated events (dip/drt) that pass signature validation but whose delegator has not yet anchored the approving seal in its own KEL. Events are reprocessed when the delegator's anchoring event arrives."
     invariants:
       - "Triggered when the delegator's KEL does not contain a seal committing to this delegated event"
-      - "Indexed by prefix + sn in the partially-delegated escrow subdatabase [.pdes in keripy]"
-      - "Default timeout: 3600 seconds (keripy TimeoutPSE for delegation), configurable via EscrowConfig.delegation_timeout (keriox)"
-      - "Reprocessed when a KeyEventAdded or MissingDelegatingEvent notification fires for the delegator's prefix (keriox) or during processEscrowPartialDels sweep (keripy)"
+      - "Indexed by AID prefix and sequence number in the Partially-Delegated escrow"
+      - "Default timeout: 3600 seconds (configurable)"
+      - "Reprocessed when the delegator's KEL is updated with new events"
       - "On reprocessing, if the delegator's seal is found, event advances to witness check (may cascade to PWE)"
     examples:
       - "Delegated inception (dip) arrives before the delegator's approving ixn -> PDE. Delegator's ixn with seal arrives and is accepted -> dip reprocessed -> delegation validated -> accept (or -> PWE if witnesses insufficient)."
@@ -88,15 +88,15 @@ terms:
     related_terms: ["Partially-Delegated Escrow", "Delegable Event Escrow", "Delegation Validation"]
 
   - term: "Delegable Event Escrow"
-    synonyms: [".delegables [keripy]"]
+    synonyms: []
     definition: "Holds locally-originated delegated events (dip/drt created by this node's delegatee) that are awaiting the delegator's approval. Unlike PDE which holds remote delegated events, this escrow holds the local controller's own delegated events before the delegator has anchored its approving seal."
     invariants:
       - "Only applies to events the local node has originated as a delegatee"
-      - "Indexed by prefix + sn in the delegable event escrow subdatabase [.delegables in keripy]"
+      - "Indexed by AID prefix and sequence number in the Delegable Event escrow"
       - "Cleared when the delegator's anchoring event is detected"
       - "Distinct from PDE: delegables are local events awaiting external approval, PDE are remote events awaiting external evidence"
     examples:
-      - "Local node creates a dip for a new delegated AID -> escrowed in delegable event escrow [.delegables in keripy] -> waits for delegator to anchor seal -> cleared on approval"
+      - "Local node creates a dip for a new delegated AID -> escrowed in Delegable Event escrow -> waits for delegator to anchor seal -> cleared on approval"
     related_terms: ["Partially-Delegated Escrow", "Delegation Validation", "Event Locality"]
 
 events:

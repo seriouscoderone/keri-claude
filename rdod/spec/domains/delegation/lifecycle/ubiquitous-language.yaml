@@ -3,61 +3,57 @@ domain_ref: "delegation/lifecycle"
 
 terms:
   - term: "Delegation Validation"
-    synonyms: ["valSigsWigsDel [keripy]", "validate_event with delegator check [keriox]"]
+    synonyms: []
     definition: "The multi-step validation process for delegated events that verifies both the delegatee's authority and the delegator's approval."
     invariants:
       - "Step 1: Verify event signatures against delegatee's key state"
       - "Step 2: Verify the di field references a valid delegator AID"
       - "Step 3: Locate the delegator's anchoring seal in the delegator's KEL"
       - "Step 4: Verify the seal commits to this delegated event's digest"
-      - "If any step fails, the event is escrowed to the appropriate queue (partially-delegated escrow [.pdes in keripy], delegable event escrow [.delegables in keripy], or rejected)"
-      - "In keripy: valSigsWigsDel() orchestrates the full validation pipeline"
-      - "In keriox: validate_event includes delegator check as part of the event processing pipeline"
+      - "If any step fails, the event is escrowed to the appropriate queue (Partially-Delegated escrow, Delegable Event escrow) or rejected"
     examples:
       - "Fay's drt arrives: (1) verify Fay's signatures, (2) check di=Ean, (3) find seal in Ean's KEL, (4) verify seal digest matches drt SAID"
-      - "Seal not found in Ean's KEL — event escrowed to partially-delegated escrow [.pdes in keripy] pending Ean's anchoring event"
+      - "Seal not found in Ean's KEL — event escrowed to Partially-Delegated escrow pending Ean's anchoring event"
     related_terms: ["Partially-Delegated Escrow", "Delegable Event Escrow", "Approved Delegation Seals"]
 
   # Inherits: "Partially-Delegated Escrow" from domain://delegation
   - term: "Partially-Delegated Escrow"
-    synonyms: ["PDE", ".pdes [keripy]", "DelegationEscrow [keriox]"]
+    synonyms: ["PDE"]
     specializes: "domain://delegation"
     definition: "In the context of delegation lifecycle, the Partially-Delegated Escrow manages the promotion pipeline: events sit here until the delegator's KEL shows a seal committing to the delegated event's digest, then are promoted to the KEL."
     invariants:
       - "Contains delegated events whose delegator seal has not yet been found"
       - "Timeout: 3600 seconds — escrowed events are pruned after expiry"
       - "When the delegator's anchoring event arrives and contains the matching seal, the escrowed event is promoted to the KEL"
-      - "In keripy: partially-delegated escrow [.pdes], drained by the Event Processor (Kevery in keripy).processEscrowPartialDels()"
-      - "In keriox: DelegationEscrow, notified on KeyEventAdded to retry pending delegated events"
+      - "Reprocessed when the delegator's KEL is updated with new events"
     examples:
-      - "Fay's dip event arrives but Ean's anchoring ixn hasn't been processed yet — dip goes to partially-delegated escrow [.pdes in keripy]"
-      - "When Ean's ixn with the matching seal is accepted, Fay's dip is promoted from partially-delegated escrow to the KEL"
+      - "Fay's dip event arrives but Ean's anchoring ixn hasn't been processed yet — dip goes to Partially-Delegated escrow"
+      - "When Ean's ixn with the matching seal is accepted, Fay's dip is promoted from Partially-Delegated escrow to the KEL"
     related_terms: ["Delegation Validation", "Delegable Event Escrow", "Approved Delegation Seals"]
 
   - term: "Delegable Event Escrow"
-    synonyms: [".delegables [keripy]"]
+    synonyms: []
     definition: "Holds events that need delegation approval but the delegator's event hasn't been processed yet. Distinguished from PDE: delegables are waiting for the delegator's event to even arrive, while PDE events have the delegator's event but are waiting for it to contain the right seal."
     invariants:
       - "Contains events where the delegator's anchoring event has not yet arrived at all"
-      - "Distinguished from Partially-Delegated Escrow: delegable event escrow [.delegables in keripy] waits for delegator event arrival, partially-delegated escrow [.pdes in keripy] waits for seal match"
-      - "In keripy: delegable event escrow [.delegables], drained when the delegator's KEL advances"
-      - "Events are promoted to partially-delegated escrow or directly to the KEL once the delegator's event arrives"
+      - "Distinguished from Partially-Delegated Escrow: Delegable Event escrow waits for delegator event arrival, Partially-Delegated escrow waits for seal match"
+      - "Drained when the delegator's KEL advances"
+      - "Events are promoted to Partially-Delegated escrow or directly to the KEL once the delegator's event arrives"
     examples:
-      - "Fay's dip arrives but Ean's entire KEL is unknown — dip goes to delegable event escrow [.delegables in keripy] (not partially-delegated escrow)"
-      - "Once Ean's KEL is fetched and processed, Fay's dip moves from delegable event escrow to either partially-delegated escrow (if seal not found) or directly to KEL (if seal matches)"
+      - "Fay's dip arrives but Ean's entire KEL is unknown — dip goes to Delegable Event escrow (not Partially-Delegated escrow)"
+      - "Once Ean's KEL is fetched and processed, Fay's dip moves from Delegable Event escrow to either Partially-Delegated escrow (if seal not found) or directly to KEL (if seal matches)"
     related_terms: ["Partially-Delegated Escrow", "Delegation Validation"]
 
   - term: "Approved Delegation Seals"
-    synonyms: [".aess [keripy]"]
-    definition: "Storage for delegation seals that have been verified — the delegator's KEL contains a seal matching the delegated event. Moves from .udes (unverified) to .aess (approved) when the delegator's anchoring event is found."
+    synonyms: []
+    definition: "Storage for delegation seals that have been verified — the delegator's KEL contains a seal matching the delegated event. Transitions from unverified to approved when the delegator's anchoring event is found."
     invariants:
       - "Contains seals whose corresponding delegator anchor event has been located and verified"
       - "Represents the transition from unverified delegation to approved delegation"
-      - "In keripy: .aess database tracks which delegation seals have been confirmed"
       - "A delegated event can only be fully accepted once its seal moves to approved status"
     examples:
-      - "Ean's ixn at sn=1 contains seal for Fay's dip — the seal moves from unverified to .aess"
-      - "Validator checks .aess to confirm Fay's delegated inception has approved backing"
+      - "Ean's ixn at sn=1 contains seal for Fay's dip — the seal moves from unverified to approved"
+      - "Validator checks the approved seal store to confirm Fay's delegated inception has approved backing"
     related_terms: ["Delegation Validation", "Partially-Delegated Escrow"]
 
 events:
@@ -76,6 +72,6 @@ events:
 rules:
   - "Validators must verify both the delegatee's signatures and the delegator's seal before accepting a delegated event"
   - "Events failing validation are escrowed — not rejected — to handle asynchronous arrival of delegator events"
-  - "Delegable events (delegable event escrow [.delegables in keripy]) wait for delegator event arrival; partially-delegated events (partially-delegated escrow [.pdes in keripy]) wait for seal match — these are distinct escrow states"
+  - "Delegable events (Delegable Event escrow) wait for delegator event arrival; partially-delegated events (Partially-Delegated escrow) wait for seal match — these are distinct escrow states"
   - "Escrowed events are pruned after timeout (3600 seconds default) — stale delegations do not accumulate"
   - "When the delegator's KEL advances, all relevant escrow queues must be swept for promotable events"

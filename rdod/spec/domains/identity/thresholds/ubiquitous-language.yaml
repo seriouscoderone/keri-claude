@@ -3,15 +3,13 @@ domain_ref: "identity/thresholds"
 
 terms:
   - term: "Signing Threshold"
-    synonyms: ["Current Threshold", "kt field", "tholder [keripy]", "SignatureThreshold [keriox]"]
-    definition: "The threshold expression that determines the minimum satisficing subset of current signing keys required to produce a valid signature on any event. Stored in the kt field of establishment events and parsed into a Tholder (keripy) or SignatureThreshold (keriox) instance for evaluation."
+    synonyms: ["Current Threshold", "kt field"]
+    definition: "The threshold expression that determines the minimum satisficing subset of current signing keys required to produce a valid signature on any event. Stored in the kt field of establishment events and evaluated against verified signature indices."
     invariants:
       - "Must be satisfiable given the number of keys in the signing key list (k field)"
       - "Can be a simple integer M (M-of-N) or a fractionally weighted threshold"
       - "A valid event must have signatures satisfying this threshold from the current signing keys"
       - "For rotations, signatures must satisfy both the new signing threshold AND the prior next threshold (dual threshold)"
-      - "In keripy: Tholder(sith=kt_value) with satisfy(indices) -> bool"
-      - "In keriox: SignatureThreshold::Simple(m) or SignatureThreshold::Weighted(weights) with enough(indices) -> bool"
     examples:
       - "Simple: kt='2' means 2-of-3 when there are 3 signing keys"
       - "Fractional: kt=['1/2', '1/2', '1/2'] means each key has weight 1/2, sum of any two >= 1"
@@ -19,14 +17,14 @@ terms:
     related_terms: ["Rotation Threshold", "Dual Threshold", "Fractionally Weighted Threshold"]
 
   - term: "Rotation Threshold"
-    synonyms: ["Next Threshold", "nt field", "ntholder [keripy]"]
+    synonyms: ["Next Threshold", "nt field"]
     definition: "The threshold expression that determines the minimum satisficing subset of next (pre-rotated) keys required to authorize a rotation event. Declared in the nt field of the establishment event that commits the next key digests. Evaluated at the time of the NEXT rotation, not at declaration time."
     invariants:
       - "Must be satisfiable given the number of next key digests (n field)"
-      - "Can be a simple integer or fractionally weighted, using the same Tholder/SignatureThreshold type as signing threshold"
+      - "Can be a simple integer or fractionally weighted, using the same threshold evaluation as signing threshold"
       - "The rotation event must satisfy both the newly current signing threshold (kt) AND this prior next threshold (nt)"
       - "Applies at the time of the next rotation — the nt from the PRIOR establishment event constrains the current rotation"
-      - "In keripy: ntholder = Tholder(sith=nt_value) stored on the Kever, carried forward until next establishment event"
+      - "Stored on the Key Event Verifier and carried forward until the next establishment event"
     examples:
       - "Simple: nt='2' means 2-of-3 next keys must sign the rotation"
       - "Fractional: nt=['1/2', '1/2', '1/2'] for weighted rotation authorization"
@@ -34,7 +32,7 @@ terms:
     related_terms: ["Signing Threshold", "Dual Threshold", "Fractionally Weighted Threshold"]
 
   - term: "Dual Threshold"
-    synonyms: ["Double Threshold Requirement", "valSigsWigsDel [keripy]"]
+    synonyms: ["Double Threshold Requirement"]
     definition: "The requirement that a rotation event's signatures must satisfy both the newly current signing threshold (kt from this rotation) and the prior next threshold (nt from the previous establishment event). This is the mechanism that cryptographically enforces the pre-rotation commitment — it ensures that the new signing keys include a sufficient subset of the previously pre-committed keys."
     invariants:
       - "Both thresholds must be independently satisfied for a valid rotation"
@@ -55,9 +53,8 @@ terms:
       - "Each fraction represents the weight of the corresponding key's signature"
       - "The sum of weights of the actual signers must be >= 1"
       - "Enables unequal key authority — a high-weight key alone may satisfy the threshold while multiple low-weight keys are needed together"
-      - "In keripy: Tholder parses fraction strings (e.g., '1/2') into Fraction objects; tholder.weighted == True"
-      - "In keriox: SignatureThreshold::Weighted(Vec<Vec<(u64, u64)>>) where each tuple is (numerator, denominator)"
-      - "Nesting in keriox allows clause-based thresholds: outer Vec is AND of clauses, inner Vec is OR within a clause"
+      - "Fractions are parsed from string representations (e.g., '1/2') into rational number objects for evaluation"
+      - "Nested clause-based thresholds are supported: outer list is AND of clauses, inner list is OR within a clause"
     examples:
       - "['1/2', '1/2', '1/2'] — any 2-of-3 keys suffice (each weighs 1/2, sum of any two = 1)"
       - "['1/1', '1/2', '1/2'] — first key alone suffices (weight 1), or both other keys together (1/2 + 1/2 = 1)"
@@ -65,15 +62,14 @@ terms:
     related_terms: ["Signing Threshold", "Rotation Threshold", "Dual Threshold"]
 
   - term: "Witness Threshold"
-    synonyms: ["Accountability Threshold", "Tally", "TOAD", "bt field", "toader [keripy]"]
+    synonyms: ["Accountability Threshold", "Tally", "TOAD", "bt field"]
     definition: "The minimum number of witness receipts required for an event to be considered sufficiently accountable. Specified in the bt field of establishment events. Unlike signing and rotation thresholds, the witness threshold is always a simple integer (not fractionally weighted)."
     invariants:
       - "Must be a non-negative integer no greater than the number of witnesses in the witness list"
       - "Determines the M in M-of-N witness accountability"
       - "Can be changed at rotation along with the witness set"
       - "A higher threshold increases security (more witnesses must agree) but requires more witness availability"
-      - "In keripy: toader = Tholder(sith=bt_value) — reuses the same Tholder class but always with a simple integer"
-      - "In keriox: toad field on WitnessConfig — a plain u64, not a SignatureThreshold"
+      - "Always a simple integer — fractionally weighted witness thresholds are not supported"
       - "TOAD stands for Threshold of Accountable Duplicity"
     examples:
       - "bt='3' with 4 witnesses means 3-of-4 must receipt for accountability"
@@ -82,14 +78,14 @@ terms:
     related_terms: ["Witness Configuration", "Witness List", "Signing Threshold"]
 
   - term: "Threshold Satisfaction"
-    synonyms: ["tholder.satisfy() [keripy]", "SignatureThreshold.enough() [keriox]"]
-    definition: "Checking whether a set of verified signature indices satisfies a signing threshold expression. The threshold can be a simple integer (M-of-N) or a fractionally weighted expression. Returns True if the provided indices meet the threshold requirement."
+    synonyms: []
+    definition: "Checking whether a set of verified signature indices satisfies a signing threshold expression. The threshold can be a simple integer (M-of-N) or a fractionally weighted expression. Returns true if the provided indices meet the threshold requirement."
     invariants:
-      - "Simple threshold: len(valid_indices) >= M where threshold is M"
-      - "Weighted threshold: sum of weights at valid_indices >= 1.0"
-      - "The Tholder instance stores the parsed threshold expression from kt or nt fields"
-      - "Tholder.size gives the minimum number of keys needed to possibly satisfy the threshold"
-      - "The same satisfy() mechanism is used for both signing threshold (tholder) and rotation threshold (ntholder)"
+      - "Simple threshold: count of valid indices >= M where threshold is M"
+      - "Weighted threshold: sum of weights at valid indices >= 1.0"
+      - "The threshold evaluator stores the parsed threshold expression from kt or nt fields"
+      - "The evaluator exposes the minimum number of keys needed to possibly satisfy the threshold"
+      - "The same satisfaction check is used for both signing threshold (kt) and rotation threshold (nt)"
     examples:
       - "Simple: tholder(sith='2'), indices=[0, 2] -> 2 >= 2 -> True"
       - "Weighted: tholder(sith=['1/2','1/2','1/2']), indices=[0, 1] -> 0.5 + 0.5 = 1.0 >= 1 -> True"
@@ -97,24 +93,21 @@ terms:
     related_terms: ["Signing Threshold", "Rotation Threshold", "Dual Threshold", "Fractionally Weighted Threshold"]
 
   - term: "Witness Configuration"
-    synonyms: ["WitnessConfig [keriox]", "witness config"]
+    synonyms: ["witness config"]
     definition: "The current witness list paired with the receipt threshold (TOAD). Provides the accountability layer of key state — which witnesses must receipt events and how many receipts are required. Updated atomically at establishment events when witnesses are added, removed, or the threshold changes."
     invariants:
       - "Witness list is an ordered set of witness AIDs (non-transferable prefixes)"
       - "TOAD (bt) must be satisfiable given the witness count: 0 <= bt <= len(witnesses)"
-      - "Provides enough_receipts() check — whether the witness threshold is met for a given event"
+      - "Provides a receipt sufficiency check — whether the witness threshold is met for a given event"
       - "Set at inception in the b field; modified at rotation via br (remove) and ba (add) fields"
-      - "In keripy: Kever holds wits (list of witness AIDs) and toader (Tholder for bt)"
-      - "In keriox: WitnessConfig struct with witnesses Vec and toad u64"
       - "Witness changes at rotation are ordered: removals (br) applied before additions (ba)"
     examples:
-      - "In keripy: wits=['BGKV...', 'BJfu...', 'BAPv...'] with toader=Tholder(sith='2') requiring 2-of-3 receipts"
-      - "In keriox: WitnessConfig { witnesses: [...], toad: 2 }"
-      - "After rotation removing one witness and adding two: wits list updated, bt possibly increased"
+      - "Witness configuration: witnesses=['BGKV...', 'BJfu...', 'BAPv...'] with threshold=2 requiring 2-of-3 receipts"
+      - "After rotation removing one witness and adding two: witness list updated, threshold possibly increased"
     related_terms: ["Witness Threshold", "Witness List"]
 
   - term: "Witness List"
-    synonyms: ["Witness Set", "b field", "Witness Pool", "wits [keripy]"]
+    synonyms: ["Witness Set", "b field", "Witness Pool"]
     definition: "The ordered list of witness AIDs designated by the controller in establishment events. Witnesses provide availability and consistency via the first-seen rule. Set at inception in the b field and modified at rotation via the br (remove) and ba (add) fields."
     invariants:
       - "Designated by the controller, not self-selected by witnesses"
@@ -142,13 +135,13 @@ terms:
     related_terms: ["Threshold Satisfaction", "Partially-Signed Escrow", "Signature Accumulation"]
 
   - term: "Partially-Signed Escrow"
-    synonyms: ["PSE", ".pses [keripy]", "PartiallySignedEscrow [keriox]"]
+    synonyms: ["PSE"]
     definition: "Holds events that have been verified for sequence order but whose controller signatures do not yet satisfy the signing threshold. Accumulates additional signatures over time as they arrive from other multi-sig participants. Events are reprocessed when new signatures are added."
     invariants:
-      - "Triggered when signature verification passes for at least one sig but tholder.satisfy(indices) returns False"
-      - "Indexed by prefix + sn in the partially-signed escrow subdatabase [.pses in keripy]"
+      - "Triggered when at least one signature verifies but the signing threshold is not satisfied"
+      - "Indexed by AID prefix and sequence number in the Partially-Signed escrow"
       - "Signatures are accumulated: new arrivals of the same event (same SAID) merge their signatures into the existing escrow entry"
-      - "Default timeout: 3600 seconds (keripy TimeoutPSE), configurable via EscrowConfig.partially_signed_timeout (keriox)"
+      - "Default timeout: 3600 seconds (configurable)"
       - "On reprocessing, if signatures now satisfy the threshold, the event advances to witness/delegation checks (may cascade to PWE or PDE)"
     examples:
       - "3-of-5 multi-sig: first participant submits event with 1 signature -> PSE. Second participant adds signature -> still 2 < 3 -> stays in PSE. Third arrives -> 3 >= 3 -> threshold satisfied -> advance to witness check."
@@ -160,7 +153,7 @@ terms:
     definition: "The process of merging newly-arriving signatures into an existing partially-signed escrow entry for the same event. When a multi-sig participant signs and submits the same event (same SAID), their signature is appended to the existing signature set rather than creating a duplicate escrow entry."
     invariants:
       - "Signatures are matched by event SAID -- only signatures for the exact same event are merged"
-      - "The controller signature store [.sigs in keripy] uses append semantics, not replace"
+      - "The controller signature store uses append semantics, not replace"
       - "After accumulation, the updated signature set is re-checked against the threshold"
       - "Idempotent: re-submitting the same signature from the same index is a no-op"
       - "Both controller signatures (Sigers) and witness receipts (Wigers) can accumulate over time"
@@ -203,7 +196,7 @@ rules:
   - "A rotation threshold (nt) must be satisfiable: for simple thresholds, M <= len(next_digests); for weighted, at least one subset has sum >= 1"
   - "A witness threshold (bt) must be a non-negative integer: 0 <= bt <= len(witnesses)"
   - "Rotation events must satisfy BOTH the new signing threshold (kt) AND the prior rotation threshold (nt) — the dual threshold requirement"
-  - "Threshold satisfaction uses the same Tholder.satisfy() mechanism for all three threshold types"
+  - "Threshold satisfaction uses the same evaluation mechanism for all three threshold types"
   - "For weighted thresholds, the sum of weights of actual signers must be >= 1"
   - "Witness threshold is always a simple integer — fractionally weighted witness thresholds are not supported"
   - "Witness list modifications at rotation are ordered: removals (br) applied first, then additions (ba)"

@@ -31,26 +31,24 @@ terms:
     related_terms: ["KAWA", "TOAD"]
 
   - term: "TOAD"
-    synonyms: ["Threshold of Accountable Duplicity", "toader [keripy]", "tally [keriox]"]
+    synonyms: ["Threshold of Accountable Duplicity"]
     definition: "The numeric threshold of witness receipts required before an event is considered fully witnessed. Set per AID in establishment events. Must satisfy: TOAD <= witness_count and TOAD >= ample(witness_count). The name emphasizes that this threshold determines when duplicity becomes accountable."
     invariants:
       - "Set in the bt field of establishment events, alongside the witness list"
       - "Must be less than or equal to the total number of designated witnesses"
       - "Must be at least ample(witness_count), the BFT minimum for the given witness count"
-      - "In keripy, the Toader class (coring module) wraps the TOAD value"
-      - "In keriox, the tally field on establishment events holds this value"
     examples:
       - "bt='3' with 5 witnesses: 3 receipts required before the event is fully witnessed"
-      - "Toader(toad=4) in keripy wrapping bt=4 for a 6-witness configuration"
+      - "bt='4' for a 6-witness configuration: 4 receipts required"
     related_terms: ["KAWA", "Witness"]
 
   - term: "Witness Threshold Check"
-    synonyms: ["toader.satisfy() [keripy]", "WitnessConfig.enough_receipts() [keriox]"]
+    synonyms: []
     definition: "Verification that a sufficient number of designated witnesses have receipted an event, meeting or exceeding the witness threshold (TOAD). The check compares the count of verified witness receipt indices against the threshold."
     invariants:
       - "Each witness receipt is a signature (indexed or non-indexed) from a designated witness"
       - "Witness receipts are verified against the witness's own public key"
-      - "toader.satisfy(windices) checks whether the count of valid witness signatures meets the TOAD"
+      - "The check evaluates whether the count of valid witness signatures meets the TOAD"
       - "Insufficient witness receipts route the event to the Partially-Witnessed Escrow (PWE)"
       - "New witness receipts arriving later trigger reprocessing of PWE-escrowed events"
     examples:
@@ -59,14 +57,14 @@ terms:
     related_terms: ["KAWA", "TOAD", "Witness"]
 
   - term: "Partially-Witnessed Escrow"
-    synonyms: ["PWE", ".pwes [keripy]", "PartiallyWitnessedEscrow [keriox]"]
+    synonyms: ["PWE"]
     definition: "Holds events that pass signature validation but whose witness receipt count does not yet satisfy the witness threshold (TOAD). Events are reprocessed when new witness receipts arrive."
     invariants:
-      - "Triggered when toader.satisfy(windices) returns False -- insufficient witness receipts"
-      - "Indexed by prefix + sn in the partially-witnessed escrow subdatabase [.pwes in keripy]"
+      - "Triggered when the witness receipt count is insufficient to satisfy the TOAD"
+      - "Indexed by AID prefix and sequence number in the Partially-Witnessed escrow"
       - "Witness receipts accumulate as they arrive from designated witnesses"
-      - "Default timeout: 3600 seconds (keripy TimeoutPWE), configurable via EscrowConfig.partially_witnessed_timeout (keriox)"
-      - "Reprocessed when PartiallyWitnessed or ReceiptOutOfOrder notifications fire (keriox) or during processEscrowPartialWigs sweep (keripy)"
+      - "Default timeout: 3600 seconds (configurable)"
+      - "Reprocessed when new witness receipts arrive for the same event"
       - "On reprocessing, if witness threshold is now met, event is accepted to KEL"
     examples:
       - "TOAD=3 with 5 witnesses: event has 2 receipts -> PWE. Third receipt arrives -> 3 >= 3 -> accept to KEL."

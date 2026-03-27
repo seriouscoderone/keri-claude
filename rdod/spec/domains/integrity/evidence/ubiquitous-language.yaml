@@ -30,36 +30,34 @@ terms:
       - "Detected forks trigger escrow to the Likely Duplicitous Escrow for further investigation"
     examples:
       - "Event E1 at (AID, sn=5) with SAID=X already accepted; Event E2 at (AID, sn=5) with SAID=Y arrives — fork detected"
-      - "In keripy Kevery: an incoming event at an occupied sn with a different digest triggers duplicity handling"
+      - "During event processing, an incoming event at an occupied sn with a different digest triggers duplicity handling"
     related_terms: ["Duplicity Evidence", "Likely Duplicitous Escrow"]
 
   - term: "Likely Duplicitous Escrow"
-    synonyms: ["LDE", ".ldes [keripy]"]
+    synonyms: ["LDE"]
     definition: "Temporary storage for events that appear duplicitous but haven't been fully confirmed. Events land here when a fork is detected during event processing."
     invariants:
       - "Events are placed here when a conflicting event at the same (prefix, sn) is detected"
       - "Timeout: 3600 seconds — escrowed events are pruned after expiry"
-      - "Events may be promoted to the confirmed Duplicitous Event Log (DEL store [.dels in keripy]) after investigation"
-      - "In keripy: stored in the likely duplicitous escrow database [.ldes in keripy], processed by the Event Processor (Kevery in keripy).processEscrowLikelyDuplicitous()"
+      - "Events may be promoted to the confirmed Duplicitous Event Log (DEL) after investigation"
       - "Distinguished from the DEL — LDE holds suspected duplicity, DEL holds confirmed duplicity"
     examples:
-      - "An event at sn=5 arrives that conflicts with the accepted event at sn=5 — placed in likely duplicitous escrow [.ldes in keripy] for investigation"
-      - "After timeout or confirmation, event is either promoted to the DEL store [.dels in keripy] or pruned"
+      - "An event at sn=5 arrives that conflicts with the accepted event at sn=5 — placed in the Likely Duplicitous escrow for investigation"
+      - "After timeout or confirmation, event is either promoted to the DEL or pruned"
     related_terms: ["Fork Detection", "Duplicitous Event Log", "Duplicity Evidence"]
 
   - term: "Duplicitous Event Log"
-    synonyms: ["DEL", ".dels [keripy]", "DuplicitousEvents escrow [keriox]"]
+    synonyms: ["DEL"]
     definition: "Permanent storage of confirmed duplicitous events. Unlike other escrows, entries are never automatically deleted — they serve as forensic evidence of controller misbehavior. Stored separately from the valid KEL."
     invariants:
       - "Contains confirmed duplicitous events — events verified as forks at the same (prefix, sn)"
       - "Entries are never automatically pruned or timed out — they are permanent evidence"
       - "Stored separately from the KEL — the DEL is a forensic log, not an event history"
-      - "In keripy: DEL store [.dels in keripy], distinct from the likely duplicitous escrow [.ldes in keripy]"
-      - "In keriox: DuplicitousEvents escrow in the event processor"
+      - "Distinct from the Likely Duplicitous Escrow (LDE) which holds suspected duplicity"
       - "Used by judges and watchers to make trust decisions"
     examples:
-      - "Two confirmed conflicting rotation events at sn=3, both with valid signatures — stored permanently in the DEL store [.dels in keripy]"
-      - "A judge queries the DEL store [.dels in keripy] for an AID and finds confirmed duplicity evidence — revokes trust"
+      - "Two confirmed conflicting rotation events at sn=3, both with valid signatures — stored permanently in the DEL"
+      - "A judge queries the DEL for an AID and finds confirmed duplicity evidence — revokes trust"
     related_terms: ["Likely Duplicitous Escrow", "Fork Detection", "Duplicity Evidence"]
 
 events:
@@ -69,11 +67,11 @@ events:
 
   - name: "EvidenceEscrowed"
     payload: "aid: AID, sn: int, conflicting_event: KeyEvent"
-    triggers: "A detected fork causes the conflicting event to be placed in the Likely Duplicitous Escrow [.ldes in keripy]"
+    triggers: "A detected fork causes the conflicting event to be placed in the Likely Duplicitous Escrow"
 
   - name: "EvidencePromoted"
     payload: "aid: AID, sn: int, evidence: DuplicityEvidence"
-    triggers: "Likely duplicitous evidence is confirmed and promoted from likely duplicitous escrow [.ldes in keripy] to the permanent DEL store [.dels in keripy]"
+    triggers: "Likely duplicitous evidence is confirmed and promoted from the Likely Duplicitous Escrow to the permanent DEL"
 
   - name: "EvidenceExpired"
     payload: "aid: AID, sn: int, conflicting_event: KeyEvent"
@@ -86,6 +84,6 @@ events:
 rules:
   - "A fork at (prefix, sn) is non-repudiable evidence of duplicity — only the controller can sign events"
   - "Likely duplicitous events are escrowed for 3600 seconds before being pruned or promoted"
-  - "Confirmed duplicity evidence in the DEL store [.dels in keripy] is never automatically deleted — it is permanent forensic record"
+  - "Confirmed duplicity evidence in the DEL is never automatically deleted — it is permanent forensic record"
   - "Event acceptance triggers downstream evidence processing — implementations decouple this via internal coordination mechanisms"
   - "Fork detection compares SAIDs, not event content — different SAIDs at the same (prefix, sn) is sufficient"

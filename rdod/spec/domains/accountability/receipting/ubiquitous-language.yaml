@@ -25,70 +25,68 @@ terms:
     synonyms: []
     definition: "Three distinct receipt message types in the KERI protocol, each carrying different signature and identifier structures depending on the signer's transferability and role."
     invariants:
-      - "Non-transferable Receipt Couple: (Prefixer, Cigar) — witness AID prefix + unindexed signature. Used by non-transferable witness AIDs. Stored in the non-transferable receipt store [.rcts in keripy]"
-      - "Transferable Receipt Quadruple: (Prefixer, Seqner, Saider, Siger) — validator prefix + sn + digest + indexed signature. Used by transferable validator/delegator AIDs. Stored in the transferable receipt store [.vrcs in keripy]"
-      - "Witness Indexed Receipt: (Diger, Siger) — event digest + indexed witness signature. Used in indirect mode. Stored in the witness signature store [.wigs in keripy]"
+      - "Non-transferable Receipt Couple: witness AID prefix + unindexed signature. Used by non-transferable witness AIDs. Stored in the non-transferable receipt store"
+      - "Transferable Receipt Quadruple: validator prefix + sn + digest + indexed signature. Used by transferable validator/delegator AIDs. Stored in the transferable receipt store"
+      - "Witness Indexed Receipt: event digest + indexed witness signature. Used in indirect mode. Stored in the witness signature store"
       - "Receipt type is determined by the signer's AID type (transferable vs. non-transferable) and role (witness vs. validator)"
     examples:
-      - "A non-transferable witness receipts via Couple: its AID prefix + Cigar (unindexed Ed25519 signature)"
-      - "A transferable validator receipts via Quadruple: its AID + current sn + event digest + indexed Siger"
-      - "An indexed witness receipt in the witness signature store [.wigs in keripy]: event Diger + Siger with the witness's index in the b list"
+      - "A non-transferable witness receipts via Couple: its AID prefix + unindexed Ed25519 signature"
+      - "A transferable validator receipts via Quadruple: its AID + current sn + event digest + indexed signature"
+      - "An indexed witness receipt in the witness signature store: event digest + indexed signature with the witness's index in the b list"
     related_terms: ["Receipt", "KERL", "CESR Attachment Codes"]
 
   - term: "Receipt Escrows"
     synonyms: []
     definition: "Typed escrow queues for receipts that cannot yet be verified because the corresponding key event has not been processed."
     invariants:
-      - "Unverified Witness Receipts [.uwes in keripy]: witness receipts for events not yet in the KEL"
-      - "Unverified Non-transferable Receipts [.ures in keripy]: non-transferable receipts for unknown events"
-      - "Unverified Transferable Receipts [.vres in keripy]: transferable receipts for unknown events"
+      - "Unverified Witness Receipts: witness receipts for events not yet in the KEL"
+      - "Unverified Non-transferable Receipts: non-transferable receipts for unknown events"
+      - "Unverified Transferable Receipts: transferable receipts for unknown events"
       - "Default timeout: 3600 seconds — escrowed receipts are pruned after expiry"
-      - "Drained by Kevery.processEscrowUnverWitness(), processEscrowUnverNonTrans(), processEscrowUnverTrans() in keripy"
+      - "Each escrow type is drained when the missing event arrives"
       - "When the missing event arrives, matching escrowed receipts are promoted to verified storage"
     examples:
-      - "A witness receipt for sn=5 arrives before the event at sn=5 — escrowed in the unverified witness receipt escrow [.uwes in keripy] until the event is processed"
-      - "After event at sn=5 is accepted, the unverified witness receipt escrow [.uwes in keripy] is drained and matching receipts are attached to the event"
+      - "A witness receipt for sn=5 arrives before the event at sn=5 — escrowed in the Unverified Witness Receipt escrow until the event is processed"
+      - "After event at sn=5 is accepted, the Unverified Witness Receipt escrow is drained and matching receipts are attached to the event"
     related_terms: ["Receipt", "Receipt Types", "Unverified Receipt Escrow", "Unverified Witness Receipt Escrow", "Unverified Transferable Receipt Escrow"]
 
   - term: "Unverified Receipt Escrow"
-    synonyms: ["URE", ".ures [keripy]"]
-    definition: "Holds non-transferable witness receipts (Couples) for events that have not yet been accepted into the KEL. When the corresponding event is accepted, escrowed receipts are promoted to verified storage."
+    synonyms: ["URE"]
+    definition: "Holds non-transferable witness receipts (couples) for events that have not yet been accepted into the KEL. When the corresponding event is accepted, escrowed receipts are promoted to verified storage."
     invariants:
-      - "Stores non-transferable receipt couples (Prefixer + Cigar) indexed by event digest key"
-      - "Drained by Kevery.processEscrowUnverNonTrans() in keripy"
+      - "Stores non-transferable receipt couples (AID prefix + unindexed signature) indexed by event digest key"
+      - "Drained when the corresponding event is accepted into the KEL"
       - "Default timeout: 3600 seconds"
     related_terms: ["Receipt Escrows", "Receipt Types"]
 
   - term: "Unverified Witness Receipt Escrow"
-    synonyms: ["UWE", ".uwes [keripy]"]
-    definition: "Holds indexed witness receipts (Sigers) for events that have not yet been accepted into the KEL. When the corresponding event is accepted, escrowed witness receipts are promoted to the witness signature store."
+    synonyms: ["UWE"]
+    definition: "Holds indexed witness receipts for events that have not yet been accepted into the KEL. When the corresponding event is accepted, escrowed witness receipts are promoted to the witness signature store."
     invariants:
-      - "Stores indexed witness signatures (Siger) indexed by event digest key"
-      - "Drained by Kevery.processEscrowUnverWitness() in keripy"
+      - "Stores indexed witness signatures indexed by event digest key"
+      - "Drained when the corresponding event is accepted into the KEL"
       - "Default timeout: 3600 seconds"
     related_terms: ["Receipt Escrows", "Receipt Types"]
 
   - term: "Unverified Transferable Receipt Escrow"
-    synonyms: ["VRE", ".vres [keripy]"]
-    definition: "Holds transferable receipt quadruples (Prefixer + Seqner + Saider + Siger) for events that have not yet been accepted into the KEL. When the corresponding event is accepted, escrowed transferable receipts are promoted to verified storage."
+    synonyms: ["VRE"]
+    definition: "Holds transferable receipt quadruples (AID prefix + sn + digest + indexed signature) for events that have not yet been accepted into the KEL. When the corresponding event is accepted, escrowed transferable receipts are promoted to verified storage."
     invariants:
       - "Stores transferable receipt quadruples indexed by event digest key"
-      - "Drained by Kevery.processEscrowUnverTrans() in keripy"
+      - "Drained when the corresponding event is accepted into the KEL"
       - "Default timeout: 3600 seconds"
     related_terms: ["Receipt Escrows", "Receipt Types"]
 
   - term: "Witness Receipt Generator"
-    synonyms: ["WitnessReceiptGenerator [keriox]", "Receiptor [keripy]"]
+    synonyms: []
     definition: "Component that automatically generates a witness receipt (non-transferable signature) when a new key event is accepted into the KEL."
     invariants:
-      - "Triggers on new key event acceptance — KeyEventAdded notification in keriox, cues in keripy"
+      - "Triggers on new key event acceptance"
       - "Generates a non-transferable receipt using the witness's signing keys"
-      - "In keriox: observes KeyEventAdded notification via internal coordination"
-      - "In keripy: the Receiptor class processes cues from Kevery to generate receipts"
       - "The generated receipt is then disseminated to the controller and other witnesses"
     examples:
-      - "In keriox: WitnessReceiptGenerator subscribes to KeyEventAdded, creates receipt for each accepted event"
-      - "In keripy: Receiptor.processCues() iterates cues, generating receipts for witnessed events"
+      - "A witness node accepts a rotation event and automatically generates a receipt with its non-transferable signature"
+      - "The receipt generator processes event acceptance notifications and creates receipts for each witnessed event"
     related_terms: ["Receipt", "Receipt Types"]
 
   # Inherits: "KERL" from domain://identity
@@ -111,7 +109,7 @@ events:
 
   - name: "ReceiptEscrowed"
     payload: "aid: AID, sn: int, event_said: SAID, witness_aid: WitnessAID, escrow_type: EscrowType"
-    triggers: "A receipt arrives for an event not yet in the KEL — placed in typed escrow ([.uwes in keripy], [.ures in keripy], or [.vres in keripy])"
+    triggers: "A receipt arrives for an event not yet in the KEL — placed in the appropriate typed escrow (Unverified Witness, Unverified Non-transferable, or Unverified Transferable)"
 
   - name: "EscrowDrained"
     payload: "aid: AID, sn: int, event_said: SAID, promoted_count: int, escrow_type: EscrowType"
