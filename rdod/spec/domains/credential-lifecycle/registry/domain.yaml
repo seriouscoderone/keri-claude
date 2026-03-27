@@ -4,11 +4,12 @@ id: "credential-lifecycle/registry"
 name: "Credential Registry"
 description: >
   Creating and managing credential registries — the containers that track groups
-  of credentials. A registry is initialized via a registry inception (vcp/rip) event,
-  rotated via registry rotation (vrt) events, and identified by its REGID (the SAID
-  of its inception event). Registry configuration (backer mode, backer list, threshold)
-  is established at inception and governs all subsequent credential events within the
-  registry.
+  of credentials. A registry is initialized via a registry inception (rip) event
+  and identified by its REGID (the SAID of its inception event). Registry
+  configuration (blindability mode, backer list, threshold) is established at
+  inception and is immutable — there is no registry rotation in v2. All
+  subsequent credential events within the registry are governed by the inception
+  configuration. LEGACY (v1 -- do NOT implement): vcp inception, vrt rotation events.
 version: "0.1.0"
 
 source_material:
@@ -17,7 +18,7 @@ source_material:
   - type: document
     reference: "acdc-specification.md — Registry Inception, Registry Rotation, Backer Configuration sections"
   - type: implementation
-    reference: "keripy — src/keri/vdr/eventing.py: Regery (registry collection manager), Registry class, VCP/VRT event handling"
+    reference: "keripy — src/keri/vdr/eventing.py: Regery (registry collection manager), Registry class, rip event handling. LEGACY (v1 -- do NOT implement): VCP/VRT event handling"
   - type: implementation
     reference: "keriox/teliox — src/state.rs: ManagerTelState, registry management event processing"
 
@@ -52,9 +53,11 @@ implementation_guidance:
     (registryByName), and management event processing. The Registry class
     represents a single registry instance. In keriox, ManagerTelState tracks
     the registry's management state. The key insight is that registry configuration
-    (backer mode) is immutable after inception and constrains all subsequent
-    credential events within that registry.
+    (blindability mode) is immutable after inception and constrains all subsequent
+    credential events within that registry. In v2 there is no rotation event --
+    the rip inception event is the only management event.
+    LEGACY (v1 -- do NOT implement): vcp/vrt events, NoBackers trait, backer rotation.
 
 issues: []
 
-tags: ["registry", "inception", "rotation", "backer-configuration", "regid", "credential-lifecycle"]
+tags: ["registry", "inception", "blindable", "non-blindable", "backer-configuration", "regid", "credential-lifecycle"]

@@ -57,8 +57,8 @@ errors:
     related_port: "port://credential-lifecycle/verification/inbound/validate-tel-event"
 
   - name: "RegistryStateUnavailableError"
-    description: "The registry's VCP/management TEL is not yet available"
-    cause: "TEL validation pipeline step 2 failed — registry state cannot be computed because the registry inception event has not been received"
+    description: "The registry's rip/management TEL is not yet available"
+    cause: "TEL validation pipeline step 2 failed — registry state cannot be computed because the registry inception event (rip) has not been received"
     recovery: "escrow"
     escrow_queue: "MRE"
     severity: "transient"
@@ -123,7 +123,7 @@ errors:
         description: "The credential's current state (NotIssued, Issued, Revoked)"
       - field: "attempted_transition"
         type: "string"
-        description: "The transition the event attempted (e.g., iss, rev, bis, brv)"
+        description: "The transition the event attempted (e.g., upd with ts='issued', upd with ts='revoked', bup with ts='issued', bup with ts='revoked')"
     related_port: "port://credential-lifecycle/verification/inbound/validate-tel-event"
 
   - name: "OutOfOrderTELError"

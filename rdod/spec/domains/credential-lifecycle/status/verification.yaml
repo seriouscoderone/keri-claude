@@ -65,7 +65,7 @@ properties:
         )
     notes: "Hash-chain integrity verification"
 
-  - invariant: "An iss/bis event is only valid when credential state is NotIssued"
+  - invariant: "An upd/bup event with ts='issued' is only valid when credential state is NotIssued"
     term: "State Transition Rules"
     technique: smt
     formal:
@@ -73,13 +73,13 @@ properties:
       expression: |
         ForAll([event, state],
           Implies(
-            And(event.t in ('iss', 'bis'), is_valid_transition(event, state)),
+            And(event.t in ('upd', 'bup'), event.ts == 'issued', is_valid_transition(event, state)),
             state == 'NotIssued'
           )
         )
-    notes: "Issuance precondition"
+    notes: "Issuance precondition — v2 uses upd/bup with ts='issued' instead of LEGACY (v1 -- do NOT implement) iss/bis"
 
-  - invariant: "A rev/brv event is only valid when credential state is Issued"
+  - invariant: "An upd/bup event with ts='revoked' is only valid when credential state is Issued"
     term: "State Transition Rules"
     technique: smt
     formal:
@@ -87,11 +87,11 @@ properties:
       expression: |
         ForAll([event, state],
           Implies(
-            And(event.t in ('rev', 'brv'), is_valid_transition(event, state)),
+            And(event.t in ('upd', 'bup'), event.ts == 'revoked', is_valid_transition(event, state)),
             state == 'Issued'
           )
         )
-    notes: "Revocation precondition"
+    notes: "Revocation precondition — v2 uses upd/bup with ts='revoked' instead of LEGACY (v1 -- do NOT implement) rev/brv"
 
   - invariant: "No event is valid when credential state is Revoked (terminal state)"
     term: "State Transition Rules"
@@ -107,18 +107,18 @@ properties:
         )
     notes: "Terminal state — no further transitions possible"
 
-  - invariant: "Registry mode (NoBackers trait) must match the event type: NoBackers -> iss/rev, backed -> bis/brv"
+  - invariant: "Registry blindability mode must match the event type: non-blindable -> upd, blindable -> bup"
     term: "State Transition Rules"
     technique: property-based
     formal:
       language: python
       expression: |
         lambda registry, event: (
-          (has_nobackers_trait(registry) and event.t in ('iss', 'rev'))
-          or (not has_nobackers_trait(registry) and event.t in ('bis', 'brv'))
+          (is_non_blindable(registry) and event.t == 'upd')
+          or (is_blindable(registry) and event.t == 'bup')
         )
     strategy: "Generate registries with both modes and all event types; verify mode matching"
-    notes: "Mode mismatch is rejected"
+    notes: "Mode mismatch is rejected — non-blindable registries use upd, blindable registries use bup. LEGACY (v1 -- do NOT implement): NoBackers trait mapped to iss/rev, backed mapped to bis/brv"
 
   - invariant: "Replaying the same TEL events in order always produces the same state (deterministic)"
     term: "State Reconstruction"
@@ -163,24 +163,24 @@ contracts:
           language: python
           expression: |
             is_valid_tel_event(event) and (
-              (event.t in ('iss', 'bis') and verifier.vc_state(event.acdc_said) == 'NotIssued') or
-              (event.t in ('rev', 'brv') and verifier.vc_state(event.acdc_said) == 'Issued')
+              (event.t in ('upd', 'bup') and event.ts == 'issued' and verifier.vc_state(event.acdc_said) == 'NotIssued') or
+              (event.t in ('upd', 'bup') and event.ts == 'revoked' and verifier.vc_state(event.acdc_said) == 'Issued')
             )
-        description: "apply_event: event must be valid and current state must allow the transition"
+        description: "apply_event: event must be valid upd/bup with appropriate ts field and current state must allow the transition"
     postconditions:
       - formal:
           language: python
           expression: |
-            (event.t in ('iss', 'bis') and result.new_state == 'Issued') or
-            (event.t in ('rev', 'brv') and result.new_state == 'Revoked')
-        description: "iss/bis events transition state to Issued; rev/brv events transition state to Revoked"
+            (event.t in ('upd', 'bup') and event.ts == 'issued' and result.new_state == 'Issued') or
+            (event.t in ('upd', 'bup') and event.ts == 'revoked' and result.new_state == 'Revoked')
+        description: "upd/bup events with ts='issued' transition state to Issued; upd/bup events with ts='revoked' transition state to Revoked"
 
   - port_ref: "port://credential-lifecycle/status/inbound/state-reconstruction"
     preconditions:
       - formal:
           language: python
-          expression: "is_valid_said(regid) and len(events) > 0 and events[0].t in ('rip', 'vcp')"
-        description: "Events must start with inception and be a non-empty list"
+          expression: "is_valid_said(regid) and len(events) > 0 and events[0].t == 'rip'"
+        description: "Events must start with rip inception and be a non-empty list"
     postconditions:
       - formal:
           language: python
@@ -200,16 +200,16 @@ contracts:
       - description: "State transition must be valid per the credential FSM"
         formal:
           language: "pseudocode"
-          expression: "(current_state == NotIssued AND event.t in ['iss','bis']) OR (current_state == Issued AND event.t in ['rev','brv'])"
+          expression: "(current_state == NotIssued AND event.t in ['upd','bup'] AND event.ts == 'issued') OR (current_state == Issued AND event.t in ['upd','bup'] AND event.ts == 'revoked')"
     postconditions:
       - description: "On issuance: credential transitions to Issued state"
         formal:
           language: "pseudocode"
-          expression: "event.t in ['iss','bis'] implies credential_state(event.i) == Issued"
+          expression: "event.t in ['upd','bup'] AND event.ts == 'issued' implies credential_state(event.i) == Issued"
       - description: "On revocation: credential transitions to Revoked state (terminal)"
         formal:
           language: "pseudocode"
-          expression: "event.t in ['rev','brv'] implies credential_state(event.i) == Revoked"
+          expression: "event.t in ['upd','bup'] AND event.ts == 'revoked' implies credential_state(event.i) == Revoked"
       - description: "On escrow: TEL event stored pending missing prerequisite"
         formal:
           language: "pseudocode"
@@ -224,12 +224,12 @@ state_machines:
     transitions:
       - from: "NotIssued"
         to: "Issued"
-        trigger: "Issuance event (iss or bis) accepted to TEL"
-        guard: "Registry exists AND issuer key state valid AND KEL anchor present AND event sn == current_sn + 1 AND p field matches prior event SAID AND registry mode matches event type"
+        trigger: "Update event (upd with ts='issued' for non-blindable, bup with ts='issued' for blindable) accepted to TEL"
+        guard: "Registry exists AND issuer key state valid AND KEL anchor present AND event sn == current_sn + 1 AND p field matches prior event SAID AND registry blindability mode matches event type (upd/bup)"
       - from: "Issued"
         to: "Revoked"
-        trigger: "Revocation event (rev or brv) accepted to TEL"
-        guard: "Credential in Issued state AND issuer key state valid AND KEL anchor present AND event sn == current_sn + 1 AND p field matches prior event SAID AND registry mode matches event type"
+        trigger: "Update event (upd with ts='revoked' for non-blindable, bup with ts='revoked' for blindable) accepted to TEL"
+        guard: "Credential in Issued state AND issuer key state valid AND KEL anchor present AND event sn == current_sn + 1 AND p field matches prior event SAID AND registry blindability mode matches event type (upd/bup)"
     invariants:
       - "No reverse transitions — Revoked is permanent and terminal"
       - "No skip transitions — cannot go directly from NotIssued to Revoked"
@@ -240,34 +240,25 @@ state_machines:
 
   - name: "RegistryLifecycle"
     term: "Registry State"
-    states: ["Uninitialized", "Active", "Rotated"]
+    states: ["Uninitialized", "Active"]
     initial_state: "Uninitialized"
     terminal_states: []
     transitions:
       - from: "Uninitialized"
         to: "Active"
-        trigger: "VCP/rip event processed"
+        trigger: "rip event processed"
         guard: "Event sn == 0 AND issuer AID is valid"
-      - from: "Active"
-        to: "Rotated"
-        trigger: "Registry rotation event (vrt) accepted"
-        guard: "Registry exists AND issuer key state valid AND registry has backers (not NoBackers)"
-      - from: "Rotated"
-        to: "Active"
-        trigger: "Rotation complete — new backer set active"
-        guard: "New backers configured AND event sn == current_sn + 1 AND p field matches prior event SAID"
     invariants:
-      - "Registry must be Active or Rotated before any credential events can be processed"
-      - "Registry rotation changes the backer set but does not affect credential states"
-      - "All credentials under this registry remain in their current state during rotation"
-      - "VRT events are only valid for registries with backers (not NoBackers)"
-      - "Config traits set at inception cannot be changed by VRT events"
+      - "Registry must be Active before any credential events can be processed"
+      - "Registry configuration is immutable after inception — no v2 equivalent of vrt exists"
+      - "All credentials under this registry remain in their current state"
+      - "LEGACY (v1 -- do NOT implement): vrt rotation events, NoBackers trait, Rotated state. In v2 registry config is immutable after rip inception."
 
 # TEL event acceptance as a composable constraint graph.
 # An AI reads this as a DAG: C1 → C2 → C3 → C4 → C5 (sequential with escrow at each stage).
 validation_constraints:
   - id: "C1_registry_exists"
-    constraint: "Registry identified by ri (or ra.i) must exist and be in Active or Rotated state"
+    constraint: "Registry identified by ri (or ra.i) must exist and be in Active state"
     depends_on: []
     on_failure: "escrow to MRE — missing registry escrow"
 

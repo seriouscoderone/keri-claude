@@ -2,8 +2,9 @@
 domain_ref: "credential-lifecycle/registry"
 
 # Error catalog for the Registry Management domain.
-# Covers registry inception (rip/vcp), registry rotation (vrt),
-# and backer configuration validation.
+# Covers registry inception (rip) and backer configuration validation.
+# In v2, registry config is immutable after inception — no rotation event exists.
+# LEGACY (v1 -- do NOT implement): vcp inception, vrt rotation, NoBackers trait.
 #
 # Severity levels:
 #   transient  — condition may self-resolve (escrow and retry)
@@ -13,7 +14,7 @@ domain_ref: "credential-lifecycle/registry"
 errors:
   - name: "RegistryAlreadyExistsError"
     description: "Attempted to create a registry with a REGID that already exists"
-    cause: "A registry inception event (rip/vcp) was submitted but a registry with this REGID is already established"
+    cause: "A registry inception event (rip) was submitted but a registry with this REGID is already established"
     recovery: "abort"
     severity: "fatal"
     context:
@@ -41,7 +42,7 @@ errors:
 
   - name: "InvalidBackerConfigError"
     description: "Registry backer configuration is invalid"
-    cause: "Backer threshold exceeds backer count, or backers specified for a backerless registry"
+    cause: "Backer threshold exceeds backer count, or backer configuration is inconsistent with registry blindability mode"
     recovery: "abort"
     severity: "fatal"
     context:
@@ -56,37 +57,17 @@ errors:
         description: "Configured threshold"
     related_port: "port://credential-lifecycle/registry/inbound/registry-management"
 
-  - name: "NoBackersRotationError"
-    description: "Attempted to rotate a registry that has the NoBackers config trait"
-    cause: "A VRT event was submitted for a backerless registry — rotation is structurally invalid for registries with the NoBackers trait"
-    recovery: "abort"
-    severity: "fatal"
-    context:
-      - field: "regid"
-        type: "string"
-        description: "The backerless registry REGID"
-    related_port: "port://credential-lifecycle/registry/inbound/registry-management"
+  # LEGACY (v1 -- do NOT implement): NoBackersRotationError removed.
+  # In v2 there is no vrt rotation event and no NoBackers trait.
+  # Registry config is immutable after rip inception.
 
-  - name: "RegistrySequenceError"
-    description: "Registry management event has an invalid sequence number"
-    cause: "VRT event sn does not equal current registry sn + 1 — sequence gap, duplicate, or reversal detected"
-    recovery: "abort"
-    severity: "fatal"
-    context:
-      - field: "regid"
-        type: "string"
-        description: "The registry REGID"
-      - field: "received_sn"
-        type: "integer"
-        description: "The sequence number in the VRT event"
-      - field: "expected_sn"
-        type: "integer"
-        description: "The expected next sequence number (current sn + 1)"
-    related_port: "port://credential-lifecycle/registry/inbound/registry-management"
+  # LEGACY (v1 -- do NOT implement): RegistrySequenceError for VRT removed.
+  # In v2 the registry management TEL has exactly one event (rip at sn 0).
+  # There is no registry rotation, so no sequence number validation for management events beyond inception.
 
   - name: "MissingKELSealError"
     description: "Registry management event is not anchored in the issuer's KEL"
-    cause: "A registry inception (rip) or rotation (vrt) event was submitted without a corresponding anchor seal in the issuer's KEL"
+    cause: "A registry inception (rip) event was submitted without a corresponding anchor seal in the issuer's KEL"
     recovery: "escrow"
     severity: "transient"
     context:
@@ -103,7 +84,7 @@ errors:
 
   - name: "ConfigTraitMutationError"
     description: "Attempted to modify immutable config traits after registry inception"
-    cause: "A rotation event (vrt) attempted to change config traits (e.g., NoBackers, EstOnly) that were set at inception and are immutable"
+    cause: "An event attempted to change config traits (e.g., EstOnly, DoNotDelegate) that were set at inception and are immutable — in v2 registry config cannot be changed after rip inception"
     recovery: "abort"
     severity: "fatal"
     context:

@@ -199,32 +199,30 @@ properties:
     strategy: "Custom strategies for valid and invalid key events"
     notes: "Local Event Processor (Kevery in keripy) applies the same validation rules as any KERI event processor"
 
-  - invariant: "Registry TEL events (vcp, iss, rev, bis, brv) created and stored in the local Event Database (Baser in keripy)"
+  - invariant: "Registry TEL events (rip, upd, bup) created and stored in the local Event Database (Baser in keripy)"
     term: "Local Credential Management"
     technique: property-based
     formal:
       language: python
       expression: |
         @given(
-            event_type=st.sampled_from(['vcp', 'iss', 'rev', 'bis', 'brv'])
+            event_type=st.sampled_from(['rip', 'upd', 'bup'])
         )
         def test_tel_events_stored_locally(event_type):
             habery = create_habery()
             hab = habery.makeHab('test')
             regery = create_regery(habery)
-            if event_type == 'vcp':
+            if event_type == 'rip':
                 event = regery.incept()
-            elif event_type == 'iss':
-                event = regery.issue(hab=hab, said=make_said())
-            elif event_type == 'rev':
-                event = regery.revoke(hab=hab, said=make_said())
-            else:
-                return  # bis/brv are for backerless registries
+            elif event_type == 'upd':
+                event = regery.issue(hab=hab, said=make_said())  # upd with ts='issued'
+            elif event_type == 'bup':
+                event = regery.issue(hab=hab, said=make_said(), blindable=True)  # bup with ts='issued'
             # Event stored in local database
             stored = habery.db.getTelEvent(event.said)
             assert stored is not None
     strategy: "st.sampled_from for TEL event types"
-    notes: "All TEL events are created and stored locally — no cloud agent interaction"
+    notes: "All TEL events are created and stored locally — no cloud agent interaction. LEGACY (v1 -- do NOT implement): vcp, iss, rev, bis, brv were the v1 TEL event types."
 
   - invariant: "Memory-mapped databases (LMDB) require a stable local filesystem — incompatible with ephemeral/serverless"
     term: "Local Database"

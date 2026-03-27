@@ -58,23 +58,23 @@ properties:
       expression: "Implies(is_registry(r), r.regid == said_compute(r.rip_event))"
     notes: "REGID is cryptographically derived from inception content"
 
-  - invariant: "Cannot mix modes within a single registry — all credential events follow the registry's mode"
-    term: "Backed vs Backerless"
+  - invariant: "Cannot mix modes within a single registry — all credential events follow the registry's blindability mode"
+    term: "Blindable vs Non-blindable"
     technique: property-based
     formal:
       language: python
       expression: |
         lambda registry, events: (
-          mode := 'backerless' if 'NoBackers' in registry.config_traits else 'backed',
-          backerless_types := {'iss', 'rev'},
-          backed_types := {'bis', 'brv'},
-          valid_types := backerless_types if mode == 'backerless' else backed_types,
-          all(e.t in valid_types for e in events if e.t not in {'rip', 'vrt'})
+          mode := 'non-blindable' if is_non_blindable(registry) else 'blindable',
+          non_blindable_types := {'upd'},
+          blindable_types := {'bup'},
+          valid_types := non_blindable_types if mode == 'non-blindable' else blindable_types,
+          all(e.t in valid_types for e in events if e.t not in {'rip'})
         )[-1]
     strategy: "Generate registries with both modes; attempt cross-mode events; verify rejected"
-    notes: "Mode set at inception, enforced on all subsequent credential events"
+    notes: "Mode set at inception, enforced on all subsequent credential events. LEGACY (v1 -- do NOT implement): NoBackers trait mapped to iss/rev (backerless), backed mapped to bis/brv, vrt for rotation"
 
-  - invariant: "Update event MUST have message type t == 'upd'; any other t value for a credential update MUST be rejected; the 'upd' ilk distinguishes update events from inception (rip), rotation (vrt), issuance (iss/bis), and revocation (rev/brv) events"
+  - invariant: "Credential update events MUST use t == 'upd' (non-blindable) or t == 'bup' (blindable) with a ts field indicating the target state ('issued' or 'revoked'); the ts field distinguishes issuance from revocation within the same event type"
     term: "Update Event"
     technique: property-based
     formal:
@@ -82,16 +82,19 @@ properties:
       expression: |
         @given(event=tel_event_strategy(), tamper_type=st.booleans())
         def test_update_event_ilk(event):
-            if event.is_update():
-                assert event.get('t') == 'upd', (
-                    f"Update event must have t=='upd', got '{event.get('t')}'"
+            if event.is_credential_update():
+                assert event.get('t') in ('upd', 'bup'), (
+                    f"Credential update event must have t in ('upd', 'bup'), got '{event.get('t')}'"
+                )
+                assert event.get('ts') in ('issued', 'revoked'), (
+                    f"Credential update event must have ts in ('issued', 'revoked'), got '{event.get('ts')}'"
                 )
             # Events with wrong ilk for their purpose must be rejected
-            if event.get('t') not in ('rip', 'vrt', 'iss', 'bis', 'rev', 'brv', 'upd'):
+            if event.get('t') not in ('rip', 'upd', 'bup'):
                 with pytest.raises(ValidationError, match='unknown event type'):
                     validate_tel_event(event)
     strategy: "tel_event_strategy() generating all TEL event types"
-    notes: "The t field is the event type discriminant. Only the seven recognized ilks are valid."
+    notes: "v2 TEL has three recognized ilks: rip (inception), upd (non-blindable update), bup (blindable update). The ts field carries the target state. LEGACY (v1 -- do NOT implement): iss, bis, rev, brv, vcp, vrt were separate ilks."
 
   - invariant: "State is determined by the latest transaction event in the TEL"
     term: "Credential State"
@@ -150,7 +153,7 @@ validation_constraints:
   - id: "C1_registry_known"
     constraint: "Registry REGID must resolve to a known registry with management TEL"
     depends_on: []
-    on_failure: "escrow — registry VCP not yet received"
+    on_failure: "escrow — registry rip event not yet received"
 
   - id: "C2_credential_identified"
     constraint: "Credential SAID must be extractable from the TEL event"

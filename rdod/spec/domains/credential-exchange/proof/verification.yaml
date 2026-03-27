@@ -70,7 +70,7 @@ properties:
     strategy: "Generate grant messages; verify ACDC presence and variant validity"
     notes: ""
 
-  - invariant: "Grant contains the issuance TEL event (iss for backerless, bis for backed registries)"
+  - invariant: "Grant contains the issuance TEL event (upd with ts='issued' for non-blindable, bup with ts='issued' for blindable registries)"
     term: "Credential Artifacts in Grant"
     technique: property-based
     formal:
@@ -78,10 +78,11 @@ properties:
       expression: |
         lambda grant: (
           grant.tel_event is not None
-          and grant.tel_event.t in ('iss', 'bis')
+          and grant.tel_event.t in ('upd', 'bup')
+          and grant.tel_event.ts == 'issued'
         )
     strategy: "Generate grants with and without TEL events; verify presence required"
-    notes: ""
+    notes: "LEGACY (v1 -- do NOT implement): iss for backerless, bis for backed registries"
 
   - invariant: "Grant contains the KEL anchor seal binding the TEL event to the issuer's KEL"
     term: "Credential Artifacts in Grant"
@@ -97,7 +98,7 @@ properties:
     strategy: "Generate grants with and without seals; verify seal presence required"
     notes: ""
 
-  - invariant: "Credential artifact verification requires ACDC SAID to match iss event, and iss event digest to match KEL seal"
+  - invariant: "Credential artifact verification requires ACDC SAID to match issuance update event, and update event digest to match KEL seal"
     term: "Credential Artifacts in Grant"
     technique: smt
     formal:
@@ -112,7 +113,7 @@ properties:
             )
           )
         )
-    notes: "Three-link verification chain: ACDC -> TEL -> KEL"
+    notes: "Three-link verification chain: ACDC -> TEL (upd/bup with ts='issued') -> KEL"
 
   - invariant: "KRAM authentication is checked before processing any IPEX exchange message content"
     term: "KRAM"

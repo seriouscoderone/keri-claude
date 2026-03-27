@@ -27,46 +27,39 @@ properties:
         )
     notes: "REGID is cryptographically derived from inception content — uniqueness is guaranteed by the collision resistance of the SAID digest."
 
-  - invariant: "Config traits set at inception (c field, e.g., NoBackers, EstOnly) MUST be immutable; any rotation event (vrt) that attempts to modify config traits MUST be rejected; config_traits(registry) MUST equal config_traits(rip_event) for all time"
+  - invariant: "Config traits set at inception (c field, e.g., EstOnly, DoNotDelegate) MUST be immutable; registry configuration cannot be changed after inception — there is no registry rotation event in v2"
     term: "Backer Configuration"
     technique: property-based
     formal:
       language: python
       expression: |
-        @given(inception_traits=st.lists(st.sampled_from(['NoBackers', 'EstOnly', 'DoNotDelegate']),
-                                          min_size=0, max_size=3, unique=True),
-               vrt_count=st.integers(min_value=1, max_value=5))
-        def test_config_traits_immutable(inception_traits, vrt_count):
+        @given(inception_traits=st.lists(st.sampled_from(['EstOnly', 'DoNotDelegate']),
+                                          min_size=0, max_size=2, unique=True))
+        def test_config_traits_immutable(inception_traits):
             registry = create_registry(config_traits=inception_traits)
-            for _ in range(vrt_count):
-                registry = apply_rotation(registry)
-                assert registry.config_traits == inception_traits, (
-                    f"Config traits must remain {inception_traits} after rotation, "
-                    f"got {registry.config_traits}"
-                )
-    strategy: "st.lists of traits x st.integers for rotation count"
-    notes: "Config traits are set once at inception and never change — even after multiple rotations."
+            assert registry.config_traits == inception_traits, (
+                f"Config traits must equal inception traits {inception_traits}, "
+                f"got {registry.config_traits}"
+            )
+    strategy: "st.lists of valid v2 traits"
+    notes: "Config traits are set once at inception and never change. In v2 registry config is immutable — no rotation event exists. LEGACY (v1 -- do NOT implement): NoBackers was a config trait; vrt rotation events could change backer sets."
 
-  - invariant: "A VRT event on a registry with NoBackers trait MUST be rejected; only registries without NoBackers trait can accept rotation events"
+  - invariant: "LEGACY (v1 -- do NOT implement): VRT registry rotation events do not exist in v2. Registry configuration is immutable after rip inception. The v1 concept of NoBackers trait and backer rotation via vrt is superseded by the blindable/non-blindable registry model where configuration is permanently fixed at inception."
     term: "Registry Rotation"
     technique: property-based
     formal:
       language: python
       expression: |
-        @given(has_nobackers=st.booleans())
-        def test_vrt_requires_backers(has_nobackers):
-            traits = ['NoBackers'] if has_nobackers else []
-            registry = create_registry(config_traits=traits)
-            vrt = build_vrt_event(registry)
-            if has_nobackers:
-                with pytest.raises(ValidationError, match='NoBackers registry cannot rotate'):
-                    apply_vrt(registry, vrt)
-            else:
-                apply_vrt(registry, vrt)  # Must not raise
-    strategy: "st.booleans() for NoBackers presence"
-    notes: "Backerless registries have no backer set to rotate — VRT is structurally invalid for them."
+        @given(event_type=st.just('vrt'))
+        def test_vrt_rejected_in_v2(event_type):
+            registry = create_registry()
+            vrt = build_event(registry, t=event_type)
+            with pytest.raises(ValidationError, match='unknown event type'):
+                apply_event(registry, vrt)
+    strategy: "Attempt vrt event on any registry"
+    notes: "v2 has no registry rotation. Registry config (blindable/non-blindable) is immutable after rip inception. LEGACY (v1 -- do NOT implement): vrt events rotated backer sets; NoBackers registries rejected vrt."
 
-  - invariant: "Every registry management event (rip, vrt) MUST be anchored via a seal in the issuer's KEL; an event without a corresponding KEL seal MUST be rejected"
+  - invariant: "Every registry management event (rip) MUST be anchored via a seal in the issuer's KEL; an event without a corresponding KEL seal MUST be rejected"
     term: "Registry Inception"
     technique: property-based
     formal:
@@ -86,24 +79,20 @@ properties:
     strategy: "st.booleans() for seal presence"
     notes: "KEL seal is the cryptographic anchor — without it, the registry event is unauthenticated."
 
-  - invariant: "VRT event sequence number MUST equal current registry sn + 1; sn gaps and sn duplicates MUST be rejected"
+  - invariant: "LEGACY (v1 -- do NOT implement): VRT event sequence number handling does not apply in v2. Registry management TEL has only the rip inception event (sn == 0). There is no registry rotation in v2 — registry config is immutable after inception."
     term: "Registry Rotation"
     technique: property-based
     formal:
       language: python
       expression: |
-        @given(current_sn=st.integers(min_value=0, max_value=100),
-               delta=st.sampled_from([-1, 0, 1, 2, 5]))
-        def test_vrt_sn_must_increment(current_sn, delta):
-            registry = create_registry_at_sn(current_sn)
-            vrt = build_vrt_event(registry, sn=current_sn + delta)
-            if delta == 1:
-                apply_vrt(registry, vrt)  # Must not raise
-            else:
-                with pytest.raises(ValidationError, match='sequence number'):
-                    apply_vrt(registry, vrt)
-    strategy: "st.integers for current sn, st.sampled_from for delta values"
-    notes: "Strict sn increment by 1. No gaps, no duplicates, no reversals."
+        def test_registry_management_tel_has_single_event():
+            registry = create_registry()
+            management_tel = get_management_tel(registry.regid)
+            assert len(management_tel) == 1, "v2 registry management TEL has exactly one event (rip)"
+            assert management_tel[0].t == 'rip'
+            assert management_tel[0].n == 0
+    strategy: "Verify management TEL length after creation"
+    notes: "v2 registry management TEL is a single rip event. LEGACY (v1 -- do NOT implement): vrt events incremented sn for backer rotation."
 
 contracts:
   - port_ref: "port://credential-lifecycle/registry/inbound/registry-management"
@@ -118,14 +107,6 @@ contracts:
           expression: "is_valid_said(result) and get_registry(result).issuer == issuer_aid"
         description: "create_registry returns a valid REGID bound to the issuer"
 
-  - port_ref: "port://credential-lifecycle/registry/inbound/registry-management"
-    preconditions:
-      - formal:
-          language: python
-          expression: "is_valid_said(regid) and not has_nobackers_trait(get_registry(regid))"
-        description: "Registry must exist and have backers for rotation"
-    postconditions:
-      - formal:
-          language: python
-          expression: "result.sn == get_registry(regid).sn + 1"
-        description: "Rotation increments the registry's management sequence number"
+  # LEGACY (v1 -- do NOT implement): Registry rotation contract removed.
+  # In v2, registry config is immutable after rip inception. There is no vrt event
+  # and no NoBackers trait check. The registry management TEL has exactly one event (rip at sn 0).

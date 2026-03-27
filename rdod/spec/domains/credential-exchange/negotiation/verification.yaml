@@ -313,7 +313,7 @@ properties:
     notes: "One handler per route, complete coverage, no duplicates."
 
   # IPEX Message Construction invariants
-  - invariant: "Grant message MUST bundle three artifacts: (1) the ACDC credential, (2) the TEL issuance event (iss or bis), (3) the KEL anchor seal; if any is missing, the grant MUST be rejected"
+  - invariant: "Grant message MUST bundle three artifacts: (1) the ACDC credential, (2) the TEL issuance update event (upd or bup with ts='issued'), (3) the KEL anchor seal; if any is missing, the grant MUST be rejected"
     term: "IPEX Message Construction"
     technique: property-based
     formal:
@@ -337,11 +337,12 @@ properties:
             else:
                 assert grant.acdc is not None
                 assert grant.tel_event is not None
-                assert grant.tel_event.t in ('iss', 'bis')
+                assert grant.tel_event.t in ('upd', 'bup')
+                assert grant.tel_event.ts == 'issued'
                 assert grant.kel_seal is not None
                 validate_grant(grant)
     strategy: "st.sampled_from for which artifact to remove"
-    notes: "Grant is the only message type bundling all three verification artifacts."
+    notes: "Grant is the only message type bundling all three verification artifacts. LEGACY (v1 -- do NOT implement): iss/bis were the issuance event types."
 
   - invariant: "Admit message MUST reference the grant message by its SAID: admit.p == grant.d; if admit.p does not match any known grant SAID, the admit MUST be escrowed (not rejected)"
     term: "IPEX Message Construction"
