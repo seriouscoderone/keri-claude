@@ -30,8 +30,8 @@ errors:
   - name: "AuthenticationError"
     description: "KRAM authentication failed — message signature does not verify against sender's current key state"
     cause: "Invalid signature, expired timestamp, or unknown sender AID"
-    recovery: "reject"
-    severity: "error"
+    recovery: "abort"
+    severity: "fatal"
     context:
       - field: "sender_aid"
         type: "string"

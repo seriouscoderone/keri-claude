@@ -69,8 +69,8 @@ errors:
   - name: "ReconstructionError"
     description: "Key state reconstruction from KEL replay failed"
     cause: "Corrupted or incomplete KEL, missing events in sequence"
-    recovery: "re-fetch KEL from witnesses"
-    severity: "error"
+    recovery: "retry"
+    severity: "recoverable"
     context:
       - field: "prefix"
         type: "string"
