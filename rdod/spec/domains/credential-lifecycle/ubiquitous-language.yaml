@@ -37,8 +37,8 @@ terms:
       - "Every TEL event has a t field (ilk), d field (SAID), and rd field (registry SAID)"
       - "Every TEL event must be sealed (anchored) in the issuer's KEL — the seal provides non-repudiable commitment"
       - "Events are hash-chained via prior event SAID (p field) — except registry inception which has no predecessor"
-      - "Backed variants (bis, brv) include an EventSeal referencing the management TEL and require backer signatures"
-      - "Backerless variants (iss, rev) reference only the registry ID — simpler, no backer infrastructure"
+      - "Blindable registries use bup events with blinded attribute blocks for decorrelation"
+      - "Non-blindable registries use upd events with publicly observable state transitions"
       - "Each event type produces exactly one state transition: rip creates registry, upd/bup changes credential state"
     examples:
       - "Registry Inception (rip): ilk=rip, fields=[v,t,d,u,i,n,dt], transition=creates registry, mode=N/A, anchor=required"
@@ -146,22 +146,23 @@ terms:
       - "Escrows events that cannot be immediately validated (out-of-order, missing anchor, missing registry)"
       - "Escrowed events are automatically retried when blocking conditions resolve"
     examples:
-      - "Tevery receiving a bis event, finding no registry for it yet, and escrowing it for later"
-      - "TelEventProcessor reprocessing escrowed events after a VCP event arrives"
+      - "Tevery receiving a bup event, finding no registry for it yet, and escrowing it for later"
+      - "TelEventProcessor reprocessing escrowed events after a rip event arrives"
     related_terms: ["TEL Event Verifier", "TEL Escrows", "Registry Collection", "TEL Database"]
 
-  - term: "Backed vs Backerless"
-    synonyms: []
-    definition: "Two modes for TEL events: Backed (Bis/Brv) events include an EventSeal anchoring the event to the registry's management TEL and require backer witness signatures. Backerless (Iss/Rev) events are simpler, referencing only the registry ID. Determined by the NoBackers config trait on registry inception (VCP)."
+  - term: "Blindable vs Non-Blindable"
+    synonyms: ["Registry Privacy Mode"]
+    definition: "Two modes for TEL registries determined at inception. A Blindable registry uses bup events with blinded attribute blocks — each update carries a fresh BLID for decorrelation, making state changes unobservable. A Non-Blindable registry uses upd events with publicly observable state transitions. Both use the ts field to express issuance or revocation."
     invariants:
-      - "Backed events (bis, brv) include an EventSeal referencing the management TEL and require backer witness signatures"
-      - "Backerless events (iss, rev) reference only the registry ID — no backer infrastructure needed"
-      - "Mode is determined at registry inception by the NoBackers config trait on the VCP event"
+      - "Blindable registries use bup events — each carries a blinded attribute block with fresh UUID"
+      - "Non-blindable registries use upd events — state transitions are publicly observable"
+      - "Mode is determined at registry inception (rip) and cannot be changed"
       - "Cannot mix modes within a single registry — all credential events follow the registry's mode"
+      - "The ts field (not the event type) determines whether the update is issuance or revocation"
     examples:
-      - "A backerless registry using iss/rev events with no backer witnesses"
-      - "A backed registry using bis/brv events with three backer witnesses and a threshold of two"
-    related_terms: ["Registry", "Registry Inception", "TEL Event Verifier", "Transaction Event Seal"]
+      - "A non-blindable registry using upd events with ts='issued' and ts='revoked'"
+      - "A blindable registry using bup events where observers cannot distinguish state changes from decorrelation updates"
+    related_terms: ["Registry", "Registry Inception", "TEL Event Verifier", "Blinded Attribute Block"]
 
   - term: "REGID"
     synonyms: ["Registry Identifier"]
@@ -175,23 +176,24 @@ terms:
     related_terms: ["Registry Inception", "Registry SAID", "rd field"]
 
   - term: "TEL Event Type Dimensions"
-    definition: "Transaction Event Log events are characterized by two orthogonal dimensions: Registry Mode (Backerless vs Backed) and Event Purpose (Registry Management vs Credential State Change). These dimensions determine which event types are valid and what fields are required."
+    definition: "Transaction Event Log events are characterized by two orthogonal dimensions: Registry Privacy Mode (Blindable vs Non-Blindable) and Transaction State (the ts field value). These dimensions determine which event type is used and what the update means."
     invariants:
-      - "Backerless registries use iss/rev events — no backer signatures required"
-      - "Backed registries use bis/brv events — require backer threshold signatures"
-      - "Registry mode is set at inception (vcp/rip) and enforced on all subsequent events"
-      - "Registry management events (vcp, vrt, rip) control backer configuration"
-      - "Credential state events (iss, rev, bis, brv) track individual credential status"
-    related_terms: ["Credential Status", "Credential Registry"]
+      - "Non-blindable registries use upd events — state transitions publicly observable"
+      - "Blindable registries use bup events — state transitions decorrelated via blinding"
+      - "Registry mode is set at inception (rip) and enforced on all subsequent events"
+      - "The ts field carries the target state: 'issued' or 'revoked'"
+      - "Only three normative event types: rip (inception), bup (blindable update), upd (non-blindable update)"
+      - "LEGACY (v1 — do NOT implement): vcp, vrt, iss, rev, bis, brv are superseded by the v2 model"
+    related_terms: ["Credential Status", "Credential Registry", "Blindable vs Non-Blindable"]
 
   - term: "Registry Mode"
-    synonyms: ["Backerless vs Backed Registry"]
-    definition: "Determines whether credential state changes require backer (witness) co-signatures. A Backerless registry uses simpler iss/rev events signed only by the issuer. A Backed registry uses bis/brv events requiring threshold backer signatures for additional accountability."
+    synonyms: ["Blindable vs Non-Blindable Registry"]
+    definition: "Determines whether credential state updates carry blinding for privacy decorrelation. A Non-Blindable registry uses upd events with publicly observable state. A Blindable registry uses bup events where each update carries a fresh BLID, making it impossible for observers to distinguish state-changing updates from no-op decorrelation updates."
     invariants:
-      - "Backerless: NoBackers trait in configuration — events are iss (issuance) and rev (revocation)"
-      - "Backed: no NoBackers trait — events are bis (backed issuance) and brv (backed revocation)"
-      - "Mode is immutable after registry inception"
-    related_terms: ["TEL Event Type Dimensions"]
+      - "Non-blindable: upd events with ta (transaction ACDC SAID) and ts (transaction state) publicly visible"
+      - "Blindable: bup events with blinded attribute blocks — decorrelation protects observer linkability"
+      - "Mode is immutable after registry inception (rip)"
+    related_terms: ["TEL Event Type Dimensions", "Blindable vs Non-Blindable"]
 
   - term: "TEL Storage Schema"
     synonyms: ["Reger subdatabases [keripy]"]
@@ -235,8 +237,8 @@ terms:
       - "Missing chain escrow [.mce in keripy]: credential events referencing an unresolved credential chain"
       - "Missing schema escrow [.mse in keripy]: credential events referencing an unavailable schema"
     examples:
-      - "An iss event escrowed in out-of-order escrow [.oots in keripy] because a prior event at sn=2 has not yet been processed"
-      - "A credential event escrowed in missing registry escrow [.mre in keripy] because the registry VCP has not yet been received"
+      - "An upd event escrowed in out-of-order escrow [.oots in keripy] because a prior event at sn=2 has not yet been processed"
+      - "A credential event escrowed in missing registry escrow [.mre in keripy] because the registry rip has not yet been received"
     related_terms: ["TEL Storage Schema", "TEL Database", "Credential Storage"]
 
   - term: "Credentialer"
