@@ -220,8 +220,8 @@ terms:
       - "Implements GroupItem trait for polymorphic round-trip serialization"
       - "Unknown counter codes produce an error (extensible via new variants)"
     examples:
-      - "CesrGroup::ControllerIdxSigsVariant — counter code '-A', wraps Vec<Siger>"
-      - "CesrGroup::TransReceiptQuadruplesVariant — counter code '-D', wraps Vec<(Prefixer, Seqner, Saider, Siger)>"
+      - "CesrGroup::ControllerIdxSigsVariant — counter code '-K', wraps Vec<Siger>"
+      - "CesrGroup::TransReceiptQuadruplesVariant — counter code '-N', wraps Vec<(Prefixer, Seqner, Saider, Siger)>"
     related_terms: ["GroupItem", "Counter", "Parser Dispatch"]
 
   - term: "GroupItem"
@@ -233,7 +233,7 @@ terms:
       - "full_size(): counter size + sum of all items' full sizes"
       - "Round-trip: parse from stream → serialize back to identical bytes"
     examples:
-      - "group.qb64() → '-AAC' + siger1.qb64() + siger2.qb64()"
+      - "group.qb64() → '-KAC' + siger1.qb64() + siger2.qb64()"
     related_terms: ["CesrGroup", "Group", "Count Code"]
 
   - term: "Parser Dispatch"
@@ -245,7 +245,7 @@ terms:
       - "Group parsers use nom combinators: count() for repeated items, tuple() for fixed structures, many0() for nested groups"
       - "All parsers return (remaining_bytes, parsed_value) — enabling stream continuation"
     examples:
-      - "byte → CtB64 → parse counter '-A##' → code 'A' → ControllerIdxSigs parser → count(siger_parser, n)"
+      - "byte → CtB64 → parse counter '-K##' → code 'K' → ControllerIdxSigs parser → count(siger_parser, n)"
     related_terms: ["ColdCode", "CesrGroup", "Counter"]
 
   - term: "MessageList"
@@ -273,40 +273,42 @@ terms:
 
   - term: "Concrete Group Types"
     synonyms: ["KERI/ACDC Group Types"]
-    definition: "The 12 specific group structures defined by the KERI/ACDC genus, each with a fixed internal structure of CESR primitives."
+    definition: "The specific group structures defined by the KERI/ACDC genus, each with a fixed internal structure of CESR primitives. Universal codes (-A through -J) are protocol-agnostic; genus-specific codes (-K onward) carry KERI/ACDC semantics."
     invariants:
-      - "Simple sig groups: ControllerIdxSigs (-A, Vec<Siger>), WitnessIdxSigs (-B, Vec<Siger>)"
-      - "Couple groups: NonTransReceiptCouples (-C, Vec<Cigar>), SealSourceCouples (-G, Vec<(Seqner,Saider)>), FirstSeenReplayCouples (-E, Vec<(Seqner,Dater)>)"
-      - "Quadruple groups: TransReceiptQuadruples (-D, Vec<(Prefixer,Seqner,Saider,Siger)>)"
-      - "Nested groups: TransIdxSigGroups (-F, Vec<(Prefixer,Seqner,Saider,ControllerIdxSigs)>), TransLastIdxSigGroups (-H, Vec<(Prefixer,ControllerIdxSigs)>)"
-      - "SAD path groups: SadPathSigGroups (-K, path+nested), SadPathSigs (-J, path+counter+primitives)"
-      - "Container groups: AttachedMaterialQuadlets (-V, Vec<CesrGroup>), PathedMaterialQuadlets (-L, raw bytes)"
+      - "Universal groups: GenericPipelineGroup (-A), MessageGroup (-B, message+attachments), AttachmentGroup (-C, attachments only)"
+      - "Universal groups: DatagramSegment (-D), ESSRSignable (-E), CESRNativeFixedSignable (-F), CESRNativeFieldMapSignable (-G), EnclosedNonNative (-H)"
+      - "Genus-specific sig groups: ControllerIdxSigs (-K, Vec<Siger>), WitnessIdxSigs (-L, Vec<Siger>)"
+      - "Genus-specific couple groups: NonTransReceiptCouples (-M, Vec<Cigar>), TransReceiptQuadruples (-N, Vec<(Prefixer,Seqner,Saider,Siger)>)"
+      - "Genus-specific couple groups: FirstSeenReplayCouples (-O, Vec<(Seqner,Dater)>), SealSourceCouples (-S, Vec<(Seqner,Saider)>)"
+      - "Genus-specific nested groups: TransIdxSigGroups (-X, Vec<(Prefixer,Seqner,Saider,ControllerIdxSigs)>), TransLastIdxSigGroups (-Y, Vec<(Prefixer,ControllerIdxSigs)>)"
+      - "Genus-specific container: PathedMaterialQuadlets (-Z, raw bytes)"
+      - "Genus-specific seal couples: RegistrarBackerSealCouples (-V, Vec<(Prefixer,Saider)>)"
     examples:
-      - "-A## + Siger Siger Siger → ControllerIdxSigs with 3 controller signatures"
-      - "-D## + (Prefixer Seqner Saider Siger) × N → TransReceiptQuadruples with N receipts"
-      - "-V## + any CesrGroup* → AttachedMaterialQuadlets containing heterogeneous nested groups"
-    related_terms: ["CesrGroup", "Count Code", "Genus-Specific Count Code"]
+      - "-K## + Siger Siger Siger → ControllerIdxSigs with 3 controller signatures"
+      - "-N## + (Prefixer Seqner Saider Siger) × N → TransReceiptQuadruples with N receipts"
+      - "-C## + any CesrGroup* → AttachmentGroup containing nested groups"
+    related_terms: ["CesrGroup", "Count Code", "Genus-Specific Count Code", "Universal Count Code"]
 
-  - term: "AttachedMaterialQuadlets"
-    synonyms: ["Generic Attachment Container"]
-    definition: "A container group (-V##) that can hold any mix of CesrGroup types. Items are self-describing — each nested group has its own counter. The outer count is in quadlets (total size / 4 - 1)."
+  - term: "AttachmentGroup"
+    synonyms: ["Generic Attachment Container", "AttachedMaterialQuadlets (legacy)"]
+    definition: "A universal container group (-C##) that holds attachment material. Items are self-describing — each nested group has its own counter. The outer count is in quadlets."
     invariants:
-      - "Counter code '-V'; count = total_quadlets - 1 (excludes own counter)"
+      - "Counter code '-C' (universal, non-overrideable)"
       - "Inner items parsed via many0(CesrGroup::from_stream_bytes) — cold-start on each"
       - "Enables heterogeneous attachment collections without pre-declaring types"
     examples:
-      - "-V## containing: -A## (controller sigs) + -C## (non-trans receipts) + -G## (seal source couples)"
+      - "-C## containing: -K## (controller sigs) + -M## (non-trans receipts) + -S## (seal source couples)"
     related_terms: ["CesrGroup", "Concrete Group Types"]
 
   - term: "PathedMaterialQuadlets"
     synonyms: ["Raw Material Container"]
-    definition: "An opaque container group (-L##) that stores raw CESR bytes without parsing their contents. Enables extensibility — application-level code interprets the material."
+    definition: "An opaque container group (-Z##) that stores raw CESR bytes without parsing their contents. Enables extensibility — application-level code interprets the material."
     invariants:
-      - "Counter code '-L'; byte count = counter.count() * 4 (QB64) or * 3 (QB2)"
+      - "Counter code '-Z' (genus-specific); byte count = counter.count() * 4 (QB64) or * 3 (QB2)"
       - "No parsing of contents — preserved as raw bytes"
       - "Quadlet-aligned — total size must be exact"
     examples:
-      - "-L## + raw CESR bytes → preserved for application-specific processing"
+      - "-Z## + raw CESR bytes → preserved for application-specific processing"
     related_terms: ["CesrGroup", "Concrete Group Types"]
 
   - term: "Sadder"
