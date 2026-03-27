@@ -21,3 +21,92 @@ types:
         invariants:
           - "All three components required for complete verification"
           - "Missing any component → escrow until available"
+
+  - name: "TelValidationPassed"
+    description: "Successful validation of a TEL event against the registry and credential state."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event_said"
+            type: "string"
+            required: true
+            description: "SAID of the validated TEL event"
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID of the registry the event belongs to"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the validated event"
+
+  - name: "TelValidationEscrowed"
+    description: "A TEL event that could not be validated yet and was placed in escrow for later reprocessing."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event_said"
+            type: "string"
+            required: true
+            description: "SAID of the escrowed TEL event"
+          - name: "escrow_type"
+            type: "string"
+            required: true
+            description: "Category of missing dependency that caused escrow"
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Human-readable explanation of what is missing"
+
+  - name: "TelEscrowReprocessed"
+    description: "Result of reprocessing a previously escrowed TEL event after its blocking dependency arrived."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event_said"
+            type: "string"
+            required: true
+            description: "SAID of the reprocessed TEL event"
+          - name: "outcome"
+            type: "string"
+            required: true
+            description: "What happened when the escrowed event was retried"
+            constraints:
+              enum: ["accepted", "still_escrowed", "cascaded", "pruned"]
+        invariants:
+          - "accepted: event now passes validation and was applied"
+          - "still_escrowed: a different dependency is still missing"
+          - "cascaded: acceptance triggered reprocessing of other escrowed events"
+          - "pruned: event is no longer relevant (e.g., superseded by a later event)"
+
+  - name: "TelNotification"
+    description: "Notification that a TEL-related event occurred, used to trigger escrow reprocessing."
+    variants:
+      - name: "default"
+        fields:
+          - name: "kind"
+            type: "string"
+            required: true
+            description: "Type of notification (e.g., kel_arrived, registry_created, schema_resolved)"
+          - name: "event_said"
+            type: "string"
+            required: true
+            description: "SAID of the event that triggered this notification"
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID of the affected registry"
+
+  - name: "EscrowFilter"
+    description: "Filter criteria for querying escrowed TEL events from the escrow repository."
+    variants:
+      - name: "default"
+        fields:
+          - name: "escrow_type"
+            type: "string"
+            required: true
+            description: "Category of escrow to query"
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID to filter escrowed events by"

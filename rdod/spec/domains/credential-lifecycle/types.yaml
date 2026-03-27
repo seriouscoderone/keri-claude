@@ -431,6 +431,35 @@ types:
         invariants:
           - "Derived from processing rip event and subsequent updates"
 
+  - name: "UpdateEvent"
+    description: "Wrapper for credential state-change events (upd or bup), unifying both update variants for callers that don't need to distinguish blindable from non-blindable."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event_type"
+            type: "string"
+            required: true
+            description: "Which TEL update event type this wraps"
+            constraints:
+              enum: ["upd", "bup"]
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID of the registry managing this credential"
+          - name: "credential_said"
+            type: "string"
+            required: true
+            description: "SAID of the credential this event applies to"
+          - name: "transaction_state"
+            type: "string"
+            required: true
+            description: "Target credential state after this update"
+            constraints:
+              enum: ["issued", "revoked"]
+        invariants:
+          - "Wraps either a BlindableUpdateEvent or NonBlindableUpdateEvent"
+          - "event_type determines which underlying TEL event was produced"
+
   - name: "TELEvent"
     description: "Union type for any event in a Transaction Event Log. Discriminated by the t field."
     variants:

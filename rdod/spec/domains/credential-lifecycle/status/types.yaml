@@ -1,0 +1,87 @@
+domain_ref: "credential-lifecycle/status"
+
+types:
+  - name: "TelEvent"
+    description: "Any TEL event (rip, upd, or bup) with its core identifying fields for state computation."
+    variants:
+      - name: "default"
+        fields:
+          - name: "ilk"
+            type: "string"
+            required: true
+            description: "Event type discriminator"
+            constraints:
+              enum: ["rip", "upd", "bup"]
+          - name: "said"
+            type: "string"
+            required: true
+            description: "SAID of this TEL event"
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID of the registry this event belongs to"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number within the registry's TEL"
+
+  - name: "TelEventVerifier"
+    description: "Verifier instance bound to a specific registry, tracking expected sequence number for state transitions."
+    variants:
+      - name: "default"
+        fields:
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID of the registry being verified"
+          - name: "issuer_aid"
+            type: "string"
+            required: true
+            description: "AID of the registry's issuer"
+          - name: "current_sn"
+            type: "integer"
+            required: true
+            description: "Next expected sequence number (highest processed sn + 1)"
+        invariants:
+          - "current_sn advances monotonically as events are applied"
+          - "Rejects events with sn != current_sn (out-of-order)"
+
+  - name: "InvalidTransition"
+    description: "A rejected state transition that violates the credential lifecycle state machine."
+    variants:
+      - name: "default"
+        fields:
+          - name: "current_state"
+            type: "string"
+            required: true
+            description: "State the credential was in when the transition was attempted"
+          - name: "attempted_state"
+            type: "string"
+            required: true
+            description: "State the event tried to transition to"
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Human-readable explanation of why the transition is invalid"
+        invariants:
+          - "Common case: attempting to issue an already-issued credential, or revoke a not-yet-issued one"
+
+  - name: "StateChanged"
+    description: "Notification that a credential's lifecycle state changed after applying a TEL event."
+    variants:
+      - name: "default"
+        fields:
+          - name: "credential_said"
+            type: "string"
+            required: true
+            description: "SAID of the credential whose state changed"
+          - name: "new_state"
+            type: "string"
+            required: true
+            description: "The state after the transition"
+            constraints:
+              enum: ["Issued", "Revoked"]
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the event that caused the state change"

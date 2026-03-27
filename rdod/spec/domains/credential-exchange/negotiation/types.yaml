@@ -37,3 +37,88 @@ types:
           - "State transitions follow the IPEX FSM defined in verification.yaml"
           - "Admitted and Spurned are terminal — no further messages accepted"
           - "Role alternation: apply/agree/admit from disclosee; offer/grant from discloser"
+
+  - name: "AdmitMessage"
+    description: "An IPEX admit exchange message (exn) accepting a granted credential."
+    variants:
+      - name: "default"
+        fields:
+          - name: "route"
+            type: "string"
+            required: true
+            description: "IPEX route — always /ipex/admit"
+            constraints:
+              enum: ["/ipex/admit"]
+          - name: "grant_said"
+            type: "string"
+            required: true
+            description: "SAID of the grant message being admitted"
+        invariants:
+          - "Terminal message — no further messages in this exchange thread"
+          - "Sent by disclosee after receiving and validating the grant"
+
+  - name: "AgreeMessage"
+    description: "An IPEX agree exchange message (exn) accepting an offer's terms."
+    variants:
+      - name: "default"
+        fields:
+          - name: "route"
+            type: "string"
+            required: true
+            description: "IPEX route — always /ipex/agree"
+            constraints:
+              enum: ["/ipex/agree"]
+          - name: "offer_said"
+            type: "string"
+            required: true
+            description: "SAID of the offer message being agreed to"
+        invariants:
+          - "Sent by disclosee to accept the offered terms"
+          - "For chain-link confidentiality: agreement is to contractual terms"
+
+  - name: "SpurnMessage"
+    description: "An IPEX spurn exchange message (exn) rejecting any prior message in the thread."
+    variants:
+      - name: "default"
+        fields:
+          - name: "route"
+            type: "string"
+            required: true
+            description: "IPEX route — always /ipex/spurn"
+            constraints:
+              enum: ["/ipex/spurn"]
+          - name: "rejected_said"
+            type: "string"
+            required: true
+            description: "SAID of the message being rejected"
+          - name: "reason"
+            type: "string"
+            required: false
+            description: "Optional human-readable rejection reason"
+        invariants:
+          - "Terminal message — no further messages in this exchange thread"
+          - "Can be sent by either party at any non-terminal state"
+
+  - name: "EscrowReason"
+    description: "Why an IPEX exchange message was escrowed instead of processed immediately."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "Category of missing dependency"
+            constraints:
+              enum: ["MissingKEL", "MissingTEL", "MissingSchema", "MissingSignatures"]
+
+  - name: "HandlerResponse"
+    description: "Result from an IPEX route handler after attempting to process an exchange message."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "Processing outcome"
+            constraints:
+              enum: ["Accepted", "Escrowed", "Rejected"]

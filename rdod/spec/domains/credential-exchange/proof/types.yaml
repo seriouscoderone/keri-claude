@@ -1,0 +1,22 @@
+domain_ref: "credential-exchange/proof"
+
+types:
+  - name: "RegistryState"
+    description: "Current registry state snapshot used for TEL chain validation during proof verification."
+    variants:
+      - name: "default"
+        fields:
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID of the registry"
+          - name: "mode"
+            type: "string"
+            required: true
+            description: "Registry blinding mode"
+            constraints:
+              enum: ["blindable", "non-blindable"]
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Latest processed sequence number in this registry's TEL"

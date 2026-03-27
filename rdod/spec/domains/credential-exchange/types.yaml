@@ -107,3 +107,68 @@ types:
           - "ACDC SAID must match the TEL event's credential reference"
           - "TEL event must be anchored by the KEL seal"
           - "KEL seal must be verifiable against the issuer's current key state"
+
+  - name: "OfferMessage"
+    description: "An IPEX offer exchange message (exn) presenting a credential preview to a prospective holder."
+    variants:
+      - name: "default"
+        fields:
+          - name: "route"
+            type: "string"
+            required: true
+            description: "IPEX route — always /ipex/offer"
+            constraints:
+              enum: ["/ipex/offer"]
+          - name: "credential_schema"
+            type: "string"
+            required: true
+            description: "SAID of the credential schema being offered"
+          - name: "attributes_preview"
+            type: "map"
+            required: true
+            description: "Preview of credential attributes (may be metadata ACDC for chain-link confidentiality)"
+        invariants:
+          - "Sent by discloser (issuer) in response to an apply or unsolicited"
+
+  - name: "GrantMessage"
+    description: "An IPEX grant exchange message (exn) delivering a credential with its full proof bundle."
+    variants:
+      - name: "default"
+        fields:
+          - name: "route"
+            type: "string"
+            required: true
+            description: "IPEX route — always /ipex/grant"
+            constraints:
+              enum: ["/ipex/grant"]
+          - name: "acdc"
+            type: "types://credential-lifecycle#Credential"
+            required: true
+            description: "The ACDC credential being granted"
+          - name: "tel_event"
+            type: "types://credential-lifecycle#TELEvent"
+            required: true
+            description: "TEL issuance event proving the credential was issued"
+          - name: "kel_seal"
+            type: "types://cesr/primitives#Seal"
+            required: true
+            description: "KEL event seal anchoring the TEL event to the issuer's KEL"
+        invariants:
+          - "MUST bundle all three artifacts — missing any makes the grant unverifiable"
+          - "Sent by discloser after agree (negotiated) or directly (direct issuance)"
+
+  - name: "ExchangeResult"
+    description: "Outcome of processing an IPEX exchange message through the protocol state machine."
+    variants:
+      - name: "default"
+        fields:
+          - name: "state"
+            type: "string"
+            required: true
+            description: "Terminal or pending state of the exchange"
+            constraints:
+              enum: ["admitted", "spurned", "pending"]
+          - name: "thread_said"
+            type: "string"
+            required: true
+            description: "SAID of the exchange thread this result belongs to"

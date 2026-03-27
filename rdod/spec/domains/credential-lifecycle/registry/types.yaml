@@ -1,0 +1,39 @@
+domain_ref: "credential-lifecycle/registry"
+
+types:
+  - name: "RegistryRotationEvent"
+    description: "LEGACY v1 registry rotation (vrt) event type marker, retained for migration compatibility."
+    variants:
+      - name: "default"
+        fields:
+          - name: "note"
+            type: "string"
+            required: true
+            description: "LEGACY — v1 vrt event, no v2 equivalent. Registries in v2 are immutable after inception."
+
+  - name: "RegistryRecord"
+    description: "Stored metadata for a credential registry, persisted when the registry is created."
+    variants:
+      - name: "default"
+        fields:
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID — SAID of the registry inception event"
+          - name: "issuer_aid"
+            type: "string"
+            required: true
+            description: "AID of the issuer who owns this registry"
+          - name: "mode"
+            type: "string"
+            required: true
+            description: "Whether the registry supports blinding"
+            constraints:
+              enum: ["blindable", "non-blindable"]
+          - name: "created_at"
+            type: "string"
+            required: true
+            description: "ISO 8601 datetime when the registry was created"
+        invariants:
+          - "Immutable after creation — registry mode cannot change"
+          - "mode determines whether credentials use bup (blindable) or upd (non-blindable) events"
