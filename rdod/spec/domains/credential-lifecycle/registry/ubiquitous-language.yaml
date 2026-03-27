@@ -4,62 +4,63 @@ domain_ref: "credential-lifecycle/registry"
 terms:
   # Inherits: "Registry Inception" from domain://credential-lifecycle
   - term: "Registry Inception"
-    synonyms: ["rip event", "vcp event"]
+    synonyms: ["rip event", "vcp event LEGACY (v1 -- do NOT implement)"]
     specializes: "Registry Inception"
-    definition: "In the context of the registry subdomain, registry inception is the initialization event that establishes the registry's REGID, binds it to the issuer AID, and sets immutable configuration traits. Specializes the parent definition with backer configuration details and the vcp legacy format synonym."
+    definition: "In the context of the registry subdomain, registry inception is the initialization event that establishes the registry's REGID, binds it to the issuer AID, and sets immutable configuration (blindable or non-blindable mode). In TEL v2 this is the rip event; registry configuration is immutable after inception -- there is no rotation equivalent. LEGACY (v1 -- do NOT implement): the vcp event served this role, with mutable backer lists rotated via vrt."
     invariants:
-      - "Message type t field must be 'rip' (or 'vcp' in legacy format)"
-      - "Field order: [v, t, d, u, i, n, dt] — all required"
+      - "Message type t field must be 'rip'. LEGACY (v1): was 'vcp'"
+      - "Field order: [v, t, d, u, i, n, dt] -- all required"
       - "Sequence number n must be 0"
       - "SAID of this event becomes the REGID referenced by the rd field in ACDCs"
       - "Must be anchored (sealed) in the issuer's KEL"
-      - "Config traits (e.g., NoBackers) set at inception are immutable"
+      - "Registry mode (blindable or non-blindable) set at inception is immutable -- no rotation in v2"
     examples:
-      - "Registry inception with issuer AID, NoBackers config trait, and UUID for unique identification"
-      - "Backed registry inception with three backer witnesses and a threshold of two"
-    related_terms: ["REGID", "Registry Rotation", "Backer Configuration"]
+      - "Registry inception with issuer AID, non-blindable mode, and UUID for unique identification"
+      - "Blindable registry inception with designated backer witnesses"
+    related_terms: ["REGID", "Blindable vs Non-Blindable"]
 
   - term: "Registry Rotation"
-    synonyms: ["vrt event"]
-    definition: "A management event that updates a registry's backer configuration — modifying the backer witness list and/or threshold without affecting any credential state within the registry."
+    synonyms: ["vrt event LEGACY (v1 -- do NOT implement)"]
+    definition: "LEGACY (v1 -- do NOT implement). In TEL v1, a management event (vrt) that updated a registry's backer configuration -- modifying the backer witness list and/or threshold. In TEL v2, registry configuration is immutable after inception (rip). There is no v2 equivalent of vrt. New implementations must NOT include registry rotation logic."
     invariants:
-      - "Only valid for registries that have backers (not NoBackers trait)"
-      - "Updates the backer list via cuts (removals) and adds (additions)"
-      - "May update the backer threshold (toad)"
-      - "Does not affect per-credential state — only registry management state"
-      - "Must be anchored in the issuer's KEL"
+      - "LEGACY (v1 -- do NOT implement): vrt was valid only for registries with backers (not NoBackers trait)"
+      - "LEGACY (v1 -- do NOT implement): updated the backer list via cuts (removals) and adds (additions)"
+      - "In TEL v2: registry configuration is immutable after rip -- no rotation event exists"
+      - "In TEL v2: if backer changes are needed, a new registry must be incepted"
     examples:
-      - "Adding a new backer witness to a registry: vrt event with adds=[new_backer_AID]"
-      - "Adjusting threshold from 2 to 3 after adding backers"
-    related_terms: ["Registry Inception", "Backer Configuration", "Registry State Snapshot"]
+      - "LEGACY (v1): adding a new backer witness via vrt event with adds=[new_backer_AID] -- not valid in v2"
+      - "v2: registry configuration established at rip is permanent; no vrt equivalent exists"
+    related_terms: ["Registry Inception"]
 
   # Inherits: "REGID" from domain://credential-lifecycle (identical definition — parent owns this term)
 
-  - term: "Backer Configuration"
-    synonyms: ["NoBackers trait", "Backer mode"]
-    definition: "The configuration of a registry's backer witness infrastructure, set at inception via config traits. Determines whether credential events use backed (bis/brv) or backerless (iss/rev) event types."
+  - term: "Registry Mode"
+    synonyms: ["Blindable/Non-Blindable", "Backer Configuration"]
+    definition: "The configuration of a registry's mode, set at inception (rip). Determines whether credential events use non-blindable (upd) or blindable (bup) event types. In v2, this replaces the v1 'NoBackers trait' / 'backed vs backerless' terminology. LEGACY (v1 -- do NOT implement): 'NoBackers' trait determined iss/rev vs bis/brv; backer list was mutable via vrt."
     invariants:
-      - "NoBackers trait means no backer witnesses — credential events use iss/rev"
-      - "Without NoBackers, backer witnesses are required — credential events use bis/brv"
-      - "Backer mode is immutable after registry inception"
-      - "Backer list and threshold can be updated via registry rotation (vrt) events"
+      - "Non-blindable mode: credential events use upd"
+      - "Blindable mode: credential events use bup"
+      - "Registry mode is immutable after inception (rip)"
+      - "In v2: no registry rotation -- configuration cannot be changed after rip"
+      - "LEGACY (v1 -- do NOT implement): 'NoBackers' trait -> iss/rev; backed -> bis/brv; backer list mutable via vrt"
     examples:
-      - "NoBackers registry: simple mode with iss/rev events, no witness infrastructure"
-      - "Backed registry: three backer witnesses, threshold of two, uses bis/brv events"
-    related_terms: ["Registry Inception", "Registry Rotation", "Backed vs Backerless"]
+      - "Non-blindable registry: simple mode with upd events"
+      - "Blindable registry: designated backer witnesses, uses bup events"
+    related_terms: ["Registry Inception", "Blindable vs Non-Blindable"]
 
 events:
   - name: "RegistryIncepted"
-    payload: "regid: REGID, issuer_aid: AID, config_traits: [str], backers: [AID], toad: int"
-    triggers: "Issuer creates a new registry via a registry inception event"
+    payload: "regid: REGID, issuer_aid: AID, mode: blindable|non-blindable"
+    triggers: "Issuer creates a new registry via a rip (registry inception) event"
 
   - name: "RegistryRotated"
+    note: "LEGACY (v1 -- do NOT implement). No v2 equivalent -- registry configuration is immutable after rip."
     payload: "regid: REGID, new_sn: int, cuts: [AID], adds: [AID], new_toad: int"
-    triggers: "Issuer rotates the registry's backer configuration via a vrt event"
+    triggers: "LEGACY: Issuer rotated the registry's backer configuration via a vrt event -- not valid in v2"
 
 rules:
-  - "Registry inception must have sequence number 0"
-  - "Config traits (e.g., NoBackers) are set at inception and cannot be changed"
-  - "Registry rotation is only valid for registries with backers"
+  - "Registry inception (rip) must have sequence number 0"
+  - "Registry mode (blindable or non-blindable) is set at inception and cannot be changed -- configuration is immutable in v2"
+  - "LEGACY (v1 -- do NOT implement): registry rotation (vrt) was valid for registries with backers -- no v2 equivalent"
   - "Every registry management event must be anchored in the issuer's KEL"
-  - "REGID is the SAID of the inception event — it uniquely identifies the registry"
+  - "REGID is the SAID of the inception event -- it uniquely identifies the registry"

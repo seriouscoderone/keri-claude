@@ -12,16 +12,16 @@ terms:
     definition: "The complete multi-step sequence that validates an incoming TEL event from receipt to acceptance or escrow. Five steps: (1) extract registry ID from the event, (2) compute current registry management state from the management TEL, (3) verify the issuer's KEL contains the anchor seal at the stated position, (4) compute the current credential state from the credential's TEL, (5) apply the state transition. Failure at any step routes the event to the appropriate escrow queue."
     invariants:
       - "Step 1: Extract registry ID (rd field for credential events, d field for management events) to identify which registry this event belongs to"
-      - "Step 2: Compute current registry management state -- if the registry VCP is not yet known, escrow to Missing Registry Escrow"
+      - "Step 2: Compute current registry management state -- if the registry rip is not yet known, escrow to Missing Registry Escrow"
       - "Step 3: Verify KEL anchor seal -- the issuer's KEL must contain a seal referencing this TEL event's sn and SAID at the stated position (KEL Anchor Verification)"
       - "Step 4: Compute current credential state -- replay the credential's TEL to determine if it is NotIssued, Issued, or Revoked"
       - "Step 5: Apply the state transition -- if the transition violates State Transition Rules, reject the event"
       - "The pipeline is re-entrant: escrowed events are reprocessed through the same five steps when their blocking condition resolves"
       - "Errors: MissingRegistryError (step 2), MissingSealError / MissingIssuerError (step 3), InvalidTransitionError (step 5)"
     examples:
-      - "Processing an iss event: find registry via REGID -> check registry exists -> verify KEL anchor -> confirm credential is NotIssued -> transition to Issued -> accept"
-      - "Processing a rev event: find registry -> check registry exists -> verify KEL anchor -> confirm credential is Issued -> transition to Revoked -> accept"
-      - "Validation failing at step 2: registry VCP not yet received -> escrow to Missing Registry Escrow"
+      - "Processing an upd(ts='issued') event: find registry via REGID -> check registry exists -> verify KEL anchor -> confirm credential is NotIssued -> transition to Issued -> accept"
+      - "Processing an upd(ts='revoked') event: find registry -> check registry exists -> verify KEL anchor -> confirm credential is Issued -> transition to Revoked -> accept"
+      - "Validation failing at step 2: registry rip not yet received -> escrow to Missing Registry Escrow"
       - "Validation failing at step 3: issuer's KEL event at seal point not yet available -> escrow to Missing Issuer Escrow"
     related_terms: ["Verifiable Event", "KEL Anchor Verification", "TEL Escrows", "State Transition Rules"]
 
@@ -36,9 +36,9 @@ terms:
       - "In keriox: VerifiableEvent struct with event and attached_seal fields"
       - "In keripy: the seal arrives as a CESR attachment group alongside the TEL event serialization"
     examples:
-      - "VerifiableEvent containing an iss event and a seal pointing to the issuer's KEL event at sn=3"
+      - "VerifiableEvent containing an upd(ts='issued') event and a seal pointing to the issuer's KEL event at sn=3"
       - "Validator extracting the seal from a VerifiableEvent and checking it against the issuer's KEL"
-      - "A bis event bundled with a seal referencing the issuer's interaction event at sn=7 that anchors the credential issuance"
+      - "A bup(ts='issued') event bundled with a seal referencing the issuer's interaction event at sn=7 that anchors the credential issuance"
     related_terms: ["Transaction Event Seal", "TEL Validation Pipeline", "KEL Anchor Verification"]
 
   # Inherits: "Transaction Event Seal" from domain://credential-lifecycle
@@ -55,7 +55,7 @@ terms:
       - "The seal binds the TEL event to the issuer's key state at the time of anchoring"
     examples:
       - "Seal: {\"s\": \"3\", \"d\": \"ELvaU6Z-i0d8JJR2nmwyYAZAoTNZH3UfSVPzhzS6b5CM\"}"
-      - "Issuer creates ixn event with anchor containing the iss event's sn and SAID"
+      - "Issuer creates ixn event with anchor containing the upd event's sn and SAID"
       - "Validator looks up the issuer's KEL at the seal's stated sn and verifies the SAID matches"
     related_terms: ["Verifiable Event", "KEL Anchor Verification", "TEL Validation Pipeline"]
 
@@ -64,17 +64,17 @@ terms:
     definition: "Typed escrow queues for TEL events that cannot be immediately validated. Each escrow type corresponds to a specific blocking condition in the validation pipeline. Events are held until the condition resolves, then reprocessed through the same pipeline."
     invariants:
       - "Out-of-order escrow [.oots in keripy] / OutOfOrderEscrow [keriox]: event sn does not match expected next sequence number -- a preceding event is missing"
-      - "Missing registry escrow (MissingRegistryEscrow [keriox]): the registry's VCP/management TEL is not yet available -- cannot determine registry state"
+      - "Missing registry escrow (MissingRegistryEscrow [keriox]): the registry's rip/management TEL is not yet available -- cannot determine registry state"
       - "Missing issuer escrow [.taes in keripy] / MissingIssuerEscrow [keriox]: the issuer's KEL event at the anchor seal point is not yet received -- cannot verify KEL binding"
       - "Partial witness escrow [.twes in keripy]: insufficient backer signatures collected so far -- waiting for more witness receipts"
       - "Events in escrow retain their full VerifiableEvent bundle (TEL event + seal) for reprocessing"
       - "Escrow queues have configurable time-to-live -- stale entries are pruned"
     examples:
-      - "An iss event at sn=2 escrowed in out-of-order escrow [.oots in keripy] because sn=1 has not yet been processed"
-      - "A bis event escrowed in MissingRegistryEscrow because the VCP for that registry has not arrived"
-      - "An iss event escrowed in missing issuer escrow [.taes in keripy] because the issuer's ixn event containing the anchor seal is not yet received"
-      - "A bis event in partial witness escrow [.twes in keripy] with 1 of 3 required backer signatures -- waiting for 2 more"
-      - "After a VCP event arrives, MissingRegistryEscrow entries for that REGID are reprocessed"
+      - "An upd event at sn=2 escrowed in out-of-order escrow [.oots in keripy] because sn=1 has not yet been processed"
+      - "A bup event escrowed in MissingRegistryEscrow because the rip for that registry has not arrived"
+      - "An upd event escrowed in missing issuer escrow [.taes in keripy] because the issuer's ixn event containing the anchor seal is not yet received"
+      - "A bup event in partial witness escrow [.twes in keripy] with 1 of 3 required backer signatures -- waiting for 2 more"
+      - "After a rip event arrives, MissingRegistryEscrow entries for that REGID are reprocessed"
     related_terms: ["TEL Validation Pipeline", "Verifiable Event", "Out-of-Order TEL Escrow", "Missing Registry Escrow", "Missing Issuer Escrow"]
 
   - term: "Out-of-Order TEL Escrow"
@@ -88,7 +88,7 @@ terms:
 
   - term: "Missing Registry Escrow"
     synonyms: ["MRE", ".mre [keripy]", "MissingRegistryEscrow [keriox]"]
-    definition: "Holds TEL events and credentials whose registry inception (VCP/rip) has not yet been received. Cannot determine registry state without the management TEL. Reprocessed when the registry VCP arrives."
+    definition: "Holds TEL events and credentials whose registry inception (rip) has not yet been received. Cannot determine registry state without the management TEL. Reprocessed when the registry rip arrives. LEGACY (v1): this escrow waited for VCP events."
     invariants:
       - "Triggered when the REGID referenced by a TEL event or credential is not in the local Tevers"
       - "Reprocessed when a RegistryUpdated notification fires for the REGID (keriox) or during processEscrows sweep (keripy)"
@@ -114,10 +114,10 @@ terms:
       - "In keriox: Tel.verify_binding() performs this check within TelEventProcessor.process()"
       - "In keripy: anchor verification happens during Tevery.processEvent() via the Baser KEL lookup"
     examples:
-      - "TEL iss event at sn=0 with seal pointing to issuer KEL sn=5: look up issuer's ixn at sn=5, check its anchor contains {s: '0', d: iss_event_SAID}"
+      - "TEL upd event at sn=0 with seal pointing to issuer KEL sn=5: look up issuer's ixn at sn=5, check its anchor contains {s: '0', d: upd_event_SAID}"
       - "Issuer's KEL event at sn=5 not yet received: escrow TEL event to Missing Issuer Escrow"
       - "Issuer's KEL event at sn=5 found but anchor does not contain the expected seal: reject with MissingSealError"
-      - "Seal verified: the iss event is now cryptographically bound to the issuer's key state at KEL sn=5"
+      - "Seal verified: the upd event is now cryptographically bound to the issuer's key state at KEL sn=5"
     related_terms: ["Transaction Event Seal", "Verifiable Event", "TEL Validation Pipeline", "TEL Escrows"]
 
 events:
