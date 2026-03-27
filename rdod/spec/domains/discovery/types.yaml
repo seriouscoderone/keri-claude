@@ -134,25 +134,26 @@ types:
           - "Authorization via signed reply message (route=/loc/scheme)"
           - "Subject to BADA acceptance policy"
 
-  - name: "WitnessEndpoint"
-    description: "A resolved witness endpoint — the witness AID paired with its network URL."
+  - name: "ServiceEndpoint"
+    description: "A resolved service endpoint — a service AID paired with its role and network URL. Produced by combining EndRole authorization with LocationScheme resolution."
     variants:
       - name: "default"
         fields:
-          - name: "witness_aid"
+          - name: "service_aid"
             type: "string"
             required: true
-            description: "Non-transferable witness AID"
+            description: "Service AID (e.g., non-transferable witness AID, agent AID)"
           - name: "url"
             type: "string"
             required: true
-            description: "HTTP(S) URL where the witness is reachable"
+            description: "HTTP(S) URL where the service is reachable"
           - name: "role"
             type: "string"
             required: true
-            description: "Always 'witness'"
+            description: "Service role — determines what protocol the endpoint speaks"
             constraints:
-              enum: ["witness"]
+              enum: ["witness", "watcher", "agent", "controller", "mailbox"]
         invariants:
           - "Resolved from end-role + loc-scheme reply messages"
           - "URL is verified via BADA acceptance policy"
+          - "Role must match one of the KERI-defined service roles"

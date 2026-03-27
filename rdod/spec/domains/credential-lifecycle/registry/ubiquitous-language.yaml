@@ -48,6 +48,30 @@ terms:
       - "Blindable registry: designated backer witnesses, uses bup events"
     related_terms: ["Registry Inception", "Blindable vs Non-Blindable"]
 
+  - term: "Blindable Registry"
+    definition: "A registry operating in blindable mode. All credential update events use the bup ilk and carry blinded attribute blocks with fresh BLIDs. Observers cannot distinguish state-changing updates from no-op decorrelation updates, protecting the credential holder's privacy."
+    invariants:
+      - "All credential events use bup (blindable update) — upd events are rejected"
+      - "Each bup carries a fresh BLID derived from a shared secret salt + sequence number"
+      - "Decorrelation updates (no state change) are indistinguishable from real state changes"
+      - "Registry creator chooses blindable mode at inception (rip) — immutable thereafter"
+    examples:
+      - "Blindable registry: issuer creates bup(ts='issued') with blinded attribute block — observer sees only a BLID"
+      - "Decorrelation: issuer creates bup with unchanged state — observer cannot tell it's a no-op"
+    related_terms: ["Registry Mode", "Blinded Attribute Block", "Registry Inception"]
+
+  - term: "Non-Blindable Registry"
+    definition: "A registry operating in non-blindable mode. All credential update events use the upd ilk with publicly observable transaction state (ta and ts fields). Simpler than blindable mode — no blinding infrastructure needed."
+    invariants:
+      - "All credential events use upd (non-blindable update) — bup events are rejected"
+      - "Transaction ACDC SAID (ta) and transaction state (ts) are publicly visible"
+      - "No decorrelation capability — state changes are observable"
+      - "Registry creator chooses non-blindable mode at inception (rip) — immutable thereafter"
+    examples:
+      - "Non-blindable registry: issuer creates upd(ts='issued') — credential SAID and state are public"
+      - "Revocation: issuer creates upd(ts='revoked') — observers can see the credential was revoked"
+    related_terms: ["Registry Mode", "Registry Inception"]
+
 events:
   - name: "RegistryIncepted"
     payload: "regid: REGID, issuer_aid: AID, mode: blindable|non-blindable"

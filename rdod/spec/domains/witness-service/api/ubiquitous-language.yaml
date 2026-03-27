@@ -35,6 +35,30 @@ terms:
       - "GET /.well-known/keri/oobi/EDP1.../witness/BDg3... — resolves witness OOBI"
     related_terms: ["Event Submission", "KERL Query"]
 
+  - term: "Receipt Response"
+    synonyms: ["Witness Receipt"]
+    definition: "The CESR-encoded receipt returned by the witness after accepting a key event. Contains the witness's signature over the event, proving the witness has seen and stored it. This receipt is what controllers collect to meet their TOAD threshold."
+    invariants:
+      - "Contains the witness's non-transferable signature (Cigar) over the event SAID"
+      - "Only produced for first-seen events — duplicate submissions return the existing receipt"
+      - "Receipt is CESR-encoded for wire transmission"
+      - "Controller collects receipts from multiple witnesses to satisfy TOAD"
+    examples:
+      - "Witness returns rct message with non-transferable receipt couple after accepting an icp event"
+    related_terms: ["Event Submission", "KERL Query"]
+
+  - term: "Witness Configuration"
+    synonyms: ["Witness Bootstrap"]
+    definition: "The initialization parameters for a witness node: its non-transferable AID (derived from a seed or key pair), the HTTP port to listen on, and optional TLS configuration. A witness has exactly one AID for its lifetime."
+    invariants:
+      - "Witness AID is non-transferable (B prefix for Ed25519) — cannot rotate keys"
+      - "One AID per witness process — the AID IS the witness identity"
+      - "HTTP port and optional TLS configured at startup"
+      - "Witness OOBI is automatically available at /.well-known/keri/oobi/{witness_aid}/witness"
+    examples:
+      - "kli witness start --name wit0 --port 5632 — starts a witness with a non-transferable AID on port 5632"
+    related_terms: ["Event Submission", "OOBI Resolution"]
+
 events:
   - name: "EventSubmitted"
     payload: "aid: AID, sn: int, event_type: string, cesr_size: int"
