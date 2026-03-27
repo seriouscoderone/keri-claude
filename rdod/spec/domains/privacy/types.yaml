@@ -170,3 +170,85 @@ types:
         examples:
           - "['a', 'i'] — the issuee field inside the attributes section"
           - "['e', 'edge1', 'd'] — the SAID of a specific edge"
+
+  - name: "DisclosedVariant"
+    description: "A specific disclosure of an ACDC — captures which blocks have been expanded and the resulting disclosure form."
+    variants:
+      - name: "default"
+        fields:
+          - name: "acdc_said"
+            type: "string"
+            required: true
+            description: "SAID of the full ACDC being disclosed"
+          - name: "disclosure_form"
+            type: "string"
+            required: true
+            description: "The disclosure form used (compact, partial, selective, full, etc.)"
+          - name: "expanded_blocks"
+            type: "array[string]"
+            required: true
+            description: "SAIDs of the blocks that were expanded in this disclosure"
+        invariants:
+          - "acdc_said always refers to the same full credential regardless of form"
+          - "expanded_blocks is empty for compact form, complete for full form"
+
+  - name: "BulkInstance"
+    description: "One copy from a bulk-issued credential set — each copy has a unique SAID but all share the same bulk commitment."
+    variants:
+      - name: "default"
+        fields:
+          - name: "instance_said"
+            type: "string"
+            required: true
+            description: "Unique SAID of this instance (blinded with its own UUID)"
+          - name: "set_commitment"
+            type: "string"
+            required: true
+            description: "Aggregate commitment binding all copies in the bulk set"
+          - name: "index"
+            type: "integer"
+            required: true
+            description: "Position of this instance within the bulk set"
+        invariants:
+          - "Each instance is unlinkable to other instances in the same set"
+          - "Proof of membership requires unbinding this instance's SAID against set_commitment"
+
+  - name: "DisclosureOptions"
+    description: "Parameters controlling how a credential disclosure operation is performed."
+    variants:
+      - name: "default"
+        fields:
+          - name: "form"
+            type: "string"
+            required: true
+            description: "Target disclosure form (compact, partial, selective, full, etc.)"
+          - name: "blocks_to_expand"
+            type: "array[string]"
+            required: false
+            description: "Block labels to expand (e.g., ['a', 'e']) — only for partial/nested-partial"
+          - name: "chain_link_terms"
+            type: "map"
+            required: false
+            description: "Contractual terms for chain-link confidentiality gate (rules section content)"
+        invariants:
+          - "If form is 'full', blocks_to_expand is ignored — all blocks are expanded"
+          - "chain_link_terms triggers metadata offer/agree before disclosure"
+
+  - name: "PublicOrPrivateOrMetadata"
+    description: "Privacy classification of an ACDC block based on the presence and value of the u (UUID) field."
+    variants:
+      - name: "Public"
+        fields: []
+        invariants:
+          - "No u field — content discoverable from SAID via rainbow table"
+          - "Only compact and full disclosure forms available"
+      - name: "Private"
+        fields: []
+        invariants:
+          - "u field present with high entropy (>= 128 bits)"
+          - "All disclosure forms available including partial"
+      - name: "Metadata"
+        fields: []
+        invariants:
+          - "u field present but empty string — signals metadata variant"
+          - "Structural fields visible but not correlated to actual credential"

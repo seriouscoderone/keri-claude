@@ -1,0 +1,57 @@
+domain_ref: "integrity/detection"
+
+types:
+  - name: "NoDuplicity"
+    description: "Result when no duplicity is found for an AID — identical to the parent integrity domain type."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The AID that was checked"
+          - name: "checked_at"
+            type: "string"
+            required: true
+            description: "ISO 8601 datetime when the check completed"
+        invariants:
+          - "All known witnesses returned consistent events at every sn"
+          - "Equivalent to types://integrity#NoDuplicity"
+
+  - name: "TrustReconciled"
+    description: "Trust restored for an AID after duplicity investigation — the judge determined the AID is trustworthy again."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The AID whose trust was restored"
+          - name: "resolution"
+            type: "string"
+            required: true
+            description: "How the duplicity was resolved (e.g., superseding recovery, false positive)"
+        invariants:
+          - "Requires prior duplicity evidence that has been addressed"
+          - "Resolution must reference a concrete recovery event or investigation outcome"
+
+  - name: "TrustRevoked"
+    description: "Trust permanently revoked for an AID — duplicity was confirmed and no recovery occurred."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The AID whose trust was revoked"
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Human-readable explanation of why trust was revoked"
+          - name: "evidence_said"
+            type: "string"
+            required: true
+            description: "SAID of the duplicity evidence that triggered revocation"
+        invariants:
+          - "Revocation is permanent — cannot be reversed"
+          - "Evidence must be independently verifiable via the DEL"

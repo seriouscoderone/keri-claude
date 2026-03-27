@@ -1,0 +1,72 @@
+domain_ref: "integrity/recovery"
+
+types:
+  - name: "SupersedingRule"
+    description: "The specific superseding recovery rule being applied — each rule defines when a new event can displace an existing one in the KEL."
+    variants:
+      - name: "A0"
+        fields: []
+        invariants:
+          - "First seen wins — no superseding (normal non-recovery case)"
+      - name: "A1"
+        fields: []
+        invariants:
+          - "Rotation supersedes interaction at the same sn"
+      - name: "A2"
+        fields: []
+        invariants:
+          - "Rotation with higher config trait priority supersedes earlier rotation at same sn"
+      - name: "B1"
+        fields: []
+        invariants:
+          - "Delegated rotation supersedes delegated interaction at same sn"
+      - name: "B2"
+        fields: []
+        invariants:
+          - "Delegated rotation with higher config trait supersedes earlier delegated rotation at same sn"
+      - name: "B3"
+        fields: []
+        invariants:
+          - "Delegated rotation with delegator's seal supersedes one without"
+      - name: "C"
+        fields: []
+        invariants:
+          - "Recovery rotation at or after fork point supersedes the entire forked branch"
+
+  - name: "NotSuperseding"
+    description: "Result when a superseding check determines the candidate event does NOT supersede the existing one."
+    variants:
+      - name: "default"
+        fields:
+          - name: "rule_checked"
+            type: "string"
+            required: true
+            description: "The superseding rule that was evaluated (e.g., A1, B2, C)"
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Why the candidate event does not supersede"
+        invariants:
+          - "The existing event remains authoritative"
+          - "The candidate event may be escrowed or discarded depending on context"
+
+  - name: "DisputedBranch"
+    description: "A branch of events displaced by superseding recovery — equivalent to types://integrity#DisputedBranch."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The AID whose KEL forked"
+          - name: "fork_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number where the branch diverges from the authoritative KEL"
+          - name: "branch_events"
+            type: "array[string]"
+            required: true
+            description: "SAIDs of the events on the displaced branch, in order"
+        invariants:
+          - "All events are from sn >= fork_sn"
+          - "Branch events are retained in the DEL, not discarded"

@@ -1,0 +1,43 @@
+domain_ref: "integrity/evidence"
+
+types:
+  - name: "ForkDetected"
+    description: "Two different events exist at the same (prefix, sn) — the fundamental unit of duplicity evidence."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The AID with the forked KEL"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "The sequence number where divergent events were found"
+          - name: "first_seen_said"
+            type: "string"
+            required: true
+            description: "SAID of the event first seen at this sn"
+          - name: "conflicting_said"
+            type: "string"
+            required: true
+            description: "SAID of the second, conflicting event at the same sn"
+        invariants:
+          - "first_seen_said != conflicting_said — identical SAIDs would mean the same event"
+          - "Both events must be validly signed against key state at that sn"
+
+  - name: "NotificationType"
+    description: "Kinds of evidence notifications emitted by the evidence subdomain."
+    variants:
+      - name: "DuplicityDetected"
+        fields: []
+        invariants:
+          - "Emitted when a ForkDetected is first recorded"
+      - name: "EscrowTimeout"
+        fields: []
+        invariants:
+          - "Emitted when escrowed evidence exceeds its time-to-live"
+      - name: "EvidencePromoted"
+        fields: []
+        invariants:
+          - "Emitted when escrowed evidence is promoted to confirmed duplicity"

@@ -1,0 +1,34 @@
+domain_ref: "privacy/disclosure"
+
+types:
+  - name: "DisclosureMode"
+    description: "The mode of credential disclosure — determines how much content is revealed and through which mechanism."
+    variants:
+      - name: "Compact"
+        fields: []
+        invariants:
+          - "Only SAIDs revealed — zero content, existence and integrity only"
+      - name: "Partial"
+        fields: []
+        invariants:
+          - "SAID, UUID, and optionally schema revealed — requires Private block"
+      - name: "Selective"
+        fields: []
+        invariants:
+          - "Individual attributes disclosed against aggregate commitment"
+      - name: "Full"
+        fields: []
+        invariants:
+          - "All fields expanded — terminal disclosure form"
+      - name: "Metadata"
+        fields: []
+        invariants:
+          - "Structural fields visible but uncorrelated to actual credential — empty u field"
+      - name: "NestedPartial"
+        fields: []
+        invariants:
+          - "Each top-level section independently at a different disclosure level"
+      - name: "BulkIssued"
+        fields: []
+        invariants:
+          - "Disclosure of one copy from a bulk-issued set — unlinkable across presentations"

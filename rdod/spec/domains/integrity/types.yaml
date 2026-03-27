@@ -147,3 +147,61 @@ types:
             description: "Sequence number where superseding recovery occurred"
         invariants:
           - "Duplicity was detected but superseding recovery resolved it"
+
+  - name: "NoDuplicity"
+    description: "Result when no duplicity is found for an AID after cross-checking witnesses and watchers."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The AID that was checked"
+          - name: "checked_at"
+            type: "string"
+            required: true
+            description: "ISO 8601 datetime when the check completed"
+        invariants:
+          - "All known witnesses returned consistent events at every sn"
+
+  - name: "RecoveryApplied"
+    description: "Result of a successful superseding recovery — the forked branch has been displaced and the KEL is consistent again."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The AID that was recovered"
+          - name: "recovery_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the superseding rotation event"
+          - name: "superseded_events"
+            type: "integer"
+            required: true
+            description: "Number of events on the forked branch that were displaced"
+        invariants:
+          - "recovery_sn >= fork point sn"
+          - "superseded_events >= 1 — at least one event was displaced"
+
+  - name: "DisputedBranch"
+    description: "A branch of events displaced by superseding recovery — retained as forensic evidence but no longer part of the authoritative KEL."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The AID whose KEL forked"
+          - name: "fork_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number where the branch diverges from the authoritative KEL"
+          - name: "branch_events"
+            type: "array[string]"
+            required: true
+            description: "SAIDs of the events on the displaced branch, in order"
+        invariants:
+          - "All events are from sn >= fork_sn"
+          - "Branch events are retained in the DEL, not discarded"

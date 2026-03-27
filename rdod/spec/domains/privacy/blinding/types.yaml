@@ -1,0 +1,36 @@
+domain_ref: "privacy/blinding"
+
+types:
+  - name: "BoundBlindedAttributeBlock"
+    description: "A blinded attribute block bound to a specific transaction and key state — ties the blinding to a verifiable anchor point."
+    variants:
+      - name: "default"
+        fields:
+          - name: "blid"
+            type: "string"
+            required: true
+            description: "Blinded SAID of the attribute block"
+          - name: "uuid"
+            type: "string"
+            required: true
+            description: "UUID blinding factor (>= 128 bits entropy)"
+          - name: "transaction_said"
+            type: "string"
+            required: true
+            description: "SAID of the transaction anchoring this binding"
+          - name: "transaction_state"
+            type: "string"
+            required: true
+            description: "State of the anchoring transaction (e.g., issued, revoked)"
+          - name: "bound_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the KEL event anchoring the transaction"
+          - name: "bound_said"
+            type: "string"
+            required: true
+            description: "SAID of the KEL event at bound_sn"
+        invariants:
+          - "blid is derived from the block content + uuid"
+          - "Binding is verifiable: transaction_said must anchor in the KEL at (bound_sn, bound_said)"
+          - "uuid must have >= 128 bits of entropy to prevent rainbow table attacks"

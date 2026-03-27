@@ -1,0 +1,24 @@
+domain_ref: "privacy/aggregation"
+
+types:
+  - name: "SadPathSig"
+    description: "A SAD path signature — a signature over a specific path within a SAD structure, enabling selective signing of credential subsections."
+    variants:
+      - name: "default"
+        fields:
+          - name: "path"
+            type: "string"
+            required: true
+            description: "SAD path expression identifying the signed location (e.g., '-a-i')"
+          - name: "signature"
+            type: "string"
+            required: true
+            description: "CESR-encoded signature over the content at the path"
+          - name: "signer_aid"
+            type: "string"
+            required: true
+            description: "AID of the signer — verifiable against its current key state"
+        invariants:
+          - "Signature is over the serialized content at the specified path, not the whole SAD"
+          - "Signer's key state must be resolvable at verification time"
+          - "Path must resolve to a valid location in the target SAD"
