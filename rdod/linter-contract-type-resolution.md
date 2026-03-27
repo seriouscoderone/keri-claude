@@ -1,46 +1,55 @@
-# Feature Request: Validate type names referenced in port contract strings
+# Feature Request: Validate type names in port contract strings against types.yaml
 
 ## Summary
 
-When a port's `contract:` string references a type name (e.g., `ServiceEndpoint`, `EscrowType`, `KeyEvent`), the linter should verify that the type is defined somewhere reachable — in the domain's own types.yaml, in a kernel's types.yaml, or in an imported domain's types.yaml.
+Port contract strings reference type names (e.g., `ServiceEndpoint`, `KeyEvent`, `EscrowType`) inline without validation. The linter should parse type names from contracts and verify they exist in types.yaml definitions.
 
 ## Problem
 
-Port contracts reference type names inline (e.g., `witnesses: [WitnessEndpoint]`). When a type is renamed (e.g., `WitnessEndpoint` → `ServiceEndpoint`), the contract string becomes stale but nothing catches it. This was discovered when `accountability/dissemination/ports.yaml` still referenced `WitnessEndpoint` after we renamed it to `ServiceEndpoint` in `discovery/types.yaml`.
+When a type is renamed in types.yaml (e.g., `WitnessEndpoint` → `ServiceEndpoint`), port contracts that reference the old name silently become stale. This was caught manually but could have been missed — the linter has no way to detect it today.
+
+The linter already validates:
+- `types://` URI references in types.yaml fields (`[type-ref]` rule)
+- `port://` references in verification.yaml (`[port-resolution]` rule)
+- `domain://` references in imports (`[import-resolution]` rule)
+
+But inline type names in port contract strings are unchecked.
 
 ## Example
 
 ```yaml
-# accountability/dissemination/ports.yaml
+# ports.yaml
 contract: "disseminate_event(event: KeyEvent, witnesses: [WitnessEndpoint]) -> Result"
-#                                                         ^^^^^^^^^^^^^^^^
-#                     This type was renamed to ServiceEndpoint — contract is stale
 ```
 
-The linter should flag:
+If `WitnessEndpoint` was renamed to `ServiceEndpoint` in types.yaml, the linter should flag:
 
 ```
-[contract-type-resolution] accountability/dissemination: contract references type
-  'WitnessEndpoint' not found in local types.yaml, kernel types, or imported domains
+[contract-type-resolution] accountability/dissemination: port 'Event Propagation'
+  contract references type 'WitnessEndpoint' — not found in any types.yaml
 ```
 
 ## Proposed Rule
 
-1. Parse type names from `contract:` strings — extract identifiers used as parameter types, return types, and generic parameters (e.g., `[X]`, `Map<X, Y>`, `Result<X, Y>`)
-2. Build a set of known types for each domain: own types.yaml + kernel types + imported domain types + built-in primitives (string, int, bool, bytes, void, Result, Iterator, Map)
-3. For each extracted type name, check if it exists in the known types set
-4. If not found, emit a warning (not error — contract strings are semi-formal)
+1. Parse capitalized identifiers from port contract strings (regex: `\b[A-Z][a-zA-Z]+\b`)
+2. Exclude built-in primitives: `Result`, `Iterator`, `Map`, `AID`, `SAID`, `REGID`, `KEL`, `KERL` (configurable whitelist, could reuse `.vocabulary-whitelist` or a separate `.contract-types-whitelist`)
+3. For each remaining identifier, check if it exists as a `name:` in any domain's types.yaml
+4. Also check UL terms — some types are defined as UL terms rather than types.yaml entries (e.g., `KeyEvent`, `KeyState`)
+5. Unresolved types produce a warning (not error — contracts are semi-structured)
 
-## Scope
+## Pragmatic Scope
 
-- Only applies to `contract:` fields in ports.yaml
-- Built-in primitives (string, int, bool, bytes, void, datetime) are always allowed
-- Generic wrappers (Result, Iterator, Map, []) are ignored — only inner type names are checked
-- This is a warning, not an error, since contract strings are semi-formal and may use shorthand
+This is a best-effort heuristic, not a type checker:
+- Only checks capitalized identifiers (convention: types are PascalCase)
+- Primitives (`string`, `int`, `bool`, `bytes`, `datetime`, `void`) are ignored (lowercase)
+- Generic wrappers (`Result`, `Iterator`, `Map`) can be whitelisted
+- Cross-domain types are checked against the union of all types.yaml files
+- Warning severity — contracts are free-form strings, false positives are possible
 
 ## Acceptance Criteria
 
-- [ ] Linter extracts type names from port contract strings
-- [ ] Types checked against local types.yaml, kernel types, and imported types
-- [ ] Built-in primitives whitelisted
-- [ ] Missing types produce a warning with the port, type name, and contract context
+- [ ] Linter extracts PascalCase identifiers from port contract strings
+- [ ] Built-in primitives and configurable whitelist excluded
+- [ ] Each identifier checked against all types.yaml `name:` fields and UL `term:` fields
+- [ ] Unresolved types produce a warning with port name and contract context
+- [ ] Per-repo whitelist supported (e.g., `.contract-types-whitelist` or extend `.vocabulary-whitelist`)
