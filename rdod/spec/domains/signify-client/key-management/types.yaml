@@ -99,3 +99,56 @@ types:
         invariants:
           - "All requests to agent_url are signed with controller's current keys"
           - "When passcode_active is false, signing operations fail until re-authenticated"
+
+  - name: "EncryptedSalt"
+    description: "The master salt encrypted with a passcode-derived key. Stored on the cloud agent for salty keepers."
+    variants:
+      - name: "default"
+        fields:
+          - name: "ciphertext"
+            type: "bytes"
+            required: true
+            description: "Encrypted salt bytes"
+          - name: "algorithm"
+            type: "string"
+            required: true
+            description: "Encryption algorithm used (e.g., X25519-XSalsa20-Poly1305)"
+        invariants:
+          - "Decryption requires the passcode — only the edge client can decrypt"
+          - "Salt is the root secret for all salty key derivation"
+
+  - name: "EncryptedKey"
+    description: "A single encrypted private key with its position index."
+    variants:
+      - name: "default"
+        fields:
+          - name: "ciphertext"
+            type: "bytes"
+            required: true
+            description: "Encrypted private key bytes"
+          - name: "key_index"
+            type: "integer"
+            required: true
+            description: "Position of this key in the key list"
+            constraints:
+              min: 0
+        invariants:
+          - "Decryption requires the keeper's encryption key"
+          - "key_index corresponds to the signing or rotation index"
+
+  - name: "EncryptedKeyPair"
+    description: "Paired set of encrypted current and next private keys for a randy keeper."
+    variants:
+      - name: "default"
+        fields:
+          - name: "current"
+            type: "array[types://signify-client/key-management#EncryptedKey]"
+            required: true
+            description: "Encrypted current signing keys"
+          - name: "next"
+            type: "array[types://signify-client/key-management#EncryptedKey]"
+            required: true
+            description: "Encrypted next (pre-rotation) keys"
+        invariants:
+          - "current keys are used for signing the current event"
+          - "next keys are committed to via digest in the current establishment event"

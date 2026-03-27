@@ -1,0 +1,23 @@
+domain_ref: "watcher-service/api"
+
+types:
+  - name: "DuplicityStatus"
+    description: "Result of a duplicity check for a monitored identifier, returned to querying clients."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The identifier that was checked"
+          - name: "is_duplicitous"
+            type: "boolean"
+            required: true
+            description: "Whether conflicting events were detected"
+          - name: "evidence"
+            type: "array[types://cesr/primitives#SAID]"
+            required: true
+            description: "SAIDs of conflicting events (empty if not duplicitous)"
+        invariants:
+          - "If is_duplicitous is false, evidence is empty"
+          - "If is_duplicitous is true, evidence contains at least two conflicting SAIDs"

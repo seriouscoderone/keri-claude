@@ -1,0 +1,44 @@
+domain_ref: "signify-client/resources"
+
+types:
+  - name: "OperationStatus"
+    description: "Current status of a long-running operation polled by the Signify client."
+    variants:
+      - name: "default"
+        fields:
+          - name: "name"
+            type: "string"
+            required: true
+            description: "Unique operation identifier"
+          - name: "done"
+            type: "boolean"
+            required: true
+            description: "Whether the operation has completed"
+          - name: "result"
+            type: "map"
+            required: false
+            description: "Operation result payload (present only when done)"
+        invariants:
+          - "Clients poll GET /operations/{name} until done is true"
+          - "result is absent while done is false"
+
+  - name: "AgentConfig"
+    description: "Connection configuration for a Signify client to reach its cloud agent."
+    variants:
+      - name: "default"
+        fields:
+          - name: "agent_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The cloud agent's AID"
+          - name: "admin_url"
+            type: "string"
+            required: true
+            description: "URL of the agent's admin API (port 3901)"
+          - name: "boot_url"
+            type: "string"
+            required: true
+            description: "URL of the agent's boot endpoint (port 3903)"
+        invariants:
+          - "admin_url is used for all authenticated API requests"
+          - "boot_url is used only for initial agent provisioning"

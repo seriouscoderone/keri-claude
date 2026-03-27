@@ -152,3 +152,18 @@ types:
         invariants:
           - "v1 format: PPPPvvKKKKllllll_ (17 characters, underscore terminated)"
           - "Size is hex-encoded (max 16,777,215)"
+
+  - name: "FrameType"
+    description: "Classification of a parsed CESR stream frame after cold-start detection."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["CesrGroup", "NonNativePayload", "Annotated"]
+        invariants:
+          - "CesrGroup: count-code-prefixed group of CESR primitives"
+          - "NonNativePayload: JSON, CBOR, or MGPK serialized message body"
+          - "Annotated: CESR native event encoding with embedded type information"

@@ -1,0 +1,44 @@
+domain_ref: "cloud-agent-service"
+
+types:
+  - name: "ReceiptSet"
+    description: "Collection of witness receipts for a single event, ready for forwarding to other witnesses or validators."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The identifier whose event was receipted"
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the receipted event"
+          - name: "receipts"
+            type: "array[types://accountability#Receipt]"
+            required: true
+            description: "Witness receipts collected so far"
+        invariants:
+          - "All receipts reference the same event_said"
+          - "Each receipt is from a distinct witness"
+
+  - name: "DuplicityStatus"
+    description: "Result of a duplicity check requested from a watcher for a monitored identifier."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The identifier that was checked"
+          - name: "is_duplicitous"
+            type: "boolean"
+            required: true
+            description: "Whether conflicting events were detected"
+          - name: "evidence"
+            type: "array[types://cesr/primitives#SAID]"
+            required: true
+            description: "SAIDs of conflicting events (empty if not duplicitous)"
+        invariants:
+          - "If is_duplicitous is false, evidence is empty"
+          - "If is_duplicitous is true, evidence contains at least two SAIDs at the same sequence number"

@@ -69,3 +69,33 @@ types:
         invariants:
           - "At least one DuplicityEvidence entry with two different SAIDs at the same sn"
           - "Evidence is immutable — stored permanently in DEL"
+
+  - name: "DuplicityAlert"
+    description: "Permanent record of detected duplicity for an identifier, stored in the Duplicitous Event Log (DEL)."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The identifier found to be duplicitous"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number where conflicting events were observed"
+          - name: "first_seen_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the first event observed at this sn"
+          - name: "conflicting_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the conflicting event at the same sn"
+          - name: "detected_at"
+            type: "types://cesr/primitives#DateTime"
+            required: true
+            description: "When the duplicity was detected"
+        invariants:
+          - "first_seen_said != conflicting_said (two different events at the same sn)"
+          - "Once recorded, the alert is immutable — duplicity evidence is permanent"
+          - "Stored in the DEL (Duplicitous Event Log)"

@@ -1,0 +1,34 @@
+domain_ref: "accountability/receipting"
+
+types:
+  - name: "ReceiptType"
+    description: "Classification of witness receipt by the witness's transferability."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["NonTransferable", "Transferable", "WitnessIndexed"]
+        invariants:
+          - "NonTransferable: unindexed signature (Cigar) from a non-transferable witness"
+          - "Transferable: indexed signature group (Siger) with event seal from a transferable witness"
+          - "WitnessIndexed: indexed by witness position in the witness list"
+
+  - name: "SigningKeys"
+    description: "Key set used by a witness for generating receipts."
+    variants:
+      - name: "default"
+        fields:
+          - name: "keys"
+            type: "array[types://cesr/primitives#Matter]"
+            required: true
+            description: "Public keys (Verfers) for receipt verification"
+          - name: "threshold"
+            type: "types://cesr/primitives#SigningThreshold"
+            required: true
+            description: "Signing threshold for multi-key witnesses"
+        invariants:
+          - "For non-transferable witnesses, keys has exactly one entry"
+          - "threshold must be satisfiable by the available keys"

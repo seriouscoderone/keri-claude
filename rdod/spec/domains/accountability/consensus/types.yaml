@@ -1,0 +1,23 @@
+domain_ref: "accountability/consensus"
+
+types:
+  - name: "AlreadySeen"
+    description: "Result when a witness or validator has already first-seen an event at the given sequence number."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The identifier prefix"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number that was already occupied"
+          - name: "first_seen_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the event that was first-seen at this (aid, sn)"
+        invariants:
+          - "Any new event at the same (aid, sn) with a different SAID is rejected"
+          - "The first-seen record is immutable once written"

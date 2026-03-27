@@ -80,3 +80,40 @@ types:
         invariants:
           - "key_state obtained via OOBI resolution or direct KEL exchange"
           - "endpoints subject to BADA acceptance policy"
+
+  - name: "EscrowedItem"
+    description: "An event or message held in escrow by the local agent pending missing dependencies."
+    variants:
+      - name: "default"
+        fields:
+          - name: "key"
+            type: "string"
+            required: true
+            description: "Lookup key (typically prefix + sequence number)"
+          - name: "payload"
+            type: "bytes"
+            required: true
+            description: "Serialized event or message bytes"
+          - name: "escrowed_at"
+            type: "types://cesr/primitives#DateTime"
+            required: true
+            description: "When the item was placed in escrow"
+        invariants:
+          - "Items are periodically checked for resolution or expiry"
+          - "Removed once dependencies are satisfied or timeout elapses"
+
+  - name: "EscrowKey"
+    description: "Composite key for looking up escrowed items by identifier and sequence number."
+    variants:
+      - name: "default"
+        fields:
+          - name: "prefix"
+            type: "string"
+            required: true
+            description: "AID prefix of the escrowed event's identifier"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the escrowed event"
+        invariants:
+          - "(prefix, sn) uniquely identifies the escrow slot"

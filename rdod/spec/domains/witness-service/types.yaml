@@ -55,3 +55,39 @@ types:
         invariants:
           - "Immutable once written — a witness MUST NOT change the first-seen record for any (prefix, sn)"
           - "Any subsequent event with different SAID at the same (prefix, sn) is rejected"
+
+  - name: "ReceiptedEvent"
+    description: "A key event paired with the witness receipt proving first-seen observation."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event"
+            type: "types://identity#KeyEvent"
+            required: true
+            description: "The key event that was receipted"
+          - name: "receipt"
+            type: "types://accountability#Receipt"
+            required: true
+            description: "The witness's receipt for this event"
+          - name: "witness_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "AID of the witness that produced the receipt"
+        invariants:
+          - "receipt.event_said must match the SAID of event"
+          - "witness_aid must match the signer of the receipt"
+
+  - name: "SequenceNumber"
+    description: "Typed wrapper around an integer sequence number for event ordering."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "integer"
+            required: true
+            description: "Non-negative integer sequence number"
+            constraints:
+              min: 0
+        invariants:
+          - "Inception event has sn=0"
+          - "Each subsequent event increments sn by 1"

@@ -1,0 +1,48 @@
+domain_ref: "cesr"
+
+types:
+  - name: "CodeEntry"
+    description: "A single entry in the CESR code table defining a primitive's encoding geometry."
+    variants:
+      - name: "default"
+        fields:
+          - name: "code"
+            type: "string"
+            required: true
+            description: "CESR type code string"
+          - name: "hard_size"
+            type: "integer"
+            required: true
+            description: "Number of hard (type-identifying) characters in qb64"
+          - name: "soft_size"
+            type: "integer"
+            required: true
+            description: "Number of soft (value-carrying) characters in the code prefix"
+          - name: "full_size"
+            type: "integer"
+            required: true
+            description: "Total qb64 character count (hard + soft + payload)"
+          - name: "lead_size"
+            type: "integer"
+            required: true
+            description: "Number of lead pad bytes in the raw material"
+        invariants:
+          - "full_size is always a multiple of 4 (quadlet alignment)"
+          - "hard_size + soft_size = total code prefix length"
+          - "lead_size is 0, 1, or 2"
+
+  - name: "SerializationKind"
+    description: "Serialization format for KERI message bodies."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["JSON", "CBOR", "MGPK", "CESR"]
+        invariants:
+          - "JSON: RFC 8259 with insertion-order field preservation"
+          - "CBOR: RFC 8949 binary encoding"
+          - "MGPK: MessagePack binary encoding"
+          - "CESR: native CESR event encoding (no external serialization)"

@@ -51,3 +51,20 @@ types:
         invariants:
           - "Bidirectional: lookup by controller_aid OR agent_aid OR managed AID"
           - "A managed AID maps to exactly one agent, which maps to exactly one controller"
+
+  - name: "AgentConfig"
+    description: "Configuration parameters for provisioning a new cloud agent instance."
+    variants:
+      - name: "default"
+        fields:
+          - name: "controller_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The controller's AID that will own this agent"
+          - name: "agent_name"
+            type: "string"
+            required: true
+            description: "Human-readable name for the agent"
+        invariants:
+          - "controller_aid must not already have a provisioned agent"
+          - "agent_name is for operational identification, not cryptographic binding"

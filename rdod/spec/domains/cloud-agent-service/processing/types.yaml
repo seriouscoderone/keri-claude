@@ -1,0 +1,169 @@
+domain_ref: "cloud-agent-service/processing"
+
+types:
+  - name: "WorkItem"
+    description: "Unit of asynchronous work queued for background processing by the cloud agent."
+    variants:
+      - name: "default"
+        fields:
+          - name: "deck"
+            type: "string"
+            required: true
+            description: "Named work queue this item belongs to"
+          - name: "operation_type"
+            type: "string"
+            required: true
+            description: "Category of work to perform"
+          - name: "payload"
+            type: "map"
+            required: true
+            description: "Operation-specific data"
+        invariants:
+          - "deck determines processing priority and ordering"
+          - "payload schema depends on operation_type"
+
+  - name: "DeckName"
+    description: "Named work queue for categorizing async processing tasks."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["Delegation", "Credential", "Multisig", "Exchange", "Escrow"]
+        invariants:
+          - "Each deck is processed independently"
+
+  - name: "OpType"
+    description: "Category of long-running operation tracked by the cloud agent."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["Witness", "Delegation", "Group", "Registry", "Credential", "Exchange"]
+        invariants:
+          - "Determines the completion check strategy for polling"
+
+  - name: "SignedEventMessage"
+    description: "A key event bundled with partial signatures for multi-sig assembly."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event"
+            type: "types://identity#KeyEvent"
+            required: true
+            description: "The key event awaiting multi-sig completion"
+          - name: "signatures"
+            type: "array[types://cesr/primitives#Siger]"
+            required: true
+            description: "Indexed signatures collected so far"
+          - name: "group_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The group identifier this event belongs to"
+        invariants:
+          - "Each signature's index corresponds to a member's key position in the group"
+          - "Event is not finalized until threshold signatures are collected"
+
+  - name: "GroupStatus"
+    description: "Status of a multi-sig group operation being coordinated."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["Pending", "Satisfied", "Failed"]
+        invariants:
+          - "Pending: waiting for additional member signatures"
+          - "Satisfied: signing threshold met, event can be finalized"
+          - "Failed: coordination timed out or was rejected"
+
+  - name: "EscrowedItem"
+    description: "An event or message held in escrow pending missing dependencies (signatures, receipts, delegation approval)."
+    variants:
+      - name: "default"
+        fields:
+          - name: "key"
+            type: "string"
+            required: true
+            description: "Lookup key (typically prefix + sequence number)"
+          - name: "payload"
+            type: "bytes"
+            required: true
+            description: "Serialized event or message bytes"
+          - name: "escrowed_at"
+            type: "types://cesr/primitives#DateTime"
+            required: true
+            description: "When the item was placed in escrow"
+        invariants:
+          - "Items are periodically checked for resolution or expiry"
+          - "Escrowed items are removed once their dependencies are satisfied"
+
+  - name: "EscrowKey"
+    description: "Composite key for looking up escrowed items by identifier and sequence number."
+    variants:
+      - name: "default"
+        fields:
+          - name: "prefix"
+            type: "string"
+            required: true
+            description: "AID prefix of the escrowed event's identifier"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the escrowed event"
+        invariants:
+          - "(prefix, sn) uniquely identifies the escrow slot"
+
+  - name: "OperationType"
+    description: "Type of long-running operation the cloud agent tracks for polling."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["Witness", "Delegation", "Group", "Registry", "Credential"]
+        invariants:
+          - "Determines which completion check runs when the client polls"
+
+  - name: "OperationName"
+    description: "Unique name identifying a long-running operation for status polling."
+    variants:
+      - name: "default"
+        fields:
+          - name: "name"
+            type: "string"
+            required: true
+            description: "Operation identifier (typically type.qualifier format)"
+        invariants:
+          - "Must be unique per agent"
+          - "Used as the path parameter in GET /operations/{name}"
+
+  - name: "CredentialFilter"
+    description: "Query filter for searching credentials held by the agent."
+    variants:
+      - name: "default"
+        fields:
+          - name: "issuer"
+            type: "types://cesr/primitives#AID"
+            required: false
+            description: "Filter by issuer AID"
+          - name: "schema"
+            type: "types://cesr/primitives#SAID"
+            required: false
+            description: "Filter by credential schema SAID"
+          - name: "subject"
+            type: "types://cesr/primitives#AID"
+            required: false
+            description: "Filter by credential subject AID"
+        invariants:
+          - "All specified fields are ANDed together"
+          - "At least one filter field should be provided"

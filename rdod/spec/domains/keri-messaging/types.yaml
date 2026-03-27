@@ -162,3 +162,69 @@ types:
           - "Route /ksn handled by identity/state domain"
           - "Subject to BADA (Best Available Data Accepted) acceptance policy"
           - "Subject to KRAM replay protection"
+
+  - name: "MessageType"
+    description: "KERI message ilk — the 3-character type code in the t field of every KERI message."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["icp", "rot", "ixn", "dip", "drt", "rct", "vrc", "qry", "rpy", "pro", "bar", "exn", "xip", "rip", "bup", "upd"]
+        invariants:
+          - "icp/rot/ixn: inception, rotation, interaction (non-delegated)"
+          - "dip/drt: delegated inception, delegated rotation"
+          - "rct/vrc: non-transferable receipt, transferable receipt"
+          - "qry/rpy: query, reply"
+          - "pro/bar: probe, bare (credential lifecycle)"
+          - "exn: exchange (peer-to-peer routing)"
+          - "xip/rip/bup/upd: KERI v2 exchange types"
+
+  - name: "ProtocolVersion"
+    description: "KERI protocol version as a major.minor tuple."
+    variants:
+      - name: "default"
+        fields:
+          - name: "major"
+            type: "integer"
+            required: true
+            description: "Major version number"
+            constraints:
+              min: 1
+          - name: "minor"
+            type: "integer"
+            required: true
+            description: "Minor version number"
+            constraints:
+              min: 0
+        invariants:
+          - "Currently KERI 1.x (v1) and KERI 2.x (v2) are defined"
+          - "Version determines message format: v1 uses 17-char version string, v2 uses 19-char"
+
+  - name: "FieldMap"
+    description: "Ordered key-value message body — the serialized content of a KERI event or message."
+    variants:
+      - name: "default"
+        fields:
+          - name: "fields"
+            type: "map"
+            required: true
+            description: "Ordered key-value pairs (insertion order is significant)"
+          - name: "version"
+            type: "string"
+            required: true
+            description: "Version string (v field) — always the first field"
+          - name: "ilk"
+            type: "string"
+            required: true
+            description: "Message type (t field)"
+          - name: "said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "Self-addressing identifier (d field)"
+        invariants:
+          - "Field order must be preserved for SAID computation"
+          - "version is always the first field in the map"
+          - "said is computed over the serialized fields with d replaced by a placeholder"

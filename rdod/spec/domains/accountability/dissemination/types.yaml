@@ -1,0 +1,58 @@
+domain_ref: "accountability/dissemination"
+
+types:
+  - name: "DisseminationReport"
+    description: "Outcome of propagating an event to witnesses and collecting receipts."
+    variants:
+      - name: "default"
+        fields:
+          - name: "witnesses_contacted"
+            type: "integer"
+            required: true
+            description: "Number of witnesses the event was sent to"
+          - name: "receipts_collected"
+            type: "integer"
+            required: true
+            description: "Number of witness receipts received"
+          - name: "mode"
+            type: "string"
+            required: true
+            description: "Dissemination strategy used"
+        invariants:
+          - "receipts_collected <= witnesses_contacted"
+          - "Event is considered accountable when receipts_collected >= TOAD"
+
+  - name: "DisseminationStrategy"
+    description: "Strategy for propagating events to the witness pool."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["RoundRobin", "Gossip", "Direct"]
+        invariants:
+          - "RoundRobin: send to each witness in sequence"
+          - "Gossip: witnesses forward to each other"
+          - "Direct: send to all witnesses simultaneously"
+
+  - name: "WitnessConfig"
+    description: "Witness set and tally for an identifier's accountability configuration."
+    variants:
+      - name: "default"
+        fields:
+          - name: "witnesses"
+            type: "array[types://cesr/primitives#AID]"
+            required: true
+            description: "Ordered list of designated witness AIDs"
+          - name: "tally"
+            type: "integer"
+            required: true
+            description: "TOAD — minimum witness receipts needed for accountability"
+            constraints:
+              min: 0
+        invariants:
+          - "tally <= len(witnesses)"
+          - "Witnesses must be non-transferable AIDs"
+          - "Modified via rotation events (witness add/cut lists)"

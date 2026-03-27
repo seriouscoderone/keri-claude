@@ -1,0 +1,27 @@
+domain_ref: "local-agent/api"
+
+types:
+  - name: "VerificationResult"
+    description: "Outcome of verifying a credential's authenticity and validity chain."
+    variants:
+      - name: "default"
+        fields:
+          - name: "valid"
+            type: "boolean"
+            required: true
+            description: "Whether the credential passed all verification checks"
+          - name: "credential_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the credential that was verified"
+          - name: "issuer_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "AID of the credential issuer"
+          - name: "reasons"
+            type: "array[string]"
+            required: true
+            description: "Failure reasons (empty if valid)"
+        invariants:
+          - "If valid is true, reasons is empty"
+          - "If valid is false, reasons contains at least one failure description"

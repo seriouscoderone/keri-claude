@@ -266,3 +266,33 @@ types:
             description: "SAID of the referenced event"
         invariants:
           - "References a specific event by (prefix, sn, said) — all three must match"
+
+  - name: "IndexedSizage"
+    description: "Sizage entry for indexed CESR codes that carry dual indices (main and other)."
+    variants:
+      - name: "default"
+        fields:
+          - name: "hard_size"
+            type: "integer"
+            required: true
+            description: "Number of hard (type-identifying) characters"
+          - name: "soft_size"
+            type: "integer"
+            required: true
+            description: "Number of soft (index-carrying) characters in the code prefix"
+          - name: "full_size"
+            type: "integer"
+            required: true
+            description: "Total qb64 character count"
+          - name: "main_index_size"
+            type: "integer"
+            required: true
+            description: "Number of soft characters encoding the main (signing) index"
+          - name: "other_index_size"
+            type: "integer"
+            required: true
+            description: "Number of soft characters encoding the other (rotation) index"
+        invariants:
+          - "main_index_size + other_index_size = soft_size"
+          - "Used for dual-indexed signatures (Siger) where ondex differs from index"
+          - "full_size is always a multiple of 4 (quadlet alignment)"
