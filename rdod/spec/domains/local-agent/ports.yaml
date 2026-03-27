@@ -42,12 +42,7 @@ ports:
     description: >
       Append-only store for the controller's own key event logs and associated
       signatures. Provides key state derivation from the persisted log.
-    contract:
-      - "append_event(aid: AID, event: KeyEvent, signatures: [Signature]) -> Result — append a signed key event to the identifier's log"
-      - "get_kel(aid: AID) -> KEL — retrieve the full key event log for an identifier"
-      - "get_key_state(aid: AID) -> KeyState — derive current key state from the persisted log"
-      - "store_controller_signatures(aid: AID, event_digest: Digest, signatures: [Signature]) -> Result — store controller signatures for an event"
-      - "store_witness_receipts(aid: AID, event_digest: Digest, receipts: [Receipt]) -> Result — store witness receipts for an event"
+    contract: "append_event(aid: AID, event: KeyEvent, signatures: [Signature]) -> Result; get_kel(aid: AID) -> KEL; get_key_state(aid: AID) -> KeyState; store_controller_signatures(aid: AID, event_digest: Digest, signatures: [Signature]) -> Result; store_witness_receipts(aid: AID, event_digest: Digest, receipts: [Receipt]) -> Result"
     protocol: "method-call"
     refs: ["persistence"]
 
@@ -57,10 +52,7 @@ ports:
     description: >
       Temporary holding area for events that cannot yet be fully verified
       (e.g., out-of-order events, partially-witnessed events).
-    contract:
-      - "store_escrow(aid: AID, escrow_type: EscrowType, item: EscrowedItem) -> Result — place an item in escrow"
-      - "get_escrowed(aid: AID, escrow_type: EscrowType) -> [EscrowedItem] — retrieve escrowed items by type"
-      - "remove_escrow(aid: AID, escrow_type: EscrowType, key: EscrowKey) -> Result — remove a resolved escrow item"
+    contract: "store_escrow(aid: AID, escrow_type: EscrowType, item: EscrowedItem) -> Result; get_escrowed(aid: AID, escrow_type: EscrowType) -> [EscrowedItem]; remove_escrow(aid: AID, escrow_type: EscrowType, key: EscrowKey) -> Result"
     protocol: "method-call"
     refs: ["persistence"]
 
@@ -70,10 +62,7 @@ ports:
     description: >
       Stores issued and received ACDC credentials and their associated
       Transaction Event Log (TEL) events for registry state tracking.
-    contract:
-      - "store_credential(credential_said: SAID, credential: Credential) -> Result — persist a credential"
-      - "get_credential(credential_said: SAID) -> Credential — retrieve a credential by its SAID"
-      - "store_tel_event(registry_id: RegistryID, event: TELEvent) -> Result — append a TEL event for credential status tracking"
+    contract: "store_credential(credential_said: SAID, credential: Credential) -> Result; get_credential(credential_said: SAID) -> Credential; store_tel_event(registry_id: RegistryID, event: TELEvent) -> Result"
     protocol: "method-call"
     refs: ["persistence"]
 

@@ -14,11 +14,7 @@ ports:
     description: >
       Append-only store for receipted key event logs. A witness records each event
       it has seen (with its own receipt) and serves the receipted KEL back to requesters.
-    contract:
-      - "store_kerl_event(aid: AID, event: KeyEvent, receipt: Receipt) -> Result — append a witnessed event with the witness receipt to the receipted KEL"
-      - "get_kerl(aid: AID) -> [ReceiptedEvent] — retrieve the full receipted key event log for an identifier"
-      - "get_receipt(aid: AID, event_said: SAID) -> Receipt — retrieve the witness receipt for a specific event"
-      - "has_event(aid: AID, sn: SequenceNumber) -> bool — first-seen check: has this witness already recorded an event at this sequence number"
+    contract: "store_kerl_event(aid: AID, event: KeyEvent, receipt: Receipt) -> Result; get_kerl(aid: AID) -> [ReceiptedEvent]; get_receipt(aid: AID, event_said: SAID) -> Receipt; has_event(aid: AID, sn: SequenceNumber) -> bool"
     protocol: "method-call"
     refs: ["persistence"]
 

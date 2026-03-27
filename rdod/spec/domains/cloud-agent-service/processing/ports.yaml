@@ -32,10 +32,7 @@ ports:
       Manages time-bounded escrow of partially-complete protocol exchanges (e.g.,
       partial signatures awaiting threshold, credentials pending presentation).
       Items expire after a configurable timeout.
-    contract:
-      - "store_escrow(escrow_type: EscrowType, key: EscrowKey, item: EscrowedItem, timeout: Duration) -> Result — place an item in escrow with a timeout"
-      - "get_escrowed(escrow_type: EscrowType) -> [EscrowedItem] — retrieve all items in a given escrow category"
-      - "remove_escrow(escrow_type: EscrowType, key: EscrowKey) -> Result — remove an item from escrow (completed or expired)"
+    contract: "store_escrow(escrow_type: EscrowType, key: EscrowKey, item: EscrowedItem, timeout: Duration) -> Result; get_escrowed(escrow_type: EscrowType) -> [EscrowedItem]; remove_escrow(escrow_type: EscrowType, key: EscrowKey) -> Result"
     protocol: "method-call"
     refs: ["persistence"]
 
@@ -45,10 +42,7 @@ ports:
     description: >
       Tracks long-running operations so clients can poll for completion.
       Operations represent async workflows like witness receipting or credential issuance.
-    contract:
-      - "store_operation(operation: Operation) -> Result — persist an operation's current state"
-      - "get_operation(operation_name: OperationName) -> Operation — retrieve an operation by name"
-      - "list_operations(operation_type: OperationType) -> [Operation] — list operations filtered by type"
+    contract: "store_operation(operation: Operation) -> Result; get_operation(operation_name: OperationName) -> Operation; list_operations(operation_type: OperationType) -> [Operation]"
     protocol: "method-call"
     refs: ["persistence"]
 
@@ -58,9 +52,7 @@ ports:
     description: >
       Searchable index over credential attributes. Allows clients to find credentials
       by schema, issuer, issuee, or any indexed attribute field.
-    contract:
-      - "index_credential(credential_said: SAID, field: string, value: string) -> Result — add a searchable attribute entry for a credential"
-      - "search_credentials(filter: CredentialFilter) -> [SAID] — find credentials matching attribute criteria"
+    contract: "index_credential(credential_said: SAID, field: string, value: string) -> Result; search_credentials(filter: CredentialFilter) -> [SAID]"
     protocol: "method-call"
     refs: ["persistence"]
 

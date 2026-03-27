@@ -24,11 +24,6 @@ ports:
       Persists encrypted key material for edge signing. Supports two keeper strategies:
       salty (salt-based derivation) and randy (random key generation). All stored material
       is encrypted — the repository never sees plaintext private keys.
-    contract:
-      - "store_encrypted_salt(aid: AID, encrypted_salt: EncryptedSalt) -> Result — persist encrypted salt for salty keeper derivation"
-      - "get_encrypted_salt(aid: AID) -> EncryptedSalt — retrieve encrypted salt for an identifier"
-      - "store_encrypted_keys(aid: AID, encrypted_private: [EncryptedKey], encrypted_next: [EncryptedKey]) -> Result — persist encrypted current and next private keys for randy keeper"
-      - "get_encrypted_keys(aid: AID) -> EncryptedKeyPair — retrieve encrypted private and next key sets"
-      - "destroy(aid: AID) -> Result — permanently remove all encrypted key material for an identifier"
+    contract: "store_encrypted_salt(aid: AID, encrypted_salt: EncryptedSalt) -> Result; get_encrypted_salt(aid: AID) -> EncryptedSalt; store_encrypted_keys(aid: AID, encrypted_private: [EncryptedKey], encrypted_next: [EncryptedKey]) -> Result; get_encrypted_keys(aid: AID) -> EncryptedKeyPair; destroy(aid: AID) -> Result"
     protocol: "method-call"
     refs: ["persistence"]

@@ -15,16 +15,7 @@ ports:
       Manages agent lifecycle, credential storage, contacts, and notifications for
       cloud-hosted identifiers. Each agent represents one provisioned Signify client
       session with its associated state.
-    contract:
-      - "store_agent(agent: Agent) -> Result — persist a provisioned agent and its configuration"
-      - "get_agent(agent_id: AgentID) -> Agent — retrieve an agent by its identifier"
-      - "remove_agent(agent_id: AgentID) -> Result — deprovision an agent and remove its state"
-      - "store_credential(aid: AID, credential: Credential) -> Result — store an issued or received credential"
-      - "list_credentials(aid: AID) -> [Credential] — list all credentials held by an identifier"
-      - "store_contact(contact: Contact) -> Result — store a contact (known external identifier)"
-      - "get_contacts(aid: AID) -> [Contact] — list known contacts for an identifier"
-      - "enqueue_notification(notification: Notification) -> Result — queue a notification for client pickup"
-      - "get_notifications(agent_id: AgentID, since?: Timestamp) -> [Notification] — retrieve pending notifications"
+    contract: "store_agent(agent: Agent) -> Result; get_agent(agent_id: AgentID) -> Agent; remove_agent(agent_id: AgentID) -> Result; store_credential(aid: AID, credential: Credential) -> Result; list_credentials(aid: AID) -> [Credential]; store_contact(contact: Contact) -> Result; get_contacts(aid: AID) -> [Contact]; enqueue_notification(notification: Notification) -> Result; get_notifications(agent_id: AgentID, since?: Timestamp) -> [Notification]"
     protocol: "method-call"
     refs: ["persistence"]
 
