@@ -1,0 +1,59 @@
+domain_ref: "witness-service/api"
+
+types:
+  - name: "EventSubmissionResult"
+    description: "Outcome of submitting a key event to the witness for receipting."
+    variants:
+      - name: "receipted"
+        fields:
+          - name: "receipt"
+            type: "types://cesr/primitives#Cigar"
+            required: true
+            description: "Witness's non-transferable signature over the event SAID"
+          - name: "event_said"
+            type: "string"
+            required: true
+            description: "SAID of the accepted event"
+        invariants:
+          - "Produced only for first-seen events"
+      - name: "escrowed"
+        fields:
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Why the event was escrowed (out-of-order, missing signatures, etc.)"
+          - name: "event_said"
+            type: "string"
+            required: true
+            description: "SAID of the escrowed event"
+        invariants:
+          - "Event held pending resolution of blocking condition"
+      - name: "rejected"
+        fields:
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Why the event was rejected (first-seen conflict, invalid signatures, etc.)"
+          - name: "event_said"
+            type: "string"
+            required: true
+            description: "SAID of the rejected event"
+        invariants:
+          - "Rejected events are not stored — the rejection is terminal"
+
+  - name: "KERLResponse"
+    description: "CESR-encoded stream of receipted key events for a queried AID."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "The AID whose KERL was requested"
+          - name: "events"
+            type: "[ReceiptedEvent]"
+            required: true
+            description: "Ordered sequence of key events with witness receipts"
+        invariants:
+          - "Events are in strictly ascending sequence number order"
+          - "Each event includes the witness's receipt (Cigar)"
