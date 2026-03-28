@@ -52,11 +52,36 @@ uri_schemes:
 
 ## Linter Integration
 
-The linter already validates some of these ad-hoc. With formal grammars it could:
-- Parse any URI into (scheme, domain_id, fragment) using the grammar
-- Validate the domain_id resolves to a directory
-- Validate the fragment resolves to a named element in the target file
-- Report malformed URIs that don't match the grammar
+### Parsing algorithm
+
+For any string matching `{scheme}://{rest}`:
+
+1. Split on `://` → `(scheme, rest)`
+2. If `#` present in rest, split on first `#` → `(domain_id, fragment)`, else `(domain_id, None)`
+3. For `port://`, split domain_id on last two `/` segments → `(domain_path, direction, port_name)`, reconstruct full URI as the port id to match against
+
+### Resolution algorithm per scheme
+
+| Scheme | Step 1: Directory | Step 2: File | Step 3: Element match |
+|--------|------------------|-------------|----------------------|
+| `domain://X` | `X/` must exist | `X/domain.yaml` must exist | — (no fragment) |
+| `kernel://X` | `X/` must exist | `X/domain.yaml` must exist | Check `is_kernel` or presence in another domain's `kernels:` |
+| `port://X/dir/name` | `X/` must exist | `X/ports.yaml` must exist | `ports[].id == "port://X/dir/name"` must match exactly one entry |
+| `types://X#Y` | `X/` must exist | `X/types.yaml` must exist | `types[].name == "Y"` must match at least one entry |
+| `errors://X#Y` | `X/` must exist | `X/errors.yaml` must exist | `errors[].name == "Y"` must match at least one entry |
+| `verification://X#Y` | `X/` must exist | `X/verification.yaml` must exist | `properties[].term == "Y"` OR `validation_constraints[].id == "Y"` |
+| `protocols://X#Y` | `X/` must exist | `X/protocols.yaml` must exist | `protocols[].name == "Y"` must match |
+| `external://X` | — (no directory) | — (no file) | Optionally check `conventions.yaml` `external_abstractions[].name == "external://X"` |
+
+### Error levels
+
+| Check | Level | Message |
+|-------|-------|---------|
+| Malformed URI (no `://`) | error | `Malformed URI: {value} — expected {scheme}://{path}` |
+| Directory not found | error | `{scheme} {uri}: domain directory {domain_id}/ not found` |
+| File not found | error | `{scheme} {uri}: {file} not found in {domain_id}/` |
+| Element not found | warning | `{scheme} {uri}: {element_type} '{fragment}' not found in {file}` |
+| Fragment missing when required | warning | `{scheme} {uri}: fragment (#name) expected but not present` |
 
 ## Acceptance Criteria
 
