@@ -1,37 +1,50 @@
 {
   "total_domains": 47,
-  "total_layers": 15,
+  "total_layers": 10,
   "layers": [
     {
       "layer": 0,
       "label": "foundation \u2014 no dependencies",
       "domains": [
+        "accountability/consensus",
+        "accountability/dissemination",
         "cesr/composition",
-        "cesr/primitives"
+        "cesr/primitives",
+        "cloud-agent-service/api",
+        "cloud-agent-service/processing",
+        "cloud-agent-service/provisioning",
+        "credential-lifecycle/status",
+        "delegation/authorization",
+        "delegation/lifecycle",
+        "delegation/recovery",
+        "identity/anchoring",
+        "identity/establishment",
+        "identity/key-commitment",
+        "identity/state",
+        "integrity/detection",
+        "integrity/recovery",
+        "privacy/aggregation",
+        "privacy/blinding",
+        "privacy/disclosure",
+        "signify-client/key-management",
+        "signify-client/resources"
       ]
     },
     {
       "layer": 1,
-      "label": "kernels \u2014 no dependencies",
+      "label": "depends on layers 0\u20130",
       "domains": [
-        "cesr"
+        "cesr",
+        "identity/thresholds"
       ]
     },
     {
       "layer": 2,
       "label": "depends on layers 0\u20131",
       "domains": [
-        "accountability/consensus",
-        "accountability/dissemination",
-        "delegation/authorization",
-        "delegation/lifecycle",
-        "delegation/recovery",
-        "integrity/detection",
-        "integrity/recovery",
+        "delegation",
         "keri-messaging",
-        "privacy/aggregation",
-        "privacy/blinding",
-        "privacy/disclosure"
+        "watcher-service/api"
       ]
     },
     {
@@ -40,7 +53,7 @@
       "domains": [
         "accountability/receipting",
         "credential-exchange/negotiation",
-        "delegation",
+        "credential-lifecycle/verification",
         "integrity/evidence"
       ]
     },
@@ -49,93 +62,50 @@
       "label": "depends on layers 0\u20133",
       "domains": [
         "accountability",
-        "integrity"
+        "credential-exchange/proof",
+        "integrity",
+        "witness-service/api"
       ]
     },
     {
       "layer": 5,
       "label": "depends on layers 0\u20134",
       "domains": [
-        "identity/anchoring",
-        "identity/establishment",
-        "identity/key-commitment",
-        "identity/state",
-        "identity/thresholds"
+        "discovery",
+        "identity"
       ]
     },
     {
       "layer": 6,
       "label": "depends on layers 0\u20135",
       "domains": [
-        "discovery",
-        "identity"
+        "credential-lifecycle/registry",
+        "witness-service"
       ]
     },
     {
       "layer": 7,
       "label": "depends on layers 0\u20136",
       "domains": [
-        "credential-lifecycle/registry",
-        "credential-lifecycle/status",
-        "credential-lifecycle/verification",
-        "witness-service/api"
+        "credential-exchange",
+        "credential-lifecycle",
+        "privacy",
+        "watcher-service"
       ]
     },
     {
       "layer": 8,
       "label": "depends on layers 0\u20137",
       "domains": [
-        "credential-exchange/proof",
-        "witness-service"
-      ]
-    },
-    {
-      "layer": 9,
-      "label": "depends on layers 0\u20138",
-      "domains": [
-        "credential-exchange",
-        "credential-lifecycle",
-        "privacy",
-        "watcher-service/api"
-      ]
-    },
-    {
-      "layer": 10,
-      "label": "depends on layers 0\u20139",
-      "domains": [
-        "watcher-service"
-      ]
-    },
-    {
-      "layer": 11,
-      "label": "depends on layers 0\u201310",
-      "domains": [
-        "cloud-agent-service/api",
-        "cloud-agent-service/processing",
-        "cloud-agent-service/provisioning",
+        "cloud-agent-service",
         "local-agent/api"
       ]
     },
     {
-      "layer": 12,
-      "label": "depends on layers 0\u201311",
-      "domains": [
-        "cloud-agent-service",
-        "local-agent"
-      ]
-    },
-    {
-      "layer": 13,
-      "label": "depends on layers 0\u201312",
-      "domains": [
-        "signify-client/key-management",
-        "signify-client/resources"
-      ]
-    },
-    {
-      "layer": 14,
+      "layer": 9,
       "label": "services + applications",
       "domains": [
+        "local-agent",
         "signify-client"
       ]
     }
