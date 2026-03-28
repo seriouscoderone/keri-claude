@@ -109,6 +109,26 @@ external_abstractions:
 
 # Domain file placement rules
 
+file_template:
+  required:
+    - "domain.yaml — identity, relationships, published language"
+    - "ubiquitous-language.yaml — terms, imports, specializations, events, rules"
+    - "ports.yaml — inbound/outbound interfaces with contracts"
+  optional:
+    - "verification.yaml — formalized invariants, state machines, validation constraints"
+    - "errors.yaml — error taxonomy with cause, recovery, severity, recovery_target"
+    - "types.yaml — formal data structures with variants, fields, constraints"
+    - "protocols.yaml — cross-domain orchestration sequences with failure paths"
+  special:
+    - "conventions.yaml — cross-cutting type patterns (this file, spec root only)"
+    - "integration-scenarios.yaml — cross-domain end-state assertions (spec root only)"
+    - "context-map.html — generated visualization (spec root only)"
+  notes:
+    - "A missing optional file means intentionally omitted, not incomplete"
+    - "All 47 domains have the 3 required files"
+    - "verification.yaml is present in 47/47 — effectively required for this spec"
+    - "template_version '1.0' in domain.yaml refers to the RDOD template schema version"
+
 file_placement:
   errors_yaml:
     rule: "Parent domains with subdomains MAY have their own errors.yaml for orchestration-level errors that occur BEFORE subdomain dispatch. Subdomain-specific errors live in the subdomain's errors.yaml. A parent with no orchestration errors does not need errors.yaml."
