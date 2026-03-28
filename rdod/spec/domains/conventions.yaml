@@ -1,8 +1,59 @@
-# conventions.yaml — Cross-cutting type conventions for port contracts
+# conventions.yaml — Cross-cutting conventions for the KERI DDD spec
 #
-# These patterns appear in port contract signatures across all domains.
-# They are language-level constructs, not domain types — implementations
-# use their language's native equivalents.
+# This file defines: URI reference schemes, contract type patterns,
+# external abstractions, file template rules, and file placement rules.
+
+# URI reference schemes used across all spec files.
+# Each scheme resolves to a specific file and element within the spec tree.
+
+uri_schemes:
+  - scheme: "domain://"
+    grammar: "domain://{domain_id}"
+    resolves_to: "{domain_id}/domain.yaml"
+    example: "domain://identity"
+    notes: "References a domain. The domain_id is the directory path relative to the spec root."
+
+  - scheme: "kernel://"
+    grammar: "kernel://{domain_id}"
+    resolves_to: "{domain_id}/domain.yaml (domain must be declared as a kernel)"
+    example: "kernel://cesr"
+    notes: "Declares adoption of a domain as a native kernel. Used in kernels: sections of domain.yaml. The same domain may also be referenced via domain:// in imports and specializations — both are valid in different contexts."
+
+  - scheme: "port://"
+    grammar: "port://{domain_id}/{direction}/{port_name}"
+    resolves_to: "{domain_id}/ports.yaml -> ports[id == full_uri]"
+    example: "port://identity/inbound/event-processing"
+    notes: "Direction is inbound or outbound. Port name is kebab-case."
+
+  - scheme: "types://"
+    grammar: "types://{domain_id}#{type_name}"
+    resolves_to: "{domain_id}/types.yaml -> types[name == {type_name}]"
+    example: "types://cesr/primitives#AID"
+    notes: "Fragment (#) is required and names the type. No variant selection in the URI — use the type's variants list."
+
+  - scheme: "errors://"
+    grammar: "errors://{domain_id}#{error_name}"
+    resolves_to: "{domain_id}/errors.yaml -> errors[name == {error_name}]"
+    example: "errors://identity/establishment#OutOfOrderError"
+    notes: "Fragment (#) names the error."
+
+  - scheme: "verification://"
+    grammar: "verification://{domain_id}#{term_or_constraint}"
+    resolves_to: "{domain_id}/verification.yaml -> properties or validation_constraints matching the fragment"
+    example: "verification://identity/establishment#Event Validation Pipeline"
+    notes: "Fragment names a verification term, invariant, or constraint."
+
+  - scheme: "protocols://"
+    grammar: "protocols://{domain_id}#{protocol_name}"
+    resolves_to: "{domain_id}/protocols.yaml -> protocols[name == {protocol_name}]"
+    example: "protocols://credential-lifecycle#CredentialIssuance"
+    notes: "Fragment names the protocol."
+
+  - scheme: "external://"
+    grammar: "external://{external_name}"
+    resolves_to: "conventions.yaml -> external_abstractions[name == full_uri] (or abstract — no file)"
+    example: "external://cryptographic-primitives"
+    notes: "Externals are adapter interfaces, not domains. They have no directory. Documented in this file's external_abstractions section."
 
 contract_conventions:
   - pattern: "Result<T, E>"
