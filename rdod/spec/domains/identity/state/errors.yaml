@@ -36,7 +36,7 @@ errors:
     description: "Referenced event missing from log so the key state notice cannot be verified"
     cause: "A key state notice references an establishment event at a sequence number that is not yet in the local KEL — the notice arrived before its supporting events"
     recovery: "escrow"
-    escrow_queue: "OOE"
+    recovery_target: "OOE"
     severity: "transient"
     context:
       - field: "prefix"
@@ -105,7 +105,7 @@ errors:
     description: "Key state notice reply message could not be verified"
     cause: "Reply message signatures do not verify — the key state notice was not signed by a trusted source or the signing key state is not yet available"
     recovery: "escrow"
-    escrow_queue: "RPE"
+    recovery_target: "RPE"
     severity: "transient"
     context:
       - field: "prefix"

@@ -16,7 +16,7 @@ errors:
     description: "Delegator has not anchored a seal approving this delegated event"
     cause: "No interaction or rotation event in the delegator's KEL contains an anchor seal matching the delegated event's (prefix, sn, SAID) — the delegator has not yet approved the delegation"
     recovery: "escrow"
-    escrow_queue: "PDE"
+    recovery_target: "PDE"
     severity: "transient"
     context:
       - field: "delegate_prefix"
@@ -37,7 +37,7 @@ errors:
     description: "Delegation source seal present but cannot be verified against the delegator's KEL"
     cause: "The delegated event carries a delegation source seal attachment (delnum, deldiger) but the referenced delegating event cannot be found or confirmed in the delegator's KEL"
     recovery: "escrow"
-    escrow_queue: "MDE"
+    recovery_target: "MDE"
     severity: "transient"
     context:
       - field: "delegate_prefix"
@@ -58,7 +58,7 @@ errors:
     description: "The delegator AID does not exist or has no key state"
     cause: "Delegator prefix specified in the di field is not found in kevers — the delegator's inception event has not been received or processed"
     recovery: "escrow"
-    escrow_queue: "PDE"
+    recovery_target: "PDE"
     severity: "transient"
     context:
       - field: "delegator_prefix"
@@ -113,7 +113,7 @@ errors:
     description: "A potentially superseding delegation was detected but the superseding event's own delegation cannot be verified"
     cause: "During cooperative delegation recovery, a newer delegating event was found in the delegator's KEL but the corresponding superseding delegated event or its delegation seal cannot be fully validated"
     recovery: "escrow"
-    escrow_queue: "PDE"
+    recovery_target: "PDE"
     severity: "transient"
     context:
       - field: "delegate_prefix"

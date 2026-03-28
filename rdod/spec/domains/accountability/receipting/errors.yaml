@@ -17,7 +17,7 @@ errors:
     description: "Non-transferable receipt cannot be verified because the receipted event is not yet in the KEL"
     cause: "Receipt references an event at (prefix, sn) that has not yet been accepted into the local KEL — the receipted event must arrive before the receipt can be verified"
     recovery: "escrow"
-    escrow_queue: "URE"
+    recovery_target: "URE"
     severity: "transient"
     context:
       - field: "prefix"
@@ -35,7 +35,7 @@ errors:
     description: "Witness receipt cannot be verified because the receipted event is not yet in the KEL"
     cause: "A witness receipt (wiger) references an event that has not yet been accepted — the receipt arrived before the event it covers"
     recovery: "escrow"
-    escrow_queue: "UWE"
+    recovery_target: "UWE"
     severity: "transient"
     context:
       - field: "prefix"
@@ -53,7 +53,7 @@ errors:
     description: "Transferable receipt cannot be verified because the receipter's establishment event or the receipted event is missing"
     cause: "A transferable receipt quadruple (Prefixer, Seqner, Saider, Siger) references either a receipted event not yet in the local KEL or a receipter establishment event that has not been received"
     recovery: "escrow"
-    escrow_queue: "VRE"
+    recovery_target: "VRE"
     severity: "transient"
     context:
       - field: "receipter_prefix"

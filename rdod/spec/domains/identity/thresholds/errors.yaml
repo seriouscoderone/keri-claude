@@ -16,7 +16,7 @@ errors:
     description: "Provided signatures do not satisfy the signing threshold"
     cause: "tholder.satisfy(indices) returned False — the set of verified signature indices does not meet the threshold expression (simple count, fractional weight, or combination)"
     recovery: "escrow"
-    escrow_queue: "PSE"
+    recovery_target: "PSE"
     severity: "transient"
     context:
       - field: "threshold"
@@ -34,7 +34,7 @@ errors:
     description: "Rotation event signatures do not satisfy the prior next threshold"
     cause: "ntholder.satisfy(ondices) returned False — the exposed signature indices (ondex values matching pre-committed next key digests) do not meet the previous establishment event's next threshold commitment"
     recovery: "escrow"
-    escrow_queue: "PSE"
+    recovery_target: "PSE"
     severity: "transient"
     context:
       - field: "prior_next_threshold"
@@ -69,7 +69,7 @@ errors:
     description: "Witness receipts do not satisfy the witness accountability threshold (TOAD)"
     cause: "Number of verified unique witness receipts < toader.num — the event has insufficient witness accountability to be accepted"
     recovery: "escrow"
-    escrow_queue: "PWE"
+    recovery_target: "PWE"
     severity: "transient"
     context:
       - field: "receipt_count"
@@ -104,7 +104,7 @@ errors:
     description: "Rotation event fails to satisfy both signing threshold (kt) and prior next threshold (nt)"
     cause: "Insufficient signatures for either the current key set or the pre-committed next key set"
     recovery: "escrow"
-    escrow_queue: "PSE"
+    recovery_target: "PSE"
     severity: "recoverable"
     context:
       - field: "prefix"

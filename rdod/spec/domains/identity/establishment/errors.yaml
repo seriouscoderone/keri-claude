@@ -16,7 +16,7 @@ errors:
     description: "Received an event whose sequence number is ahead of the expected next event"
     cause: "Event sn > expected sn for this prefix — prior events have not yet been received or accepted"
     recovery: "escrow"
-    escrow_queue: "OOE"
+    recovery_target: "OOE"
     severity: "transient"
     context:
       - field: "prefix"
@@ -37,7 +37,7 @@ errors:
     description: "Event signatures do not satisfy the signing threshold"
     cause: "Verified signature indices do not satisfy tholder.satisfy() — insufficient controller signatures for this event"
     recovery: "escrow"
-    escrow_queue: "PSE"
+    recovery_target: "PSE"
     severity: "transient"
     context:
       - field: "prefix"
@@ -58,7 +58,7 @@ errors:
     description: "Witness receipts do not satisfy the witness threshold (TOAD)"
     cause: "Number of verified witness signatures < toader.num — insufficient witness accountability"
     recovery: "escrow"
-    escrow_queue: "PWE"
+    recovery_target: "PWE"
     severity: "transient"
     context:
       - field: "prefix"
@@ -79,7 +79,7 @@ errors:
     description: "Delegated event lacks the required anchoring seal from the delegator's KEL"
     cause: "No matching seal found in delegator's KEL anchoring this delegated event's SAID"
     recovery: "escrow"
-    escrow_queue: "PDE"
+    recovery_target: "PDE"
     severity: "transient"
     context:
       - field: "prefix"
@@ -97,7 +97,7 @@ errors:
     description: "Delegable event source seal cannot be verified against the delegator"
     cause: "Delegation source seal attachment is present but cannot be matched to a confirmed delegating event in the delegator's KEL"
     recovery: "escrow"
-    escrow_queue: "MDE"
+    recovery_target: "MDE"
     severity: "transient"
     context:
       - field: "prefix"
@@ -115,7 +115,7 @@ errors:
     description: "Received an event at a sequence number that already has a different accepted event"
     cause: "Event at (prefix, sn) with SAID different from the already-accepted event's SAID — possible key compromise or Byzantine behavior"
     recovery: "escrow"
-    escrow_queue: "LDE"
+    recovery_target: "LDE"
     severity: "recoverable"
     context:
       - field: "prefix"
@@ -136,7 +136,7 @@ errors:
     description: "Remote source submitted an event that must be locally sourced"
     cause: "Event for a locally-owned, locally-witnessed, or locally-delegated identifier was submitted from a remote (unprotected) source"
     recovery: "escrow"
-    escrow_queue: "MFE"
+    recovery_target: "MFE"
     severity: "transient"
     context:
       - field: "prefix"

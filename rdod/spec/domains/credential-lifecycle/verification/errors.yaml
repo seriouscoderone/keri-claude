@@ -15,7 +15,7 @@ errors:
     description: "TEL event cannot be verified because the chain back to the KEL is broken"
     cause: "The TEL event references a KEL seal that does not exist in the issuer's KEL, or the issuer's KEL is not available"
     recovery: "escrow"
-    escrow_queue: "OOT"
+    recovery_target: "OOT"
     severity: "transient"
     context:
       - field: "credential_said"
@@ -61,7 +61,7 @@ errors:
     description: "The registry's rip/management TEL is not yet available"
     cause: "TEL validation pipeline step 2 failed — registry state cannot be computed because the registry inception event (rip) has not been received"
     recovery: "escrow"
-    escrow_queue: "MRE"
+    recovery_target: "MRE"
     severity: "transient"
     context:
       - field: "regid"
@@ -96,7 +96,7 @@ errors:
     description: "The issuer's KEL event at the anchor seal point has not been received"
     cause: "TEL validation pipeline step 3 failed — the issuer's KEL event at the sequence number stated in the attached seal is not yet available"
     recovery: "escrow"
-    escrow_queue: "MIE"
+    recovery_target: "MIE"
     severity: "transient"
     context:
       - field: "issuer_aid"
@@ -131,7 +131,7 @@ errors:
     description: "TEL event sequence number does not match the expected next sequence number"
     cause: "A preceding TEL event is missing — the event's sn is ahead of the current TEL state"
     recovery: "escrow"
-    escrow_queue: "OOT"
+    recovery_target: "OOT"
     severity: "transient"
     context:
       - field: "regid"

@@ -98,7 +98,7 @@ properties:
     formal:
       language: python
       expression: |
-        lambda notification, escrow_queue: (
+        lambda notification, recovery_target: (
           reprocessed := [e for e in escrow_queue if matches_notification(e, notification)],
           all(validate_event(e) is not None for e in reprocessed)
         )[-1]

@@ -33,7 +33,7 @@ errors:
     description: "Registry identifier not found in the Tevers (TEL event verifiers)"
     cause: "The registry REGID referenced by a TEL event or credential is not in the local Tevers — the registry inception event (rip) has not been received or processed"
     recovery: "escrow"
-    escrow_queue: "MRE"
+    recovery_target: "MRE"
     severity: "transient"
     context:
       - field: "registry_id"
@@ -48,7 +48,7 @@ errors:
     description: "TEL event lacks a verified anchor seal in the issuer's KEL"
     cause: "The issuer's KEL does not contain a seal binding this TEL event — non-repudiability cannot be established until the anchor appears"
     recovery: "escrow"
-    escrow_queue: "MAE"
+    recovery_target: "MAE"
     severity: "transient"
     context:
       - field: "issuer_aid"
@@ -66,7 +66,7 @@ errors:
     description: "Issuer AID not found in the Kevers (key event verifiers)"
     cause: "The issuer's KEL has not been received — cannot verify credential issuance without the issuer's key state"
     recovery: "escrow"
-    escrow_queue: "MRI"
+    recovery_target: "MRI"
     severity: "transient"
     context:
       - field: "issuer_aid"
@@ -81,7 +81,7 @@ errors:
     description: "Credential schema SAID not found in the local cache"
     cause: "The JSON schema referenced by the credential's 's' field SAID has not been resolved — typically requires a data OOBI resolution first"
     recovery: "escrow"
-    escrow_queue: "MSE"
+    recovery_target: "MSE"
     severity: "transient"
     context:
       - field: "schema_said"
@@ -113,7 +113,7 @@ errors:
     description: "Chained credential in the edge section cannot be verified"
     cause: "A credential referenced in the 'e' (edge) section has not been received or its status cannot be confirmed"
     recovery: "escrow"
-    escrow_queue: "MCE"
+    recovery_target: "MCE"
     severity: "transient"
     context:
       - field: "credential_said"

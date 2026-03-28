@@ -21,7 +21,7 @@ errors:
     description: "Two different events with different SAIDs exist for the same (prefix, sequence number)"
     cause: "An event arrived at (prefix, sn) with a SAID different from the already-accepted event at that (prefix, sn) — this is the primary duplicity detection trigger indicating possible key compromise or Byzantine controller behavior"
     recovery: "escrow"
-    escrow_queue: "LDE"
+    recovery_target: "LDE"
     severity: "recoverable"
     context:
       - field: "prefix"
@@ -42,7 +42,7 @@ errors:
     description: "A second inception event with a different SAID was received for an already-incepted prefix"
     cause: "An icp or dip event arrived for a prefix that already has an accepted inception event, and the new inception has a different SAID — this is duplicity at the root of the KEL"
     recovery: "escrow"
-    escrow_queue: "LDE"
+    recovery_target: "LDE"
     severity: "recoverable"
     context:
       - field: "prefix"
