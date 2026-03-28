@@ -68,6 +68,7 @@ errors:
     description: "Credential in exchange message references a registry that has not been received"
     cause: "The ACDC embedded in a grant message references a registry REGID not in the local Tevers — the registry inception has not been processed"
     recovery: "escrow"
+    escrow_queue: "IPX"
     severity: "transient"
     context:
       - field: "registry_id"
@@ -85,6 +86,7 @@ errors:
     description: "Credential schema referenced in exchange not found in local cache"
     cause: "The JSON schema SAID referenced by the ACDC in a grant message has not been resolved via data OOBI"
     recovery: "escrow"
+    escrow_queue: "IPX"
     severity: "transient"
     context:
       - field: "schema_said"

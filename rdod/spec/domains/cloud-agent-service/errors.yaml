@@ -1,0 +1,40 @@
+# errors.yaml
+domain_ref: "cloud-agent-service"
+
+# Parent-level errors for the cloud agent service.
+# Subdomain-specific errors are in api/, provisioning/, and processing/.
+# These are orchestration-level errors that span subdomains.
+
+errors:
+  - name: "AgentNotFoundError"
+    description: "No agent instance exists for the given controller AID"
+    cause: "Request references a controller AID that has not been provisioned via /boot"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - name: "controller_aid"
+        type: "string"
+        description: "The AID that has no provisioned agent"
+
+  - name: "AgentUnavailableError"
+    description: "Agent instance exists but is not currently reachable or ready"
+    cause: "Agent is initializing, shutting down, or in a degraded state"
+    recovery: "retry"
+    severity: "transient"
+    context:
+      - name: "agent_aid"
+        type: "string"
+        description: "The agent AID that is unavailable"
+
+  - name: "UnauthorizedRequestError"
+    description: "Request failed KRAM/SKRAP authentication — signature invalid or sender not authorized for this agent"
+    cause: "Invalid signature, unknown sender AID, or sender is not the agent's controller"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - name: "sender_aid"
+        type: "string"
+        description: "The AID that attempted the request"
+      - name: "reason"
+        type: "string"
+        description: "Why authentication failed"
