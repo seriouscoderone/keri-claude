@@ -1,0 +1,167 @@
+# verification.yaml
+domain_ref: "keri-messaging"
+
+properties:
+  # KRAM invariants
+  - invariant: "Every non-KEL message (exn, qry, rpy, xip, pro, bar) MUST include a signature by the sender's current signing keys — unsigned messages MUST be rejected before any content processing"
+    term: "KRAM"
+    technique: "property-based"
+    formal:
+      language: python
+      expression: |
+        @given(message=non_kel_message_strategy())
+        def test_kram_signature_required(message):
+            unsigned = strip_signatures(message)
+            result = verify_kram(unsigned, sender_key_state, now)
+            assert not result.accepted, "Unsigned non-KEL message must be rejected"
+    strategy: "Generate non-KEL messages with and without signatures"
+
+  - invariant: "Monotonic timestamps: each message from a given AID MUST have a datetime >= all previously seen datetimes from that AID — out-of-order timestamps indicate replay"
+    term: "KRAM"
+    technique: "property-based"
+    formal:
+      language: python
+      expression: |
+        @given(messages=st.lists(timestamped_message_strategy(), min_size=2))
+        def test_kram_monotonic_timestamps(messages):
+            cache = KRAMCache()
+            sorted_msgs = sorted(messages, key=lambda m: m.dt)
+            for msg in sorted_msgs:
+                cache.accept(msg)
+            # Replaying an older message must fail
+            older = sorted_msgs[0]
+            result = cache.check(older)
+            assert result.rejected, "Message with timestamp older than last-seen must be rejected"
+    strategy: "Generate sequences of timestamped messages, verify monotonicity"
+
+  - invariant: "Freshness window: message datetime MUST satisfy (receiver_time - drift - lag) <= message_dt <= (receiver_time + drift) — messages outside this window MUST be rejected as stale"
+    term: "KRAM"
+    technique: "property-based"
+    formal:
+      language: python
+      expression: |
+        @given(drift=st.integers(min_value=50, max_value=500),
+               lag=st.integers(min_value=1000, max_value=86400000),
+               message_age=st.integers(min_value=0, max_value=172800000))
+        def test_kram_freshness_window(drift, lag, message_age):
+            now = current_time_ms()
+            message_dt = now - message_age
+            lower_bound = now - drift - lag
+            upper_bound = now + drift
+            is_fresh = lower_bound <= message_dt <= upper_bound
+            result = check_freshness(message_dt, now, drift, lag)
+            assert result.fresh == is_fresh
+    strategy: "Parameterized drift, lag, and message age"
+    notes: "Three auth types determine lag: seal-reference (short), single-key (short), multi-key (long for signature accumulation)"
+
+  - invariant: "Duplicate SAID detection: messages with the same SAID from the same sender MUST be idempotently accepted — the cache prevents reprocessing"
+    term: "KRAM"
+    technique: "property-based"
+    formal:
+      language: python
+      expression: |
+        @given(message=non_kel_message_strategy())
+        def test_kram_duplicate_detection(message):
+            cache = KRAMCache()
+            result1 = cache.accept(message)
+            result2 = cache.accept(message)
+            assert result1.accepted
+            assert result2.duplicate, "Second submission of same SAID must be detected as duplicate"
+    strategy: "Submit same message twice, verify idempotent duplicate detection"
+
+  - invariant: "KEL messages (icp, rot, ixn, dip, drt) MUST bypass KRAM — they have built-in ordering via sequence numbers and hash-chain integrity"
+    term: "KRAM"
+    technique: "property-based"
+    formal:
+      language: python
+      expression: |
+        @given(kel_event=kel_event_strategy())
+        def test_kel_bypasses_kram(kel_event):
+            assert kel_event.ilk in ('icp', 'rot', 'ixn', 'dip', 'drt')
+            assert not requires_kram(kel_event), "KEL events must not require KRAM"
+    strategy: "Generate KEL events, verify KRAM bypass"
+
+  - invariant: "Multi-key signature accumulation: for multi-key AIDs, signatures are accumulated across deliveries until the signing threshold is satisfied — key state changes between deliveries invalidate accumulated signatures"
+    term: "KRAM"
+    technique: "property-based"
+    formal:
+      language: python
+      expression: |
+        @given(threshold=st.integers(min_value=2, max_value=5),
+               sig_count=st.integers(min_value=1, max_value=10))
+        def test_kram_multisig_accumulation(threshold, sig_count):
+            cache = KRAMCache()
+            message = build_multisig_message(threshold=threshold)
+            for i in range(min(sig_count, threshold)):
+                delivery = add_signature(message, signer_index=i)
+                result = cache.accept(delivery)
+            if sig_count >= threshold:
+                assert result.accepted, "Threshold-satisfying signatures must be accepted"
+            else:
+                assert result.pending, "Below-threshold signatures must be pending"
+    strategy: "Parameterized threshold and signature accumulation count"
+
+  # SKRAP (HTTP-level) invariants
+  - invariant: "SKRAP signature base is constructed from exactly four fields in canonical order: Signify-Resource, @method, @path, Signify-Timestamp"
+    term: "SKRAP"
+    technique: "property-based"
+    formal:
+      language: python
+      expression: |
+        @given(method=st.sampled_from(['GET', 'POST', 'PUT', 'DELETE']),
+               path=st.text(min_size=1, max_size=100),
+               aid=aid_strategy(),
+               timestamp=st.datetimes())
+        def test_skrap_signature_base(method, path, aid, timestamp):
+            base = build_signature_base(method=method, path=path, resource=aid, timestamp=timestamp)
+            lines = base.split('\n')
+            assert '"signify-resource"' in lines[0] or '"@method"' in lines[0]
+            assert len(lines) == 5  # 4 fields + signature-params
+    strategy: "Generate HTTP request components, verify canonical signature base"
+
+  - invariant: "SKRAP mutual authentication: client signs requests with Client AID key, agent signs responses with Agent AID key — both sides verify against the other's current key state"
+    term: "SKRAP"
+    technique: "property-based"
+    formal:
+      language: python
+      expression: |
+        @given(request=http_request_strategy(), response=http_response_strategy())
+        def test_skrap_mutual_auth(request, response):
+            # Client -> Agent
+            signed_request = skrap_sign(request, client_keys)
+            assert skrap_verify(signed_request, client_key_state), "Agent must verify client signature"
+            # Agent -> Client
+            signed_response = skrap_sign(response, agent_keys)
+            assert skrap_verify(signed_response, agent_key_state), "Client must verify agent signature"
+    strategy: "Generate request/response pairs, verify bidirectional signing"
+
+contracts: []
+
+state_machines: []
+
+# KRAM timeliness cache as a composable constraint graph.
+validation_constraints:
+  - id: "K1_signature_valid"
+    constraint: "Message signature must verify against sender's current key state"
+    depends_on: []
+    on_failure: "reject — invalid signature"
+
+  - id: "K2_freshness_check"
+    constraint: "Message datetime must be within the freshness window for the auth type"
+    depends_on: ["K1_signature_valid"]
+    on_failure: "reject — stale message"
+
+  - id: "K3_monotonic_check"
+    constraint: "Message datetime must be >= last seen datetime from this sender AID"
+    depends_on: ["K2_freshness_check"]
+    on_failure: "reject — out-of-order timestamp (possible replay)"
+
+  - id: "K4_duplicate_check"
+    constraint: "Message SAID must not already exist in the timeliness cache for this sender"
+    depends_on: ["K3_monotonic_check"]
+    on_failure: "ignore — duplicate delivery (idempotent)"
+
+  - id: "K5_accepted"
+    constraint: "All checks passed — message accepted for domain dispatch"
+    depends_on: ["K4_duplicate_check"]
+    on_failure: null
