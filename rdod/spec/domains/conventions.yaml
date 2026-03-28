@@ -180,6 +180,12 @@ file_template:
     - "verification.yaml is present in 47/47 — effectively required for this spec"
     - "template_version '1.0' in domain.yaml refers to the RDOD template schema version"
 
+  domain_clients:
+    rule: "domain_clients lists only direct, designed-for consumers — domains this domain was built to serve. It is NOT an exhaustive list of all transitive consumers. For full dependency analysis, use the generated build-order files."
+    examples:
+      - "cesr/domain.yaml lists identity and credential-lifecycle as clients — these are the primary consumers cesr was designed for. The 30+ other domains that transitively depend on cesr are not listed."
+      - "accountability/domain.yaml lists identity as its client — identity drives the accountability domain's witness agreement protocol."
+
 file_placement:
   errors_yaml:
     rule: "Parent domains with subdomains MAY have their own errors.yaml for orchestration-level errors that occur BEFORE subdomain dispatch. Subdomain-specific errors live in the subdomain's errors.yaml. A parent with no orchestration errors does not need errors.yaml."
