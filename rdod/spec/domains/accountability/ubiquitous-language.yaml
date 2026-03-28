@@ -23,8 +23,8 @@ terms:
     invariants:
       - "A witness's receipt constitutes a first-seen guarantee for that event"
       - "Witnesses are accountable — duplicitous witnessing (signing conflicting events) is detectable"
-      - "A witness should only accept local events from the controller (protected channel)"
-      - "A witness should not accept remote (unprotected) events for its controlled AID"
+      - "A witness MUST only accept local events from the controller (protected channel) — accepting remote events is a security vulnerability"
+      - "A witness MUST NOT accept remote (unprotected) events for its controlled AID"
     examples:
       - "A witness node running on dedicated infrastructure, receipting events via HTTP"
       - "A pool of 4 witnesses with threshold 3: ['BGKV6v93...', 'BJfueFAY...', 'BAPv2Mno...', 'BA4PSatf...']"
