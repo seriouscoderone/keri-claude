@@ -296,3 +296,59 @@ types:
           - "main_index_size + other_index_size = soft_size"
           - "Used for dual-indexed signatures (Siger) where ondex differs from index"
           - "full_size is always a multiple of 4 (quadlet alignment)"
+
+  # Generic aliases — these are used across port contracts as domain-agnostic names
+
+  - name: "Signature"
+    description: "Generic signature reference used in port contracts. Resolves to Siger (indexed) or Cigar (unindexed) depending on context. Implementations should accept either form."
+    variants:
+      - name: "indexed"
+        fields:
+          - name: "siger"
+            type: "types://cesr/primitives#Siger"
+            required: true
+            description: "Indexed controller or witness signature"
+      - name: "unindexed"
+        fields:
+          - name: "cigar"
+            type: "types://cesr/primitives#Cigar"
+            required: true
+            description: "Unindexed non-transferable signature"
+    invariants:
+      - "Port contracts use 'Signature' as a generic — implementations dispatch on indexed vs unindexed"
+
+  - name: "Endpoint"
+    description: "A network-reachable service URL. Used in port contracts for transport operations where the full ServiceEndpoint structure is not needed."
+    variants:
+      - name: "default"
+        fields:
+          - name: "url"
+            type: "string"
+            required: true
+            description: "HTTP(S) or TCP URL of the endpoint"
+
+  - name: "UUID"
+    description: "A high-entropy universally unique identifier used for blinding. Minimum 128 bits of cryptographic entropy when used for privacy."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "CESR-qualified UUID string"
+        invariants:
+          - "For privacy blinding: must have >= 128 bits of entropy"
+          - "For metadata credentials: value is empty string (present but no entropy)"
+
+  - name: "Salt"
+    description: "A cryptographic salt used for key derivation. Typically 128 bits of entropy, stretched via argon2 for salty keepers."
+    variants:
+      - name: "default"
+        fields:
+          - name: "qb64"
+            type: "string"
+            required: true
+            description: "CESR-qualified salt value"
+        invariants:
+          - "Minimum 128 bits of entropy"
+          - "Used as seed for hierarchical deterministic key derivation"

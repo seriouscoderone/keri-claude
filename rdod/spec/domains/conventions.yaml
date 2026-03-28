@@ -1,0 +1,59 @@
+# conventions.yaml — Cross-cutting type conventions for port contracts
+#
+# These patterns appear in port contract signatures across all domains.
+# They are language-level constructs, not domain types — implementations
+# use their language's native equivalents.
+
+contract_conventions:
+  - pattern: "Result<T, E>"
+    description: "An operation that returns either success value T or error E. Not a domain type — use the language's native error handling."
+    implementations:
+      - language: "Rust"
+        equivalent: "Result<T, E>"
+      - language: "TypeScript"
+        equivalent: "T | E (union type) or Promise<T> with thrown E"
+      - language: "Python"
+        equivalent: "returns T, raises E as exception"
+      - language: "Go"
+        equivalent: "(T, error)"
+    invariants:
+      - "Every Result<T, E> in a port contract names both the success and error types"
+      - "The error type E is always defined in the domain's errors.yaml"
+      - "Implementations MUST handle the error case — silent swallowing is a bug"
+
+  - pattern: "void"
+    description: "An operation with no meaningful return value. Side effect only."
+    implementations:
+      - language: "Rust"
+        equivalent: "()"
+      - language: "TypeScript"
+        equivalent: "void"
+      - language: "Python"
+        equivalent: "None"
+
+  - pattern: "[T]"
+    description: "An ordered collection of T. Implementations use their language's native list/array/vector."
+
+  - pattern: "Map<K, V>"
+    description: "A key-value mapping. Implementations use their language's native dictionary/hashmap."
+
+  - pattern: "Iterator<T>"
+    description: "A lazy sequence of T. Implementations use their language's native iterator/generator."
+
+  - pattern: "bool"
+    description: "Boolean true/false."
+
+  - pattern: "int"
+    description: "Integer (arbitrary precision unless constrained)."
+
+  - pattern: "string"
+    description: "UTF-8 text."
+
+  - pattern: "bytes"
+    description: "Raw byte sequence."
+
+  - pattern: "datetime"
+    description: "ISO 8601 timestamp with timezone. Format: YYYY-MM-DDTHH:MM:SS.ffffff+HH:MM"
+
+  - pattern: "map"
+    description: "Untyped key-value mapping (when the structure varies by context)."
