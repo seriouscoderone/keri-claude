@@ -23,11 +23,11 @@ ports:
     name: "Cryptographic Digest"
     contract: "blake3_256(data: bytes) -> Digest"
     protocol: "method-call"
-    refs: ["kernel://cryptographic-algorithms"]
+    refs: ["external://cryptographic-primitives"]
 
   - id: "port://privacy/blinding/outbound/kdf"
     type: outbound
     name: "Key Derivation Function"
     contract: "derive(salt: bytes, path: int) -> bytes"
     protocol: "method-call"
-    refs: ["kernel://cryptographic-algorithms"]
+    refs: ["external://cryptographic-primitives"]

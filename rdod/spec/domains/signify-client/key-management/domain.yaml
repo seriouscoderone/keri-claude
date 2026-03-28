@@ -26,7 +26,7 @@ domain_clients:
 subdomains: []
 
 kernels:
-  - ref: "kernel://cryptographic-algorithms"
+  - ref: "external://cryptographic-primitives"
     source: "argon2 for passcode stretching, Ed25519/ECDSA for key generation, X25519 for key-at-rest encryption (ECDH + secretbox)"
     relationship: "All cryptographic primitives — key derivation, signing, encryption — are kernel operations. This subdomain composes them into the Keeper abstraction and Encrypter"
 

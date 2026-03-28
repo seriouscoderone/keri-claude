@@ -16,7 +16,7 @@ ports:
     contract: "create_blinded_update(regid, acdc_said, state, shared_salt, sn) -> BlindableUpdateEvent; unblind_state(blid, shared_salt, sn, possible_states) -> CredentialState; update_blind(regid, sn) -> BlindableUpdateEvent"
     protocol: "method-call"
     refs: ["domain://credential-lifecycle"]
-    delegates_to: "domain://privacy/blinding via port://privacy/blinding/inbound/blinded-state"
+    delegates_to: "port://privacy/blinding/inbound/blinded-state"
 
   # Outbound — what credential-lifecycle calls (delegated to subdomains)
   - id: "port://credential-lifecycle/outbound/kel-sealing"
