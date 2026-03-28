@@ -106,3 +106,13 @@ external_abstractions:
     invariants:
       - "Repository interfaces define the contract — the persistence external implements it"
       - "Implementations MUST satisfy the invariants on each Repository port (append-only, idempotent, etc.)"
+
+# Domain file placement rules
+
+file_placement:
+  errors_yaml:
+    rule: "Parent domains with subdomains MAY have their own errors.yaml for orchestration-level errors that occur BEFORE subdomain dispatch. Subdomain-specific errors live in the subdomain's errors.yaml. A parent with no orchestration errors does not need errors.yaml."
+    examples:
+      - "delegation/errors.yaml has DelegationChainError — a cross-subdomain error that occurs before delegation/authorization or delegation/lifecycle is invoked"
+      - "identity/ has no errors.yaml — all errors occur within establishment/, state/, thresholds/, etc."
+      - "accountability/ has no errors.yaml — all errors occur within receipting/, consensus/, dissemination/"
