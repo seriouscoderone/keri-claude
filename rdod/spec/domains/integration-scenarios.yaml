@@ -420,3 +420,98 @@ scenarios:
     reference_implementation:
       source: "keripy tests/core/test_eventing.py (superseding recovery sections)"
       notes: "Tests superseding rotation with pre-rotated key validation"
+
+  # ── Escrow Cascade ────────────────────────────────────────────────────────
+
+  - name: "EscrowCascade_full_pipeline"
+    protocol: "protocols://identity#DelegatedInception"
+    description: "A delegated inception event arrives out of order, with partial signatures, before the delegator's seal. It cascades through OOE → PSE → PWE → PDE → accepted. Tests the full escrow reprocessing pipeline across 4 domains."
+    setup:
+      description: "Multi-sig delegated inception: 2-of-3 threshold, 2 witnesses TOAD=1, delegator is a separate AID. Event arrives at a validator before the prior event (out-of-order)."
+      preconditions:
+        - domain: "domain://identity/state"
+          condition: "Validator has the delegator's KEL but the delegate's prefix is unknown"
+    cascade_steps:
+      - step: 1
+        escrow: "Out-of-Order Escrow (OOE)"
+        owning_domain: "domain://identity"
+        trigger: "Event sn > expected (or prefix unknown and not inception) — but this IS an inception for a new prefix, so OOE only applies if prior context is missing"
+        resolution: "For inception of unknown prefix: OOE is skipped (inception doesn't need a prior event). Event proceeds directly to validation."
+        timeout: "1200s"
+        notes: "OOE is processed first in the sweep order to release sequence-gapped events"
+
+      - step: 2
+        escrow: "Partially-Signed Escrow (PSE)"
+        owning_domain: "domain://identity/thresholds"
+        trigger: "Event arrives with 1 of 3 required signatures (threshold is 2-of-3)"
+        resolution: "Second signature arrives via exn multisig coordination → accumulated → threshold satisfied → event exits PSE"
+        reprocessing_trigger: "Domain Event Bus: SignatureAccumulated notification for this event's SAID"
+        timeout: "3600s"
+        notes: "PSE is processed after OOE. Signatures accumulate across multiple deliveries."
+
+      - step: 3
+        escrow: "Partially-Witnessed Escrow (PWE)"
+        owning_domain: "domain://accountability"
+        trigger: "Signatures satisfy threshold, but only 0 of 1 required witness receipts collected (TOAD=1)"
+        resolution: "Witness receipts arrive via receipt dissemination → count reaches TOAD → event exits PWE"
+        reprocessing_trigger: "Domain Event Bus: WitnessReceiptCollected notification for this event's AID+sn"
+        timeout: "3600s"
+        notes: "PWE is processed after PSE. Events that pass signing may still lack witness accountability."
+
+      - step: 4
+        escrow: "Partially-Delegated Escrow (PDE)"
+        owning_domain: "domain://delegation"
+        trigger: "Signatures and witnesses satisfied, but delegator's anchoring seal not yet found in delegator's KEL"
+        resolution: "Delegator creates an ixn with a seal referencing the delegate's dip SAID → seal discovered in delegator's KEL → event exits PDE"
+        reprocessing_trigger: "Domain Event Bus: KeyEventAccepted for the delegator's AID (new event in delegator's KEL may contain the seal)"
+        timeout: "86400s (24 hours)"
+        notes: "PDE is processed last. Delegation may require human approval by the delegator."
+
+      - step: 5
+        outcome: "Accepted to KEL"
+        owning_domain: "domain://identity"
+        trigger: "All blocking conditions resolved: signatures ≥ threshold, receipts ≥ TOAD, delegation seal verified"
+        post_acceptance:
+          - "Key state created for the new delegated AID"
+          - "Event logged to KEL with first-seen number assigned"
+          - "Domain Event Bus: KeyEventAccepted published (may trigger other escrow reprocessing)"
+
+    end_state_assertions:
+      - domain: "domain://identity/state"
+        assertion: "Delegated AID has established key state with correct signing keys, next commitments, and witness set"
+      - domain: "domain://accountability/receipting"
+        assertion: "Witness receipts stored for the delegation inception event"
+      - domain: "domain://delegation/authorization"
+        assertion: "Two-way binding verified: delegate's di field references delegator, delegator's KEL contains matching seal"
+      - domain: "domain://identity"
+        assertion: "All escrow queues (OOE, PSE, PWE, PDE) are empty for this event — it has been fully promoted"
+
+    ordering_invariants:
+      - "Escrow sweep order MUST be OOE → PSE → PWE → PDE — resolving one type may cascade events into the next"
+      - "Each escrow reprocessing re-enters the event at the validation step, not at the escrow check — the event is fully re-validated"
+      - "An event can visit multiple escrow types (PSE then PWE then PDE) but is in exactly one at a time"
+      - "Timeout at any escrow stage prunes the event permanently — it does not cascade to the next escrow"
+      - "KeyEventAccepted notifications from accepting OTHER events may trigger reprocessing of escrowed events for related AIDs"
+
+    failure_scenarios:
+      - name: "timeout_in_pde"
+        inject_failure_at: "step 4 — delegator never approves within 86400s"
+        expected_state:
+          - domain: "domain://identity"
+            assertion: "Event pruned from PDE — no AID created"
+          - domain: "domain://delegation"
+            assertion: "No delegation binding exists"
+
+      - name: "key_state_change_during_escrow"
+        inject_failure_at: "step 2 — delegator rotates keys while signatures are accumulating in PSE"
+        expected_state:
+          - domain: "domain://identity/thresholds"
+            assertion: "Accumulated signatures invalidated — must re-sign with new key state"
+
+      - name: "cascade_pse_to_pwe"
+        inject_failure_at: "step 2 resolves (signatures pass) but step 3 blocks (no witness receipts)"
+        expected_state:
+          - domain: "domain://identity"
+            assertion: "Event moves from PSE to PWE — cascade in action"
+          - domain: "domain://accountability"
+            assertion: "Event appears in PWE, not PSE"
