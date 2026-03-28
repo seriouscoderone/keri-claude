@@ -1,0 +1,193 @@
+domain_ref: "privacy"
+
+protocols:
+  - name: "GraduatedDisclosure"
+    description: "The orchestration sequence for graduated disclosure of an ACDC. Shows how the privacy domain coordinates its three subdomains (disclosure, blinding, aggregation) to produce disclosed variants at each stage."
+    trigger: "Discloser decides to present a credential to a disclosee"
+    participants:
+      - "Discloser (credential holder initiating disclosure)"
+      - "Disclosee (verifier receiving disclosure)"
+      - "privacy (orchestrator)"
+      - "privacy/disclosure (mode classification and form selection)"
+      - "privacy/blinding (UUID derivation and blinded state operations)"
+      - "privacy/aggregation (AGID computation and inclusion proofs)"
+      - "credential-exchange/negotiation (IPEX message transport)"
+    steps:
+      - seq: 1
+        domain: "domain://privacy/disclosure"
+        action: "classify_disclosure_mode"
+        port: "port://privacy/disclosure/inbound/mode-definitions"
+        input:
+          description: "The ACDC and the discloser's intent (what to reveal, to whom)"
+        output:
+          description: "DisclosureMode — which form to start with (compact, metadata, partial, full, selective)"
+        preconditions:
+          - "Discloser holds a valid ACDC with established TEL status"
+
+      - seq: 2
+        domain: "domain://privacy"
+        action: "classify_privacy_level"
+        port: "port://privacy/inbound/privacy-management"
+        input:
+          description: "The ACDC"
+        output:
+          description: "PublicOrPrivateOrMetadata — determines which disclosure paths are available"
+        notes: "Public ACDCs skip directly from compact to full (no partial). Private ACDCs support all forms. Metadata ACDCs support structural disclosure only."
+
+      - seq: 3
+        domain: "domain://privacy/disclosure"
+        action: "produce_compact_form"
+        port: "port://privacy/disclosure/inbound/mode-definitions"
+        input:
+          description: "The ACDC in expanded form"
+        output:
+          description: "Compact variant — each section replaced by its SAID"
+        notes: "This is the Most Compact Form. Its SAID is what the issuer signed (Proof of Issuance)."
+        depends_on: [1, 2]
+
+      - seq: 4
+        domain: "domain://credential-exchange/negotiation"
+        action: "send_offer_or_apply"
+        port: "port://credential-exchange/negotiation/inbound/negotiation-protocol"
+        input:
+          description: "Compact or metadata variant + schema + terms"
+        output:
+          description: "IPEX offer or apply message sent to disclosee"
+        notes: "If chain-link confidentiality applies, the discloser sends a metadata ACDC first. The disclosee must agree to contractual terms before full content is disclosed."
+        depends_on: [3]
+
+      - seq: 5
+        domain: "domain://credential-exchange/negotiation"
+        action: "receive_agreement"
+        port: "port://credential-exchange/negotiation/inbound/negotiation-protocol"
+        input:
+          description: "IPEX agree message from disclosee accepting terms"
+        output:
+          description: "Agreement confirmed — full disclosure authorized"
+        preconditions:
+          - "Disclosee has agreed to the rules section terms (non-repudiable signed exn)"
+        notes: "Skip this step if no chain-link confidentiality gate. Direct grant is also valid (steps 4-5 become just step 6)."
+        depends_on: [4]
+
+      - seq: 6
+        domain: "domain://privacy"
+        action: "produce_disclosed_variant"
+        port: "port://privacy/inbound/privacy-management"
+        input:
+          description: "The ACDC, target DisclosureMode, DisclosureOptions (which sections/blocks to expand)"
+        output:
+          description: "DisclosedVariant with the requested sections expanded"
+        depends_on: [5]
+        sub_steps:
+          - seq: "6a"
+            condition: "mode == selective"
+            domain: "domain://privacy/aggregation"
+            action: "compute_inclusion_proof"
+            port: "port://privacy/aggregation/inbound/aggregation-operations"
+            input:
+              description: "AGID, the attribute block SAID to disclose, the full attribute SAID list"
+            output:
+              description: "Inclusion proof — the attribute block SAID is in the committed AGID set"
+            notes: "Only for selective disclosure. The disclosee verifies the disclosed attribute is in the AGID without seeing other attributes."
+
+          - seq: "6b"
+            condition: "registry is blindable"
+            domain: "domain://privacy/blinding"
+            action: "derive_blinded_state"
+            port: "port://privacy/blinding/inbound/blinded-state"
+            input:
+              description: "Shared secret salt, sequence number, registry SAID"
+            output:
+              description: "Blinded attribute block with fresh BLID for decorrelation"
+            notes: "Only for blindable registries. Each disclosure uses a fresh BLID derived from the shared salt + sn."
+
+      - seq: 7
+        domain: "domain://credential-exchange/negotiation"
+        action: "send_grant"
+        port: "port://credential-exchange/negotiation/inbound/direct-issuance"
+        input:
+          description: "Disclosed variant + TEL issuance event + KEL anchor seal"
+        output:
+          description: "IPEX grant message containing the credential bundle"
+        depends_on: [6]
+
+      - seq: 8
+        domain: "domain://credential-exchange/negotiation"
+        action: "receive_admit"
+        port: "port://credential-exchange/negotiation/inbound/negotiation-protocol"
+        input:
+          description: "IPEX admit from disclosee confirming receipt"
+        output:
+          description: "Exchange complete — credential disclosed"
+        depends_on: [7]
+
+    failure_paths:
+      - step: 4
+        failure: "Disclosee spurns the offer"
+        handling: "Exchange terminates — no credential disclosed. Discloser may retry with different terms."
+      - step: 5
+        failure: "Disclosee does not agree to contractual terms"
+        handling: "Exchange terminates — chain-link confidentiality prevents full disclosure without agreement."
+      - step: 6a
+        failure: "Inclusion proof fails — attribute block not in AGID"
+        handling: "Internal error — the ACDC is malformed or the AGID was computed incorrectly."
+      - step: 7
+        failure: "Grant delivery fails (network, escrow)"
+        handling: "Message escrowed at recipient side — reprocessed when prerequisites arrive."
+
+    invariants:
+      - "Each step discloses the minimum information needed for the next step (principle of least disclosure)"
+      - "Disclosure is monotonically increasing — revealed information cannot be retracted"
+      - "Chain-link confidentiality gates (steps 4-5) are optional but non-bypassable when rules specify them"
+      - "The Most Compact Form SAID is the anchor for all verification — any disclosed variant traces back to it"
+      - "Selective disclosure and blinding are independent — both, either, or neither may be used"
+
+  - name: "BulkIssuance"
+    description: "The issuance-side protocol for creating a set of unlinkable credential copies that the holder can present to different verifiers without cross-correlation."
+    trigger: "Issuer wants to produce N copies of the same credential for anti-correlation"
+    participants:
+      - "Issuer"
+      - "privacy/blinding (UUID generation per copy)"
+      - "privacy/aggregation (bulk commitment computation)"
+      - "credential-lifecycle (TEL event creation per copy)"
+    steps:
+      - seq: 1
+        domain: "domain://privacy/blinding"
+        action: "generate_unique_uuids"
+        input:
+          description: "Count N, shared secret salt"
+        output:
+          description: "N unique UUIDs, each with >= 128 bits of entropy"
+
+      - seq: 2
+        domain: "domain://privacy"
+        action: "construct_copies"
+        input:
+          description: "ACDC template, N UUIDs"
+        output:
+          description: "N ACDC copies, each with a unique (d, u) pair"
+        depends_on: [1]
+
+      - seq: 3
+        domain: "domain://privacy/aggregation"
+        action: "compute_bulk_commitment"
+        input:
+          description: "List of N ACDC SAIDs"
+        output:
+          description: "Bulk commitment B = H(C(blinded_SAID_k for all k))"
+        depends_on: [2]
+
+      - seq: 4
+        domain: "domain://credential-lifecycle"
+        action: "issue_with_bulk_commitment"
+        input:
+          description: "Bulk commitment B, issuer AID, registry SAID"
+        output:
+          description: "Issuer signs commitment to bulk set — one signature covers all N copies"
+        depends_on: [3]
+
+    invariants:
+      - "Each copy has a unique SAID and UUID — copies are unlinkable"
+      - "Issuer signs the bulk commitment, not individual copies — O(1) signing"
+      - "Holder can present any copy with an inclusion proof against the bulk commitment"
+      - "Verifier cannot determine which copy index was presented"
