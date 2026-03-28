@@ -49,7 +49,7 @@ implementation_guidance:
     and processed by the escrow processing loop with a configurable timeout. Confirmed duplicity
     is promoted to the permanent Duplicitous Event Log.
 
-    Internal coordination for escrow reprocessing is implementation-defined — the spec only requires that escrow reprocessing occurs when blocking conditions resolve.
+    Escrow reprocessing is triggered by Domain Event Bus notifications: when a key event is accepted (KeyEventAccepted), the LDE is checked for conflicting events at that AID+sn. When the LDE timeout expires (default 3600s), events are either promoted to the permanent DEL (if duplicity confirmed) or pruned (if no confirmation). Reprocessing order: LDE sweep runs after each KeyEventAccepted notification and on a periodic timer.
 
 issues: []
 

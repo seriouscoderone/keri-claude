@@ -315,7 +315,51 @@ contracts:
           expression: "lambda aid, kel: len(kel.events) >= 1 and kel.events[0].t in ('icp', 'dip')"
         description: "KEL always starts with inception"
 
-state_machines: []
+state_machines:
+  - name: "EventProcessingOutcome"
+    term: "Event Processing"
+    states: ["Received", "Validated", "Accepted", "Escrowed", "Rejected"]
+    initial_state: "Received"
+    terminal_states: ["Accepted", "Rejected"]
+    transitions:
+      - from: "Received"
+        to: "Validated"
+        trigger: "Prefix known and sequence number matches expected"
+        guard: "sn == expected_sn AND prefix in known AIDs"
+      - from: "Received"
+        to: "Escrowed"
+        trigger: "Sequence number gap or unknown prefix"
+        guard: "sn > expected_sn OR (prefix unknown AND event is not inception)"
+      - from: "Received"
+        to: "Rejected"
+        trigger: "Stale or duplicate event"
+        guard: "sn < expected_sn AND not a valid recovery rotation"
+      - from: "Validated"
+        to: "Accepted"
+        trigger: "All validation passes (signatures, witnesses, delegation)"
+        guard: "Signatures satisfy threshold AND witness receipts satisfy TOAD AND delegation seal verified (if delegated)"
+      - from: "Validated"
+        to: "Escrowed"
+        trigger: "Partial validation — missing signatures, witnesses, or delegation"
+        guard: "Signatures below threshold → PSE; witness receipts below TOAD → PWE; delegation seal missing → PDE"
+      - from: "Validated"
+        to: "Rejected"
+        trigger: "Invalid signatures or EO trait violation"
+        guard: "No valid signatures OR (event is ixn AND AID has EstOnly trait) OR (event is rot AND sn < last establishment sn for non-delegated)"
+      - from: "Escrowed"
+        to: "Validated"
+        trigger: "Blocking condition resolved — reprocess through validation"
+        guard: "Missing dependency arrived (prior event, signatures, receipts, delegation seal)"
+      - from: "Escrowed"
+        to: "Rejected"
+        trigger: "Escrow timeout exceeded"
+        guard: "escrowed_at + timeout < current_time"
+    invariants:
+      - "Every event reaches exactly one terminal state (Accepted or Rejected)"
+      - "Escrowed events re-enter at Validated, not Received — no duplicate dispatch"
+      - "EO trait violation is immediate rejection — no escrow"
+      - "Stale rotation (sn < lastEst.sn for non-delegated) is immediate rejection"
+      - "Stale delegated rotation (sn < lastEst.sn) is NOT rejected — may be valid recovery"
 
 # Escrow processing order as declarative constraints.
 # The order matters because resolving one escrow type may cascade events
