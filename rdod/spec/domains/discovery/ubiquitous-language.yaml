@@ -63,6 +63,7 @@ terms:
     invariants:
       - "Resolution is not complete until the KEL is verified"
       - "Failed verification means the OOBI is untrusted, not that it's invalid"
+      - "Key rotation during OOBI resolution: if the controller's keys rotate between the time the OOBI URL is shared and the time the resolver fetches the KEL, the resolver receives the updated key state — OOBI resolution always produces the CURRENT key state, not the key state at OOBI creation time. The resolver MUST verify the full KEL, which includes the rotation event."
     examples:
       - "Resolve OOBI → GET KEL from witness → verify KEL → establish key state"
     related_terms: ["OOBI", "Validator"]

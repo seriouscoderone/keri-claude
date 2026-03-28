@@ -105,6 +105,7 @@ terms:
       - "Tries each state in the finite state set (e.g., issued, revoked) with each candidate ACDC SAID"
       - "Match is found when computed BLID equals the b field in the bup event"
       - "Computational cost is bounded by |states| x |candidate_acdc_saids| -- typically very small"
+      - "The finite state set for credential status is exactly {issued, revoked} — two values. State discovery cost is bounded: for each candidate (salt, sn), the holder tries at most 2 BLID computations (one per state) times the number of candidate ACDC SAIDs."
       - "Without the salt, brute-forcing the UUID is computationally infeasible (>= 128 bits entropy)"
     examples:
       - "Discloser computes uuid = derive(salt, sn=5), then tries BLID(uuid, acdc_said, 'issued') and BLID(uuid, acdc_said, 'revoked') -- one matches the b field"

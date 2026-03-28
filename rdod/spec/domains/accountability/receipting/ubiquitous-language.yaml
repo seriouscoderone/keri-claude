@@ -16,6 +16,7 @@ terms:
       - "Receipt signatures are attached as CESR attachment codes"
       - "Receipts are stored in the witness's KERL"
       - "Later receipts from other witnesses for the same event version are appended to the log entry"
+      - "Receipts from witnesses removed by a rotation event (listed in br field) MUST still be accepted for events at sequence numbers BEFORE the rotation — the receipt was valid at the time it was produced. Receipts from pruned witnesses for events AT OR AFTER the rotation sn MUST be rejected — the witness was no longer authorized."
     examples:
       - "rct message: {v: version, t: 'rct', d: event_SAID, i: event_AID, s: event_sn} with attached witness signature"
       - "A controller collecting 3 receipts from different witnesses for a single event"
