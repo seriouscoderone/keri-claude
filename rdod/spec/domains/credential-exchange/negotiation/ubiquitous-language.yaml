@@ -181,6 +181,15 @@ terms:
       - "ipexAdmitExn(hab, recp, message, grant_said) building an admit referencing the grant"
     related_terms: ["IPEX Handler", "Exchange Message", "Exchanger"]
 
+  - term: "IPEX Exchange Escrow"
+    synonyms: ["IPX"]
+    definition: "Escrow for IPEX messages that cannot be immediately processed because a prerequisite is missing — the sender's KEL, the credential's TEL, the credential schema, or required signatures. Messages are held and reprocessed when the missing dependency arrives."
+    invariants:
+      - "Messages escrowed when prerequisites are unavailable — never silently dropped"
+      - "Reprocessed when the blocking condition resolves (KEL arrives, schema fetched, etc.)"
+      - "Each escrowed message retains its full IPEX context (route, sender, content SAID)"
+    related_terms: ["IPEX Handler", "Escrow Cascade"]
+
 events:
   - name: "ExchangeInitiated"
     payload: "route: Route, initiator_aid: AID, recipient_aid: AID, content_said: SAID"

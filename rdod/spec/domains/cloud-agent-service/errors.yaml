@@ -6,23 +6,13 @@ domain_ref: "cloud-agent-service"
 # These are orchestration-level errors that span subdomains.
 
 errors:
-  - name: "AgentNotFoundError"
-    description: "No agent instance exists for the given controller AID"
-    cause: "Request references a controller AID that has not been provisioned via /boot"
-    recovery: "abort"
-    severity: "fatal"
-    context:
-      - name: "controller_aid"
-        type: "string"
-        description: "The AID that has no provisioned agent"
-
   - name: "AgentUnavailableError"
     description: "Agent instance exists but is not currently reachable or ready"
     cause: "Agent is initializing, shutting down, or in a degraded state"
     recovery: "retry"
     severity: "transient"
     context:
-      - name: "agent_aid"
+      - field: "agent_aid"
         type: "string"
         description: "The agent AID that is unavailable"
 
@@ -32,9 +22,9 @@ errors:
     recovery: "abort"
     severity: "fatal"
     context:
-      - name: "sender_aid"
+      - field: "sender_aid"
         type: "string"
         description: "The AID that attempted the request"
-      - name: "reason"
+      - field: "reason"
         type: "string"
         description: "Why authentication failed"

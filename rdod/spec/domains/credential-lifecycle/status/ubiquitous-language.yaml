@@ -143,6 +143,14 @@ terms:
       - "Reprocessed when the blocking credential chain dependency resolves — the chained credential is accepted to the TEL"
     related_terms: ["TEL Event Verifier", "Credential State"]
 
+  - term: "Missing Schema Escrow"
+    synonyms: ["MSE"]
+    definition: "Holds credential events whose schema SAID cannot be resolved — the schema has not yet been fetched or cached. The credential cannot be validated until its schema is available for structural verification."
+    invariants:
+      - "Triggered when the credential's schema SAID is not found in the local schema cache"
+      - "Reprocessed when the schema is fetched and cached"
+    related_terms: ["TEL Event Verifier", "Credential State"]
+
 events:
   - name: "CredentialStateChanged"
     payload: "regid: REGID, acdc_said: SAID, old_state: CredentialState, new_state: CredentialState, event_sn: int, event_said: SAID"
