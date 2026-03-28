@@ -207,9 +207,10 @@ Each domain directory contains up to 8 spec files:
 | `ubiquitous-language.yaml` | Detailed terms with invariants, examples, imports, specializes | 47/47 |
 | `ports.yaml` | Inbound/outbound interfaces with contracts | 47/47 |
 | `verification.yaml` | Formal properties, port contracts, state machines | 47/47 |
-| `errors.yaml` | Typed error taxonomy with cause, recovery, context | 42/47 |
-| `types.yaml` | Formal data structures with field constraints and variants | 23/47 |
-| `protocols.yaml` | Cross-domain orchestration flows with typed references | 7/47 |
+| `errors.yaml` | Typed error taxonomy with cause, recovery, context | 44/47 |
+| `types.yaml` | Formal data structures with field constraints and variants | 46/47 |
+| `protocols.yaml` | Cross-domain orchestration flows with typed references | 8/47 |
+| `conventions.yaml` | Cross-cutting type patterns (Result, primitives, externals) | 1 |
 | `integration-scenarios.yaml` | Cross-domain end-state assertions for protocols | 1 (14 scenarios) |
 | `context-map.html` | Interactive Cytoscape visualization of all 47 domains | 1 |
 
@@ -217,7 +218,7 @@ Each domain directory contains up to 8 spec files:
 
 **Adopter-centric naming** — Every domain is named for the job it does, not the mechanism it uses. `event-log` became `identity`. `duplicity-detection` became `integrity`. `tel` became `credential-lifecycle`. The spec vocabulary is encapsulated inside understandable domain concepts.
 
-**Language independence** — Domain terms are primary (`Identity State Machine`), implementation names are secondary synonyms (`Kever in keripy`). LMDB subdatabase names, Python class names, and framework terms are wrapped as implementation references, never used as domain vocabulary.
+**Language independence** — Domain terms are primary (`Key State`, `Event Repository`, `Escrow Cascade`), not implementation names. No keripy class names, LMDB subdatabase names, or framework terms in the spec — all stripped in favor of adopter-centric domain vocabulary.
 
 **Published Language boundaries** — Each top-level domain declares which terms it exports. Child domains import or specialize parent terms with explicit `specializes:` and `imports:` declarations. No unauthorized term redefinition.
 
