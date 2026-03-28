@@ -6,8 +6,10 @@ terms:
     synonyms: ["Aggregate ID"]
     definition: "A cryptographic digest of the serialized list of blinded attribute block SAIDs, serving as the compact value of the selectively disclosable aggregate section (A field)."
     invariants:
-      - "AGID = digest of serialized list [AGID_placeholder, a_1, a_2, ..., a_N] where a_i is the SAID of block i"
-      - "Zeroth element is the AGID itself (computed via dummy character replacement)"
+      - "AGID = SAID(serialize([AGID_placeholder, block_SAID_1, block_SAID_2, ..., block_SAID_N]))"
+      - "Serialization uses the same format as the enclosing ACDC (JSON, CBOR, or MGPK) — determined by the ACDC's version string v field"
+      - "The zeroth element is the AGID itself (computed via dummy character replacement, same as any SAID)"
+      - "Block SAIDs are in the order they appear in the schema's anyOf composition — NOT sorted"
       - "Makes a blinded commitment to all SAIDs in the list"
       - "Collision-resistant against birthday attacks on concatenated elements"
     examples:

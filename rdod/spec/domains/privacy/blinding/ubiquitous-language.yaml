@@ -71,13 +71,12 @@ terms:
 
   - term: "UUID Derivation"
     synonyms: ["Hierarchically Deterministic UUID Derivation"]
-    definition: "The process of deterministically deriving the blinding UUID from the shared secret salt and the TEL event sequence number, using a hierarchically deterministic key derivation function (argon2/HKDF). Ensures both issuer and discloser independently compute the same UUID for each event without communication."
+    definition: "The process of deterministically deriving the blinding UUID from the shared secret salt and the TEL event sequence number, using HKDF (HMAC-based Key Derivation Function). Ensures both issuer and discloser independently compute the same UUID for each event without communication."
     invariants:
-      - "Input: shared secret salt + event sequence number"
-      - "Output: UUID of length 2x the salt length (to preserve cryptographic entropy)"
-      - "Deterministic: same salt + same sequence number always produces the same UUID"
+      - "Derivation function: HKDF (HMAC-based Key Derivation Function) with the shared secret salt as input key material and the TEL sequence number as the info parameter"
+      - "Output length: 256 bits (32 bytes) to preserve >= 128 bits of cryptographic strength"
+      - "The derived UUID is deterministic: same (salt, sn) always produces the same UUID"
       - "Hierarchical: each sequence number produces an independent UUID with no correlation to other sequence numbers"
-      - "Uses argon2 or HKDF as the derivation function"
     examples:
       - "uuid_0 = derive(salt, sn=0) for the first bup event"
       - "uuid_5 = derive(salt, sn=5) for the sixth bup event -- independent of uuid_0 through uuid_4"
