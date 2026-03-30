@@ -193,3 +193,113 @@ file_placement:
       - "delegation/errors.yaml has DelegationChainError — a cross-subdomain error that occurs before delegation/authorization or delegation/lifecycle is invoked"
       - "identity/ has no errors.yaml — all errors occur within establishment/, state/, thresholds/, etc."
       - "accountability/ has no errors.yaml — all errors occur within receipting/, consensus/, dissemination/"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Package boundaries — which domains should be independently deployable packages
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Not every domain needs its own package. The 47 domains group naturally into
+# deployment units based on trust boundaries, runtime independence, and
+# consumer isolation. A domain becomes its own package when:
+#   1. It runs as an independent service (different process/host)
+#   2. It serves consumers that don't need the full protocol stack
+#   3. It has a distinct trust domain (e.g., witness vs watcher vs controller)
+#
+# Domains not listed below belong in the core protocol library.
+
+packaging:
+  rationale: >
+    Package boundaries follow deployment and trust boundaries, not domain
+    boundaries. Multiple domains may share a package when they always deploy
+    together and share the same trust context. A domain gets its own package
+    when it can be used independently or runs as a separate service.
+
+  packages:
+    - name: "@kerizon/cesr"
+      domains:
+        - cesr/primitives
+        - cesr/composition
+        - cesr
+      rationale: "Pure encoding layer — used by every KERI participant regardless of role"
+      type: library
+
+    - name: "@kerizon/keri-core"
+      domains:
+        - identity/establishment
+        - identity/state
+        - identity/key-commitment
+        - identity/anchoring
+        - identity/thresholds
+        - identity
+        - delegation/authorization
+        - delegation/lifecycle
+        - delegation/recovery
+        - delegation
+        - keri-messaging
+        - accountability/receipting
+        - accountability/consensus
+        - accountability/dissemination
+        - accountability
+        - credential-exchange/negotiation
+        - credential-exchange/proof
+        - credential-exchange
+        - credential-lifecycle/status
+        - credential-lifecycle/tel-validation
+        - credential-lifecycle/registry
+        - credential-lifecycle
+        - privacy/disclosure
+        - privacy/blinding
+        - privacy/aggregation
+        - privacy
+      rationale: "Core protocol logic — these domains are tightly coupled and always needed together"
+      type: library
+
+    - name: "@kerizon/signify-client"
+      domains:
+        - signify-client/key-management
+        - signify-client/resources
+        - signify-client
+      rationale: "Thin wallet SDK — can be used independently by edge agents without pulling in the full protocol stack"
+      type: library
+
+    - name: "@kerizon/discovery"
+      domains:
+        - discovery
+      rationale: "OOBI resolution and BADA policy — standalone concern for any KERI participant bootstrapping trust"
+      type: library
+
+    - name: "@kerizon/watcher"
+      domains:
+        - integrity/detection
+        - integrity/evidence
+        - integrity/recovery
+        - integrity
+        - watcher-service/api
+        - watcher-service
+      rationale: "Watcher runs under validator control (not controller) — different trust domain, independent service"
+      type: service
+
+    - name: "@kerizon/witness"
+      domains:
+        - witness-service/api
+        - witness-service
+      rationale: "Witness is a designated infrastructure role — runs as independent service with its own persistence"
+      type: service
+
+    - name: "@kerizon/agent"
+      domains:
+        - cloud-agent-service/api
+        - cloud-agent-service/processing
+        - cloud-agent-service/provisioning
+        - cloud-agent-service
+        - local-agent/api
+        - local-agent
+      rationale: "Agent services (cloud + local) are application-tier deployments with distinct operational concerns"
+      type: application
+
+  notes:
+    - "A package of type 'library' is imported as a dependency"
+    - "A package of type 'service' runs as an independent process (HTTP/TCP server)"
+    - "A package of type 'application' is a user-facing deployment (CLI, web app, cloud service)"
+    - "The core library re-exports domain types for convenience — consumers can import from core or from the specific package"
+    - "Service packages depend on the core library but not on each other (witness does not depend on watcher)"
