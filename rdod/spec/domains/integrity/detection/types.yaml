@@ -1,6 +1,102 @@
 domain_ref: "integrity/detection"
 
 types:
+  - name: "MonitorHandle"
+    description: "Reference to an active monitoring subscription for a specific AID. Returned when monitoring begins; used to track or cancel the subscription."
+    variants:
+      - name: "default"
+        fields:
+          - name: "monitored_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID being monitored for duplicity"
+          - name: "sources"
+            type: "array[types://cesr/primitives#AID]"
+            required: true
+            description: "Witness AIDs being polled for KEL comparison"
+          - name: "active"
+            type: "boolean"
+            required: true
+            description: "Whether this monitoring subscription is currently active"
+        invariants:
+          - "At least 2 sources from distinct operators must be present"
+          - "Monitoring remains active until explicitly cancelled or duplicity confirmed"
+
+  - name: "DuplicityEvidence"
+    description: "Evidence of conflicting events for the same AID at the same sequence number, collected from multiple witness sources."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID for which duplicity was detected"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number where the fork occurs"
+          - name: "first_event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the first-seen (incumbent) event"
+          - name: "conflicting_event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the conflicting (challenger) event"
+          - name: "first_source"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "AID of the witness that provided the first event"
+          - name: "conflicting_source"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "AID of the witness that provided the conflicting event"
+        invariants:
+          - "first_event_said != conflicting_event_said — identical SAIDs is not duplicity"
+          - "Both events must be at the same (aid, sn) — different sn is not duplicity"
+          - "Evidence is permanent — stored in the DEL, never deleted"
+
+  - name: "TrustDecision"
+    description: "The judge's verdict on whether to trust an AID after evaluating duplicity evidence. Three possible outcomes: trust granted, trust denied, or reconciliation pending."
+    variants:
+      - name: "trust"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID that was evaluated"
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Why trust was granted (e.g., confirmed superseding recovery)"
+        invariants:
+          - "Requires evidence of superseding recovery or confirmed false positive"
+      - name: "no_trust"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID that was evaluated"
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Why trust was denied (e.g., confirmed unrecoverable duplicity)"
+        invariants:
+          - "Issued when duplicity is confirmed with no viable recovery path"
+      - name: "reconcile"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID under continued investigation"
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Why the decision is deferred"
+        invariants:
+          - "Issued when duplicity evidence is present but resolution is ambiguous"
+          - "Re-evaluated when new evidence (recovery rotation, witness update) arrives"
+
   - name: "NoDuplicity"
     description: "Result when no duplicity is found for an AID — identical to the parent integrity domain type."
     variants:

@@ -25,6 +25,35 @@ types:
             required: true
             description: "Sequence number within the registry's TEL"
 
+  - name: "LifecycleStateSnapshot"
+    description: "Materialized view of credential lifecycle state at a point in time, derived from TEL event replay. Cached for query performance; always reconstructable by replaying all TEL events."
+    variants:
+      - name: "default"
+        fields:
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID of the registry this snapshot belongs to"
+          - name: "credential_said"
+            type: "string"
+            required: true
+            description: "SAID of the credential this state snapshot covers"
+          - name: "state"
+            type: "string"
+            required: true
+            description: "Current lifecycle state"
+            constraints:
+              enum: ["NotIssued", "Issued", "Revoked"]
+          - name: "last_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the last TEL event applied to produce this snapshot"
+        invariants:
+          - "Deterministic: the same sequence of TEL events always produces identical snapshots"
+          - "Reconstructable: snapshot must equal the result of replaying all TEL events from inception"
+          - "last_sn matches the sn of the most recently applied TelEvent"
+          - "A cache miss is never an error — reconstruct from TEL and cache the result"
+
   - name: "StateQueryInput"
     description: "Parameters for querying and computing a credential's current lifecycle state within a registry."
     variants:
@@ -35,7 +64,7 @@ types:
             required: true
             description: "REGID of the registry to query"
           - name: "credential_snapshot"
-            type: "types://credential-lifecycle#CredentialStateSnapshot"
+            type: "types://credential-lifecycle/status#LifecycleStateSnapshot"
             required: true
             description: "The credential state snapshot to validate and compute against"
         invariants:

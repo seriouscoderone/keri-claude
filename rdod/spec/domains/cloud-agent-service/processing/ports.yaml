@@ -10,7 +10,7 @@ ports:
     idempotent: false
     contract:
       input: "types://cloud-agent-service/processing#WorkItem"
-      output: "types://signify-client#Operation"
+      output: "types://cloud-agent-service/processing#ServerOperation"
       errors:
         - "errors://cloud-agent-service/processing#OperationLookupError"
     refs: ["domain://cloud-agent-service"]
@@ -34,7 +34,7 @@ ports:
     idempotent: false
     contract:
       input: "types://cloud-agent-service/processing#CredentialFilter"
-      output: "types://signify-client#Operation"
+      output: "types://cloud-agent-service/processing#ServerOperation"
       errors:
         - "errors://cloud-agent-service/processing#OperationLookupError"
     refs: ["domain://cloud-agent-service"]
@@ -65,8 +65,8 @@ ports:
       Tracks long-running operations so clients can poll for completion.
       Operations represent async workflows like witness receipting or credential issuance.
     contract:
-      input: "types://signify-client#Operation"
-      output: "types://signify-client#Operation"
+      input: "types://cloud-agent-service/processing#ServerOperation"
+      output: "types://cloud-agent-service/processing#ServerOperation"
       errors:
         - "errors://cloud-agent-service/processing#OperationLookupError"
     refs: ["persistence"]

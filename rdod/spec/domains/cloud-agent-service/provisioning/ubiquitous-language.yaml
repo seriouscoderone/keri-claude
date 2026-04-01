@@ -7,12 +7,12 @@ terms:
     definition: "The provisioning service (port 3903) that creates and destroys agent instances. Entry point for new Signify clients. Receives POST /boot with a controller inception event, validates it, creates an isolated agent instance, and returns configuration."
     invariants:
       - "POST /boot with inception event -> provisions new agent instance"
-      - "One-time per controller AID — idempotent on retry"
+      - "One-time per controller AID — POST /boot with an already-provisioned controller AID raises AgentAlreadyExistsError (HTTP 400)"
       - "Returns agent configuration (endpoints, controller AID confirmation)"
       - "Manages the bidirectional caid<->agent registry"
     examples:
       - "Signify client calls POST /boot with controller inception event -> Agency creates agent, stores mappings, returns config"
-      - "Repeated POST /boot for same controller AID -> returns existing agent config (idempotent)"
+      - "Repeated POST /boot for same controller AID -> HTTP 400 AgentAlreadyExistsError — check existence before re-provisioning"
     related_terms: ["Agent Instance", "Multi-tenancy", "Agent Registry"]
 
   - term: "Agent Instance"
@@ -92,7 +92,7 @@ events:
 
 rules:
   - "POST /boot requires a valid controller inception event — no anonymous provisioning"
-  - "One agent instance per controller AID — idempotent on retry, never duplicated"
+  - "One agent instance per controller AID — re-provisioning raises AgentAlreadyExistsError, never silently duplicated"
   - "Agent instances are isolated — one controller's data is inaccessible to another"
   - "All agent-owned resources (AIDs, credentials, contacts) are scoped to the instance and destroyed with it"
   - "Bidirectional caid<->agent mappings are updated atomically during provisioning and destruction"

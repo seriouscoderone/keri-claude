@@ -10,7 +10,7 @@ ports:
     idempotent: false
     contract:
       input: "types://cloud-agent-service/api#BootRequest"
-      output: "types://signify-client#Operation"
+      output: "types://signify-client/resources#OperationStatus"
       errors:
         - "errors://cloud-agent-service/api#InvalidBootInceptionError"
         - "errors://cloud-agent-service/provisioning#AgentAlreadyExistsError"
@@ -24,7 +24,7 @@ ports:
     idempotent: false
     contract:
       input: "types://cloud-agent-service/api#AdminRequest"
-      output: "types://signify-client#Operation"
+      output: "types://signify-client/resources#OperationStatus"
       errors:
         - "errors://cloud-agent-service/api#AuthNError"
         - "errors://cloud-agent-service/api#MissingSignifyResourceError"

@@ -1,6 +1,50 @@
 domain_ref: "signify-client/key-management"
 
 types:
+  - name: "KeyTier"
+    description: "Argon2 key-stretching security tier — controls the computational cost of passcode-to-key derivation. Higher tier means more security and slower unlock."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["low", "med", "high"]
+            description: "low: minimum cost for testing/dev; med: recommended for most production; high: maximum security at cost of slower unlock"
+        invariants:
+          - "Each tier maps to a fixed, non-negotiable Argon2 parameter set (memory cost, iterations, parallelism)"
+          - "Tier is set at keeper creation and is immutable — changing tier requires re-creating the keeper"
+          - "Implementations MUST NOT allow callers to customize Argon2 parameters beyond tier selection"
+
+  - name: "SignifyAuth"
+    description: "KRAM (Key Rate-limited Authentication Method) headers produced by the Signify edge client for every admin API request. Cryptographically binds the HTTP request to the controller's current signing keys."
+    variants:
+      - name: "default"
+        fields:
+          - name: "signify_resource"
+            type: "string"
+            required: true
+            description: "The Signify-Resource header — the controller's AID that authenticates this request"
+          - name: "signify_timestamp"
+            type: "string"
+            required: true
+            description: "The Signify-Timestamp header — ISO 8601 datetime with microsecond precision"
+          - name: "signature"
+            type: "string"
+            required: true
+            description: "The Signature header — CESR-encoded Ed25519 signature over the signed components"
+          - name: "signature_input"
+            type: "string"
+            required: true
+            description: "The Signature-Input header — describes which components were included in the signature"
+        invariants:
+          - "Signature covers HTTP method, path, body digest, and signify_timestamp"
+          - "signify_timestamp must be within the KRAM timeliness window (implementation-configurable)"
+          - "signify_resource must be a valid AID registered as a controller on the target agent"
+          - "signature must verify against the controller's current signing keys at the stated signify_resource"
+          - "A different request body with the same headers is rejected — binding is cryptographic, not structural"
+
   - name: "Keeper"
     description: "Key management strategy for a Signify edge client. Determines how signing keys are generated, stored, and rotated. Four variants for different security/convenience tradeoffs."
     variants:
@@ -11,7 +55,7 @@ types:
             required: true
             description: "CESR-qualified salt (Salter qb64) — the root secret"
           - name: "tier"
-            type: "types://signify-client#KeyTier"
+            type: "types://signify-client/key-management#KeyTier"
             required: true
             description: "Argon2 stretching tier (low/med/high)"
           - name: "stem"

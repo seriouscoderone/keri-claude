@@ -147,6 +147,38 @@ types:
           - "Must be unique per agent"
           - "Used as the path parameter in GET /operations/{name}"
 
+  - name: "ServerOperation"
+    description: "Long-running operation record tracked server-side by the cloud agent. Created when an admin API request triggers async work; polled by edge clients via GET /operations/{name}. Dual representation: this is the server's internal record; the edge client sees OperationStatus (signify-client/resources)."
+    variants:
+      - name: "default"
+        fields:
+          - name: "name"
+            type: "string"
+            required: true
+            description: "Unique operation identifier — format is {type}.{qualifier}"
+          - name: "done"
+            type: "boolean"
+            required: true
+            description: "Whether the operation has reached a terminal state"
+          - name: "operation_type"
+            type: "types://cloud-agent-service/processing#OperationType"
+            required: true
+            description: "Category of work this operation tracks"
+          - name: "response"
+            type: "map"
+            required: false
+            description: "Success payload — present only when done is true and no error occurred"
+          - name: "error"
+            type: "map"
+            required: false
+            description: "Error payload — present only when done is true and the operation failed"
+        invariants:
+          - "name follows the {type}.{qualifier} convention (e.g., witness.EDP1..., credential.ESAID...)"
+          - "done=false implies both response and error are absent"
+          - "done=true implies exactly one of response or error is present (XOR)"
+          - "Once done=true, the operation is in a terminal state and will not revert"
+          - "name is unique per agent instance"
+
   - name: "CredentialFilter"
     description: "Query filter for searching credentials held by the agent."
     variants:

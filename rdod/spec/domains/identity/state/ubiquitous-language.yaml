@@ -90,6 +90,7 @@ terms:
       - "Interaction event update: only advances sn and current event reference; verifies the prior event hash chain and signatures against current key state"
       - "The update is atomic — either all state fields change or none do (validation failure raises an error)"
       - "After a successful establishment event update: last establishment data is updated, config traits are checked and accumulated"
+      - "State cache is written after every successfully applied event — establishment events (which update key state) and interaction events (which advance only sn) both trigger a cache write so the most recent sn is always recoverable without replay"
     examples:
       - "Processing a rotation: the verifier validates the rotation, then replaces signing keys, next key digests, thresholds, witnesses, and last establishment data"
       - "Processing an interaction: the verifier checks signatures against current signing keys, advances the sequence number, updates the current event reference"
@@ -138,3 +139,5 @@ rules:
   - "Incremental update and full reconstruction must produce identical key state for the same KEL — determinism is mandatory"
   - "The state machine enforces EstOnly by rejecting interaction events when the trait is active"
   - "lastEst is updated at every establishment event to track the most recent establishment event's sn and SAID"
+  - "BADA (Best Available Data Algorithm) staleness for key state notices uses a two-tier criterion: (1) higher sequence number wins; (2) if sequence numbers are equal, later datetime wins. A notice is stale if it has an earlier sn than the stored notice, or the same sn but an earlier datetime"
+  - "For non-transferable (bare) key state notices, BADA uses only datetime comparison (no sn available)"

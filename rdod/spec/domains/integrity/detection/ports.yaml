@@ -10,7 +10,7 @@ ports:
     idempotent: false
     contract:
       input: "types://cesr/primitives#AID"
-      output: "types://integrity#MonitorHandle"
+      output: "types://integrity/detection#MonitorHandle"
       errors:
         - "errors://integrity/detection#LikelyDuplicitousError"
         - "errors://integrity/detection#DuplicitousInceptionError"
@@ -23,8 +23,8 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://integrity#DuplicityEvidence"
-      output: "types://integrity#TrustDecision"
+      input: "types://integrity/detection#DuplicityEvidence"
+      output: "types://integrity/detection#TrustDecision"
       errors:
         - "errors://integrity/detection#DuplicityEscrowTimeoutError"
     refs: ["domain://integrity"]

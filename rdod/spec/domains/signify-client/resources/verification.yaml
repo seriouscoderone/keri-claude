@@ -155,13 +155,16 @@ properties:
     strategy: "Valid SAIDs/AIDs with and without pre-existing registries"
     notes: "Registry creation is a prerequisite for credential issuance — enforced by the system, not just documented"
 
-  - invariant: "Only the five defined roles (witness, controller, agent, watcher, mediator) are accepted"
+  - invariant: "Only the eleven defined roles are accepted — arbitrary role strings are rejected"
     term: "End-Role"
     technique: property-based
     formal:
       language: pseudocode
       expression: |
-        valid_roles = {witness, controller, agent, watcher, mediator}
+        # 11 valid roles per keripy Rolage definition (kering.py)
+        valid_roles = {witness, controller, agent, watcher, registrar, gateway, judge, juror, peer, mailbox, indexer}
+        # Note: 'mediator' is specified in some KERI documents but is NOT in the current keripy implementation.
+        # Note: 'mediator' should be treated as an open question pending KSWG clarification.
         for any role string:
           if role in valid_roles:
             # Valid role is accepted and persisted
@@ -177,9 +180,12 @@ properties:
             roles = client.identifiers().listEndRoles("test")
             assert role does not appear in roles
         # The behavioral guarantee: the valid role set is closed.
-        # Arbitrary strings outside the five defined roles are rejected.
+        # Arbitrary strings outside the defined roles are rejected.
     strategy: "Both valid roles and arbitrary strings — verified by role persistence and rejection"
-    notes: "End-role authorization is restricted to exactly five roles — verified by observable state, not exception type"
+    notes: |
+      keripy defines 11 roles: witness, controller, agent, watcher, registrar, gateway, judge, juror, peer, mailbox, indexer.
+      'mediator' appears in some spec documents but is absent from the keripy implementation — flag as open question.
+      Implementations MUST reject arbitrary role strings not in the defined set.
 
   - invariant: "All resource operations require KRAM-authenticated requests — unsigned requests are rejected"
     term: "Controller AID"
