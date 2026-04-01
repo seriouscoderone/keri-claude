@@ -82,6 +82,52 @@ properties:
     strategy: "transferable_receipt_strategy()"
     notes: "Transferable receipts: (Prefixer, Seqner, Saider, Siger) quadruple. Validators use this form."
 
+  # Receipt signature verification mechanics
+  - invariant: "Receipt signature verification: the signature in a receipt is verified against the SERIALIZATION OF THE REFERENCED EVENT, not the receipt envelope itself. For non-transferable witnesses (AID = public key), verify(witness_aid, signature, event_serialization) — no KEL lookup needed. For transferable receipters, the validator MUST have the receipter's KEL to determine their current key state for verification."
+    term: "Receipt"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(receipt=receipt_strategy(), event=key_event_strategy())
+        def test_receipt_verified_against_event_serialization(receipt, event):
+            # Receipt signature is over the EVENT, not the receipt message
+            event_ser = serialize(event)
+            if not receipt.prefix.transferable:
+                # Non-transferable: AID IS the public key — direct verify
+                assert verify(receipt.prefix.raw, receipt.sig.raw, event_ser), (
+                    "Non-transferable receipt: verify(witness_pubkey=AID, sig, event_ser)"
+                )
+            else:
+                # Transferable: need receipter's KEL for current key state
+                receipter_key_state = get_key_state(receipt.prefix)
+                assert receipter_key_state is not None, (
+                    "Transferable receipt: must have receipter's KEL"
+                )
+                verfer = receipter_key_state.verfer_at(receipt.seqner.sn)
+                assert verify(verfer.raw, receipt.sig.raw, event_ser)
+    strategy: "receipt_strategy() x key_event_strategy()"
+    notes: "Critical distinction: receipt sig is over the event serialization, not the receipt envelope. Non-transferable witnesses are efficient (AID = pubkey, no KEL needed). Transferable receipters require full KEL chain verification."
+
+  - invariant: "Receipt verification is a two-phase process: (1) Event must be accepted into the KEL BEFORE receipts for it can be verified — receipts for unknown events are escrowed. (2) Once the event exists, receipt signatures are verified and counted toward the TOAD threshold. Receipts may arrive before, during, or after event acceptance."
+    term: "Receipt"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(receipt=receipt_strategy(), event_accepted=st.booleans())
+        def test_two_phase_receipt_verification(receipt, event_accepted):
+            if not event_accepted:
+                result = process_receipt(receipt)
+                assert result.escrowed, "Receipt for unknown event must be escrowed"
+            else:
+                result = process_receipt(receipt)
+                assert result.verified or result.rejected, (
+                    "Receipt for known event must be verified or rejected (not escrowed)"
+                )
+    strategy: "receipt_strategy() x event_accepted boolean"
+    notes: "Asynchronous design: events and receipts arrive independently. Escrow bridges the gap."
+
   - invariant: "Default timeout: 3600 seconds — escrowed receipts are pruned after expiry"
     term: "Receipt Escrows"
     technique: smt
