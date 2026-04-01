@@ -1,6 +1,6 @@
 # domain.yaml
 
-template_version: "1.0"
+template_version: "2.0"
 
 id: "watcher-service/api"
 
@@ -13,6 +13,7 @@ description: >
   message dispatch for all inbound watcher traffic.
 
 version: "0.1.0"
+tier: "service"
 
 source_material:
   - type: source-code
@@ -36,7 +37,11 @@ adjacents:
     relationship: "Conformist — implements integrity detection protocol"
     pattern: "Conformist"
 
-externals: []
+externals:
+  - name: "HTTP Server"
+    abstraction: "Adapter"
+    ref: "port://watcher-service/api/outbound/http-server"
+    implementation_notes: "HTTP listener for incoming KERI protocol messages and KEL state queries"
 
 implementation_guidance:
   suggested_type: "service"

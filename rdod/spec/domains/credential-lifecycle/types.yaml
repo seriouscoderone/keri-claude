@@ -488,6 +488,42 @@ types:
         invariants:
           - "t field is 'upd'"
 
+  - name: "LifecycleStateSnapshot"
+    description: "Union type for the current state of either a credential or a registry — the two kinds of state that TEL event processing produces."
+    variants:
+      - name: "credential"
+        fields:
+          - name: "snapshot"
+            type: "types://credential-lifecycle#CredentialStateSnapshot"
+            required: true
+            description: "Credential state snapshot"
+        invariants:
+          - "Describes the lifecycle state of a single credential (NotIssued, Issued, Revoked)"
+      - name: "registry"
+        fields:
+          - name: "snapshot"
+            type: "types://credential-lifecycle#RegistryStateSnapshot"
+            required: true
+            description: "Registry state snapshot"
+        invariants:
+          - "Describes the configuration state of a credential registry"
+
+  - name: "SealRequest"
+    description: "Parameters for creating a KEL interaction event that anchors a seal — pairs an issuer AID with the seal to anchor."
+    variants:
+      - name: "default"
+        fields:
+          - name: "issuer_aid"
+            type: "string"
+            required: true
+            description: "AID of the issuer whose KEL will contain the anchor seal"
+          - name: "seal"
+            type: "types://cesr/primitives#Seal"
+            required: true
+            description: "The seal to anchor in the issuer's KEL"
+        invariants:
+          - "Produces an interaction event (ixn) in the issuer's KEL with this seal in the anchors field"
+
   - name: "TELEscrowType"
     description: "Classification of TEL escrow queues for credential events awaiting different blocking conditions."
     variants:

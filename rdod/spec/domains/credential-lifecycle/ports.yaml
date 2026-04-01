@@ -6,15 +6,27 @@ ports:
   - id: "port://credential-lifecycle/inbound/state-management"
     type: inbound
     name: "Credential State Management"
-    contract: "create_registry(issuer_aid) -> REGID; issue(regid, acdc_said) -> UpdateEvent; revoke(regid, acdc_said) -> UpdateEvent; get_state(regid, acdc_said) -> CredentialState; get_tel(regid) -> TEL"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://credential-lifecycle#TELEvent"
+      output: "types://credential-lifecycle#CredentialState"
+      errors:
+        - "errors://credential-lifecycle#SchemaResolutionError"
+        - "errors://credential-lifecycle#MutualExclusionError"
+        - "errors://credential-lifecycle#IssuerKeyStateError"
+        - "errors://credential-lifecycle#CredentialSAIDError"
     refs: ["domain://credential-lifecycle"]
 
   - id: "port://credential-lifecycle/inbound/blinded-state"
     type: inbound
     name: "Blinded State Management"
-    contract: "create_blinded_update(regid, acdc_said, state, shared_salt, sn) -> BlindableUpdateEvent; unblind_state(blid, shared_salt, sn, possible_states) -> CredentialState; update_blind(regid, sn) -> BlindableUpdateEvent"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://credential-lifecycle#BlindableUpdateEvent"
+      output: "types://credential-lifecycle#CredentialState"
+      errors: []
     refs: ["domain://credential-lifecycle"]
     delegates_to: "port://privacy/blinding/inbound/blinded-state"
 
@@ -22,15 +34,24 @@ ports:
   - id: "port://credential-lifecycle/outbound/kel-sealing"
     type: outbound
     name: "KEL Sealing"
-    contract: "anchor_tel_seal(issuer_aid, event_sn, event_said) -> InteractionEvent; verify_tel_seal(issuer_aid, key_event_sn, seal) -> Result<Valid, MissingKELSealError>"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://credential-lifecycle#SealRequest"
+      output: "types://identity#InteractionEvent"
+      errors:
+        - "errors://credential-lifecycle/registry#MissingKELSealError"
     refs: ["domain://identity"]
 
   - id: "port://credential-lifecycle/outbound/tel-event-repository"
     type: outbound
     name: "TEL Event Repository"
-    contract: "append_tel_event(registry_said: SAID, event: TELEvent) -> Result — append-only, rejects duplicates by sequence number; get_tel_event_by_sn(registry_said: SAID, sn: int) -> Option<TELEvent>; get_tel_event_by_said(event_said: SAID) -> Option<TELEvent>; get_tel(registry_said: SAID) -> [TELEvent] — full TEL ordered by sequence number; get_anchor_seal(registry_said: SAID, event_said: SAID) -> Option<Seal>; put_timestamp(registry_said: SAID, event_said: SAID, datetime: DateTime) -> Result — immutable once set, subsequent writes for same key are no-ops"
-    protocol: "method-call"
+    semantics: command
+    idempotent: true
+    contract:
+      input: "types://credential-lifecycle#TELEvent"
+      output: "types://credential-lifecycle#TELEvent"
+      errors: []
     refs: ["persistence"]
     invariants:
       - "Append-only: events for a registry are ordered by sequence number and never modified or deleted"
@@ -41,8 +62,12 @@ ports:
   - id: "port://credential-lifecycle/outbound/credential-repository"
     type: outbound
     name: "Credential Repository"
-    contract: "store_credential(credential_said: SAID, credential: bytes) -> Result — stores ACDC bytes keyed by SAID; get_credential(credential_said: SAID) -> Option<bytes>; find_by_issuer(issuer_aid: AID) -> [SAID]; find_by_subject(subject_aid: AID) -> [SAID]; find_by_schema(schema_said: SAID) -> [SAID]; mark_processed(credential_said: SAID) -> Result — idempotent marker indicating credential has been fully processed"
-    protocol: "method-call"
+    semantics: command
+    idempotent: true
+    contract:
+      input: "types://credential-lifecycle#Credential"
+      output: "types://credential-lifecycle#CredentialStateSnapshot"
+      errors: []
     refs: ["persistence"]
     invariants:
       - "Credential immutability: once stored, credential bytes for a SAID cannot be modified"
@@ -52,8 +77,12 @@ ports:
   - id: "port://credential-lifecycle/outbound/tel-escrow-repository"
     type: outbound
     name: "TEL Escrow Repository"
-    contract: "escrow(escrow_type: TELEscrowType, registry_said: SAID, sn: int, event: bytes, escrowed_at: DateTime) -> Result; get_escrowed(escrow_type: TELEscrowType, registry_said: SAID) -> [TELEscrowedEvent]; remove(escrow_type: TELEscrowType, registry_said: SAID, sn: int) -> Result"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://credential-lifecycle#TELEscrowedEvent"
+      output: "types://credential-lifecycle#TELEscrowedEvent"
+      errors: []
     refs: ["persistence"]
     invariants:
       - "Escrow is transient: events are removed once the missing dependency is satisfied"

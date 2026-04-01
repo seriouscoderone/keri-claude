@@ -1,5 +1,5 @@
 # domain.yaml
-template_version: "1.0"
+template_version: "2.0"
 id: "witness-service"
 name: "Witness Service"
 description: >
@@ -9,6 +9,7 @@ description: >
   private signing keys for any controller. Implementation: keriox components/witness,
   keripy witness module.
 version: "0.1.0"
+tier: "service"
 
 source_material:
   - type: document
@@ -53,7 +54,7 @@ externals:
     implementation_notes: "Append-only KERL persistence — event logs and receipts per monitored AID."
   - name: "HTTP Server"
     abstraction: "Adapter"
-    ref: "port://witness-service/outbound/http-server"
+    ref: "port://witness-service/api/outbound/http-server"
     implementation_notes: "Event receipt endpoint, OOBI endpoint (/.well-known/keri/oobi/{aid}/{role}/{eid}), and query endpoint."
 
 implementation_guidance:

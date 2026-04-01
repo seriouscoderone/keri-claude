@@ -214,6 +214,38 @@ Each domain directory contains up to 8 spec files:
 | `integration-scenarios.yaml` | Cross-domain end-state assertions for protocols | 1 (14 scenarios) |
 | `context-map.html` | Interactive Cytoscape visualization of all 47 domains | 1 |
 
+### Spec Design Philosophy
+
+Three principles govern every decision in this spec:
+
+**1. DDD naming — never implementation naming**
+
+All terms, types, and ubiquitous language entries use Domain-Driven Design conventions. keripy class names (`Baser`, `Kevery`, `Habery`), LMDB subdatabase names, and any implementation-specific identifier are excluded. The spec must be readable by someone who has never seen keripy.
+
+**2. Adopter-centric language**
+
+Every domain and term is named for the job it does for someone *building with KERI* — not for the mechanism it implements. Domain names describe adopter concerns (`identity`, `accountability`, `credential-exchange`). Terms describe what adopters create, observe, and act on. The question is always: *"What would someone building a real application call this?"*
+
+**3. Builder pattern over field maps**
+
+KERI's wire format uses terse 1–2 character field keys (`v`, `t`, `d`, `i`, `s`, `kt`, `k`, `nt`, `n`, `bt`, `b`). This is correct for the protocol and must stay. It must not leak into the adopter experience. Every complex type in the spec includes a typed Builder that uses full domain-language parameter names and encapsulates field abbreviations internally — revealing the domain concept rather than the wire encoding.
+
+```
+# Wire format (correct for protocol, wrong for adopters)
+{"t": "icp", "i": aid, "s": "0", "kt": "1", "k": [vk], "n": [nk], "bt": "3", "b": [w1,w2,w3]}
+
+# Builder (what the spec describes)
+IdentifierInception.builder()
+  .aid(aid)
+  .signingKey(vk)
+  .nextKey(nk)
+  .witnessPool([w1, w2, w3])
+  .threshold(3)
+  .build()
+```
+
+---
+
 ### Key Design Decisions
 
 **Adopter-centric naming** — Every domain is named for the job it does, not the mechanism it uses. `event-log` became `identity`. `duplicity-detection` became `integrity`. `tel` became `credential-lifecycle`. The spec vocabulary is encapsulated inside understandable domain concepts.

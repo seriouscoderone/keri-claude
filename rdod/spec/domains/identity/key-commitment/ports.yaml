@@ -6,20 +6,40 @@ ports:
   - id: "port://identity/key-commitment/inbound/key-commitment"
     type: inbound
     name: "Key Commitment Management"
-    contract: "build_key_config(signing_keys: [PublicKey], next_digests: [Digest]) -> KeyConfiguration; verify_pre_rotation(new_keys: [PublicKey], prior_next_digests: [Digest]) -> Result<[MatchedIndex], PreRotationBindingError>; compute_next_digest(public_key: PublicKey, algorithm: DigestAlgorithm) -> Digest"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://identity#PublicKey"
+      output: "types://identity/key-commitment#KeyConfiguration"
+      errors:
+        - "errors://identity/key-commitment#PreRotationBindingError"
+        - "errors://identity/key-commitment#EmptyNextKeysError"
+        - "errors://identity/key-commitment#NextThresholdMismatchError"
+        - "errors://identity/key-commitment#PreRotatedKeyReuseError"
+        - "errors://identity/key-commitment#KeyExposureError"
     refs: ["domain://identity"]
 
   - id: "port://identity/key-commitment/inbound/transferability"
     type: inbound
     name: "Transferability Classification"
-    contract: "is_transferable(prefix_code: PrefixCode) -> bool; is_transferable_aid(next_digests: [Digest]) -> bool; classify_prefix(prefix: AID) -> TransferabilityKind"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://identity/key-commitment#PrefixCode"
+      output: "types://identity/key-commitment#TransferabilityKind"
+      errors:
+        - "errors://identity/key-commitment#NonTransferableRotationError"
+        - "errors://identity/key-commitment#TransferableMissingNextError"
     refs: ["domain://identity"]
 
   - id: "port://identity/key-commitment/inbound/partial-rotation"
     type: inbound
     name: "Partial Rotation"
-    contract: "validate_partial_rotation(new_keys: [PublicKey], prior_next_digests: [Digest], prior_next_threshold: Threshold) -> Result<{promoted: [int], discarded: [int]}, PartialRotationThresholdError>"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://identity#PublicKey"
+      output: "types://identity/key-commitment#MatchedIndex"
+      errors:
+        - "errors://identity/key-commitment#PartialRotationThresholdError"
     refs: ["domain://identity"]

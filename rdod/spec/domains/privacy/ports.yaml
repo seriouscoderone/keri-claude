@@ -6,36 +6,53 @@ ports:
   - id: "port://privacy/inbound/privacy-management"
     type: inbound
     name: "Privacy and Graduated Disclosure Orchestration"
-    contract: "disclose(acdc, mode: DisclosureMode, options: DisclosureOptions) -> DisclosedVariant; classify(acdc) -> DisclosureMode; classify_privacy_level(acdc) -> PublicOrPrivateOrMetadata; verify_disclosure(disclosed_variant, issuer_kel) -> Result<Valid, SAIDVerificationError>; bulk_issue(acdc, count) -> [BulkInstance]"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://privacy#DisclosureRequest"
+      output: "types://privacy#DisclosureResult"
+      errors:
+        - "errors://privacy#InvalidDisclosureFormError"
+        - "errors://privacy#DisclosureMonotonicityViolation"
+        - "errors://privacy#InsufficientEntropyError"
+        - "errors://privacy#ChainLinkConfidentialityViolation"
+        - "errors://privacy#DisclosureConstraintError"
+        - "errors://privacy#MutualExclusionViolation"
     refs: ["domain://credential-lifecycle"]
 
   # Outbound — delegates to subdomains
-  - id: "port://privacy/outbound/disclosure"
-    type: outbound
-    name: "Disclosure Mode Definitions"
-    contract: "Delegates to port://privacy/disclosure/inbound/mode-definitions"
-    protocol: "method-call"
-    refs: ["domain://privacy/disclosure"]
+  #   - disclosure: port://privacy/disclosure/inbound/mode-definitions
 
   - id: "port://privacy/outbound/blinding"
     type: outbound
     name: "Blinded State Operations"
-    contract: "Delegates to port://privacy/blinding/inbound/blinded-state"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://privacy#BlindedAttributeBlock"
+      output: "types://privacy#BlindedAttributeBlock"
+      errors: []
     refs: ["domain://privacy/blinding"]
 
   - id: "port://privacy/outbound/aggregation"
     type: outbound
     name: "Aggregation Operations"
-    contract: "Delegates to port://privacy/aggregation/inbound/aggregation-operations"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://privacy#SADPath"
+      output: "types://privacy/aggregation#SadPathSig"
+      errors: []
     refs: ["domain://privacy/aggregation"]
 
   # Outbound -- kernel dependency for cryptographic operations
   - id: "port://privacy/outbound/digest"
     type: outbound
     name: "Cryptographic Digest for Blinded Commitments"
-    contract: "said_compute(block_with_uuid) -> SAID; generate_uuid(entropy_bits: int) -> UUID"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "Blinded block bytes with UUID"
+      output: "types://cesr/primitives#SAID"
+      errors: []
     refs: ["external://cryptographic-primitives"]

@@ -25,6 +25,39 @@ types:
             required: true
             description: "Sequence number within the registry's TEL"
 
+  - name: "StateQueryInput"
+    description: "Parameters for querying and computing a credential's current lifecycle state within a registry."
+    variants:
+      - name: "default"
+        fields:
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID of the registry to query"
+          - name: "credential_snapshot"
+            type: "types://credential-lifecycle#CredentialStateSnapshot"
+            required: true
+            description: "The credential state snapshot to validate and compute against"
+        invariants:
+          - "Registry must exist and be resolvable by REGID"
+
+  - name: "StateReconstructionInput"
+    description: "Parameters for reconstructing the current state of a registry or credential from its TEL event history."
+    variants:
+      - name: "default"
+        fields:
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID of the registry whose state is being reconstructed"
+          - name: "events"
+            type: "array[types://credential-lifecycle/status#TelEvent]"
+            required: true
+            description: "Ordered list of TEL events to replay for state reconstruction"
+        invariants:
+          - "Events must be in ascending sequence number order"
+          - "First event must be a registry inception (rip) if reconstructing registry state"
+
   - name: "TelEventVerifier"
     description: "Verifier instance bound to a specific registry, tracking expected sequence number for state transitions."
     variants:

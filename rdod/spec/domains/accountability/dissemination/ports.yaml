@@ -6,21 +6,38 @@ ports:
   - id: "port://accountability/dissemination/inbound/event-propagation"
     type: inbound
     name: "Event Propagation"
-    contract: "disseminate_event(event: KeyEvent, receipts: [Receipt], witnesses: [ServiceEndpoint], strategy: DisseminationStrategy) -> Result<DisseminationReport, DisseminationTimeoutError>; get_witness_set(aid: AID, sn: int) -> {witnesses: [WitnessAID], tally: int}; select_mode(witness_count: int) -> Mode"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://accountability/dissemination#DisseminationStrategy"
+      output: "types://accountability/dissemination#DisseminationReport"
+      errors:
+        - "errors://accountability/dissemination#DisseminationTimeoutError"
+        - "errors://accountability/dissemination#WitnessUnreachableError"
+        - "errors://accountability/dissemination#WitnessRejectionError"
     refs: ["domain://accountability"]
 
   - id: "port://accountability/dissemination/inbound/witness-management"
     type: inbound
     name: "Witness Management"
-    contract: "designate_witnesses(witnesses: [WitnessAID], tally: int) -> WitnessConfig; amend_witnesses(prune: [WitnessAID], graft: [WitnessAID], new_tally: int) -> WitnessConfig; resolve_witness_endpoints(witnesses: [WitnessAID]) -> [ServiceEndpoint]"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://cesr/primitives#AID"
+      output: "types://accountability/dissemination#WitnessConfig"
+      errors: []
     refs: ["domain://accountability"]
 
   # Outbound — what dissemination calls
   - id: "port://accountability/dissemination/outbound/transport"
     type: outbound
     name: "Network Transport"
-    contract: "send_event(endpoint: Endpoint, event: KeyEvent, receipts: [Receipt]) -> Result; send_receipt(endpoint: Endpoint, receipt: Receipt) -> Result; gossip_receipts(witnesses: [Endpoint], receipts: [Receipt]) -> Result"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://accountability#Receipt"
+      output: "types://accountability/dissemination#DisseminationReport"
+      errors:
+        - "errors://accountability/dissemination#WitnessUnreachableError"
+        - "errors://accountability/dissemination#DisseminationTimeoutError"
     refs: ["transport"]

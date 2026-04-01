@@ -6,8 +6,13 @@ ports:
   - id: "port://credential-exchange/inbound/exchange-protocol"
     type: inbound
     name: "Exchange Protocol"
-    contract: "initiate_issuance(issuer_aid, issuee_aid, acdc) -> GrantMessage; initiate_presentation(discloser_aid, disclosee_aid, acdc, variant) -> OfferMessage; process_exchange(exn_message) -> ExchangeResult"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://credential-exchange#IPEXMessage"
+      output: "types://credential-exchange#ExchangeResult"
+      errors:
+        - "errors://credential-exchange#UnknownExchangeRouteError"
     refs: ["domain://credential-lifecycle"]
 
   # Direct Issuance port defined in child: port://credential-exchange/negotiation/inbound/direct-issuance

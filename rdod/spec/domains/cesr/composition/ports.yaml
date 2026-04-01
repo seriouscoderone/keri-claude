@@ -6,28 +6,51 @@ ports:
   - id: "port://cesr/composition/inbound/stream-composition"
     type: inbound
     name: "Stream Composition"
-    contract: "compose(body, attachments) -> Stream; group(count_code_type, primitives) -> Group; frame(groups) -> Frame"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://cesr/composition#CESRGroup"
+      output: "types://cesr/composition#CESRGroup"
+      errors:
+        - "errors://cesr/composition#GroupNestingError"
     refs: ["domain://cesr"]
 
   - id: "port://cesr/composition/inbound/stream-parsing"
     type: inbound
     name: "Stream Parsing"
-    contract: "parse(stream) -> [Frame]; sniff(byte) -> FrameType; extract_group(stream) -> (CountCode, content); extract_version_string(serialization) -> VersionString"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "Raw CESR stream bytes"
+      output: "types://cesr/composition#FrameType"
+      errors:
+        - "errors://cesr/composition#ColdStartError"
+        - "errors://cesr/composition#TruncatedStreamError"
+        - "errors://cesr/composition#VersionStringParseError"
     refs: ["domain://cesr"]
 
   - id: "port://cesr/composition/inbound/attachment-management"
     type: inbound
     name: "Attachment Management"
-    contract: "attach_signatures(body, sigs, code_type) -> Stream; attach_receipts(body, receipts) -> Stream; parse_attachments(stream) -> [AttachmentGroup]"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://cesr/composition#CESRGroup"
+      output: "types://cesr/composition#CESRGroup"
+      errors:
+        - "errors://cesr/composition#UnexpectedCountCodeError"
+        - "errors://cesr/composition#GroupNestingError"
     refs: ["domain://cesr"]
 
   # Outbound — what cesr-composition depends on
   - id: "port://cesr/composition/outbound/transport"
     type: outbound
     name: "Transport Layer"
-    contract: "send(endpoint, stream) -> Result; receive(endpoint) -> Stream"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://cesr/composition#CESRGroup"
+      output: "types://cesr/composition#CESRGroup"
+      errors:
+        - "errors://cesr/composition#TruncatedStreamError"
     refs: ["transport"]

@@ -6,24 +6,47 @@ ports:
   - id: "port://cloud-agent-service/api/inbound/boot"
     type: inbound
     name: "Boot API"
-    contract: "provision_agent(icp, sig, key_params) -> Operation — creates cloud agent for a controller AID"
-    protocol: "REST"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://cloud-agent-service/api#BootRequest"
+      output: "types://signify-client#Operation"
+      errors:
+        - "errors://cloud-agent-service/api#InvalidBootInceptionError"
+        - "errors://cloud-agent-service/provisioning#AgentAlreadyExistsError"
     refs: ["domain://signify-client"]
 
   # === PORT 3901: ADMIN API ===
   - id: "port://cloud-agent-service/api/inbound/admin-api"
     type: inbound
     name: "Admin API"
-    contract: "create_identifier(config) -> AID; rotate(aid) -> RotationEvent; interact(aid, seals) -> InteractionEvent; list_credentials() -> [Credential]; get_credential(said) -> Credential; resolve_oobi(url) -> Result; list_contacts() -> [Contact]; list_notifications() -> [Notification]; mark_notification(id, read) -> Result; get_operation(name) -> Operation; authorize_endrole(aid, role, eid) -> Operation"
-    protocol: "REST"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://cloud-agent-service/api#AdminRequest"
+      output: "types://signify-client#Operation"
+      errors:
+        - "errors://cloud-agent-service/api#AuthNError"
+        - "errors://cloud-agent-service/api#MissingSignifyResourceError"
+        - "errors://cloud-agent-service/api#AgentNotFoundError"
+        - "errors://cloud-agent-service/api#InvalidAgentConfigurationError"
+        - "errors://cloud-agent-service/api#IdentifierNotFoundError"
+        - "errors://cloud-agent-service/api#MissingParameterError"
+        - "errors://cloud-agent-service/api#ForbiddenSignatureError"
+        - "errors://cloud-agent-service/api#OperationNotFoundError"
+        - "errors://cloud-agent-service/api#ConfigurationError"
     refs: ["domain://signify-client", "domain://cloud-agent-service"]
 
   # === PORT 3902: MESSAGE ROUTER ===
   - id: "port://cloud-agent-service/api/inbound/message-router"
     type: inbound
     name: "Message Router"
-    contract: "receive_message(keri_message) -> Result — routes protocol messages to agent instances by target AID"
-    protocol: "REST"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "CESR-encoded KERI protocol message"
+      output: "Routing result"
+      errors: []
     refs: []
 
   # Outbound HTTP server defined at parent: port://cloud-agent-service/outbound/http-server

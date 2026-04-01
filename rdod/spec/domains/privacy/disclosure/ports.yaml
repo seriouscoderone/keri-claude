@@ -6,6 +6,12 @@ ports:
   - id: "port://privacy/disclosure/inbound/mode-definitions"
     type: inbound
     name: "Disclosure Mode Definitions"
-    contract: "classify_mode(acdc_variant) -> DisclosureMode; is_compact(block) -> bool; is_partial(block) -> bool; is_full(block) -> bool; is_selective(acdc) -> bool; requires_chain_link(acdc) -> bool"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://credential-lifecycle#Credential"
+      output: "types://privacy/disclosure#DisclosureMode"
+      errors:
+        - "errors://privacy/disclosure#InvalidDisclosureProgressionError"
+        - "errors://privacy/disclosure#PublicBlockPartialDisclosureError"
     refs: ["domain://privacy"]

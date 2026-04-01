@@ -6,23 +6,39 @@ ports:
   - id: "port://delegation/lifecycle/inbound/delegation-validation"
     type: inbound
     name: "Delegation Validation"
-    contract: "validate_delegated_event(event: SignedEstablishmentEvent, delegator_kel: KEL?) -> Result<Validated, ValidationError>; process_escrow_partial_dels() -> [PromotedEvent]; process_escrow_delegables() -> [PromotedEvent]"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://delegation/lifecycle#SignedEstablishmentEvent"
+      output: "types://delegation/lifecycle#PromotedEvent"
+      errors:
+        - "errors://delegation/lifecycle#DelegatorNotFoundError"
+        - "errors://delegation/lifecycle#DelegationSealMismatchError"
+        - "errors://delegation/lifecycle#DelegationNotPermittedError"
     refs: ["domain://delegation"]
 
   - id: "port://delegation/lifecycle/inbound/escrow-management"
     type: inbound
     name: "Delegation Escrow Management"
-    contract: "escrow_partially_delegated(event: SignedEstablishmentEvent) -> Result; escrow_delegable(event: SignedEstablishmentEvent) -> Result; get_escrowed_for_delegator(delegator_aid: AID) -> [SignedEstablishmentEvent]; approve_seal(delegator_aid: AID, delegatee_aid: AID, seal_said: SAID) -> Result"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://delegation/lifecycle#SignedEstablishmentEvent"
+      output: "void"
+      errors:
+        - "errors://delegation/lifecycle#DelegatorNotFoundError"
     refs: ["domain://delegation"]
 
   # Outbound — Repository interface for persistence
   - id: "port://delegation/lifecycle/outbound/escrow-store"
     type: outbound
     name: "Delegation Escrow Repository"
-    contract: "escrow_partially_delegated(aid: AID, sn: int, event_said: SAID, event: SignedEstablishmentEvent, escrowed_at: datetime) -> void; get_partially_delegated(aid: AID) -> [SignedEstablishmentEvent]; remove_partially_delegated(aid: AID, sn: int, event_said: SAID) -> void; escrow_delegable(aid: AID, sn: int, event_said: SAID, event: SignedEstablishmentEvent, escrowed_at: datetime) -> void; get_delegable(aid: AID) -> [SignedEstablishmentEvent]; remove_delegable(aid: AID, sn: int, event_said: SAID) -> void; record_anchor_seal(delegator: AID, delegatee: AID, seal_said: SAID) -> void; get_anchor_seal(delegator: AID, delegatee: AID) -> SAID?; remove_anchor_seal(delegator: AID, delegatee: AID) -> void"
-    protocol: "repository"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://delegation/lifecycle#SignedEstablishmentEvent"
+      output: "void"
+      errors: []
     refs: ["persistence"]
     invariants:
       - "Partially-delegated events await delegator anchor seal confirmation"

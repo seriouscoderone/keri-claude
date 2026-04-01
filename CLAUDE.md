@@ -129,6 +129,43 @@ python3 scripts/minimize-md.py --in-place *.md
 3. Add a catalog entry to README.md under **Skills**
 4. The skill's `description` field controls when Claude auto-activates it — be specific
 
+## DDD Spec Philosophy
+
+The `rdod/spec/domains/` directory is a formal DDD specification of the KERI ecosystem. When working on it, three principles are non-negotiable:
+
+### 1. DDD naming — never keripy naming
+
+All terms, types, ports, and ubiquitous language entries MUST use Domain-Driven Design conventions. Do NOT use keripy class names, LMDB subdatabase names, keria variable names, or any implementation-specific identifier.
+
+| Wrong (keripy) | Right (DDD) |
+|----------------|-------------|
+| `Baser` | `Event Repository` |
+| `Kevery` | `Event Processor` |
+| `Habery` | `Identifier Manager` |
+| `ked` field name | `key event dict` / describe by domain term |
+| `duplicity-detection` | `integrity` |
+
+The spec must be readable by someone who has never seen keripy.
+
+### 2. Adopter-centric language
+
+Every domain, term, and concept is named for the **job it does for someone building with KERI** — not for the mechanism it implements. Ask: *"What does an adopter need to do here, and what would they naturally call it?"*
+
+- Domain names describe the adopter's concern (`identity`, `accountability`, `credential-exchange`)
+- Terms describe what adopters create, observe, and act on — not how KERI implements them internally
+- Invariants and rules are written from the adopter's perspective: what they can rely on
+
+### 3. Builder pattern for field maps
+
+KERI's wire format uses terse field maps with 1–2 character keys (`v`, `t`, `d`, `i`, `s`, `kt`, `k`, `nt`, `n`, `bt`, `b`, `c`, `a`). This is correct for the protocol. It must NOT leak into the adopter's experience.
+
+Every complex type (3+ fields, or fields with KERI-specific encoding rules) MUST have a typed Builder in the spec that:
+- Uses full domain-language names for all parameters
+- Encapsulates field abbreviations and ordering rules internally
+- Reveals the domain concept, not the wire encoding
+
+Example: instead of `{"t": "icp", "i": aid, "s": "0", "kt": "1", "k": [vk], "nt": "1", "n": [nk], "bt": "3", "b": [w1,w2,w3]}`, the spec describes `IdentifierInception.builder().aid(aid).signingKey(vk).nextKey(nk).witnessPool([w1,w2,w3]).threshold(3).build()`.
+
 ## KERI Domain Context
 
 The keri-style skill teaches the "Domain-Specific Gerund-Agent Pattern with CESR-Native Nomenclature" used across all KERI implementations. Key conventions:

@@ -6,16 +6,29 @@ ports:
   - id: "port://credential-lifecycle/registry/inbound/registry-management"
     type: inbound
     name: "Registry Management"
-    contract: "create_registry(issuer_aid: AID, name: str, config_traits: [str], backers: [AID]?, toad: int?) -> REGID; rotate_registry(regid: REGID, cuts: [AID]?, adds: [AID]?, toad: int?) -> RegistryRotationEvent; get_registry(regid: REGID) -> RegistryStateSnapshot; get_registry_by_name(name: str) -> RegistryStateSnapshot"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://credential-lifecycle/registry#RegistryInceptionRequest"
+      output: "types://credential-lifecycle#RegistryStateSnapshot"
+      errors:
+        - "errors://credential-lifecycle/registry#RegistryAlreadyExistsError"
+        - "errors://credential-lifecycle/registry#RegistryNotOwnedError"
+        - "errors://credential-lifecycle/registry#InvalidBackerConfigError"
+        - "errors://credential-lifecycle/registry#MissingKELSealError"
+        - "errors://credential-lifecycle/registry#ConfigTraitMutationError"
     refs: ["domain://credential-lifecycle"]
 
   # Outbound -- what registry calls
   - id: "port://credential-lifecycle/registry/outbound/registry-repository"
     type: outbound
     name: "Registry Repository"
-    contract: "save_registry(name: str, record: RegistryRecord) -> Result; load_registry_by_name(name: str) -> Option<RegistryRecord>; load_registry_by_said(registry_said: SAID) -> Option<RegistryRecord>; save_state(registry_said: SAID, state: RegistryStateSnapshot) -> Result; load_state(registry_said: SAID) -> Option<RegistryStateSnapshot>"
-    protocol: "method-call"
+    semantics: command
+    idempotent: true
+    contract:
+      input: "types://credential-lifecycle/registry#RegistryRecord"
+      output: "types://credential-lifecycle/registry#RegistryRecord"
+      errors: []
     refs: ["persistence"]
     invariants:
       - "Name uniqueness: each registry name maps to exactly one registry record"

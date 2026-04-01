@@ -6,6 +6,13 @@ ports:
   - id: "port://signify-client/inbound/user-operations"
     type: inbound
     name: "User Operations"
-    contract: "connect(url, passcode) -> Session; create_identifier(alias, config) -> AID + Operation; rotate(aid) -> RotationEvent + Operation; issue_credential(registry, schema, recipient, data) -> SAID + Operation; present_credential(said, recipient) -> Result; resolve_oobi(url) -> Operation; sign(content) -> Signature; lock() -> void"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://signify-client/key-management#SessionState"
+      output: "types://signify-client#Operation"
+      errors:
+        - "errors://signify-client#AgentConnectionError"
+        - "errors://signify-client#SignifyAuthError"
+        - "errors://signify-client/key-management#PasscodeExpiredError"
     refs: []

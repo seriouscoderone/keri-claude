@@ -234,6 +234,63 @@ types:
           - "If form is 'full', blocks_to_expand is ignored — all blocks are expanded"
           - "chain_link_terms triggers metadata offer/agree before disclosure"
 
+  - name: "DisclosureRequest"
+    description: "Parameters for performing a graduated disclosure operation on a credential — pairs the credential with the desired disclosure options."
+    variants:
+      - name: "default"
+        fields:
+          - name: "credential"
+            type: "types://credential-lifecycle#Credential"
+            required: true
+            description: "The ACDC credential to disclose"
+          - name: "options"
+            type: "types://privacy#DisclosureOptions"
+            required: true
+            description: "Disclosure form and parameters controlling how the credential is disclosed"
+        invariants:
+          - "Credential must be in Issued state for disclosure to proceed"
+          - "Disclosure form must be compatible with the credential's privacy classification"
+
+  - name: "DisclosureResult"
+    description: "Output of a graduated disclosure operation — either a disclosed variant of a credential or a bulk-issued instance."
+    variants:
+      - name: "disclosed"
+        fields:
+          - name: "variant"
+            type: "types://privacy#DisclosedVariant"
+            required: true
+            description: "A specific disclosure of an ACDC at the requested form level"
+        invariants:
+          - "Produced for compact, partial, selective, nested-partial, full, and metadata forms"
+      - name: "bulk"
+        fields:
+          - name: "instance"
+            type: "types://privacy#BulkInstance"
+            required: true
+            description: "A bulk-issued credential instance with unique blinded SAID"
+        invariants:
+          - "Produced only for bulk-issued disclosure form"
+
+  - name: "AggregationInput"
+    description: "Input for aggregation operations — either a blinded attribute block for AGID computation or a list of SAIDs for aggregate verification."
+    variants:
+      - name: "blinded_block"
+        fields:
+          - name: "block"
+            type: "types://privacy#BlindedAttributeBlock"
+            required: true
+            description: "Blinded attribute block to compute AGID from"
+        invariants:
+          - "Used for computing the aggregate identifier (AGID) from blinded attributes"
+      - name: "said_list"
+        fields:
+          - name: "saids"
+            type: "array[string]"
+            required: true
+            description: "List of SAIDs for aggregate verification or compaction"
+        invariants:
+          - "SAIDs must be in canonical order for reproducible aggregation"
+
   - name: "PublicOrPrivateOrMetadata"
     description: "Privacy classification of an ACDC block based on the presence and value of the u (UUID) field."
     variants:

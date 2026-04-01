@@ -6,13 +6,25 @@ ports:
   - id: "port://integrity/recovery/inbound/superseding-rules"
     type: inbound
     name: "Superseding Rules"
-    contract: "evaluate_superseding(candidate: KeyEvent, incumbent: KeyEvent) -> Result<SupersedingRule, NotSuperseding>; apply_rule_a0(candidate: RotationEvent, incumbent: InteractionEvent) -> Result<Supersedes, NotApplicable>; apply_rule_a1(candidate: RotationEvent, incumbent: RotationEvent) -> NotSuperseding; apply_rule_a2(candidate: InteractionEvent, incumbent: KeyEvent) -> NotSuperseding"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://integrity#SupersedingRecoveryEvent"
+      output: "types://integrity/recovery#SupersedingRule"
+      errors:
+        - "errors://integrity/recovery#InvalidRecoveryRotationError"
+        - "errors://integrity/recovery#RecoveryNotPossibleError"
     refs: ["domain://integrity"]
 
   - id: "port://integrity/recovery/inbound/reconciliation"
     type: inbound
     name: "Reconciliation"
-    contract: "reconcile(aid: AID, kel_dag: KELDAG) -> Result<Trunk, IrreconcilableError>; get_trunk(aid: AID, kel_dag: KELDAG) -> [KeyEvent]; get_disputed_branches(aid: AID, kel_dag: KELDAG) -> [DisputedBranch]"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://cesr/primitives#AID"
+      output: "types://integrity/recovery#DisputedBranch"
+      errors:
+        - "errors://integrity/recovery#IrreconcilableError"
+        - "errors://integrity/recovery#SupersedingConflictError"
     refs: ["domain://integrity"]

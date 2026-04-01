@@ -796,7 +796,7 @@ properties:
     notes: "Each group is self-contained — enables core affinity in pipelined processing."
 
   # --- Error / Boundary conditions ---
-  - invariant: "Empty stream (0 bytes) MUST be handled gracefully: parser MUST return no frames and no error"
+  - invariant: "Empty stream (0 bytes) MUST return an empty list of frames and MUST NOT throw an error; the remainder MUST also be empty"
     term: "Stream"
     technique: "property-based"
     formal:

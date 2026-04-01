@@ -6,20 +6,39 @@ ports:
   - id: "port://identity/thresholds/inbound/threshold-satisfaction"
     type: inbound
     name: "Threshold Satisfaction"
-    contract: "satisfy(threshold: Threshold, indices: [int]) -> bool; parse_threshold(sith: str | [str]) -> Threshold; threshold_size(threshold: Threshold) -> int; is_weighted(threshold: Threshold) -> bool"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "Threshold expression and array of signature indices"
+      output: "boolean"
+      errors:
+        - "errors://identity/thresholds#ThresholdNotSatisfiedError"
+        - "errors://identity/thresholds#InvalidThresholdError"
     refs: ["domain://identity"]
 
   - id: "port://identity/thresholds/inbound/dual-threshold"
     type: inbound
     name: "Dual Threshold Verification"
-    contract: "check_dual_threshold(signing_threshold: Threshold, rotation_threshold: Threshold, indices: [int], ondices: [int]) -> Result<bool, DualThresholdError>"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "Signing threshold, rotation threshold, indices, and ondices"
+      output: "boolean"
+      errors:
+        - "errors://identity/thresholds#DualThresholdError"
+        - "errors://identity/thresholds#NextThresholdNotSatisfiedError"
     refs: ["domain://identity"]
 
   - id: "port://identity/thresholds/inbound/witness-configuration"
     type: inbound
     name: "Witness Configuration Management"
-    contract: "build_witness_config(witnesses: [WitnessAID], toad: int) -> WitnessConfiguration; apply_witness_changes(current: WitnessConfiguration, removals: [WitnessAID], additions: [WitnessAID], new_toad?: int) -> WitnessConfiguration; enough_receipts(config: WitnessConfiguration, receipt_indices: [int]) -> bool"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://identity#WitnessAID"
+      output: "types://identity/thresholds#GroupCoordination"
+      errors:
+        - "errors://identity/thresholds#WitnessThresholdNotSatisfiedError"
+        - "errors://identity/thresholds#InvalidWitnessThresholdError"
+        - "errors://identity/thresholds#GroupCoordinationTimeoutError"
     refs: ["domain://identity"]

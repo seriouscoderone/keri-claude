@@ -5,41 +5,72 @@ ports:
   - id: "port://witness-service/api/inbound/event-submission"
     type: inbound
     name: "Event Submission"
-    contract: "submit_event(cesr_message) -> Receipt | Escrow | Rejection — accepts CESR-encoded key events, returns receipt"
-    protocol: "REST"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "CESR-encoded key event message"
+      output: "types://witness-service/api#EventSubmissionResult"
+      errors:
+        - "errors://witness-service/api#MalformedEventError"
+        - "errors://witness-service/api#UnsupportedEventTypeError"
+        - "errors://witness-service/api#SignatureVerificationFailedError"
+        - "errors://witness-service#UnauthorizedEventError"
+        - "errors://witness-service#DuplicateReceiptError"
     refs: ["domain://cloud-agent-service", "domain://local-agent"]
 
   - id: "port://witness-service/api/inbound/receipting"
     type: inbound
     name: "Receipting"
-    contract: "receipt(pre, sn?, said?) -> Receipt — submit event for receipting or retrieve existing receipt"
-    protocol: "REST"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://cesr/primitives#AID"
+      output: "types://accountability#Receipt"
+      errors:
+        - "errors://witness-service#DuplicateReceiptError"
+        - "errors://witness-service#EventValidationError"
     refs: ["domain://cloud-agent-service", "domain://local-agent"]
 
   - id: "port://witness-service/api/inbound/kerl-query"
     type: inbound
     name: "KERL Query"
-    contract: "query(typ, pre?, sn?, reg?, vcid?) -> CESR Stream — returns KEL or TEL events"
-    protocol: "REST"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://cesr/primitives#AID"
+      output: "types://witness-service/api#KERLResponse"
+      errors: []
     refs: ["domain://watcher-service"]
 
   - id: "port://witness-service/api/inbound/oobi-resolution"
     type: inbound
     name: "OOBI Resolution"
-    contract: "resolve_oobi(aid?, role?, eid?) -> CESR Reply — serves witness OOBI as CESR reply messages + KEL replay"
-    protocol: "REST"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://cesr/primitives#AID"
+      output: "CESR reply messages with KEL replay"
+      errors: []
     refs: []
 
   - id: "port://witness-service/api/inbound/endpoint-management"
     type: inbound
     name: "Endpoint Management"
-    contract: "manage_endpoints(aid, role, endpoint_data) -> Result — service endpoint registration"
-    protocol: "REST"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://cesr/primitives#AID"
+      output: "Endpoint registration result"
+      errors: []
     refs: []
 
   - id: "port://witness-service/api/outbound/http-server"
     type: outbound
     name: "HTTP Server"
-    contract: "listen(port) -> Server"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://witness-service#WitnessConfiguration"
+      output: "Running HTTP server handle"
+      errors: []
     refs: ["transport"]

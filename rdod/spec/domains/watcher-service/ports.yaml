@@ -11,24 +11,31 @@ ports:
   - id: "port://watcher-service/outbound/witness-poll"
     type: outbound
     name: "Witness KERL Polling"
-    contract: "poll_kerl(witness_aid, target_aid, since_sn?) -> KERL — fetches KERL from witness for cross-checking"
-    protocol: "HTTP"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://cesr/primitives#AID"
+      output: "types://witness-service/api#KERLResponse"
+      errors:
+        - "errors://watcher-service#WitnessUnreachableError"
+        - "errors://watcher-service#InsufficientWitnessesError"
     refs: ["domain://witness-service"]
 
   - id: "port://watcher-service/outbound/watcher-repository"
     type: outbound
     name: "Watcher Repository"
+    semantics: command
+    idempotent: false
     description: >
       Stores observed KEL copies from multiple witnesses and permanent duplicity alerts.
       A watcher cross-checks KEL copies to detect equivocation. Duplicity alerts are
       append-only and never deleted — they are permanent evidence of misbehavior.
-    contract: "store_observed_kel(aid: AID, source_witness: AID, kel: KEL) -> Result; get_observed_kels(aid: AID) -> Map<WitnessAID, KEL>; store_duplicity_alert(aid: AID, alert: DuplicityAlert) -> Result; get_duplicity_alerts(aid: AID) -> [DuplicityAlert]"
-    protocol: "method-call"
+    contract:
+      input: "types://watcher-service#DuplicityAlert"
+      output: "types://watcher-service#DuplicityAlert"
+      errors:
+        - "errors://watcher-service#DuplicityAlertError"
     refs: ["persistence"]
 
-  - id: "port://watcher-service/outbound/http-server"
-    type: outbound
-    name: "HTTP Server"
-    contract: "listen(port) -> Server — serves query endpoint and OOBI resolution"
-    protocol: "method-call"
-    refs: ["transport"]
+  # HTTP Server port is defined in subdomain:
+  #   - api: port://watcher-service/api/outbound/http-server

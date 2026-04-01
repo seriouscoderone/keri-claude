@@ -6,23 +6,45 @@ ports:
   - id: "port://credential-lifecycle/verification/inbound/validate-tel-event"
     type: inbound
     name: "TEL Event Validation"
-    contract: "validate_event(verifiable_event: VerifiableEvent, registry_state: RegistryStateSnapshot, credential_state: CredentialStateSnapshot) -> Result<TelValidationPassed, TelValidationEscrowed|InvalidTransitionError>"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://credential-lifecycle/verification#VerifiableEvent"
+      output: "types://credential-lifecycle/verification#TelValidationPassed"
+      errors:
+        - "errors://credential-lifecycle/verification#TELChainBrokenError"
+        - "errors://credential-lifecycle/verification#SchemaValidationError"
+        - "errors://credential-lifecycle/verification#RevokedCredentialError"
+        - "errors://credential-lifecycle/verification#RegistryStateUnavailableError"
+        - "errors://credential-lifecycle/verification#MissingSealError"
+        - "errors://credential-lifecycle/verification#IssuerKELUnavailableError"
+        - "errors://credential-lifecycle/verification#InvalidTransitionError"
+        - "errors://credential-lifecycle/verification#OutOfOrderTELError"
+        - "errors://credential-lifecycle/verification#IncompleteVerifiableEventError"
     refs: ["domain://credential-lifecycle"]
 
   - id: "port://credential-lifecycle/verification/inbound/process-escrows"
     type: inbound
     name: "Escrow Processing"
-    contract: "process_escrows(escrow_type: EscrowType) -> [Result<TelEscrowReprocessed>]; notify(notification: TelNotification) -> void"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://credential-lifecycle/verification#TelNotification"
+      output: "types://credential-lifecycle/verification#TelEscrowReprocessed"
+      errors:
+        - "errors://credential-lifecycle/verification#EscrowTimeoutError"
     refs: ["domain://credential-lifecycle"]
 
   # Outbound -- what verification calls
   - id: "port://credential-lifecycle/verification/outbound/kel-and-state-lookup"
     type: outbound
     name: "KEL and State Lookup"
-    contract: "get_kel_event(issuer_aid: AID, sn: int) -> Result<KeyEvent, NotFound>; get_registry_state(registry_said: SAID) -> Result<RegistryStateSnapshot, NotFound>; get_credential_state(registry_said: SAID, credential_said: SAID) -> Result<CredentialStateSnapshot, NotFound>"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://cesr/primitives#SAID"
+      output: "types://credential-lifecycle#LifecycleStateSnapshot"
+      errors: []
     refs: ["persistence"]
     invariants:
       - "Read-only: this port never mutates state, only queries it"
@@ -31,8 +53,12 @@ ports:
   - id: "port://credential-lifecycle/verification/outbound/escrow-repository"
     type: outbound
     name: "Verification Escrow Repository"
-    contract: "escrow_event(escrow_type: EscrowType, verifiable_event: VerifiableEvent) -> Result; get_escrowed(escrow_type: EscrowType, filter: EscrowFilter) -> [VerifiableEvent]; remove_escrowed(escrow_type: EscrowType, event_said: SAID) -> Result"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://credential-lifecycle/verification#VerifiableEvent"
+      output: "types://credential-lifecycle/verification#VerifiableEvent"
+      errors: []
     refs: ["persistence"]
     invariants:
       - "Escrow is transient: events are removed once the blocking condition is resolved"

@@ -5,13 +5,26 @@ ports:
   - id: "port://keri-messaging/inbound/message-parsing"
     type: inbound
     name: "Message Parsing"
-    contract: "parse(raw_bytes) -> (MessageType, FieldMap, Attachments); validate_version(version_string) -> ProtocolVersion; validate_said(field_map) -> bool"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://keri-messaging#FieldMap"
+      output: "types://keri-messaging#MessageType"
+      errors:
+        - "errors://keri-messaging#ProtocolVersionMismatchError"
+        - "errors://keri-messaging#UnsupportedEventTypeError"
+        - "errors://keri-messaging#InvalidPrefixError"
+        - "errors://keri-messaging#SAIDVerificationError"
+        - "errors://keri-messaging#FieldOrderingError"
     refs: []
 
   - id: "port://keri-messaging/inbound/message-construction"
     type: inbound
     name: "Message Construction"
-    contract: "exchange(route, payload, sender, embeds?) -> ExchangeMessage; query(route, query_params) -> QueryMessage; reply(route, data) -> ReplyMessage"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://keri-messaging#MessageType"
+      output: "types://keri-messaging#ExchangeMessage"
+      errors: []
     refs: []

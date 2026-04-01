@@ -1,5 +1,5 @@
 # domain.yaml
-template_version: "1.0"
+template_version: "2.0"
 id: "integrity/evidence"
 name: "Duplicity Evidence"
 description: >
@@ -10,6 +10,7 @@ description: >
   promotes confirmed duplicity to the Duplicitous Event Log, and triggers
   reprocessing of dependent components.
 version: "0.1.0"
+tier: "domain"
 
 source_material:
   - type: document
@@ -36,9 +37,10 @@ kernels:
 adjacents: []
 
 externals:
-  - ref: "external://persistence"
-    source: "Escrow storage (Likely Duplicitous Escrow temporary, Duplicitous Event Log permanent)"
-    relationship: "Evidence lifecycle requires persistent storage — temporary escrow with timeout for likely duplicitous events, permanent append-only storage for confirmed duplicity evidence"
+  - name: "Duplicity Evidence Repository"
+    abstraction: "Repository"
+    ref: "port://integrity/evidence/outbound/escrow-storage"
+    implementation_notes: "Temporary escrow with timeout for likely duplicitous events, permanent append-only storage for confirmed duplicity evidence"
 
 implementation_guidance:
   suggested_type: "module"

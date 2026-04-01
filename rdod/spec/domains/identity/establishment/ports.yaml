@@ -6,28 +6,54 @@ ports:
   - id: "port://identity/establishment/inbound/validate-event"
     type: inbound
     name: "Event Validation"
-    contract: "validate_event(event: SignedEventMessage, key_state: KeyState) -> Result<ValidationPassed, ValidationError>; validate_signatures(raw: bytes, sigers: [Siger], verfers: [Verfer]) -> [int]; check_threshold(tholder: Tholder, indices: [int]) -> bool"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://identity/establishment#SignedEventMessage"
+      output: "types://identity/establishment#ValidationPassed"
+      errors:
+        - "errors://identity/establishment#OutOfOrderError"
+        - "errors://identity/establishment#MissingSignatureError"
+        - "errors://identity/establishment#MissingWitnessSignatureError"
+        - "errors://identity/establishment#LikelyDuplicitousError"
+        - "errors://identity/establishment#MisfitEventSourceError"
+        - "errors://identity/establishment#ValidationError"
     refs: ["domain://identity"]
 
   - id: "port://identity/establishment/inbound/validate-rotation"
     type: inbound
     name: "Rotation Validation"
-    contract: "validate_pre_rotation(sigers: [Siger], new_keys: [PublicKey], prior_next_digests: [Digest], ntholder: Tholder) -> Result<[int], PreRotationBindingError>; validate_dual_threshold(tholder: Tholder, ntholder: Tholder, indices: [int], ondices: [int]) -> Result<bool, InvalidThresholdError>"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://identity/establishment#SignedEventMessage"
+      output: "types://identity/establishment#ValidationPassed"
+      errors:
+        - "errors://identity/key-commitment#PreRotationBindingError"
+        - "errors://identity/thresholds#InvalidThresholdError"
     refs: ["domain://identity"]
 
   - id: "port://identity/establishment/inbound/validate-delegation"
     type: inbound
     name: "Delegation Validation"
-    contract: "validate_delegation(delegated_event: SignedEventMessage, delegator_aid: AID) -> Result<bool, MissingDelegationError>"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://identity/establishment#SignedEventMessage"
+      output: "boolean"
+      errors:
+        - "errors://identity/establishment#MissingDelegationError"
+        - "errors://identity/establishment#MissingDelegableApprovalError"
     refs: ["domain://identity"]
 
   # Outbound -- what validation calls
   - id: "port://identity/establishment/outbound/state-lookup"
     type: outbound
     name: "Key State and KEL Lookup"
-    contract: "get_key_state(aid: AID) -> KeyState; get_event_by_sn(aid: AID, sn: int) -> KeyEvent; get_delegator_seal(delegator_aid: AID, delegatee_aid: AID, sn: int, said: SAID) -> Result<EventSeal, NotFound>"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "AID prefix string"
+      output: "types://identity#KeyState"
+      errors: []
     refs: ["persistence"]

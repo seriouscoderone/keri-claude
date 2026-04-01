@@ -1,6 +1,6 @@
 # domain.yaml
 
-template_version: "1.0"
+template_version: "2.0"
 
 id: "local-agent/api"
 
@@ -14,6 +14,7 @@ description: >
   credential, and discovery operations locally without cloud agent dependency.
 
 version: "0.1.0"
+tier: "application"
 
 source_material:
   - type: document
@@ -43,7 +44,11 @@ adjacents:
     relationship: "Conformist — OOBI resolution and endpoint management"
     pattern: "Conformist"
 
-externals: []
+externals:
+  - name: "TCP Transport"
+    abstraction: "Adapter"
+    ref: "port://local-agent/api/outbound/tcp-transport"
+    implementation_notes: "TCP connection for sending raw CESR streams to remote KERI agents"
 
 implementation_guidance:
   suggested_type: "app"

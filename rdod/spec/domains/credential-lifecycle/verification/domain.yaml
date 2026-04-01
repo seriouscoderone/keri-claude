@@ -1,5 +1,5 @@
 # domain.yaml
-template_version: "1.0"
+template_version: "2.0"
 id: "credential-lifecycle/verification"
 name: "Credential Verification"
 description: >
@@ -12,6 +12,7 @@ description: >
   validation pipeline is re-entrant: escrowed events pass through the same steps
   as freshly received events.
 version: "0.1.0"
+tier: "domain"
 
 source_material:
   - type: document
@@ -51,6 +52,10 @@ externals:
     abstraction: "Repository (read-only)"
     ref: "port://credential-lifecycle/verification/outbound/kel-and-state-lookup"
     implementation_notes: "Reads issuer's KEL to verify anchor seals, and reads registry and credential state for validation context."
+  - name: "Verification Escrow Repository"
+    abstraction: "Repository"
+    ref: "port://credential-lifecycle/verification/outbound/escrow-repository"
+    implementation_notes: "Transient storage for TEL events that cannot be immediately validated, partitioned by escrow type"
 
 implementation_guidance:
   suggested_type: "module"

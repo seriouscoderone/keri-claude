@@ -6,28 +6,52 @@ ports:
   - id: "port://privacy/blinding/inbound/blinded-state"
     type: inbound
     name: "Blinded State Operations"
-    contract: "compute_blid(uuid: UUID, acdc_said: SAID?, state: CredentialState?) -> BLID; build_blinded_block(salt: Salt, sn: int, acdc_said: SAID?, state: CredentialState?) -> BlindedAttributeBlock; build_bound_block(salt: Salt, sn: int, acdc_said: SAID?, state: CredentialState?, bn: int, bd: SAID) -> BoundBlindedAttributeBlock; discover_state(salt: Salt, sn: int, blid: BLID, candidate_saids: [SAID], possible_states: [CredentialState]) -> CredentialState?"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://privacy#BlindedAttributeBlock"
+      output: "types://privacy/blinding#BoundBlindedAttributeBlock"
+      errors:
+        - "errors://privacy/blinding#BlindingKeyMismatchError"
+        - "errors://privacy/blinding#UnblindingError"
+        - "errors://privacy/blinding#BLIDComputationError"
+        - "errors://privacy/blinding#StateDiscoveryError"
+        - "errors://privacy/blinding#BLIDFieldOrderError"
     refs: ["domain://privacy"]
 
   - id: "port://privacy/blinding/inbound/uuid-derivation"
     type: inbound
     name: "UUID Derivation"
-    contract: "derive_uuid(salt: Salt, sn: int) -> UUID"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "Salt and sequence number"
+      output: "UUID string"
+      errors:
+        - "errors://privacy/blinding#InsufficientSaltEntropyError"
+        - "errors://privacy/blinding#UUIDDerivationError"
+        - "errors://privacy/blinding#UUIDLengthError"
     refs: ["domain://privacy"]
 
   # Outbound -- what blinding depends on
   - id: "port://privacy/blinding/outbound/digest"
     type: outbound
     name: "Cryptographic Digest"
-    contract: "blake3_256(data: bytes) -> Digest"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "Raw bytes"
+      output: "types://cesr/primitives#SAID"
+      errors: []
     refs: ["external://cryptographic-primitives"]
 
   - id: "port://privacy/blinding/outbound/kdf"
     type: outbound
     name: "Key Derivation Function"
-    contract: "derive(salt: bytes, path: int) -> bytes"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "Salt bytes and derivation path"
+      output: "Derived key bytes"
+      errors: []
     refs: ["external://cryptographic-primitives"]

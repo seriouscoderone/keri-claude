@@ -5,13 +5,28 @@ ports:
   - id: "port://discovery/inbound/discovery"
     type: inbound
     name: "OOBI Discovery"
-    contract: "resolve_oobi(url) -> Result<ResolvedEndpoint>; get_endpoints(aid, role?) -> [Endpoint]; introduce(aid, endpoint, role) -> OOBI"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://discovery#OOBI"
+      output: "types://discovery#ResolvedEndpoint"
+      errors:
+        - "errors://discovery#ValidationError"
+        - "errors://discovery#UnverifiedReplyError"
+        - "errors://discovery#ConfigurationError"
+        - "errors://discovery#StaleReplyError"
+        - "errors://discovery#EndRoleValidationError"
+        - "errors://discovery#MissingRouteHandlerError"
     refs: ["domain://identity"]
 
   - id: "port://discovery/outbound/url-resolution"
     type: outbound
     name: "URL Resolution"
-    contract: "http_get(url) -> Response"
-    protocol: "REST"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "URL string"
+      output: "HTTP Response"
+      errors:
+        - "errors://discovery#OOBIResolutionTimeoutError"
     refs: ["transport"]

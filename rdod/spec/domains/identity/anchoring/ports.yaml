@@ -6,13 +6,24 @@ ports:
   - id: "port://identity/anchoring/inbound/data-anchoring"
     type: inbound
     name: "Data Anchoring"
-    contract: "create_interaction(aid: AID, seals: [Seal]) -> InteractionEvent; create_digest_seal(data: bytes, algorithm: DigestAlgorithm) -> DigestSeal; create_event_seal(aid: AID, sn: int, said: SAID) -> EventSeal; create_last_est_seal(aid: AID) -> LastEstSeal"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://identity/anchoring#DigestSeal"
+      output: "types://identity#InteractionEvent"
+      errors:
+        - "errors://identity/anchoring#AnchoringNotPermittedError"
+        - "errors://identity/anchoring#NonTransferableAnchoringError"
+        - "errors://identity/anchoring#InvalidSealError"
     refs: ["domain://identity"]
 
   - id: "port://identity/anchoring/inbound/seal-query"
     type: inbound
     name: "Seal Query"
-    contract: "get_seals(aid: AID, sn: int) -> [Seal]; find_seal(aid: AID, seal_digest: Digest) -> Result<{sn: int, seal: Seal}, NotFound>; verify_seal(seal: Seal, data: bytes) -> bool"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "AID prefix and sequence number"
+      output: "array of types://identity/anchoring#DigestSeal"
+      errors: []
     refs: ["domain://identity"]

@@ -1,5 +1,5 @@
 # domain.yaml
-template_version: "1.0"
+template_version: "2.0"
 id: "watcher-service"
 name: "Watcher Service"
 description: >
@@ -8,6 +8,7 @@ description: >
   control (not the controller's). Provides ambient duplicity detection when deployed at
   sufficient diversity. Implementation: keriox components/watcher.
 version: "0.1.0"
+tier: "service"
 
 source_material:
   - type: document
@@ -56,7 +57,7 @@ externals:
     implementation_notes: "Cached KEL copies from multiple witness sources and permanent duplicity evidence records."
   - name: "HTTP Server"
     abstraction: "Adapter"
-    ref: "port://watcher-service/outbound/http-server"
+    ref: "port://watcher-service/api/outbound/http-server"
     implementation_notes: "Query endpoint for validators and OOBI resolution."
 
 implementation_guidance:

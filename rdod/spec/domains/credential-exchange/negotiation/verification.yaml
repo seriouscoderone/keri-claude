@@ -291,7 +291,7 @@ properties:
     notes: "Grant -> admit is the only valid transition from granted state."
 
   # IPEX Handler invariants
-  - invariant: "Each IPEX message type MUST have exactly one registered handler; the set of handled routes MUST equal {/ipex/apply, /ipex/offer, /ipex/agree, /ipex/grant, /ipex/admit, /ipex/spurn}"
+  - invariant: "The set of registered IPEX route handlers MUST equal exactly {/ipex/apply, /ipex/offer, /ipex/agree, /ipex/grant, /ipex/admit, /ipex/spurn} with exactly one handler per route; a message targeting an unregistered route MUST be rejected with UnhandledRouteError; registering two handlers for the same route MUST fail at startup with DuplicateHandlerError"
     term: "IPEX Handler"
     technique: property-based
     formal:

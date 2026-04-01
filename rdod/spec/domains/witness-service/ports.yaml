@@ -11,16 +11,18 @@ ports:
   - id: "port://witness-service/outbound/witness-repository"
     type: outbound
     name: "Witness Repository"
+    semantics: command
+    idempotent: false
     description: >
       Append-only store for receipted key event logs. A witness records each event
       it has seen (with its own receipt) and serves the receipted KEL back to requesters.
-    contract: "store_kerl_event(aid: AID, event: KeyEvent, receipt: Receipt) -> Result; get_kerl(aid: AID) -> [ReceiptedEvent]; get_receipt(aid: AID, event_said: SAID) -> Receipt; has_event(aid: AID, sn: SequenceNumber) -> bool"
-    protocol: "method-call"
+    contract:
+      input: "types://witness-service#ReceiptedEvent"
+      output: "types://witness-service#ReceiptedEvent"
+      errors:
+        - "errors://witness-service#DuplicateReceiptError"
+        - "errors://witness-service#EventValidationError"
     refs: ["persistence"]
 
-  - id: "port://witness-service/outbound/http-server"
-    type: outbound
-    name: "HTTP Server"
-    contract: "listen(port) -> Server — serves event receipt, KERL query, and OOBI endpoints"
-    protocol: "method-call"
-    refs: ["transport"]
+  # HTTP Server port is defined in subdomain:
+  #   - api: port://witness-service/api/outbound/http-server

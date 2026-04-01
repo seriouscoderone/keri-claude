@@ -11,6 +11,28 @@ types:
             required: true
             description: "LEGACY — v1 vrt event, no v2 equivalent. Registries in v2 are immutable after inception."
 
+  - name: "RegistryInceptionRequest"
+    description: "Parameters for creating a new credential registry — pairs the issuer AID with registry configuration options."
+    variants:
+      - name: "default"
+        fields:
+          - name: "issuer_aid"
+            type: "string"
+            required: true
+            description: "AID of the issuer who will own this registry"
+          - name: "name"
+            type: "string"
+            required: true
+            description: "Human-readable name for the registry"
+          - name: "mode"
+            type: "string"
+            required: true
+            description: "Whether the registry supports blinding"
+            constraints:
+              enum: ["blindable", "non-blindable"]
+        invariants:
+          - "Produces a RegistryInceptionEvent (rip) anchored in the issuer's KEL"
+
   - name: "RegistryRecord"
     description: "Stored metadata for a credential registry, persisted when the registry is created."
     variants:

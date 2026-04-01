@@ -6,21 +6,38 @@ ports:
   - id: "port://accountability/inbound/receipting"
     type: inbound
     name: "Receipting"
-    contract: "submit_event(event: KeyEvent, controller_signatures: [Signature]) -> Result<Receipt, UnverifiedWitnessReceiptError>; get_receipts(aid: AID, sn: int) -> [Receipt]; check_accountability(aid: AID, sn: int) -> {met: bool, count: int, threshold: int}"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://accountability#Receipt"
+      output: "types://accountability#KERL"
+      errors:
+        - "errors://accountability/receipting#UnverifiedWitnessReceiptError"
+        - "errors://accountability/receipting#UnverifiedReceiptError"
+        - "errors://accountability/receipting#StaleReceiptError"
     refs: ["domain://identity"]
 
   - id: "port://accountability/inbound/kerl-query"
     type: inbound
     name: "KERL Query"
-    contract: "get_kerl(aid: AID) -> KERL; get_receipted_event(aid: AID, sn: int) -> {event: KeyEvent, receipts: [Receipt]}"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://cesr/primitives#AID"
+      output: "types://accountability#KERL"
+      errors: []
     refs: ["domain://identity"]
 
   # Outbound — what accountability calls
   - id: "port://accountability/outbound/transport"
     type: outbound
     name: "Receipt Transport"
-    contract: "send_receipt(endpoint: Endpoint, receipt: Receipt) -> Result; send_event_with_receipts(endpoint: Endpoint, event: KeyEvent, receipts: [Receipt]) -> Result; gossip_receipts(witnesses: [Endpoint], receipts: [Receipt]) -> Result"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://accountability#Receipt"
+      output: "types://accountability/dissemination#DisseminationReport"
+      errors:
+        - "errors://accountability/dissemination#WitnessUnreachableError"
+        - "errors://accountability/dissemination#DisseminationTimeoutError"
     refs: ["transport"]

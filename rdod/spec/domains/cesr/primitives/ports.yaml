@@ -6,21 +6,40 @@ ports:
   - id: "port://cesr/primitives/inbound/qualification"
     type: inbound
     name: "Primitive Qualification"
-    contract: "qualify(raw, code) -> Primitive{qb64, qb2}; dequalify(qb64 | qb2) -> (code, raw); verify(verfer, sig, ser) -> bool; digest(ser, code) -> Diger; sign(signer, ser, index?) -> Siger | Cigar"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://cesr/primitives#Matter"
+      output: "types://cesr/primitives#Matter"
+      errors:
+        - "errors://cesr/primitives#InvalidPrimitiveCodeError"
+        - "errors://cesr/primitives#RawSizeMismatchError"
+        - "errors://cesr/primitives#InvalidQB64Error"
+        - "errors://cesr/primitives#InvalidQB2Error"
+        - "errors://cesr/primitives#SignatureVerificationError"
+        - "errors://cesr/primitives#DigestMismatchError"
     refs: ["domain://cesr"]
 
   - id: "port://cesr/primitives/inbound/code-resolution"
     type: inbound
     name: "Code Resolution"
-    contract: "resolve(code) -> Sizage{hs, ss, fs, ls}; resolve_indexed(code) -> IndexedSizage{hs, ss, os, fs, ls}"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "CESR type code string"
+      output: "types://cesr/primitives#IndexedSizage"
+      errors:
+        - "errors://cesr/primitives#InvalidPrimitiveCodeError"
     refs: ["domain://cesr"]
 
   # Outbound — what primitives depends on
   - id: "port://cesr/primitives/outbound/crypto"
     type: outbound
     name: "Cryptographic Operations"
-    contract: "ed25519_sign(privkey, msg) -> sig; ed25519_verify(pubkey, sig, msg) -> bool; blake3_256(msg) -> digest; sha256(msg) -> digest; argon2(salt, path) -> derived_key; ecdsa_sign(privkey, msg) -> sig; ecdsa_verify(pubkey, sig, msg) -> bool"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "Cryptographic key material and message bytes"
+      output: "types://cesr/primitives#Signature"
+      errors: []
     refs: ["crypto-library"]

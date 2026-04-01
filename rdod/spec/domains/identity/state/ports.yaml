@@ -6,30 +6,53 @@ ports:
   - id: "port://identity/state/inbound/state-tracking"
     type: inbound
     name: "State Tracking"
-    contract: "initialize_state(aid: AID, inception: InceptionEvent) -> KeyState; update_state(aid: AID, event: KeyEvent, signatures: [Signature]) -> Result<KeyState, ValidationError>; get_current_state(aid: AID) -> KeyState?"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://identity#KeyEvent"
+      output: "types://identity#KeyState"
+      errors:
+        - "errors://identity/state#OutOfOrderKeyStateError"
+        - "errors://identity/state#UnverifiedReplyError"
+        - "errors://identity/establishment#ValidationError"
     refs: ["domain://identity"]
 
   - id: "port://identity/state/inbound/state-reconstruction"
     type: inbound
     name: "State Reconstruction"
-    contract: "reconstruct_state(aid: AID, target_sn?: int) -> Result<KeyState, ReconstructionError>; reload_from_cache(aid: AID) -> KeyState?"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "AID prefix and optional target sequence number"
+      output: "types://identity#KeyState"
+      errors:
+        - "errors://identity/state#ReconstructionError"
+        - "errors://identity/state#StaleKeyStateError"
     refs: ["domain://identity"]
 
   - id: "port://identity/state/inbound/state-query"
     type: inbound
     name: "State Query"
-    contract: "get_last_establishment(aid: AID) -> LastEstablishmentData?; get_config_traits(aid: AID) -> [TraitCode]; is_transferable(aid: AID) -> bool; get_establishment_subsequence_sn(aid: AID) -> int?"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "AID prefix string"
+      output: "types://identity/state#LastEstablishmentData"
+      errors:
+        - "errors://identity/state#QueryNotFoundError"
     refs: ["domain://identity"]
 
   # Outbound — Repository interface for persistence
   - id: "port://identity/state/outbound/persistence"
     type: outbound
     name: "State Persistence Repository"
-    contract: "get_cached_state(aid: AID) -> KeyState?; put_cached_state(aid: AID, state: KeyState) -> void; get_event_by_said(aid: AID, event_said: SAID) -> KeyEvent?; replay_events(aid: AID, start_sn: int, end_sn: int) -> [KeyEvent]"
-    protocol: "repository"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://identity#KeyState"
+      output: "void"
+      errors:
+        - "errors://identity/state#MissingEntryError"
     refs: ["persistence"]
     invariants:
       - "Cached state may be overwritten — it is derived from the KEL, not source-of-truth"

@@ -6,23 +6,44 @@ ports:
   - id: "port://credential-lifecycle/status/inbound/state-query"
     type: inbound
     name: "State Query and Computation"
-    contract: "get_credential_state(regid: REGID, acdc_said: SAID) -> CredentialStateSnapshot; get_registry_state(regid: REGID) -> RegistryStateSnapshot; apply_event(verifier: TelEventVerifier, event: TelEvent) -> Result<StateChanged, InvalidTransition>"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://credential-lifecycle/status#StateQueryInput"
+      output: "types://credential-lifecycle/status#StateChanged"
+      errors:
+        - "errors://credential-lifecycle/status#InvalidCredentialStateError"
+        - "errors://credential-lifecycle/status#MissingRegistryError"
+        - "errors://credential-lifecycle/status#MissingAnchorError"
+        - "errors://credential-lifecycle/status#MissingIssuerError"
+        - "errors://credential-lifecycle/status#MissingSchemaError"
+        - "errors://credential-lifecycle/status#FailedSchemaValidationError"
+        - "errors://credential-lifecycle/status#MissingChainError"
+        - "errors://credential-lifecycle/status#RevokedChainError"
+        - "errors://credential-lifecycle/status#ValidationError"
     refs: ["domain://credential-lifecycle"]
 
   - id: "port://credential-lifecycle/status/inbound/state-reconstruction"
     type: inbound
     name: "State Reconstruction"
-    contract: "reconstruct_credential_state(regid: REGID, acdc_said: SAID, events: [TelEvent]) -> CredentialStateSnapshot; reconstruct_registry_state(regid: REGID, events: [TelEvent]) -> RegistryStateSnapshot"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://credential-lifecycle/status#StateReconstructionInput"
+      output: "types://credential-lifecycle#LifecycleStateSnapshot"
+      errors: []
     refs: ["domain://credential-lifecycle"]
 
   # Outbound -- what state calls
   - id: "port://credential-lifecycle/status/outbound/state-snapshot-repository"
     type: outbound
     name: "State Snapshot Repository"
-    contract: "save_credential_state(registry_said: SAID, credential_said: SAID, snapshot: CredentialStateSnapshot) -> Result; load_credential_state(registry_said: SAID, credential_said: SAID) -> Option<CredentialStateSnapshot>; save_registry_state(registry_said: SAID, snapshot: RegistryStateSnapshot) -> Result; load_registry_state(registry_said: SAID) -> Option<RegistryStateSnapshot>"
-    protocol: "method-call"
+    semantics: command
+    idempotent: true
+    contract:
+      input: "types://credential-lifecycle#LifecycleStateSnapshot"
+      output: "types://credential-lifecycle#LifecycleStateSnapshot"
+      errors: []
     refs: ["persistence"]
     invariants:
       - "Last-write-wins: saving a snapshot overwrites any previous snapshot for the same key"

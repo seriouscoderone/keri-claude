@@ -6,20 +6,36 @@ ports:
   - id: "port://delegation/inbound/delegation-lifecycle"
     type: inbound
     name: "Delegation Lifecycle"
-    contract: "create_delegated_inception(config: DelegatedInceptionConfig, delegator_aid: AID) -> DelegatedInceptionEvent; create_delegated_rotation(aid: AID, new_keys: [PublicKey], new_next: [PublicKey]) -> DelegatedRotationEvent; approve_delegation(delegator_aid: AID, delegated_event: EstablishmentEvent) -> DelegationSeal"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://delegation#DelegatedInceptionConfig"
+      output: "types://delegation#DelegatedInceptionEvent"
+      errors:
+        - "errors://delegation/authorization#DelegationNotAllowedError"
+        - "errors://delegation/authorization#InvalidDelegatorError"
     refs: ["domain://identity"]
 
   - id: "port://delegation/inbound/delegation-verification"
     type: inbound
     name: "Delegation Verification"
-    contract: "verify_delegation(delegated_event: EstablishmentEvent) -> Result<Verified, MissingDelegationError>; find_delegation_seal(delegator_aid: AID, delegatee_aid: AID, sn: int) -> Result<DelegationSeal, NotFound>; verify_delegation_chain(aid: AID) -> Result<Verified, DelegationChainError>"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://identity#KeyEvent"
+      output: "boolean"
+      errors:
+        - "errors://delegation/authorization#MissingDelegatorSealError"
+        - "errors://delegation#DelegationChainError"
     refs: ["domain://identity"]
 
   - id: "port://delegation/inbound/delegation-query"
     type: inbound
     name: "Delegation Query"
-    contract: "get_delegator(aid: AID) -> AID; get_delegatees(delegator_aid: AID) -> [AID]; get_delegation_chain(aid: AID) -> [AID]; is_delegated(aid: AID) -> bool"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "AID prefix string"
+      output: "array of AID strings"
+      errors: []
     refs: ["domain://identity"]

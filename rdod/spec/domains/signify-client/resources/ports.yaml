@@ -6,14 +6,27 @@ ports:
   - id: "port://signify-client/resources/inbound/resource-ops"
     type: inbound
     name: "Resource Operations"
-    contract: "create_identifier(alias, config) -> AID + Operation; rotate(aid) -> RotationEvent + Operation; interact(aid, seals) -> InteractionEvent; issue_credential(registry, schema, recipient, data) -> SAID + Operation; revoke_credential(said) -> Operation; create_exchange(route, payload, embeds, recipients) -> ExchangeMessage; send_exchange(exn, sigs, atc) -> Result; create_registry(aid, name) -> Operation; add_end_role(aid, role, eid) -> Operation; get_operation(name) -> OperationStatus; list_identifiers() -> [AID]; list_credentials(filter) -> [Credential]; resolve_oobi(url) -> Operation"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://signify-client#SignifyAuth"
+      output: "types://signify-client/resources#OperationStatus"
+      errors:
+        - "errors://signify-client/resources#ResourceNotFoundError"
+        - "errors://signify-client/resources#OperationTimeoutError"
+        - "errors://signify-client#AgentConnectionError"
     refs: ["domain://signify-client"]
 
   # Outbound — communication with cloud agent via KRAM-authenticated REST
   - id: "port://signify-client/resources/outbound/cloud-agent-comms"
     type: outbound
     name: "Cloud Agent Communication"
-    contract: "boot(inception_event) -> AgentConfig; request(method, path, body, kram_headers) -> Response; poll_operation(name) -> OperationStatus; send_exchange(exn, sigs, atc) -> Result"
-    protocol: "REST"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://signify-client#SignifyAuth"
+      output: "types://signify-client/resources#AgentConfig"
+      errors:
+        - "errors://signify-client#AgentConnectionError"
+        - "errors://signify-client#SignifyAuthError"
     refs: ["domain://cloud-agent-service/api"]

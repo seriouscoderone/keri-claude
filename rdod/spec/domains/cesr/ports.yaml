@@ -6,28 +6,43 @@ ports:
   - id: "port://cesr/inbound/encoding"
     type: inbound
     name: "Primitive Encoding"
-    contract: "encode(code, raw) -> qb64 | qb2; decode(qualified) -> (code, raw); convert(primitives, target_domain) -> [Primitive]"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "Primitive bytes and code table identifier"
+      output: "types://cesr/primitives#Matter"
+      errors:
+        - "errors://cesr#EncodingError"
+        - "errors://cesr#DecodingError"
+        - "errors://cesr#DomainConversionError"
+        - "errors://cesr#AlignmentError"
     refs: ["domain://identity", "domain://credential-lifecycle"]
 
   - id: "port://cesr/inbound/code-lookup"
     type: inbound
     name: "Code Table Lookup"
-    contract: "lookup(code) -> CodeEntry{type, raw_size, code_size, pad_size, lead_bytes}; list_codes(table_selector) -> [CodeEntry]"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "CESR type code string"
+      output: "types://cesr#CodeEntry"
+      errors:
+        - "errors://cesr#UnknownCodeError"
     refs: ["domain://identity", "domain://credential-lifecycle"]
 
-  # Subdomain inbound ports
-  - id: "port://cesr/primitives/inbound/qualification"
-    type: inbound
-    name: "Primitive Qualification"
-    contract: "qualify(raw, code) -> Primitive; extract(qb64 | qb2) -> (code, raw); transform(primitive, target_domain) -> Primitive"
-    protocol: "method-call"
-    refs: ["domain://cesr"]
+  # Subdomain inbound ports are defined in their respective ports.yaml files:
+  #   - primitives: port://cesr/primitives/inbound/qualification
+  #   - composition: port://cesr/composition/inbound/stream-composition
 
   - id: "port://cesr/composition/inbound/stream-composition"
     type: inbound
     name: "Stream Composition"
-    contract: "compose(groups) -> Stream; parse(stream) -> [Group]; sniff(stream_start) -> SerializationKind; pipeline(stream) -> [Frame]"
-    protocol: "method-call"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://cesr/composition#CESRGroup"
+      output: "types://cesr/composition#FrameType"
+      errors:
+        - "errors://cesr/composition#ColdStartError"
+        - "errors://cesr/composition#TruncatedStreamError"
     refs: ["domain://cesr"]

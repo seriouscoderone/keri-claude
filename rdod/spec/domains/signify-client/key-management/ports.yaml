@@ -6,18 +6,29 @@ ports:
   - id: "port://signify-client/key-management/inbound/key-ops"
     type: inbound
     name: "Key Operations"
-    contract: "unlock(passcode, tier) -> Session; lock() -> void; create_keeper(algo, pidx, config) -> Keeper; get_keeper(aid) -> Keeper; sign(aid, content, indexed) -> [Siger]; rotate_keys(aid) -> {verfers: [Verfer], digers: [Diger]}"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://signify-client/key-management#Keeper"
+      output: "types://signify-client/key-management#SessionState"
+      errors:
+        - "errors://signify-client/key-management#InvalidPasscodeError"
+        - "errors://signify-client/key-management#PasscodeExpiredError"
+        - "errors://signify-client/key-management#UnsupportedKeeperTypeError"
     refs: ["domain://signify-client"]
 
   # Outbound — encrypted key material persistence
   - id: "port://signify-client/key-management/outbound/key-repository"
     type: outbound
     name: "Key Repository"
+    semantics: command
+    idempotent: false
     description: >
       Persists encrypted key material for edge signing. Supports two keeper strategies:
       salty (salt-based derivation) and randy (random key generation). All stored material
       is encrypted — the repository never sees plaintext private keys.
-    contract: "store_encrypted_salt(aid: AID, encrypted_salt: EncryptedSalt) -> Result; get_encrypted_salt(aid: AID) -> EncryptedSalt; store_encrypted_keys(aid: AID, encrypted_private: [EncryptedKey], encrypted_next: [EncryptedKey]) -> Result; get_encrypted_keys(aid: AID) -> EncryptedKeyPair; destroy(aid: AID) -> Result"
-    protocol: "method-call"
+    contract:
+      input: "types://signify-client/key-management#EncryptedSalt"
+      output: "types://signify-client/key-management#EncryptedKeyPair"
+      errors: []
     refs: ["persistence"]

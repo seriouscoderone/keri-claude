@@ -99,6 +99,33 @@ types:
           - "Terminal message — no further messages in this exchange thread"
           - "Can be sent by either party at any non-terminal state"
 
+  - name: "MessageConstructionInput"
+    description: "Parameters for constructing a new IPEX exchange message — pairs the sender AID with the message-type-specific payload."
+    variants:
+      - name: "default"
+        fields:
+          - name: "sender_aid"
+            type: "string"
+            required: true
+            description: "AID of the party constructing the message"
+          - name: "route"
+            type: "string"
+            required: true
+            description: "Target IPEX route (e.g., /ipex/apply, /ipex/grant)"
+            constraints:
+              enum: ["/ipex/apply", "/ipex/offer", "/ipex/agree", "/ipex/grant", "/ipex/admit", "/ipex/spurn"]
+          - name: "payload"
+            type: "map"
+            required: true
+            description: "Route-specific payload fields (schema_said for apply, acdc+tel+seal for grant, etc.)"
+          - name: "prior_said"
+            type: "string"
+            required: false
+            description: "SAID of the prior message in the thread (absent for initial apply or direct grant)"
+        invariants:
+          - "Route determines which payload fields are required"
+          - "sender_aid must have valid key state for signing"
+
   - name: "EscrowReason"
     description: "Why an IPEX exchange message was escrowed instead of processed immediately."
     variants:

@@ -1,6 +1,6 @@
 # domain.yaml
 
-template_version: "1.0"
+template_version: "2.0"
 
 id: "credential-lifecycle"
 
@@ -22,6 +22,7 @@ description: >
   what's visible, go to privacy.
 
 version: "0.1.0"
+tier: "domain"
 
 source_material:
   - type: document
@@ -82,7 +83,19 @@ adjacents:
     pattern: "Conformist"
     via_port: "port://identity/anchoring/inbound/data-anchoring"
 
-externals: []
+externals:
+  - name: "TEL Event Repository"
+    abstraction: "Repository"
+    ref: "port://credential-lifecycle/outbound/tel-event-repository"
+    implementation_notes: "Append-only storage for TEL events, keyed by registry SAID and sequence number"
+  - name: "Credential Repository"
+    abstraction: "Repository"
+    ref: "port://credential-lifecycle/outbound/credential-repository"
+    implementation_notes: "Stores ACDC credential bytes keyed by SAID, with indexes by issuer, subject, and schema"
+  - name: "TEL Escrow Repository"
+    abstraction: "Repository"
+    ref: "port://credential-lifecycle/outbound/tel-escrow-repository"
+    implementation_notes: "Transient storage for TEL events awaiting missing dependencies, partitioned by escrow type"
 
 implementation_guidance:
   suggested_type: "module"

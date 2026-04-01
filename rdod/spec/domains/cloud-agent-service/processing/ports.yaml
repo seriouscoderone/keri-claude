@@ -6,59 +6,92 @@ ports:
   - id: "port://cloud-agent-service/processing/inbound/process-work"
     type: inbound
     name: "Work Processing"
-    contract: "enqueue_work(deck: DeckName, item: WorkItem) -> Result; get_operation(name: string) -> Operation; list_operations(type: OpType) -> [Operation]"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://cloud-agent-service/processing#WorkItem"
+      output: "types://signify-client#Operation"
+      errors:
+        - "errors://cloud-agent-service/processing#OperationLookupError"
     refs: ["domain://cloud-agent-service"]
 
   - id: "port://cloud-agent-service/processing/inbound/multisig"
     type: inbound
     name: "Multi-sig Assembly"
-    contract: "submit_partial_signature(group_aid: AID, siger: Siger, event: SignedEventMessage) -> Result; check_group_status(group_aid: AID) -> GroupStatus"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://cloud-agent-service/processing#SignedEventMessage"
+      output: "types://cloud-agent-service/processing#GroupStatus"
+      errors:
+        - "errors://cloud-agent-service/processing#EscrowTimeoutError"
     refs: ["domain://cloud-agent-service"]
 
   - id: "port://cloud-agent-service/processing/inbound/credential-ops"
     type: inbound
     name: "Credential Operations"
-    contract: "issue_credential(schema: SAID, issuer: AID, issuee: AID, data: object) -> Operation; search_credentials(filter: object, sort: object, skip: int, limit: int) -> [SAID]"
-    protocol: "method-call"
+    semantics: command
+    idempotent: false
+    contract:
+      input: "types://cloud-agent-service/processing#CredentialFilter"
+      output: "types://signify-client#Operation"
+      errors:
+        - "errors://cloud-agent-service/processing#OperationLookupError"
     refs: ["domain://cloud-agent-service"]
 
   # Outbound — what processing calls
   - id: "port://cloud-agent-service/processing/outbound/escrow-repository"
     type: outbound
     name: "Escrow Repository"
+    semantics: command
+    idempotent: false
     description: >
       Manages time-bounded escrow of partially-complete protocol exchanges (e.g.,
       partial signatures awaiting threshold, credentials pending presentation).
       Items expire after a configurable timeout.
-    contract: "store_escrow(escrow_type: EscrowType, key: EscrowKey, item: EscrowedItem, timeout: Duration) -> Result; get_escrowed(escrow_type: EscrowType) -> [EscrowedItem]; remove_escrow(escrow_type: EscrowType, key: EscrowKey) -> Result"
-    protocol: "method-call"
+    contract:
+      input: "types://cloud-agent-service/processing#EscrowedItem"
+      output: "types://cloud-agent-service/processing#EscrowedItem"
+      errors:
+        - "errors://cloud-agent-service/processing#EscrowTimeoutError"
     refs: ["persistence"]
 
   - id: "port://cloud-agent-service/processing/outbound/operation-repository"
     type: outbound
     name: "Operation Repository"
+    semantics: command
+    idempotent: false
     description: >
       Tracks long-running operations so clients can poll for completion.
       Operations represent async workflows like witness receipting or credential issuance.
-    contract: "store_operation(operation: Operation) -> Result; get_operation(operation_name: OperationName) -> Operation; list_operations(operation_type: OperationType) -> [Operation]"
-    protocol: "method-call"
+    contract:
+      input: "types://signify-client#Operation"
+      output: "types://signify-client#Operation"
+      errors:
+        - "errors://cloud-agent-service/processing#OperationLookupError"
     refs: ["persistence"]
 
   - id: "port://cloud-agent-service/processing/outbound/credential-index-repository"
     type: outbound
     name: "Credential Index Repository"
+    semantics: command
+    idempotent: false
     description: >
       Searchable index over credential attributes. Allows clients to find credentials
       by schema, issuer, issuee, or any indexed attribute field.
-    contract: "index_credential(credential_said: SAID, field: string, value: string) -> Result; search_credentials(filter: CredentialFilter) -> [SAID]"
-    protocol: "method-call"
+    contract:
+      input: "types://cloud-agent-service/processing#CredentialFilter"
+      output: "array[types://cesr/primitives#SAID]"
+      errors: []
     refs: ["persistence"]
 
   - id: "port://cloud-agent-service/processing/outbound/timer"
     type: outbound
     name: "Timer"
-    contract: "set_timeout(key: string, duration: Duration) -> Result; is_expired(key: string) -> bool"
-    protocol: "method-call"
+    semantics: command
+    idempotent: true
+    contract:
+      input: "Timer key and duration"
+      output: "boolean"
+      errors: []
     refs: ["timer"]
