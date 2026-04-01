@@ -10,7 +10,7 @@ ports:
     idempotent: false
     contract:
       input: "types://integrity/evidence#ForkDetected"
-      output: "types://integrity#DuplicityEvidence"
+      output: "types://integrity/detection#DuplicityEvidence"
       errors:
         - "errors://integrity/evidence#NotDuplicityError"
         - "errors://integrity/evidence#InvalidEvidenceError"
@@ -37,7 +37,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://integrity#DuplicityEvidence"
+      input: "types://integrity/detection#DuplicityEvidence"
       output: "types://integrity#DuplicityEventLog"
       errors:
         - "errors://integrity/evidence#DELAppendError"

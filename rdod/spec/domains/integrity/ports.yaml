@@ -10,7 +10,7 @@ ports:
     idempotent: false
     contract:
       input: "types://cesr/primitives#AID"
-      output: "types://integrity#MonitorHandle"
+      output: "types://integrity/detection#MonitorHandle"
       errors:
         - "errors://integrity/detection#LikelyDuplicitousError"
         - "errors://integrity/detection#KELForkDetectedError"
@@ -40,7 +40,7 @@ ports:
     idempotent: true
     contract:
       input: "types://cesr/primitives#AID"
-      output: "types://integrity#DuplicityEvidence"
+      output: "types://integrity/detection#DuplicityEvidence"
       errors: []
     delegates_to: ["port://integrity/evidence/inbound/evidence-management", "port://integrity/recovery/inbound/reconciliation"]
     refs: ["domain://identity"]

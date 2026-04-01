@@ -30,7 +30,7 @@ ports:
     idempotent: true
     contract:
       input: "types://credential-lifecycle/status#StateReconstructionInput"
-      output: "types://credential-lifecycle#LifecycleStateSnapshot"
+      output: "types://credential-lifecycle/status#LifecycleStateSnapshot"
       errors: []
     refs: ["domain://credential-lifecycle"]
 
@@ -41,8 +41,8 @@ ports:
     semantics: command
     idempotent: true
     contract:
-      input: "types://credential-lifecycle#LifecycleStateSnapshot"
-      output: "types://credential-lifecycle#LifecycleStateSnapshot"
+      input: "types://credential-lifecycle/status#LifecycleStateSnapshot"
+      output: "types://credential-lifecycle/status#LifecycleStateSnapshot"
       errors: []
     refs: ["persistence"]
     invariants:

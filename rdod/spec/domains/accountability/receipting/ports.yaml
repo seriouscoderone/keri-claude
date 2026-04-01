@@ -10,7 +10,7 @@ ports:
     idempotent: false
     contract:
       input: "types://accountability/receipting#SigningKeys"
-      output: "types://accountability#Receipt"
+      output: "types://accountability/consensus#Receipt"
       errors:
         - "errors://accountability/receipting#UnverifiedReceiptError"
         - "errors://accountability/receipting#UnverifiedWitnessReceiptError"
@@ -26,7 +26,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://accountability#Receipt"
+      input: "types://accountability/consensus#Receipt"
       output: "types://accountability#KERL"
       errors: []
     refs: ["domain://accountability"]
@@ -38,8 +38,8 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://accountability#Receipt"
-      output: "types://accountability#Receipt"
+      input: "types://accountability/consensus#Receipt"
+      output: "types://accountability/consensus#Receipt"
       errors: []
     refs: ["persistence"]
     invariants:

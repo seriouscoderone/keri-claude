@@ -2,18 +2,54 @@ domain_ref: "signify-client/key-management"
 
 types:
   - name: "KeyTier"
-    description: "Argon2 key-stretching security tier — controls the computational cost of passcode-to-key derivation. Higher tier means more security and slower unlock."
+    description: "Security tier for Argon2 key derivation — determines the ops_limit and mem_limit parameters. Higher tier means more security and slower passcode unlock."
     variants:
-      - name: "default"
+      - name: "low"
         fields:
-          - name: "value"
-            type: "string"
+          - name: "ops_limit"
+            type: "integer"
             required: true
             constraints:
-              enum: ["low", "med", "high"]
-            description: "low: minimum cost for testing/dev; med: recommended for most production; high: maximum security at cost of slower unlock"
+              enum: [2]
+          - name: "mem_limit"
+            type: "integer"
+            required: true
+            constraints:
+              enum: [67108864]
         invariants:
-          - "Each tier maps to a fixed, non-negotiable Argon2 parameter set (memory cost, iterations, parallelism)"
+          - "Fast derivation, lower security — suitable for development/testing only"
+          - "Tier is set at keeper creation and is immutable — changing tier requires re-creating the keeper"
+          - "Implementations MUST NOT allow callers to customize Argon2 parameters beyond tier selection"
+      - name: "med"
+        fields:
+          - name: "ops_limit"
+            type: "integer"
+            required: true
+            constraints:
+              enum: [3]
+          - name: "mem_limit"
+            type: "integer"
+            required: true
+            constraints:
+              enum: [268435456]
+        invariants:
+          - "Balanced derivation — recommended default for production deployments"
+          - "Tier is set at keeper creation and is immutable — changing tier requires re-creating the keeper"
+          - "Implementations MUST NOT allow callers to customize Argon2 parameters beyond tier selection"
+      - name: "high"
+        fields:
+          - name: "ops_limit"
+            type: "integer"
+            required: true
+            constraints:
+              enum: [4]
+          - name: "mem_limit"
+            type: "integer"
+            required: true
+            constraints:
+              enum: [1073741824]
+        invariants:
+          - "Slow derivation, maximum security — for high-value keys"
           - "Tier is set at keeper creation and is immutable — changing tier requires re-creating the keeper"
           - "Implementations MUST NOT allow callers to customize Argon2 parameters beyond tier selection"
 
