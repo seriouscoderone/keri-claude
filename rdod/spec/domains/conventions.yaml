@@ -109,6 +109,50 @@ contract_conventions:
   - pattern: "map"
     description: "Untyped key-value mapping (when the structure varies by context)."
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Architectural patterns — domain-agnostic patterns used across the spec
+# ─────────────────────────────────────────────────────────────────────────────
+
+architectural_patterns:
+  - name: "Guarded Repository"
+    description: >
+      A repository that enforces aggregate invariants on write — not just
+      CRUD storage. The guard validates before storing, producing one of
+      three outcomes: accept (write to the log), escrow (write to a pending
+      queue), or reject (refuse the write). The raw storage is an external
+      persistence adapter; the guard is domain logic that wraps it.
+    structure:
+      guard: "Domain logic that validates the write (signature checks, threshold satisfaction, witness receipts, delegation approval, duplicity detection)"
+      log: "Append-only storage — the aggregate's source of truth. Writes only happen after the guard approves."
+      escrow: "Pending writes — events that the guard said 'not yet' to. Each escrow type corresponds to a specific missing prerequisite. When the prerequisite arrives, the escrowed event re-enters the guard."
+      raw_persistence: "external://persistence — the adapter that implements actual storage (LMDB, DynamoDB, SQLite, etc.)"
+    outcomes:
+      accept: "Guard approves → event appended to the log → domain event published"
+      escrow: "Guard says 'not yet' → event stored in escrow queue keyed by blocking condition → reprocessed when condition resolves"
+      reject: "Guard says 'no' → event refused → error returned to caller"
+    invariants:
+      - "The log is NEVER written to directly — all writes go through the guard"
+      - "The guard calls domain-specific checkers (signature verification, threshold satisfaction, etc.) — it doesn't implement the checks itself"
+      - "Escrow is part of the repository, not a separate concern — it's the 'pending writes' queue"
+      - "Reprocessing re-enters the guard, not the log — escrowed events are fully re-validated"
+      - "The guard is what makes the repository a KERI repository, not just a database — the acceptance rules ARE the protocol's value"
+    example: >
+      The KEL Repository wraps a raw PersistencePort and adds the validation
+      guard. Domains provide the CHECK logic. The repository calls them:
+
+        KelRepository(
+          store: PersistencePort,        // raw storage
+          sigVerifier: ...,               // from identity/thresholds
+          witnessChecker: ...,            // from accountability
+          delegationChecker: ...,         // from delegation
+          duplicityChecker: ...,          // from integrity
+        )
+
+        append(event, signatures) → guard validates → Accept | Escrow | Reject
+    applies_to:
+      - "identity: KEL Repository — the primary instance. Guard = processEvent."
+      - "credential-lifecycle: TEL Repository — same pattern for the Transaction Event Log."
+
 # External abstractions referenced by multiple domains but intentionally
 # not formalized as domain directories. These are adapter interfaces —
 # implementations choose the concrete technology.
@@ -283,8 +327,14 @@ packaging:
       domains:
         - witness-service/api
         - witness-service
-      rationale: "Witness is a designated infrastructure role — runs as independent service with its own persistence"
-      type: service
+      rationale: "Witness domain logic and port interfaces — pure, no transport dependencies"
+      type: library
+
+    - name: "@kerizon/witness-node"
+      domains: []
+      rationale: "Node.js transport adapters (http, net) for the witness service. Implements external://transport for Node.js runtime."
+      type: adapter
+      implements: "external://transport"
 
     - name: "@kerizon/agent"
       domains:
@@ -303,3 +353,6 @@ packaging:
     - "A package of type 'application' is a user-facing deployment (CLI, web app, cloud service)"
     - "The core library re-exports domain types for convenience — consumers can import from core or from the specific package"
     - "Service packages depend on the core library but not on each other (witness does not depend on watcher)"
+    - "A package of type 'adapter' implements an external abstraction (transport, persistence) for a specific runtime"
+    - "Domain packages define port interfaces; adapter packages provide platform-specific implementations"
+    - "This separation allows the same domain logic to run on Node.js, Deno, Cloudflare Workers, etc."

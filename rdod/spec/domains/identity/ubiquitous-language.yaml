@@ -221,9 +221,26 @@ terms:
       - "Deployment with aggressive timeouts: 300 seconds for OOE instead of the default 1200"
     related_terms: ["Out-of-Order Escrow", "Partially-Signed Escrow", "Partially-Witnessed Escrow"]
 
+  - term: "KEL Repository"
+    synonyms: ["Guarded Event Repository"]
+    definition: "The guarded repository that protects the KEL. Not just storage — every write passes through a validation guard that enforces the KERI protocol's acceptance rules. The guard calls domain-specific checkers (signature verification from identity/thresholds, witness receipting from accountability, delegation approval from delegation, duplicity detection from integrity) and produces one of three outcomes: Accept (write to KEL), Escrow (write to pending queue), or Reject (refuse the write). The KEL Repository IS the KERI protocol — the acceptance rules are what make it a KERI log, not just an append-only database. Escrow is part of this repository, not a separate concern — it's the 'pending writes' queue for events the guard said 'not yet' to."
+    invariants:
+      - "The KEL is NEVER written to directly — all writes go through the guard"
+      - "The guard calls domain-specific checkers — it does not implement the checks itself"
+      - "Three outcomes: Accept (event appended, domain event published), Escrow (event queued by blocking condition), Reject (event refused)"
+      - "Escrow is part of the repository — the guard's 'not yet' response stores the event for later re-evaluation"
+      - "Reprocessing re-enters the guard — escrowed events are fully re-validated, not assumed valid"
+      - "The raw persistence layer (external://persistence) is an adapter — the guard is domain logic that wraps it"
+      - "This pattern applies identically to the TEL Repository in credential-lifecycle"
+    examples:
+      - "Event arrives → guard checks signatures (identity/thresholds) → insufficient → Escrow to PSE → later: new signature arrives → guard re-checks → threshold satisfied → checks witnesses (accountability) → TOAD met → checks delegation (delegation) → seal found → Accept → written to KEL"
+      - "Event arrives → guard checks signatures → valid → checks witnesses → insufficient → Escrow to PWE (cascaded from 'not yet' at the witness check)"
+      - "Event arrives → guard checks signatures → invalid → Reject → error returned"
+    related_terms: ["Escrow Type Pattern", "Escrow Cascade", "Escrow Processing Order", "KEL Storage Schema"]
+
   - term: "KEL Storage Schema"
     synonyms: ["Event Database"]
-    definition: "The partitioned database organization for the Key Event Log. Separates events, indexes, signatures, receipts, and metadata into distinct stores, each optimized for its access pattern. The schema provides both content-addressed (by digest) and sequence-ordered (by sn) access."
+    definition: "The partitioned storage organization inside the KEL Repository. Separates events, indexes, signatures, receipts, and metadata into distinct stores, each optimized for its access pattern. This is the raw persistence layer that the guard writes to — not accessed directly by domain logic."
     invariants:
       - "Event store: serialized event bytes indexed by prefix + digest — the primary event store"
       - "KEL sequence index: mapping prefix + sn to event digest — ordered access by sequence number"
