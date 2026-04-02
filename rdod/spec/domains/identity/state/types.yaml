@@ -190,3 +190,62 @@ types:
             description: "Whether the query was escrowed for later retry"
         invariants:
           - "Query is escrowed if the KEL for this AID has not been received yet"
+
+  - name: "WriteOutcome"
+    description: "Result of submitting an event to the KEL Repository guard. The guard validates the event and produces one of three outcomes."
+    variants:
+      - name: "accepted"
+        fields:
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the accepted event, now appended to the KEL"
+          - name: "first_seen"
+            type: "boolean"
+            required: true
+            description: "Whether this is the first time this event was seen (vs. idempotent duplicate with new sigs)"
+        invariants:
+          - "The event has been appended to the KEL and is now part of the authoritative log"
+          - "Key state has been updated to reflect this event"
+      - name: "escrowed"
+        fields:
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the escrowed event"
+          - name: "escrow_reason"
+            type: "string"
+            required: true
+            description: "Which validation check failed — determines the escrow queue (e.g., out-of-order, partial signatures, missing witness receipts, pending delegation)"
+        invariants:
+          - "The event is stored in a pending queue keyed by its blocking condition"
+          - "When the blocking condition resolves, the event re-enters the guard for full re-validation"
+      - name: "rejected"
+        fields:
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Why the event was permanently rejected"
+        invariants:
+          - "The event is not stored — it is dropped"
+          - "Rejection is terminal — the event will not be retried unless re-submitted by the caller"
+
+  - name: "EscrowReprocessResult"
+    description: "Result of draining an escrow queue — events that were pending may now be accepted, remain escrowed, or be rejected."
+    variants:
+      - name: "default"
+        fields:
+          - name: "promoted"
+            type: "integer"
+            required: true
+            description: "Number of events promoted from escrow to the KEL"
+          - name: "remaining"
+            type: "integer"
+            required: true
+            description: "Number of events still escrowed"
+          - name: "expired"
+            type: "integer"
+            required: true
+            description: "Number of events pruned due to timeout"
+        invariants:
+          - "promoted + remaining + expired = total events in the queue before reprocessing"

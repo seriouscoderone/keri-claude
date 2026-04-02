@@ -58,3 +58,40 @@ ports:
       - "Cached state may be overwritten — it is derived from the KEL, not source-of-truth"
       - "replay_events returns events ordered by ascending sequence number within the range"
       - "Event lookup by SAID is read-only — state reconstruction never writes events"
+
+  - id: "port://identity/state/outbound/kel-repository"
+    type: outbound
+    name: "KEL Repository"
+    semantics: command
+    idempotent: false
+    description: >
+      Guarded Repository — wraps raw persistence with a validation guard.
+      The guard calls domain-specific checkers (signature verification,
+      threshold satisfaction, witness receipts, delegation approval) before
+      allowing writes. Escrow is part of the repository, not a separate concern.
+    contract:
+      input: "types://identity/establishment#SignedEventMessage"
+      output: "types://identity/state#WriteOutcome"
+      errors:
+        - "errors://identity/establishment#ValidationError"
+    refs: ["external://persistence"]
+    invariants:
+      - "The KEL is NEVER written to directly — all writes go through the guard"
+      - "Escrow is part of the repository, not a separate persistence concern"
+      - "Reprocessing re-enters the guard — escrowed events are fully re-validated"
+      - "The guard is what makes this a KERI repository, not just a database"
+
+  - id: "port://identity/state/outbound/escrow-drain"
+    type: outbound
+    name: "Escrow Drain"
+    semantics: command
+    idempotent: true
+    description: >
+      Periodically drains escrow queues — re-submits pending events through
+      the validation guard. Events whose blocking condition has resolved
+      are promoted to the KEL. Timed-out events are pruned.
+    contract:
+      input: "string"
+      output: "types://identity/state#EscrowReprocessResult"
+      errors: []
+    refs: ["external://persistence"]

@@ -49,3 +49,22 @@ ports:
       - "Last-write-wins: saving a snapshot overwrites any previous snapshot for the same key"
       - "Snapshot is a materialized view: it can always be reconstructed from the underlying TEL events"
       - "Registry keyed by SAID: all lookups use the registry's self-addressing identifier"
+
+  - id: "port://credential-lifecycle/status/outbound/tel-repository"
+    type: outbound
+    name: "TEL Repository"
+    semantics: command
+    idempotent: false
+    description: >
+      Guarded Repository for the Transaction Event Log — same pattern as the
+      KEL Repository. Validates TEL events against the credential lifecycle
+      state machine, registry existence, issuer key state, KEL anchoring,
+      schema, and edge chain before accepting. Escrow queues hold events
+      pending missing prerequisites.
+    contract:
+      input: "types://credential-lifecycle/status#TELEvent"
+      output: "types://credential-lifecycle/status#TelWriteOutcome"
+      errors:
+        - "errors://credential-lifecycle/status#TelRepositoryStateError"
+        - "errors://credential-lifecycle/status#TelRepositoryValidationError"
+    refs: ["external://persistence"]

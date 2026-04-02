@@ -156,6 +156,43 @@ types:
         invariants:
           - "Common case: attempting to issue an already-issued credential, or revoke a not-yet-issued one"
 
+  - name: "TelWriteOutcome"
+    description: "Result of submitting a TEL event to the TEL Repository guard. Same guarded-repository pattern as the KEL Repository."
+    variants:
+      - name: "accepted"
+        fields:
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the accepted TEL event"
+          - name: "state_changed"
+            type: "boolean"
+            required: true
+            description: "Whether the credential lifecycle state changed (e.g., NotIssued → Issued)"
+        invariants:
+          - "The TEL event is appended and the credential state snapshot is updated"
+      - name: "escrowed"
+        fields:
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the escrowed TEL event"
+          - name: "escrow_reason"
+            type: "string"
+            required: true
+            description: "Blocking condition — missing registry, missing anchor, missing issuer key state, missing schema, missing chain"
+        invariants:
+          - "Stored in escrow queue keyed by blocking condition (MRE, MAE, MRI, MSE, MCE)"
+          - "Re-enters the guard when the blocking condition resolves"
+      - name: "rejected"
+        fields:
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Why the TEL event was permanently rejected"
+        invariants:
+          - "Invalid state transition (e.g., revoking a not-yet-issued credential) or failed schema validation"
+
   - name: "StateChanged"
     description: "Notification that a credential's lifecycle state changed after applying a TEL event."
     variants:
