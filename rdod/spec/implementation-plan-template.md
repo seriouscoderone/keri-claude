@@ -24,7 +24,7 @@ For EACH domain `{d}` in this layer, read these files (all paths relative to `rd
 7. **`{d}/protocols.yaml`** (if exists) — cross-domain orchestration sequences with failure paths
 
 Also read these cross-domain files ONCE:
-- **`conventions.yaml`** — URI scheme grammar, Result<T,E> pattern, primitive types, external abstractions, file template rules, packaging boundaries
+- **`packaging.yaml`** — package boundaries (which domains belong to which deployable package)
 - **`integration-scenarios.yaml`** — end-state assertions that this domain participates in
 - **`build-order.txt`** — dependency layers (verify all deps are in prior layers)
 
@@ -50,7 +50,7 @@ For each type in `types.yaml`:
 
 1. **Inbound ports** → plan as Application Service classes/modules with the methods from the `contract:` field
 2. **Outbound Repository ports** → plan as trait/interface/protocol with the methods from `contract:` and the `invariants:` as doc-comments or test assertions. Repository implementations are in separate adapter packages — plan only the interface here.
-3. **Outbound Adapter ports** (transport, crypto) → plan as trait/interface referencing `external://` abstractions in conventions.yaml
+3. **Outbound Adapter ports** (transport, crypto) → plan as trait/interface referencing `external://` abstractions defined in each domain's `externals:` section
 4. Every port contract references types by name — verify each type exists in types.yaml, errors.yaml, or UL terms before using it
 5. Port IDs follow the URI scheme: `port://{domain}/{direction}/{name}` — preserve these as identifiers
 
@@ -97,7 +97,7 @@ For each type in `types.yaml`:
 
 ### J. Packaging boundaries
 
-1. Check `conventions.yaml` `packaging:` section for which package this domain belongs to
+1. Check `packaging.yaml` `packaging:` section for which package this domain belongs to
 2. Plan module/crate/package structure to match the declared packages
 3. Domain packages define interfaces; adapter packages implement externals
 4. Service packages depend on core but not on each other

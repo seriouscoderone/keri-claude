@@ -101,6 +101,31 @@ implementation_guidance:
     implementations must enforce normative field ordering, SAID computation, and deterministic
     key state derivation per the specification.
 
+    Guarded Repository pattern (applies to KEL Repository here and TEL Repository in
+    credential-lifecycle): A repository that enforces aggregate invariants on write — not
+    just CRUD storage. The guard validates before storing, producing one of three outcomes:
+    accept (write to the log), escrow (write to a pending queue), or reject (refuse the
+    write). The raw storage is an external://persistence adapter; the guard is domain logic
+    that wraps it.
+    Structure — guard: domain logic that validates the write (signature checks, threshold
+    satisfaction, witness receipts, delegation approval, duplicity detection); log:
+    append-only storage, the aggregate's source of truth (writes only happen after the guard
+    approves); escrow: pending writes, events the guard said 'not yet' to (each escrow type
+    corresponds to a specific missing prerequisite, re-enters the guard when the prerequisite
+    arrives); raw_persistence: external://persistence adapter (LMDB, DynamoDB, SQLite, etc.).
+    Outcomes — accept: guard approves, event appended to the log, domain event published;
+    escrow: guard says 'not yet', event stored in escrow queue keyed by blocking condition,
+    reprocessed when condition resolves; reject: guard says 'no', event refused, error
+    returned to caller.
+    Invariants: the log is NEVER written to directly (all writes go through the guard); the
+    guard calls domain-specific checkers (it doesn't implement the checks itself); escrow is
+    part of the repository, not a separate concern (it's the 'pending writes' queue);
+    reprocessing re-enters the guard, not the log (escrowed events are fully re-validated);
+    the guard is what makes the repository a KERI repository, not just a database (the
+    acceptance rules ARE the protocol's value).
+    Example: KelRepository(store: PersistencePort, sigVerifier, witnessChecker,
+    delegationChecker, duplicityChecker).append(event, signatures) -> Accept | Escrow | Reject.
+
     Identifier Type Dimensions: Every KERI identifier is characterized by five orthogonal
     dimensions (Transferability, Delegation, Witnessing, Signing Model, Operational Constraints) expressed through
     field values in the inception event. Implementations SHOULD provide typed builders that

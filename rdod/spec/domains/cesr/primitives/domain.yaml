@@ -68,7 +68,18 @@ externals:
   - name: "Cryptographic Library"
     abstraction: "Adapter"
     ref: "port://cesr/primitives/outbound/crypto"
-    implementation_notes: "Signing, verification, hashing, key generation. Implementations: libsodium (Python/TS/JS), ed25519-dalek/k256/p256 (Rust)"
+    implementation_notes: >
+      Interface: sign(private_key: bytes, message: bytes) -> bytes;
+      verify(public_key: bytes, signature: bytes, message: bytes) -> bool;
+      digest(algorithm: DigestAlgorithm, data: bytes) -> bytes;
+      generate_keypair(algorithm: string) -> (public_key, private_key);
+      derive_key(salt: bytes, path: string, algorithm: string) -> bytes.
+      Implementations: libsodium (Ed25519 signing, X25519 key exchange, Blake2b hashing),
+      blake3 (Blake3-256 hashing), argon2 (password-based key stretching for Signify salts),
+      ed25519-dalek/k256/p256 (Rust).
+      Invariants: Algorithm selection is determined by the CESR code (not a runtime choice);
+      implementations MUST support Ed25519 and Blake3-256 at minimum;
+      key material MUST be zeroed after use (ZeroizeOnDrop pattern).
 
 implementation_guidance:
   suggested_type: "module"

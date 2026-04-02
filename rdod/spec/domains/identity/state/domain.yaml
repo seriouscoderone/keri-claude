@@ -44,7 +44,17 @@ externals:
   - name: "State Persistence Repository"
     abstraction: "Repository"
     ref: "port://identity/state/outbound/persistence"
-    implementation_notes: "State cache for fast key state lookup by prefix, and KEL access for state reconstruction via replay."
+    implementation_notes: >
+      State cache for fast key state lookup by prefix, and KEL access for state
+      reconstruction via replay.
+      Implementations: LMDB (memory-mapped key-value store, keripy),
+      redb (embedded Rust key-value store, keriox),
+      DynamoDB (serverless key-value store, serious-keri),
+      SQLite/PostgreSQL (relational alternatives),
+      in-memory (for testing).
+      Invariants: Repository interfaces define the contract (the persistence
+      external implements it); implementations MUST satisfy the invariants on
+      each Repository port (append-only, idempotent, etc.).
 
 implementation_guidance:
   suggested_type: "module"
