@@ -40,15 +40,15 @@ subdomains:
     relationship: "Owns the async event processing pipeline — Processing Units, Message Queues, escrow management, long-running operation tracking, and specialized processing components"
     via_port: "port://cloud-agent-service/processing/inbound/process-work"
 
-kernels:
-  - ref: "kernel://cesr"
-    source: "domain://cesr"
-    relationship: "Conformist — all events and messages encoded in CESR format"
-  - ref: "kernel://keri-messaging"
-    source: "domain://keri-messaging"
-    relationship: "KERI messaging primitives (exn, qry, rpy) adopted natively"
+kernels: []
 
 adjacents:
+  - ref: "domain://cesr"
+    pattern: "conformist"
+    relationship: "Conformist — all events and messages encoded in CESR format"
+  - ref: "domain://keri-messaging"
+    pattern: "conformist"
+    relationship: "KERI messaging primitives (exn, qry, rpy) adopted natively"
   - ref: "domain://identity"
     relationship: "Conformist — runs KERI protocol stack on behalf of controllers"
     pattern: "Conformist"

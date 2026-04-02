@@ -3,15 +3,12 @@ template_version: "2.0"
 id: "keri-messaging"
 name: "KERI Messaging"
 description: >
-  Kernel domain providing the cross-cutting messaging primitives used by every
+  Peer domain providing the cross-cutting messaging primitives used by every
   domain that communicates over the KERI protocol. Defines the exchange message
   envelope (exn), query/reply message types (qry/rpy), the Exchanger routing
   pattern, KRAM replay protection, and KERI field map conventions.
-
-  This is a kernel — adopted natively by all communicating domains, like CESR
-  is adopted for encoding. Domains reference it via kernel://keri-messaging.
 version: "0.1.0"
-tier: "kernel"
+tier: "domain"
 
 source_material:
   - type: document
@@ -38,12 +35,12 @@ published_language:
 domain_clients: []
 subdomains: []
 
-kernels:
-  - ref: "kernel://cesr"
-    source: "domain://cesr"
-    relationship: "All KERI protocol messages are CESR-encoded"
+kernels: []
 
-adjacents: []
+adjacents:
+  - ref: "domain://cesr"
+    pattern: "conformist"
+    relationship: "All KERI protocol messages are CESR-encoded — CESR types used natively"
 externals: []
 
 implementation_guidance:
@@ -56,4 +53,4 @@ implementation_guidance:
     or receives exn/qry/rpy messages depends on this kernel.
 
 issues: []
-tags: ["kernel", "messaging", "exn", "qry", "rpy", "kram"]
+tags: ["messaging", "exn", "qry", "rpy", "kram"]

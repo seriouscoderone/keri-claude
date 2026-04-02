@@ -30,15 +30,15 @@ subdomains:
     relationship: "Owns the client-side API surface — resource classes for identifiers, credentials, exchanges, groups, registries, and async operation tracking"
     via_port: "port://signify-client/resources/inbound/resource-ops"
 
-kernels:
-  - ref: "kernel://cesr"
-    source: "domain://cesr"
-    relationship: "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly"
-  - ref: "kernel://keri-messaging"
-    source: "domain://keri-messaging"
-    relationship: "KERI messaging primitives (exn, qry, rpy) adopted natively"
+kernels: []
 
 adjacents:
+  - ref: "domain://cesr"
+    pattern: "conformist"
+    relationship: "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly"
+  - ref: "domain://keri-messaging"
+    pattern: "conformist"
+    relationship: "KERI messaging primitives (exn, qry, rpy) adopted natively"
   - ref: "domain://cloud-agent-service"
     relationship: "Customer-Supplier — signify-client drives cloud-agent-service via Signify protocol (delegated to resources subdomain's cloud-agent-comms port)"
     pattern: "Customer-Supplier"
