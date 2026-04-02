@@ -1,6 +1,140 @@
 domain_ref: "credential-exchange/negotiation"
 
 types:
+  - name: "IPEXMessage"
+    description: "An IPEX protocol message — a specialized exchange message (exn) with route-specific payload structure. Each variant corresponds to one step in the IPEX negotiation flow."
+    variants:
+      - name: "apply"
+        fields:
+          - name: "schema_said"
+            type: "string"
+            required: true
+            description: "SAID of the desired credential schema"
+          - name: "attributes"
+            type: "map"
+            required: false
+            description: "Requested attributes (optional — issuer decides what to include)"
+        invariants:
+          - "Route: /ipex/apply"
+          - "Sent by disclosee (prospective holder)"
+          - "No prior message reference (p field empty)"
+      - name: "offer"
+        fields:
+          - name: "credential_preview"
+            type: "map"
+            required: true
+            description: "Preview of the credential being offered (may be metadata ACDC for chain-link confidentiality)"
+        invariants:
+          - "Route: /ipex/offer"
+          - "Sent by discloser (issuer)"
+          - "p field references the apply message's SAID"
+      - name: "agree"
+        fields:
+          - name: "accepted"
+            type: "boolean"
+            required: true
+            description: "Agreement to the offered terms"
+        invariants:
+          - "Route: /ipex/agree"
+          - "Sent by disclosee"
+          - "p field references the offer message's SAID"
+          - "If chain-link confidentiality: agreement is to contractual terms"
+      - name: "grant"
+        fields:
+          - name: "acdc"
+            type: "types://credential-lifecycle#Credential"
+            required: true
+            description: "The credential being granted"
+          - name: "tel_event"
+            type: "types://credential-lifecycle/status#TELEvent"
+            required: true
+            description: "TEL issuance event proving the credential was issued"
+          - name: "kel_seal"
+            type: "types://cesr/primitives#Seal"
+            required: true
+            description: "KEL event seal anchoring the TEL event to the issuer's KEL"
+        invariants:
+          - "Route: /ipex/grant"
+          - "Sent by discloser"
+          - "MUST bundle all three artifacts: ACDC + TEL event + KEL seal"
+          - "p field references agree SAID (negotiated) or empty (direct grant)"
+      - name: "admit"
+        fields:
+          - name: "grant_said"
+            type: "string"
+            required: true
+            description: "SAID of the grant message being admitted"
+        invariants:
+          - "Route: /ipex/admit"
+          - "Sent by disclosee"
+          - "p field references the grant message's SAID"
+          - "Terminal: no further messages in this thread"
+      - name: "spurn"
+        fields:
+          - name: "spurned_said"
+            type: "string"
+            required: true
+            description: "SAID of the message being rejected"
+          - name: "reason"
+            type: "string"
+            required: false
+            description: "Optional rejection reason"
+        invariants:
+          - "Route: /ipex/spurn"
+          - "Sent by either party"
+          - "Terminal: no further messages in this thread"
+          - "p field references the spurned message's SAID"
+
+  - name: "GrantBundle"
+    description: "The three artifacts that MUST be bundled together in an IPEX grant message. This is the proof package that makes a credential verifiable."
+    variants:
+      - name: "default"
+        fields:
+          - name: "acdc"
+            type: "types://credential-lifecycle#Credential"
+            required: true
+            description: "The ACDC credential"
+          - name: "tel_event"
+            type: "types://credential-lifecycle/status#TELEvent"
+            required: true
+            description: "TEL issuance event"
+          - name: "kel_seal"
+            type: "types://cesr/primitives#Seal"
+            required: true
+            description: "KEL event seal anchoring the TEL event"
+        invariants:
+          - "All three MUST be present — missing any one makes the grant unverifiable"
+          - "ACDC SAID must match the TEL event's credential reference"
+          - "TEL event must be anchored by the KEL seal"
+          - "KEL seal must be verifiable against the issuer's current key state"
+
+  - name: "GrantMessage"
+    description: "An IPEX grant exchange message (exn) delivering a credential with its full proof bundle."
+    variants:
+      - name: "default"
+        fields:
+          - name: "route"
+            type: "string"
+            required: true
+            description: "IPEX route — always /ipex/grant"
+            constraints:
+              enum: ["/ipex/grant"]
+          - name: "acdc"
+            type: "types://credential-lifecycle#Credential"
+            required: true
+            description: "The ACDC credential being granted"
+          - name: "tel_event"
+            type: "types://credential-lifecycle/status#TELEvent"
+            required: true
+            description: "TEL issuance event proving the credential was issued"
+          - name: "kel_seal"
+            type: "types://cesr/primitives#Seal"
+            required: true
+            description: "KEL event seal anchoring the TEL event to the issuer's KEL"
+        invariants:
+          - "MUST bundle all three artifacts — missing any makes the grant unverifiable"
+          - "Sent by discloser after agree (negotiated) or directly (direct issuance)"
+
   - name: "NegotiationThread"
     description: "The state of an in-progress IPEX negotiation between two parties. Tracks the message chain and current protocol state."
     variants:
@@ -29,7 +163,7 @@ types:
             required: true
             description: "Ordered message chain with SAIDs and types"
           - name: "grant_bundle"
-            type: "types://credential-exchange#GrantBundle"
+            type: "types://credential-exchange/negotiation#GrantBundle"
             required: false
             description: "The credential bundle (set after grant step)"
         invariants:

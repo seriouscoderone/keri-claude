@@ -21,7 +21,7 @@ protocols:
         input:
           description: "Registry SAID (REGID)"
           types:
-            - ref: "types://credential-lifecycle#RegistryInceptionEvent"
+            - ref: "types://credential-lifecycle/registry#RegistryInceptionEvent"
               fields: ["i"]
         output:
           description: "Registry confirmed active and owned by issuer"
@@ -45,11 +45,11 @@ protocols:
         input:
           description: "Credential SAID, registry SAID, datetime"
           types:
-            - ref: "types://credential-lifecycle#NonBlindableUpdateEvent"
+            - ref: "types://credential-lifecycle/registry#NonBlindableUpdateEvent"
               fields: ["ta", "rd", "ts", "dt"]
         output:
           description: "TEL update event (upd or bup) with ts='issued'"
-          type: "types://credential-lifecycle#NonBlindableUpdateEvent"
+          type: "types://credential-lifecycle/registry#NonBlindableUpdateEvent"
         depends_on: [2]
       - seq: 4
         domain: "domain://identity/anchoring"
@@ -58,7 +58,7 @@ protocols:
         input:
           description: "Issuer creates interaction event with seal containing TEL event SAID"
           types:
-            - ref: "types://identity#InteractionEvent"
+            - ref: "types://identity/establishment#InteractionEvent"
               fields: ["a"]
         output:
           description: "Anchoring ixn accepted to issuer's KEL"
@@ -125,11 +125,11 @@ protocols:
         input:
           description: "Credential SAID, registry SAID, prior TEL event SAID, datetime"
           types:
-            - ref: "types://credential-lifecycle#NonBlindableUpdateEvent"
+            - ref: "types://credential-lifecycle/registry#NonBlindableUpdateEvent"
               fields: ["ta", "rd", "p", "ts", "dt"]
         output:
           description: "TEL update event (upd or bup) with ts='revoked'"
-          type: "types://credential-lifecycle#NonBlindableUpdateEvent"
+          type: "types://credential-lifecycle/registry#NonBlindableUpdateEvent"
         depends_on: [1]
       - seq: 3
         domain: "domain://identity/anchoring"
@@ -138,7 +138,7 @@ protocols:
         input:
           description: "Issuer creates ixn with seal of TEL revocation event"
           types:
-            - ref: "types://identity#InteractionEvent"
+            - ref: "types://identity/establishment#InteractionEvent"
               fields: ["a"]
         output:
           description: "Anchoring ixn accepted to KEL"

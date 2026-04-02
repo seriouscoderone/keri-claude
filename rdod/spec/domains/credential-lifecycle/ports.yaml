@@ -9,7 +9,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://credential-lifecycle#TELEvent"
+      input: "types://credential-lifecycle/status#TELEvent"
       output: "types://credential-lifecycle#CredentialState"
       errors:
         - "errors://credential-lifecycle#SchemaResolutionError"
@@ -24,7 +24,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://credential-lifecycle#BlindableUpdateEvent"
+      input: "types://credential-lifecycle/registry#BlindableUpdateEvent"
       output: "types://credential-lifecycle#CredentialState"
       errors: []
     refs: ["domain://credential-lifecycle"]
@@ -38,7 +38,7 @@ ports:
     idempotent: false
     contract:
       input: "types://credential-lifecycle#SealRequest"
-      output: "types://identity#InteractionEvent"
+      output: "types://identity/establishment#InteractionEvent"
       errors:
         - "errors://credential-lifecycle/registry#MissingKELSealError"
     refs: ["domain://identity"]
@@ -49,8 +49,8 @@ ports:
     semantics: command
     idempotent: true
     contract:
-      input: "types://credential-lifecycle#TELEvent"
-      output: "types://credential-lifecycle#TELEvent"
+      input: "types://credential-lifecycle/status#TELEvent"
+      output: "types://credential-lifecycle/status#TELEvent"
       errors: []
     refs: ["persistence"]
     invariants:

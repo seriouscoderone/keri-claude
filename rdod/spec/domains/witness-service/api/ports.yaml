@@ -14,8 +14,8 @@ ports:
         - "errors://witness-service/api#MalformedEventError"
         - "errors://witness-service/api#UnsupportedEventTypeError"
         - "errors://witness-service/api#SignatureVerificationFailedError"
-        - "errors://witness-service#UnauthorizedEventError"
-        - "errors://witness-service#DuplicateReceiptError"
+        - "errors://witness-service/api#UnauthorizedEventError"
+        - "errors://witness-service/api#DuplicateReceiptError"
     refs: ["domain://cloud-agent-service", "domain://local-agent"]
 
   - id: "port://witness-service/api/inbound/receipting"
@@ -27,8 +27,8 @@ ports:
       input: "types://cesr/primitives#AID"
       output: "types://accountability/consensus#Receipt"
       errors:
-        - "errors://witness-service#DuplicateReceiptError"
-        - "errors://witness-service#EventValidationError"
+        - "errors://witness-service/api#DuplicateReceiptError"
+        - "errors://witness-service/api#EventValidationError"
     refs: ["domain://cloud-agent-service", "domain://local-agent"]
 
   - id: "port://witness-service/api/inbound/kerl-query"
@@ -70,7 +70,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://witness-service#WitnessConfiguration"
+      input: "types://witness-service/api#WitnessConfiguration"
       output: "Running HTTP server handle"
       errors: []
     refs: ["transport"]

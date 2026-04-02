@@ -10,7 +10,7 @@ ports:
     idempotent: false
     contract:
       input: "types://identity#InceptionConfig"
-      output: "types://identity#InceptionEvent"
+      output: "types://identity/establishment#InceptionEvent"
       errors:
         - "errors://identity/establishment#ValidationError"
     refs: ["domain://identity"]
@@ -39,7 +39,7 @@ ports:
     idempotent: true
     contract:
       input: "AID prefix string"
-      output: "types://identity#KeyState"
+      output: "types://identity/state#KeyState"
       errors: []
     refs: ["domain://identity"]
 
@@ -51,7 +51,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://identity#KeyEvent"
+      input: "types://identity/establishment#KeyEvent"
       output: "void"
       errors:
         - "errors://identity/establishment#LikelyDuplicitousError"

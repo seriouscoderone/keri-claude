@@ -1,6 +1,48 @@
 domain_ref: "witness-service/api"
 
 errors:
+  - name: "UnauthorizedEventError"
+    description: "Received an event for an identifier that has not designated this witness"
+    cause: "The event's witness list (b field) does not include this witness's AID"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "event_prefix"
+        type: "string"
+        description: "The AID of the event"
+      - field: "witness_aid"
+        type: "string"
+        description: "This witness's AID"
+
+  - name: "DuplicateReceiptError"
+    description: "Already receipted a different event at this (prefix, sn)"
+    cause: "First-seen rule violation — this witness already signed an event with a different SAID at the same sequence number"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "prefix"
+        type: "string"
+        description: "The AID"
+      - field: "sn"
+        type: "integer"
+        description: "The conflicting sequence number"
+      - field: "first_seen_said"
+        type: "string"
+        description: "SAID of the event already receipted"
+      - field: "new_said"
+        type: "string"
+        description: "SAID of the conflicting event"
+
+  - name: "EventValidationError"
+    description: "Event failed basic structural validation before receipting"
+    cause: "Event body is malformed, signatures are missing or invalid, or SAID does not match"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "reason"
+        type: "string"
+        description: "Specific validation failure"
+
   - name: "MalformedEventError"
     description: "Submitted event is not valid CESR or has structural problems"
     cause: "The CESR stream cannot be parsed or the deserialized event is missing required fields"

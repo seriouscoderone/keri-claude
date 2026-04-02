@@ -143,11 +143,11 @@ protocols:
         input:
           description: "Rotation event at recovery_sn >= fork_point_sn with verified recovery keys"
           types:
-            - ref: "types://identity#RotationEvent/non-delegated"
+            - ref: "types://identity/establishment#RotationEvent/non-delegated"
               fields: ["k", "n", "s"]
         output:
           description: "Superseding rotation accepted — key state updated, forked branch invalidated"
-          type: "types://identity#KeyState"
+          type: "types://identity/state#KeyState"
         depends_on: [3]
         preconditions:
           - "verification://integrity/recovery#Superseding Recovery"

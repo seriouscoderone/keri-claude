@@ -21,11 +21,11 @@ protocols:
         input:
           description: "Signing keys, next key digests, witness list, TOAD, configuration traits"
           types:
-            - ref: "types://identity#InceptionEvent/non-delegated"
+            - ref: "types://identity/establishment#InceptionEvent/non-delegated"
               fields: ["k", "n", "b", "bt", "c"]
         output:
           description: "Signed inception event (icp) with SAID as new AID prefix"
-          type: "types://identity#InceptionEvent"
+          type: "types://identity/establishment#InceptionEvent"
         on_failure:
           - error: "ValidationError"
             ref: "errors://identity/establishment#ValidationError"
@@ -38,10 +38,10 @@ protocols:
         input:
           description: "Signed inception event + controller signatures"
           types:
-            - ref: "types://identity#InceptionEvent"
+            - ref: "types://identity/establishment#InceptionEvent"
         output:
           description: "Key state created in database, event logged to KEL"
-          type: "types://identity#KeyState"
+          type: "types://identity/state#KeyState"
         depends_on: [1]
         on_failure:
           - error: "MissingSignatureError"
@@ -108,11 +108,11 @@ protocols:
         input:
           description: "New keys, new next digests, witness changes (br/ba), new thresholds"
           types:
-            - ref: "types://identity#RotationEvent/non-delegated"
+            - ref: "types://identity/establishment#RotationEvent/non-delegated"
               fields: ["k", "n", "br", "ba", "kt", "nt", "bt"]
         output:
           description: "Signed rotation event (rot)"
-          type: "types://identity#RotationEvent"
+          type: "types://identity/establishment#RotationEvent"
       - seq: 2
         domain: "domain://identity/key-commitment"
         action: "verify_pre_rotation_binding"
@@ -136,10 +136,10 @@ protocols:
         input:
           description: "Rotation event + verified signatures meeting threshold"
           types:
-            - ref: "types://identity#RotationEvent"
+            - ref: "types://identity/establishment#RotationEvent"
         output:
           description: "Key state updated — new keys, new witnesses, new thresholds active"
-          type: "types://identity#KeyState"
+          type: "types://identity/state#KeyState"
         depends_on: [2]
         preconditions:
           - "verification://identity/establishment#Dual Threshold Verification"
@@ -187,11 +187,11 @@ protocols:
         input:
           description: "Keys, next digests, witnesses, TOAD, delegator AID"
           types:
-            - ref: "types://identity#InceptionEvent/delegated"
+            - ref: "types://identity/establishment#InceptionEvent/delegated"
               fields: ["k", "n", "b", "bt", "di"]
         output:
           description: "Signed delegated inception event (dip) with di field"
-          type: "types://identity#InceptionEvent/delegated"
+          type: "types://identity/establishment#InceptionEvent/delegated"
       - seq: 2
         domain: "domain://identity/establishment"
         action: "validate_basic_structure"
@@ -199,7 +199,7 @@ protocols:
         input:
           description: "Delegated inception event + controller signatures"
           types:
-            - ref: "types://identity#InceptionEvent/delegated"
+            - ref: "types://identity/establishment#InceptionEvent/delegated"
         output:
           description: "Event structurally valid, signatures verified"
         depends_on: [1]
@@ -231,7 +231,7 @@ protocols:
         input:
           description: "Delegator creates ixn with digest seal of delegate's dip SAID"
           types:
-            - ref: "types://identity#InteractionEvent"
+            - ref: "types://identity/establishment#InteractionEvent"
               fields: ["a"]
         output:
           description: "Delegator's ixn accepted to their KEL"
@@ -244,7 +244,7 @@ protocols:
           description: "dip event + delegator seal confirmation"
         output:
           description: "Delegated AID established with key state"
-          type: "types://identity#KeyState"
+          type: "types://identity/state#KeyState"
         depends_on: [3, 4]
       - seq: 6
         domain: "domain://accountability/receipting"
@@ -300,7 +300,7 @@ protocols:
           description: "Signed rpy with key state data"
         output:
           description: "Key state updated locally if reply is fresher than cached state (BADA policy)"
-          type: "types://identity#KeyState"
+          type: "types://identity/state#KeyState"
         depends_on: [2]
         preconditions:
           - "verification://identity/state#State Reconstruction"
@@ -336,11 +336,11 @@ protocols:
         input:
           description: "New keys (matching prior next commitments), new next digests, witness changes"
           types:
-            - ref: "types://identity#RotationEvent/delegated"
+            - ref: "types://identity/establishment#RotationEvent/delegated"
               fields: ["k", "n", "br", "ba"]
         output:
           description: "Signed delegated rotation event (drt)"
-          type: "types://identity#RotationEvent/delegated"
+          type: "types://identity/establishment#RotationEvent/delegated"
       - seq: 2
         domain: "domain://identity/key-commitment"
         action: "verify_pre_rotation_binding"
@@ -364,7 +364,7 @@ protocols:
         input:
           description: "Delegated rotation event + signatures"
           types:
-            - ref: "types://identity#RotationEvent/delegated"
+            - ref: "types://identity/establishment#RotationEvent/delegated"
         output:
           description: "Event structurally valid, signatures verified"
         depends_on: [2]
@@ -396,7 +396,7 @@ protocols:
         input:
           description: "Delegator creates ixn with seal of delegate's drt SAID"
           types:
-            - ref: "types://identity#InteractionEvent"
+            - ref: "types://identity/establishment#InteractionEvent"
               fields: ["a"]
         output:
           description: "Delegator's ixn accepted to their KEL"
@@ -409,7 +409,7 @@ protocols:
           description: "drt event + delegator seal confirmation"
         output:
           description: "Key state updated for delegated AID"
-          type: "types://identity#KeyState"
+          type: "types://identity/state#KeyState"
         depends_on: [4, 5]
       - seq: 7
         domain: "domain://accountability/receipting"

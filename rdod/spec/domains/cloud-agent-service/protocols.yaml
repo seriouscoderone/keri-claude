@@ -24,7 +24,7 @@ protocols:
             - ref: "types://signify-client/key-management#KeyTier"
         output:
           description: "Agent inception event signed with edge keys"
-          type: "types://identity#InceptionEvent"
+          type: "types://identity/establishment#InceptionEvent"
         preconditions:
           - "verification://signify-client/key-management#Passcode"
       - seq: 2
@@ -64,10 +64,10 @@ protocols:
         input:
           description: "Agent's inception event"
           types:
-            - ref: "types://identity#InceptionEvent"
+            - ref: "types://identity/establishment#InceptionEvent"
         output:
           description: "Agent AID established with key state"
-          type: "types://identity#KeyState"
+          type: "types://identity/state#KeyState"
         depends_on: [3]
       - seq: 5
         domain: "domain://cloud-agent-service/provisioning"

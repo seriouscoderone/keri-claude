@@ -1,6 +1,19 @@
 domain_ref: "watcher-service/api"
 
 errors:
+  - name: "WitnessUnreachableError"
+    description: "Cannot contact a designated witness to fetch KEL copy"
+    cause: "HTTP request to witness endpoint timed out or returned error"
+    recovery: "retry"
+    severity: "transient"
+    context:
+      - field: "witness_aid"
+        type: "string"
+        description: "The unreachable witness"
+      - field: "witness_url"
+        type: "string"
+        description: "The endpoint URL that failed"
+
   - name: "UnknownAIDError"
     description: "Queried AID is not being watched by this watcher"
     cause: "The watcher has not been configured to watch this AID — no KEL data available"

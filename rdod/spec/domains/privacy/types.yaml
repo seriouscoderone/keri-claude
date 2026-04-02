@@ -133,44 +133,6 @@ types:
           - "Agreement is non-repudiable — signed exn message via IPEX"
           - "Terms in rules section are Ricardian — human and machine readable"
 
-  - name: "BlindedAttributeBlock"
-    description: "A credential attribute block with UUID blinding — the u field provides entropy that prevents rainbow table discovery of the block's content from its SAID."
-    variants:
-      - name: "default"
-        fields:
-          - name: "d"
-            type: "string"
-            required: true
-            description: "SAID of the block (commitment)"
-          - name: "u"
-            type: "string"
-            required: true
-            description: "UUID blinding factor — high entropy (>= 128 bits)"
-          - name: "attributes"
-            type: "map"
-            required: true
-            description: "The actual attribute data (hidden behind the SAID+UUID)"
-        invariants:
-          - "u field MUST have >= 128 bits of entropy"
-          - "SAID(block) is a blinded commitment — cannot discover content without u"
-          - "Public blocks (no u) cannot be blinded"
-
-  - name: "SADPath"
-    description: "A path expression identifying a specific location within a nested SAD structure. Used for selective disclosure and SAD path signatures."
-    variants:
-      - name: "default"
-        fields:
-          - name: "path"
-            type: "array[string]"
-            required: true
-            description: "Ordered sequence of field labels from root to target"
-        invariants:
-          - "Each element is a field label in the SAD hierarchy"
-          - "Empty path refers to the root SAD"
-        examples:
-          - "['a', 'i'] — the issuee field inside the attributes section"
-          - "['e', 'edge1', 'd'] — the SAID of a specific edge"
-
   - name: "DisclosedVariant"
     description: "A specific disclosure of an ACDC — captures which blocks have been expanded and the resulting disclosure form."
     variants:
@@ -270,26 +232,6 @@ types:
             description: "A bulk-issued credential instance with unique blinded SAID"
         invariants:
           - "Produced only for bulk-issued disclosure form"
-
-  - name: "AggregationInput"
-    description: "Input for aggregation operations — either a blinded attribute block for AGID computation or a list of SAIDs for aggregate verification."
-    variants:
-      - name: "blinded_block"
-        fields:
-          - name: "block"
-            type: "types://privacy#BlindedAttributeBlock"
-            required: true
-            description: "Blinded attribute block to compute AGID from"
-        invariants:
-          - "Used for computing the aggregate identifier (AGID) from blinded attributes"
-      - name: "said_list"
-        fields:
-          - name: "saids"
-            type: "array[string]"
-            required: true
-            description: "List of SAIDs for aggregate verification or compaction"
-        invariants:
-          - "SAIDs must be in canonical order for reproducible aggregation"
 
   - name: "PublicOrPrivateOrMetadata"
     description: "Privacy classification of an ACDC block based on the presence and value of the u (UUID) field."

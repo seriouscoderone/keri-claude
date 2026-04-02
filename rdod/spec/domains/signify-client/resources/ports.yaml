@@ -14,7 +14,7 @@ ports:
       errors:
         - "errors://signify-client/resources#ResourceNotFoundError"
         - "errors://signify-client/resources#OperationTimeoutError"
-        - "errors://signify-client#AgentConnectionError"
+        - "errors://signify-client/resources#AgentConnectionError"
     refs: ["domain://signify-client"]
 
   # Outbound — communication with cloud agent via KRAM-authenticated REST
@@ -27,6 +27,6 @@ ports:
       input: "types://signify-client/key-management#SignifyAuth"
       output: "types://signify-client/resources#AgentConfig"
       errors:
-        - "errors://signify-client#AgentConnectionError"
-        - "errors://signify-client#SignifyAuthError"
+        - "errors://signify-client/resources#AgentConnectionError"
+        - "errors://signify-client/resources#SignifyAuthError"
     refs: ["domain://cloud-agent-service/api"]

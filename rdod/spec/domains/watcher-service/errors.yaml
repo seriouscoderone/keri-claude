@@ -1,19 +1,6 @@
 domain_ref: "watcher-service"
 
 errors:
-  - name: "WitnessUnreachableError"
-    description: "Cannot contact a designated witness to fetch KEL copy"
-    cause: "HTTP request to witness endpoint timed out or returned error"
-    recovery: "retry"
-    severity: "transient"
-    context:
-      - field: "witness_aid"
-        type: "string"
-        description: "The unreachable witness"
-      - field: "witness_url"
-        type: "string"
-        description: "The endpoint URL that failed"
-
   - name: "InsufficientWitnessesError"
     description: "Cannot fetch KEL copies from enough witnesses for meaningful comparison"
     cause: "Too few witnesses responded — cannot reliably detect duplicity"

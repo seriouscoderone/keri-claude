@@ -21,7 +21,7 @@ protocols:
         input:
           description: "Member AIDs, signing threshold, key list, next key digests, witnesses"
           types:
-            - ref: "types://identity#InceptionEvent/non-delegated"
+            - ref: "types://identity/establishment#InceptionEvent/non-delegated"
               fields: ["kt", "k", "nt", "n", "b", "bt"]
         output:
           description: "Unsigned inception event (icp) + exn proposal message to all members"
@@ -57,10 +57,10 @@ protocols:
         input:
           description: "Inception event with accumulated signatures meeting threshold"
           types:
-            - ref: "types://identity#InceptionEvent"
+            - ref: "types://identity/establishment#InceptionEvent"
         output:
           description: "Group AID created with key state"
-          type: "types://identity#KeyState"
+          type: "types://identity/state#KeyState"
         depends_on: [3]
         on_failure:
           - error: "ThresholdNotSatisfiedError"
@@ -104,7 +104,7 @@ protocols:
         input:
           description: "New keys (matching prior next commitments), new next digests, new thresholds, witness changes"
           types:
-            - ref: "types://identity#RotationEvent/non-delegated"
+            - ref: "types://identity/establishment#RotationEvent/non-delegated"
               fields: ["k", "n", "kt", "nt", "br", "ba"]
         output:
           description: "Unsigned rotation event (rot) + exn proposal (route=/multisig/rot)"
@@ -156,10 +156,10 @@ protocols:
         input:
           description: "Rotation event with threshold-satisfying signatures"
           types:
-            - ref: "types://identity#RotationEvent"
+            - ref: "types://identity/establishment#RotationEvent"
         output:
           description: "Key state updated"
-          type: "types://identity#KeyState"
+          type: "types://identity/state#KeyState"
         depends_on: [4]
       - seq: 6
         domain: "domain://accountability/receipting"
@@ -195,7 +195,7 @@ protocols:
         input:
           description: "Anchor seals (digest seals, event seals), prior event SAID"
           types:
-            - ref: "types://identity#InteractionEvent"
+            - ref: "types://identity/establishment#InteractionEvent"
               fields: ["a", "p"]
         output:
           description: "Unsigned interaction event (ixn) + exn proposal (route=/multisig/ixn)"
@@ -231,7 +231,7 @@ protocols:
         input:
           description: "Interaction event with threshold-satisfying signatures"
           types:
-            - ref: "types://identity#InteractionEvent"
+            - ref: "types://identity/establishment#InteractionEvent"
         output:
           description: "Event accepted, seals anchored to KEL"
         depends_on: [3]

@@ -9,12 +9,12 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://local-agent#Habitat"
-      output: "types://identity#KeyState"
+      input: "types://local-agent/api#Habitat"
+      output: "types://identity/state#KeyState"
       errors:
         - "errors://local-agent#DatabaseOpenError"
-        - "errors://local-agent#IdentifierNotFoundError"
-        - "errors://local-agent#DuplicateAliasError"
+        - "errors://local-agent/api#IdentifierNotFoundError"
+        - "errors://local-agent/api#DuplicateAliasError"
     refs: []
 
   - id: "port://local-agent/inbound/cli-commands"
@@ -24,11 +24,11 @@ ports:
     idempotent: false
     contract:
       input: "CLI arguments (name, alias, config_file)"
-      output: "types://identity#KeyState"
+      output: "types://identity/state#KeyState"
       errors:
         - "errors://local-agent/api#CLIConfigError"
         - "errors://local-agent/api#CLIArgumentError"
-        - "errors://local-agent#IdentifierNotFoundError"
+        - "errors://local-agent/api#IdentifierNotFoundError"
     refs: []
 
   # Outbound — local persistence repositories
@@ -41,8 +41,8 @@ ports:
       Append-only store for the controller's own key event logs and associated
       signatures. Provides key state derivation from the persisted log.
     contract:
-      input: "types://identity#KeyEvent"
-      output: "types://identity#KeyState"
+      input: "types://identity/establishment#KeyEvent"
+      output: "types://identity/state#KeyState"
       errors:
         - "errors://local-agent#DatabaseOpenError"
     refs: ["persistence"]
@@ -82,10 +82,10 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://identity#KeyEvent"
+      input: "types://identity/establishment#KeyEvent"
       output: "types://accountability/consensus#Receipt"
       errors:
-        - "errors://watcher-service#WitnessUnreachableError"
+        - "errors://watcher-service/api#WitnessUnreachableError"
     refs: ["domain://witness-service"]
 
   # Outbound — direct watcher HTTP communication
@@ -98,5 +98,5 @@ ports:
       input: "types://cesr/primitives#AID"
       output: "types://watcher-service#DuplicityReport"
       errors:
-        - "errors://watcher-service#WitnessUnreachableError"
+        - "errors://watcher-service/api#WitnessUnreachableError"
     refs: ["domain://watcher-service"]

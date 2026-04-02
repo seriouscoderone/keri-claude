@@ -32,3 +32,25 @@ types:
         invariants:
           - "For non-transferable witnesses, keys has exactly one entry"
           - "threshold must be satisfiable by the available keys"
+
+  - name: "KERL"
+    description: "Key Event Receipt Log — a KEL augmented with witness receipts. A KERL contains every event plus the witness receipts that make each event accountable."
+    variants:
+      - name: "default"
+        fields:
+          - name: "prefix"
+            type: "string"
+            required: true
+            description: "The AID this KERL belongs to"
+          - name: "events"
+            type: "array[KeyEvent]"
+            required: true
+            description: "Ordered sequence of key events"
+          - name: "receipts"
+            type: "map[string, array[WitnessReceipt]]"
+            required: true
+            description: "Map from event SAID to list of witness receipts for that event"
+        invariants:
+          - "Every event in events has at least TOAD receipts in the receipts map"
+          - "Events are ordered by sequence number with no gaps"
+          - "KERL = KEL + receipts — the KEL is extractable by removing receipts"

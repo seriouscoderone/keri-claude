@@ -1,6 +1,86 @@
 domain_ref: "identity/state"
 
 types:
+  - name: "KeyState"
+    description: "The current cryptographic configuration of an identifier at a given point in its event history. Derived from processing the KEL up to a specific establishment event."
+    variants:
+      - name: "default"
+        fields:
+          - name: "prefix"
+            type: "string"
+            required: true
+            description: "The identifier (AID)"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the latest event"
+            constraints:
+              min: 0
+          - name: "digest"
+            type: "string"
+            required: true
+            description: "SAID of the latest event"
+          - name: "ilk"
+            type: "string"
+            required: true
+            description: "Type of the latest event"
+          - name: "signing_keys"
+            type: "array[string]"
+            required: true
+            description: "Current signing public keys"
+          - name: "signing_threshold"
+            type: "string"
+            required: true
+            description: "Current signing threshold expression"
+          - name: "next_key_digests"
+            type: "array[string]"
+            required: true
+            description: "Pre-rotation commitments for next keys"
+          - name: "next_threshold"
+            type: "string"
+            required: true
+            description: "Next key threshold expression"
+          - name: "witness_threshold"
+            type: "integer"
+            required: true
+            description: "TOAD — witness threshold"
+          - name: "witnesses"
+            type: "array[string]"
+            required: true
+            description: "Current witness AIDs"
+          - name: "config_traits"
+            type: "array[string]"
+            required: true
+            description: "Active configuration traits"
+          - name: "delegator"
+            type: "string"
+            required: false
+            description: "Delegator AID if delegated, absent if self-sovereign"
+          - name: "transferable"
+            type: "boolean"
+            required: true
+            description: "Whether this identifier can rotate keys"
+          - name: "last_establishment_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the most recent establishment event"
+          - name: "first_seen_sn"
+            type: "integer"
+            required: true
+            description: "First-seen ordinal for ordering"
+        invariants:
+          - "Derived entirely from processing KEL events — not directly authored"
+          - "signing_keys correspond to the latest establishment event's k field"
+          - "next_key_digests correspond to the latest establishment event's n field"
+          - "If next_key_digests is empty and sn > 0, identifier is abandoned"
+          - "If next_key_digests is empty and sn == 0, identifier is non-transferable"
+        examples:
+          - format: "json"
+            description: "Key state after inception — non-transferable, no witnesses"
+            value: |
+              {"prefix":"DFs8BBx86uytIM0D2BhsE5rrqVIT8ef8mflpNceHo4XH","sn":0,"digest":"EPLRRJFe2FHdXKVTkSEX4xb4x-YaPFJ2Xds1vhtNTd4n","ilk":"icp","signing_keys":["DFs8BBx86uytIM0D2BhsE5rrqVIT8ef8mflpNceHo4XH"],"signing_threshold":"1","next_key_digests":[],"next_threshold":"0","witness_threshold":0,"witnesses":[],"config_traits":[],"transferable":false,"last_establishment_sn":0,"first_seen_sn":0}
+            notes: "Derived from non-transferable icp. next_key_digests=[] and sn=0 means non-transferable. Logical representation — keripy exposes via Kever attributes."
+
   - name: "TraitCode"
     description: "Configuration trait enum controlling operational constraints on an identifier."
     variants:
@@ -65,7 +145,7 @@ types:
       - name: "default"
         fields:
           - name: "key_state"
-            type: "types://identity#KeyState"
+            type: "types://identity/state#KeyState"
             required: true
             description: "The current key state snapshot"
           - name: "reply_datetime"
@@ -93,7 +173,7 @@ types:
             required: true
             description: "The queried AID"
           - name: "key_state"
-            type: "types://identity#KeyState"
+            type: "types://identity/state#KeyState"
             required: true
             description: "Current key state"
         invariants:

@@ -67,7 +67,7 @@ protocols:
           description: "Validated KEL events"
         output:
           description: "Remote AID's key state available locally"
-          type: "types://identity#KeyState"
+          type: "types://identity/state#KeyState"
         depends_on: [3]
       - seq: 5
         domain: "domain://discovery"
@@ -116,7 +116,7 @@ protocols:
               fields: ["cid", "role", "eid"]
         output:
           description: "Interaction event with endpoint authorization seal"
-          type: "types://identity#InteractionEvent"
+          type: "types://identity/establishment#InteractionEvent"
         preconditions:
           - "verification://identity/anchoring#Seal"
       - seq: 2

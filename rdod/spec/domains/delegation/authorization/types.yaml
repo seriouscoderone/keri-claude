@@ -1,6 +1,28 @@
 domain_ref: "delegation/authorization"
 
 types:
+  - name: "DelegationSeal"
+    description: "The seal a delegator anchors in their own KEL to approve a delegated event. Created via an interaction event in the delegator's KEL."
+    variants:
+      - name: "default"
+        fields:
+          - name: "i"
+            type: "string"
+            required: true
+            description: "Delegate's AID prefix"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Sequence number of the delegated event being approved"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID of the delegated event being approved"
+        invariants:
+          - "Must appear in the anchor (a) list of a delegator's interaction or establishment event"
+          - "The SAID d must exactly match the delegated event's computed SAID"
+          - "The seal binds the delegator's approval to this specific delegated event — changing any field in the delegated event invalidates the seal"
+
   - name: "TwoWayBinding"
     description: "A verified bidirectional delegation binding confirming both delegator seal and delegatee di field agree."
     variants:

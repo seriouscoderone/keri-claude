@@ -1,6 +1,24 @@
 domain_ref: "integrity/detection"
 
 types:
+  - name: "DuplicityEventLog"
+    description: "The Duplicity Event Log (DEL) — permanent forensic record of detected duplicity for an identifier."
+    variants:
+      - name: "default"
+        fields:
+          - name: "prefix"
+            type: "string"
+            required: true
+            description: "The AID this DEL tracks"
+          - name: "entries"
+            type: "array[DuplicityEvidence]"
+            required: true
+            description: "Chronologically ordered duplicity evidence entries"
+        invariants:
+          - "Append-only — entries are never removed, modified, or reordered"
+          - "Each entry is independently verifiable (both events have valid signatures)"
+          - "DEL may be empty (no duplicity detected) — this is the normal case"
+
   - name: "MonitorHandle"
     description: "Reference to an active monitoring subscription for a specific AID. Returned when monitoring begins; used to track or cancel the subscription."
     variants:

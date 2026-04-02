@@ -9,7 +9,7 @@ ports:
     semantics: query
     idempotent: true
     contract:
-      input: "types://identity#PublicKey"
+      input: "types://identity/key-commitment#PublicKey"
       output: "types://identity/key-commitment#KeyConfiguration"
       errors:
         - "errors://identity/key-commitment#PreRotationBindingError"
@@ -38,7 +38,7 @@ ports:
     semantics: query
     idempotent: true
     contract:
-      input: "types://identity#PublicKey"
+      input: "types://identity/key-commitment#PublicKey"
       output: "types://identity/key-commitment#MatchedIndex"
       errors:
         - "errors://identity/key-commitment#PartialRotationThresholdError"

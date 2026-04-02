@@ -9,7 +9,7 @@ ports:
     semantics: query
     idempotent: true
     contract:
-      input: "types://credential-exchange#GrantBundle"
+      input: "types://credential-exchange/negotiation#GrantBundle"
       output: "types://credential-exchange/proof#RegistryState"
       errors:
         - "errors://credential-exchange/proof#MissingProofArtifactError"
@@ -23,7 +23,7 @@ ports:
     semantics: query
     idempotent: true
     contract:
-      input: "types://credential-exchange#IPEXMessage"
+      input: "types://credential-exchange/negotiation#IPEXMessage"
       output: "types://credential-exchange/proof#RegistryState"
       errors:
         - "errors://credential-exchange/proof#AuthenticationError"
@@ -36,7 +36,7 @@ ports:
     semantics: query
     idempotent: true
     contract:
-      input: "types://credential-lifecycle#TELEvent"
+      input: "types://credential-lifecycle/status#TELEvent"
       output: "types://credential-exchange/proof#RegistryState"
       errors:
         - "errors://credential-lifecycle/verification#TELChainBrokenError"

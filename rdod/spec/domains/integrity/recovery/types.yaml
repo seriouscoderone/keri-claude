@@ -1,6 +1,29 @@
 domain_ref: "integrity/recovery"
 
 types:
+  - name: "SupersedingRecoveryEvent"
+    description: "A rotation event that recovers from detected duplicity by superseding the compromised key state. Uses pre-rotation keys committed before the compromise."
+    variants:
+      - name: "default"
+        fields:
+          - name: "rotation_event"
+            type: "types://identity/establishment#RotationEvent"
+            required: true
+            description: "The recovery rotation event (rot or drt)"
+          - name: "recovery_sn"
+            type: "integer"
+            required: true
+            description: "The sequence number where recovery occurs — must be >= fork point"
+          - name: "fork_point_sn"
+            type: "integer"
+            required: true
+            description: "The sequence number where the KEL forked (duplicity began)"
+        invariants:
+          - "recovery_sn >= fork_point_sn — can recover at or after the fork"
+          - "Recovery keys must match pre-rotation commitments from the LAST establishment event BEFORE the fork"
+          - "Superseding rotation has priority over the forked branch because it uses authentic pre-rotated keys"
+          - "After recovery, all events from the forked branch at sn >= fork_point are invalidated"
+
   - name: "SupersedingRule"
     description: "The specific superseding recovery rule being applied — each rule defines when a new event can displace an existing one in the KEL."
     variants:

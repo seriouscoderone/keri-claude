@@ -1,6 +1,28 @@
 domain_ref: "privacy/blinding"
 
 types:
+  - name: "BlindedAttributeBlock"
+    description: "A credential attribute block with UUID blinding — the u field provides entropy that prevents rainbow table discovery of the block's content from its SAID."
+    variants:
+      - name: "default"
+        fields:
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID of the block (commitment)"
+          - name: "u"
+            type: "string"
+            required: true
+            description: "UUID blinding factor — high entropy (>= 128 bits)"
+          - name: "attributes"
+            type: "map"
+            required: true
+            description: "The actual attribute data (hidden behind the SAID+UUID)"
+        invariants:
+          - "u field MUST have >= 128 bits of entropy"
+          - "SAID(block) is a blinded commitment — cannot discover content without u"
+          - "Public blocks (no u) cannot be blinded"
+
   - name: "BoundBlindedAttributeBlock"
     description: "A blinded attribute block bound to a specific transaction and key state — ties the blinding to a verifiable anchor point."
     variants:

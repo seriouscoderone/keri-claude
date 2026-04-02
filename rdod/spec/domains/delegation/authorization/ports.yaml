@@ -9,7 +9,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://identity#KeyEvent"
+      input: "types://identity/establishment#KeyEvent"
       output: "types://delegation/authorization#TwoWayBinding"
       errors:
         - "errors://delegation/authorization#MissingDelegatorSealError"
@@ -25,7 +25,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://delegation#DelegationSeal"
+      input: "types://delegation/authorization#DelegationSeal"
       output: "types://delegation/authorization#AnchorPayload"
       errors:
         - "errors://delegation/authorization#SealMismatchError"

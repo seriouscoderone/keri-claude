@@ -1,6 +1,34 @@
 domain_ref: "credential-lifecycle/status"
 
 types:
+  - name: "TELEvent"
+    description: "Union type for any event in a Transaction Event Log. Discriminated by the t field."
+    variants:
+      - name: "registry_inception"
+        fields:
+          - name: "event"
+            type: "types://credential-lifecycle/registry#RegistryInceptionEvent"
+            required: true
+            description: "Registry inception event (rip)"
+        invariants:
+          - "t field is 'rip'"
+      - name: "blindable_update"
+        fields:
+          - name: "event"
+            type: "types://credential-lifecycle/registry#BlindableUpdateEvent"
+            required: true
+            description: "Blindable update event (bup)"
+        invariants:
+          - "t field is 'bup'"
+      - name: "non_blindable_update"
+        fields:
+          - name: "event"
+            type: "types://credential-lifecycle/registry#NonBlindableUpdateEvent"
+            required: true
+            description: "Non-blindable update event (upd)"
+        invariants:
+          - "t field is 'upd'"
+
   - name: "TelEvent"
     description: "Any TEL event (rip, upd, or bup) with its core identifying fields for state computation."
     variants:

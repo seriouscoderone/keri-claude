@@ -19,11 +19,11 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://local-agent#Habitat"
-      output: "types://identity#KeyState"
+      input: "types://local-agent/api#Habitat"
+      output: "types://identity/state#KeyState"
       errors:
-        - "errors://local-agent#IdentifierNotFoundError"
-        - "errors://local-agent#DuplicateAliasError"
+        - "errors://local-agent/api#IdentifierNotFoundError"
+        - "errors://local-agent/api#DuplicateAliasError"
     refs: []
 
   - id: "port://local-agent/api/inbound/cli"
@@ -33,7 +33,7 @@ ports:
     idempotent: false
     contract:
       input: "CLI arguments (name, alias, config_file)"
-      output: "types://identity#KeyState"
+      output: "types://identity/state#KeyState"
       errors:
         - "errors://local-agent/api#CLIConfigError"
         - "errors://local-agent/api#CLIArgumentError"
@@ -48,7 +48,7 @@ ports:
       input: "types://cesr/primitives#AID"
       output: "types://local-agent/api#VerificationResult"
       errors:
-        - "errors://local-agent#IdentifierNotFoundError"
+        - "errors://local-agent/api#IdentifierNotFoundError"
     refs: []
 
   - id: "port://local-agent/api/outbound/tcp-transport"

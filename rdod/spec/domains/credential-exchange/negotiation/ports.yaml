@@ -9,8 +9,8 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://credential-exchange#IPEXMessage"
-      output: "types://credential-exchange#IPEXMessage"
+      input: "types://credential-exchange/negotiation#IPEXMessage"
+      output: "types://credential-exchange/negotiation#IPEXMessage"
       errors: []
     refs: ["domain://credential-exchange"]
 
@@ -20,7 +20,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://credential-exchange#GrantMessage"
+      input: "types://credential-exchange/negotiation#GrantMessage"
       output: "types://credential-exchange/negotiation#AdmitMessage"
       errors: []
     refs: ["domain://credential-exchange"]
@@ -32,7 +32,7 @@ ports:
     idempotent: true
     contract:
       input: "types://credential-exchange/negotiation#MessageConstructionInput"
-      output: "types://credential-exchange#IPEXMessage"
+      output: "types://credential-exchange/negotiation#IPEXMessage"
       errors:
         - "errors://credential-exchange/negotiation#ConfigurationError"
     refs: ["domain://credential-exchange"]
@@ -43,7 +43,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://credential-exchange#IPEXMessage"
+      input: "types://credential-exchange/negotiation#IPEXMessage"
       output: "types://credential-exchange/negotiation#HandlerResponse"
       errors:
         - "errors://credential-exchange/negotiation#MissingSignatureError"
@@ -61,7 +61,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://credential-exchange#IPEXMessage"
-      output: "types://credential-exchange#IPEXMessage"
+      input: "types://credential-exchange/negotiation#IPEXMessage"
+      output: "types://credential-exchange/negotiation#IPEXMessage"
       errors: []
     refs: ["transport"]

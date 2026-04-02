@@ -1,30 +1,6 @@
 domain_ref: "watcher-service"
 
 types:
-  - name: "WatcherConfiguration"
-    description: "Configuration for a watcher node instance."
-    variants:
-      - name: "default"
-        fields:
-          - name: "watcher_aid"
-            type: "string"
-            required: true
-            description: "This watcher's AID"
-          - name: "listen_port"
-            type: "integer"
-            required: true
-            description: "HTTP port"
-          - name: "check_interval_seconds"
-            type: "integer"
-            required: false
-            description: "How often to perform duplicity checks"
-            constraints:
-              min: 60
-          - name: "monitored_prefixes"
-            type: "array[string]"
-            required: true
-            description: "List of AIDs this watcher monitors for duplicity"
-
   - name: "DuplicityReport"
     description: "Report generated after a watcher cross-checks witnesses for a monitored identifier."
     variants:

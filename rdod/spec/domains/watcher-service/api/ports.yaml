@@ -9,7 +9,7 @@ ports:
     idempotent: true
     contract:
       input: "types://cesr/primitives#AID"
-      output: "types://identity#KeyState"
+      output: "types://identity/state#KeyState"
       errors:
         - "errors://watcher-service/api#UnknownAIDError"
     refs: ["domain://cloud-agent-service", "domain://local-agent"]
@@ -44,7 +44,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://watcher-service#WatcherConfiguration"
+      input: "types://watcher-service/api#WatcherConfiguration"
       output: "Running HTTP server handle"
       errors: []
     refs: ["transport"]
@@ -58,5 +58,5 @@ ports:
       input: "types://cesr/primitives#AID"
       output: "types://witness-service/api#KERLResponse"
       errors:
-        - "errors://watcher-service#WitnessUnreachableError"
+        - "errors://watcher-service/api#WitnessUnreachableError"
     refs: ["domain://witness-service/api"]

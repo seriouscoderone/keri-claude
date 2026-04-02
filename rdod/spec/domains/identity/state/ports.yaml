@@ -9,8 +9,8 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://identity#KeyEvent"
-      output: "types://identity#KeyState"
+      input: "types://identity/establishment#KeyEvent"
+      output: "types://identity/state#KeyState"
       errors:
         - "errors://identity/state#OutOfOrderKeyStateError"
         - "errors://identity/state#UnverifiedReplyError"
@@ -24,7 +24,7 @@ ports:
     idempotent: true
     contract:
       input: "AID prefix and optional target sequence number"
-      output: "types://identity#KeyState"
+      output: "types://identity/state#KeyState"
       errors:
         - "errors://identity/state#ReconstructionError"
         - "errors://identity/state#StaleKeyStateError"
@@ -49,7 +49,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://identity#KeyState"
+      input: "types://identity/state#KeyState"
       output: "void"
       errors:
         - "errors://identity/state#MissingEntryError"

@@ -1,6 +1,154 @@
 domain_ref: "credential-lifecycle/registry"
 
 types:
+  - name: "RegistryInceptionEvent"
+    description: "Creates a new credential registry (rip). All credentials issued under this registry reference its REGID. This is the ACDC v2 normative event type."
+    variants:
+      - name: "default"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string"
+          - name: "t"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["rip"]
+            description: "Message type — registry inception"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID — becomes the REGID"
+          - name: "u"
+            type: "string"
+            required: false
+            description: "UUID — blinding nonce for privacy (absent for public registries)"
+          - name: "i"
+            type: "string"
+            required: true
+            description: "Registry identifier — computed as SAID (same as d for self-addressing)"
+          - name: "n"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["0"]
+            description: "Sequence number — hex-encoded, always '0' for inception"
+          - name: "dt"
+            type: "string"
+            required: true
+            description: "Datetime — ISO 8601 timestamp"
+        invariants:
+          - "Field order: [v, t, d, u, i, n, dt]"
+          - "d and i are both computed as SAID"
+          - "Must be anchored in the issuer's KEL via a seal"
+          - "n is the sequence number field (not s as in legacy vcp events)"
+
+  - name: "BlindableUpdateEvent"
+    description: "A blindable update event (bup) for registries that support blinding. Carries a blinded attribute block with BLID for decorrelation. Used for both issuance and revocation — the transaction state (ts) field determines the state transition."
+    variants:
+      - name: "default"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string"
+          - name: "t"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["bup"]
+            description: "Message type — blindable update"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID"
+          - name: "rd"
+            type: "string"
+            required: true
+            description: "Registry delegation — REGID of the managing registry"
+          - name: "n"
+            type: "string"
+            required: true
+            description: "Sequence number — hex-encoded, must equal prior sn + 1"
+          - name: "p"
+            type: "string"
+            required: true
+            description: "Prior TEL event SAID — hash chain linkage"
+          - name: "dt"
+            type: "string"
+            required: true
+            description: "Datetime — ISO 8601 timestamp"
+          - name: "ta"
+            type: "string"
+            required: true
+            description: "Transaction ACDC SAID — the credential this event applies to"
+          - name: "ts"
+            type: "string"
+            required: true
+            description: "Transaction state — the target state after this update"
+            constraints:
+              enum: ["issued", "revoked"]
+        invariants:
+          - "Field order: [v, t, d, rd, n, p, dt, ta, ts]"
+          - "Each bup event carries a fresh BLID with new UUID for decorrelation"
+          - "An observer cannot distinguish state-changing updates from no-op decorrelation updates"
+          - "ts determines the credential state transition — not the event type"
+          - "Must be anchored in the issuer's KEL via a seal"
+          - "Builder: UpdateEvent.builder().blindable().registry(regid).credential(said).state('issued').build()"
+
+  - name: "NonBlindableUpdateEvent"
+    description: "A non-blindable update event (upd) for registries without blinding. Used for both issuance and revocation — the transaction state (ts) field determines the state transition."
+    variants:
+      - name: "default"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string"
+          - name: "t"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["upd"]
+            description: "Message type — non-blindable update"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID"
+          - name: "rd"
+            type: "string"
+            required: true
+            description: "Registry delegation — REGID of the managing registry"
+          - name: "n"
+            type: "string"
+            required: true
+            description: "Sequence number — hex-encoded, must equal prior sn + 1"
+          - name: "p"
+            type: "string"
+            required: true
+            description: "Prior TEL event SAID — hash chain linkage"
+          - name: "dt"
+            type: "string"
+            required: true
+            description: "Datetime — ISO 8601 timestamp"
+          - name: "ta"
+            type: "string"
+            required: true
+            description: "Transaction ACDC SAID — the credential this event applies to"
+          - name: "ts"
+            type: "string"
+            required: true
+            description: "Transaction state — the target state after this update"
+            constraints:
+              enum: ["issued", "revoked"]
+        invariants:
+          - "Field order: [v, t, d, rd, n, p, dt, ta, ts]"
+          - "No blinding — credential state transitions are publicly observable"
+          - "ts determines the credential state transition — not the event type"
+          - "Must be anchored in the issuer's KEL via a seal"
+          - "Builder: UpdateEvent.builder().nonBlindable().registry(regid).credential(said).state('revoked').build()"
+
   - name: "RegistryRotationEvent"
     description: "LEGACY v1 registry rotation (vrt) event type marker, retained for migration compatibility."
     variants:
@@ -59,3 +207,27 @@ types:
         invariants:
           - "Immutable after creation — registry mode cannot change"
           - "mode determines whether credentials use bup (blindable) or upd (non-blindable) events"
+
+  - name: "RegistryStateSnapshot"
+    description: "The current state of a credential registry — derived from processing rip and update events."
+    variants:
+      - name: "default"
+        fields:
+          - name: "registry_said"
+            type: "string"
+            required: true
+            description: "REGID"
+          - name: "issuer_aid"
+            type: "string"
+            required: true
+            description: "AID of the registry owner/issuer"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Registry sequence number"
+          - name: "blindable"
+            type: "boolean"
+            required: true
+            description: "Whether this registry supports blinding (bup events) or not (upd events)"
+        invariants:
+          - "Derived from processing rip event and subsequent updates"

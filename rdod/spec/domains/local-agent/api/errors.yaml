@@ -1,6 +1,26 @@
 domain_ref: "local-agent/api"
 
 errors:
+  - name: "IdentifierNotFoundError"
+    description: "Requested identifier alias does not exist in the local Identifier Repository"
+    cause: "No Hab with this name has been incepted"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "alias"
+        type: "string"
+        description: "The identifier alias that was not found"
+
+  - name: "DuplicateAliasError"
+    description: "An identifier with this alias already exists"
+    cause: "Attempted to incept a new identifier with an alias that is already in use"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "alias"
+        type: "string"
+        description: "The duplicate alias"
+
   - name: "CLIConfigError"
     description: "CLI configuration file is missing or malformed"
     cause: "The --config-file or --config-dir arguments point to a file that does not exist or cannot be parsed"
