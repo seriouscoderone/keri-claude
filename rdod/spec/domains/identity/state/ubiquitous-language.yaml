@@ -91,6 +91,7 @@ terms:
       - "The update is atomic — either all state fields change or none do (validation failure raises an error)"
       - "After a successful establishment event update: last establishment data is updated, config traits are checked and accumulated"
       - "State cache is written after every successfully applied event — establishment events (which update key state) and interaction events (which advance only sn) both trigger a cache write so the most recent sn is always recoverable without replay"
+      - "After an ixn event, the full KeyState is cached (not just sn) — key material remains unchanged from the last establishment event, but sn, current event digest, and first-seen number are updated"
     examples:
       - "Processing a rotation: the verifier validates the rotation, then replaces signing keys, next key digests, thresholds, witnesses, and last establishment data"
       - "Processing an interaction: the verifier checks signatures against current signing keys, advances the sequence number, updates the current event reference"

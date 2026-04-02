@@ -723,6 +723,7 @@ state_machines:
       - "Delegated events must pass through 'delegation_checked' before 'accepted'"
       - "Local source protection is checked before signature verification"
       - "Escrowed events re-enter the pipeline at 'received' when their blocking condition resolves"
+      - "Interaction events (ixn) go through signature threshold and witness threshold checks but NOT delegation checks — delegation validation applies only to establishment events (icp, rot, dip, drt)"
     initial_state: "received"
     terminal_states: ["accepted", "rejected", "escrowed_ooe", "escrowed_pse", "escrowed_pwe", "escrowed_pde", "escrowed_lde", "escrowed_misfit"]
 

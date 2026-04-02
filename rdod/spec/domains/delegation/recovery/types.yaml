@@ -19,7 +19,7 @@ types:
           - "Used as input to superseding rule evaluation"
 
   - name: "SupersedingRule"
-    description: "Which superseding rule applies when two conflicting delegated events compete for the same KEL position."
+    description: "Which superseding rule applies when two conflicting delegated events compete for the same KEL position. Rules A0-A2 apply to non-delegated identifiers; B1-B3 apply to delegated identifiers; C applies recursively up the delegation chain."
     variants:
       - name: "default"
         fields:
@@ -28,8 +28,15 @@ types:
             required: true
             description: "The applicable superseding rule"
             constraints:
-              enum: ["A0_RotationSupersedes", "A1_NoRotationSuperseding", "A2_InteractionCannotSupersede", "B1_DelegatedSealOrder", "B2_MultipleDelegatingSameEvent", "B3_DelegateeRecovery", "C_RecursiveDelegation"]
+              enum: ["A0_RotationSupersedesInteraction", "A1_NoRotationSupersedingRotation", "A2_InteractionCannotSupersede", "B1_HigherDelegatingSn", "B2_LaterSealInSameEvent", "B3_RotationOverInteractionSameSn", "C_RecursiveDelegation"]
         invariants:
+          - "A0: Any rotation event may supersede an interaction event at the same sn where that interaction event is not before any other rotation event"
+          - "A1: A non-delegated rotation may not supersede another rotation at the same sn"
+          - "A2: An interaction event may not supersede any event"
+          - "B1: The superseding rotation's delegating event has a higher sn in the delegator's KEL"
+          - "B2: Both delegations appear in the same delegating event, and the superseding seal appears later in the seal list"
+          - "B3: Same delegating sn, but the superseding delegation's event is a rotation and the superseded's is an interaction"
+          - "C: Recursive application up the delegation chain to the root undelegated KEL"
           - "Rules are evaluated in order: A rules (non-delegated), B rules (delegated), C (recursive)"
           - "First applicable rule determines the outcome"
 

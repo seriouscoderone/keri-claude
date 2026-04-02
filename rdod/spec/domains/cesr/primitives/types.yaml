@@ -60,6 +60,7 @@ types:
         invariants:
           - "Encoded as a JSON array of arrays"
           - "Satisfaction semantics defined by identity/thresholds domain, not by CESR encoding"
+          - "Satisfaction requires ALL clauses to be independently satisfied (AND logic) — each clause's verified-signature weights must sum to >= 1.0"
 
   - name: "Seal"
     description: "CESR-encoded reference structure appearing in the anchors (a) field of events. Three structural variants with different field sets."
@@ -202,6 +203,9 @@ types:
         invariants:
           - "index identifies which key in the current key list signed this"
           - "ondex identifies which key in the next key list this maps to (for rotation verification)"
+          - "When using a CurrentSigCodex code (B#, D#), ondex is always None — the signature indexes only into the current signing key list"
+          - "When using a BothSigCodex code (A#, C#), ondex implicitly equals index — the key appears at the same position in both the current and prior-next lists"
+          - "When using a dual-indexed code (0A##, 2A####), ondex is explicit and may differ from index — the key appears at different positions in the two lists"
 
   - name: "Cigar"
     description: "Unindexed signature — typically from a non-transferable witness whose public key IS their identifier."

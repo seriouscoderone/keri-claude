@@ -14,13 +14,25 @@ types:
             type: "boolean"
             required: true
             description: "Whether the operation has completed"
+          - name: "operation_type"
+            type: "string"
+            required: true
+            description: "Category of long-running operation — determines the expected result schema"
+            constraints:
+              enum: ["oobi", "witness", "delegation", "group", "query", "registry", "credential", "endrole", "done"]
           - name: "result"
             type: "map"
             required: false
-            description: "Operation result payload (present only when done)"
+            description: "Operation result payload (present only when done and successful)"
+          - name: "error"
+            type: "map"
+            required: false
+            description: "Error details when the operation failed — contains code (int), message (string), and optional details (map)"
         invariants:
           - "Clients poll GET /operations/{name} until done is true"
-          - "result is absent while done is false"
+          - "result and error are both absent while done is false"
+          - "When done=true, exactly one of result or error is present (XOR)"
+          - "error.code follows HTTP status code conventions (e.g., 408 for timeout, 404 for not found)"
 
   - name: "AgentConfig"
     description: "Connection configuration for a Signify client to reach its cloud agent."

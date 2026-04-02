@@ -23,7 +23,7 @@ types:
           - "payload schema depends on operation_type"
 
   - name: "DeckName"
-    description: "Named work queue for categorizing async processing tasks."
+    description: "Named work queue for categorizing async processing tasks. Each deck represents a distinct processing concern in the cloud agent's cue processing loop."
     variants:
       - name: "default"
         fields:
@@ -31,12 +31,17 @@ types:
             type: "string"
             required: true
             constraints:
-              enum: ["Delegation", "Credential", "Multisig", "Exchange", "Escrow"]
+              enum: ["cues", "groups", "anchors", "witners", "queries"]
         invariants:
           - "Each deck is processed independently"
+          - "cues: general event processing cues from the event processor"
+          - "groups: multisig coordination — partial signature collection and threshold satisfaction"
+          - "anchors: delegation anchor requests — seal confirmation from delegators"
+          - "witners: witness receipt requests — collecting receipts to satisfy TOAD"
+          - "queries: key state queries — resolving OOBI and key state lookups"
 
   - name: "OpType"
-    description: "Category of long-running operation tracked by the cloud agent."
+    description: "Category of long-running operation tracked by the cloud agent. Nine distinct operation types cover the full range of async work."
     variants:
       - name: "default"
         fields:
@@ -44,9 +49,10 @@ types:
             type: "string"
             required: true
             constraints:
-              enum: ["Witness", "Delegation", "Group", "Registry", "Credential", "Exchange"]
+              enum: ["oobi", "witness", "delegation", "group", "query", "registry", "credential", "endrole", "done"]
         invariants:
           - "Determines the completion check strategy for polling"
+          - "done is a terminal pseudo-type indicating the operation completed synchronously"
 
   - name: "SignedEventMessage"
     description: "A key event bundled with partial signatures for multi-sig assembly."
@@ -122,7 +128,7 @@ types:
           - "(prefix, sn) uniquely identifies the escrow slot"
 
   - name: "OperationType"
-    description: "Type of long-running operation the cloud agent tracks for polling."
+    description: "Alias for OpType — retained for backward compatibility in port contracts. Prefer OpType for new references."
     variants:
       - name: "default"
         fields:
@@ -130,9 +136,10 @@ types:
             type: "string"
             required: true
             constraints:
-              enum: ["Witness", "Delegation", "Group", "Registry", "Credential"]
+              enum: ["oobi", "witness", "delegation", "group", "query", "registry", "credential", "endrole", "done"]
         invariants:
           - "Determines which completion check runs when the client polls"
+          - "Semantically identical to OpType — implementations should normalize to a single enum"
 
   - name: "OperationName"
     description: "Unique name identifying a long-running operation for status polling."

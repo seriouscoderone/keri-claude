@@ -25,36 +25,36 @@ types:
           - "After recovery, all events from the forked branch at sn >= fork_point are invalidated"
 
   - name: "SupersedingRule"
-    description: "The specific superseding recovery rule being applied — each rule defines when a new event can displace an existing one in the KEL."
+    description: "The specific superseding recovery rule being applied — each rule defines when a new event can displace an existing one in the KEL. Rules A0-A2 apply to non-delegated identifiers; B1-B3 apply to delegated identifiers; C applies recursively up the delegation chain."
     variants:
       - name: "A0"
         fields: []
         invariants:
-          - "First seen wins — no superseding (normal non-recovery case)"
+          - "Any rotation event may supersede an interaction event at the same sn where that interaction event is not before any other rotation event — this enables recovery of live exploit"
       - name: "A1"
         fields: []
         invariants:
-          - "Rotation supersedes interaction at the same sn"
+          - "A non-delegated rotation may not supersede another rotation at the same sn"
       - name: "A2"
         fields: []
         invariants:
-          - "Rotation with higher config trait priority supersedes earlier rotation at same sn"
+          - "An interaction event may not supersede any event"
       - name: "B1"
         fields: []
         invariants:
-          - "Delegated rotation supersedes delegated interaction at same sn"
+          - "The superseding rotation's delegating event has a higher sn in the delegator's KEL than the superseded event's delegating event"
       - name: "B2"
         fields: []
         invariants:
-          - "Delegated rotation with higher config trait supersedes earlier delegated rotation at same sn"
+          - "Both delegations appear in the same delegating event, and the superseding seal appears later in the seal list"
       - name: "B3"
         fields: []
         invariants:
-          - "Delegated rotation with delegator's seal supersedes one without"
+          - "Same delegating sn, but the superseding delegation's event is a rotation and the superseded's is an interaction"
       - name: "C"
         fields: []
         invariants:
-          - "Recovery rotation at or after fork point supersedes the entire forked branch"
+          - "Recursive application up the delegation chain to the root undelegated KEL — delegated superseding is resolved by applying the non-delegated rules at each level"
 
   - name: "NotSuperseding"
     description: "Result when a superseding check determines the candidate event does NOT supersede the existing one."

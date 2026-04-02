@@ -510,7 +510,7 @@ types:
           - "No state change occurs"
 
   - name: "EscrowDecision"
-    description: "The routing decision for an event that cannot be immediately accepted. Identifies which escrow queue the event belongs in, why it was escrowed, and what condition must resolve for reprocessing."
+    description: "The routing decision for an event that cannot be immediately accepted. Identifies which escrow queue the event belongs in, why it was escrowed, and what condition must resolve for reprocessing. Note: Escrow queue names (OOE, PSE, PWE, PDE, MDE, MFE, LDE) are derived from the keripy reference implementation — the KERI protocol spec defines escrow conditions functionally (insufficient signatures, missing receipts, missing delegation) but does not name specific queues."
     variants:
       - name: "out-of-order"
         fields:

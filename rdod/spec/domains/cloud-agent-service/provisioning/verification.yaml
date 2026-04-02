@@ -7,20 +7,20 @@ domain_ref: "cloud-agent-service/provisioning"
 
 # Formalized invariants from ubiquitous_language terms
 properties:
-  - invariant: "One-time per controller AID — idempotent on retry"
+  - invariant: "One-time per controller AID — re-provisioning raises AgentAlreadyExistsError"
     term: "Agency"
     technique: property-based
     formal:
       language: python
       expression: |
         @given(inception_event=valid_inception_strategy())
-        def test_provision_idempotent(inception_event):
-            config1 = agency.provision_agent(inception_event)
-            config2 = agency.provision_agent(inception_event)
-            assert config1.agent_id == config2.agent_id
-            assert config1.controller_aid == config2.controller_aid
+        def test_provision_not_idempotent(inception_event):
+            config = agency.provision_agent(inception_event)
+            assert config.agent_id is not None
+            with pytest.raises(AgentAlreadyExistsError):
+                agency.provision_agent(inception_event)
     strategy: "valid_inception_strategy() producing valid inception events with unique controller AIDs"
-    notes: "Repeated provisioning for the same controller AID returns the same agent config"
+    notes: "Re-provisioning for an already-provisioned controller AID raises AgentAlreadyExistsError (HTTP 400)"
 
   - invariant: "Bound to exactly one controller AID (the authentication anchor)"
     term: "Agent Instance"
@@ -191,6 +191,6 @@ state_machines:
     invariants:
       - "An agent in 'active' state has consistent bidirectional registry mappings"
       - "An agent in 'destroyed' state has no remaining registry entries or owned resources"
-      - "Provisioning is idempotent — re-provisioning an active agent returns existing config without state change"
+      - "Provisioning is NOT idempotent — re-provisioning an already-active agent raises AgentAlreadyExistsError (HTTP 400)"
     initial_state: "unprovisioned"
     terminal_states: ["destroyed"]
