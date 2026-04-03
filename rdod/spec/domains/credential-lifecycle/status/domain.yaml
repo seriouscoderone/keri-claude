@@ -37,10 +37,8 @@ kernels: []
 adjacents: []
 
 externals:
-  - name: "State Snapshot Repository"
-    abstraction: "Repository"
-    ref: "port://credential-lifecycle/status/outbound/status-read-model"
-    implementation_notes: "Read/write credential and registry state snapshots — materialized views reconstructable from TEL events."
+  - ref: "domain://externals/persistence"
+    relationship: "Credential and registry state snapshot storage — materialized views reconstructable from TEL events, the status-read-model outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "module"

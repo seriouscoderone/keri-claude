@@ -37,10 +37,8 @@ adjacents:
     relationship: "KERI messaging primitives (exn, qry, rpy) adopted natively"
 
 externals:
-  - name: "Transport"
-    abstraction: "Message delivery between agents"
-    ref: "port://credential-exchange/negotiation/outbound/message-transport"
-    implementation_notes: "Delivers constructed EXN messages to recipient agents. Implementations: HTTP, TCP, or agent-to-agent message relay."
+  - ref: "domain://externals/transport"
+    relationship: "EXN message delivery to recipient agents — the message-transport outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "module"

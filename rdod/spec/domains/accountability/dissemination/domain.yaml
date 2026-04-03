@@ -35,19 +35,8 @@ kernels: []
 adjacents: []
 
 externals:
-  - name: "Network Transport"
-    abstraction: "Adapter"
-    ref: "port://accountability/dissemination/outbound/transport"
-    implementation_notes: >
-      Interface: send(endpoint: Endpoint, payload: bytes) -> Result<Sent, TransportError>;
-      receive(listen_address: string) -> AsyncStream<bytes>.
-      Implementations: HTTP/HTTPS (cloud deployments, KERIA, witness HTTP API),
-      TCP (bare metal CESR streams for high-throughput local deployments),
-      UDP (lightweight for receipt dissemination),
-      WebSocket (bidirectional for browser extension communication).
-      Invariants: Transport is payload-agnostic (delivers bytes, domain parses them);
-      CESR framing handles message boundaries (transport does not need to delimit);
-      implementations MUST support at least HTTP, other transports are optional.
+  - ref: "domain://externals/transport"
+    relationship: "Event and receipt propagation over HTTP, TCP, UDP, or WebSocket — the transport outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "module"

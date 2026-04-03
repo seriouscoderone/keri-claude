@@ -48,14 +48,8 @@ externals:
   - ref: "domain://externals/cryptographic-primitives"
     source: "Blake3-256 digest comparison for seal verification (comparing TEL event SAID against the seal digest in the issuer's KEL)"
     relationship: "Digest comparison is a kernel operation invoked during KEL authorization verification"
-  - name: "Authorization Lookup"
-    abstraction: "Repository (read-only)"
-    ref: "port://credential-lifecycle/verification/outbound/authorization-lookup"
-    implementation_notes: "Queries the IdentityService and StatusService to check whether the authorization chain for a credential is complete — issuer's identity history, credential status, and registry state."
-  - name: "Verification Repository"
-    abstraction: "Repository"
-    ref: "port://credential-lifecycle/verification/outbound/verification-repository"
-    implementation_notes: "Transient storage for TEL events that cannot be immediately validated, partitioned by escrow type"
+  - ref: "domain://externals/persistence"
+    relationship: "Transient escrow storage for TEL events awaiting validation and authorization chain lookup — the verification-repository and authorization-lookup outbound ports delegate to this external"
 
 implementation_guidance:
   suggested_type: "module"

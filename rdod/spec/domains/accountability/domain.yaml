@@ -74,10 +74,8 @@ externals:
   - ref: "domain://externals/cryptographic-primitives"
     source: "Ed25519 (witness receipt signatures), Blake3-256/SHA-256 (event verification)"
     relationship: "Witness receipt signatures and event digest verification use kernel cryptographic types directly"
-  - name: "Network Transport"
-    abstraction: "Adapter"
-    ref: "port://accountability/outbound/transport"
-    implementation_notes: "Message delivery for events, receipts, and gossip between controller, witnesses, and validators. Implementations: HTTP, TCP, WebSocket, round-robin, gossip protocol"
+  - ref: "domain://externals/transport"
+    relationship: "Message delivery for events, receipts, and gossip between controller, witnesses, and validators — the transport outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "module"

@@ -34,10 +34,8 @@ externals:
   - ref: "domain://externals/cryptographic-primitives"
     source: "argon2 for passcode stretching, Ed25519/ECDSA for key generation, X25519 for key-at-rest encryption (ECDH + secretbox)"
     relationship: "All cryptographic primitives — key derivation, signing, encryption — are kernel operations. This subdomain composes them into the Keeper abstraction and Encrypter"
-  - name: "Key Repository"
-    abstraction: "Repository"
-    ref: "port://signify-client/key-management/outbound/key-repository"
-    implementation_notes: "Encrypted key material at rest — backend is implementation-defined."
+  - ref: "domain://externals/persistence"
+    relationship: "Encrypted key material at rest — the key-repository outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "module"

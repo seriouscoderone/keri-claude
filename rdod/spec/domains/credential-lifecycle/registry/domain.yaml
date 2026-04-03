@@ -40,10 +40,8 @@ adjacents:
     is_cross_cutting: false
 
 externals:
-  - name: "Registry Repository"
-    abstraction: "Repository"
-    ref: "port://credential-lifecycle/registry/outbound/registry-repository"
-    implementation_notes: "Stores registry metadata, name-to-REGID mappings, and cached management state."
+  - ref: "domain://externals/persistence"
+    relationship: "Registry metadata, name-to-REGID mappings, and cached management state — the registry-repository outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "module"

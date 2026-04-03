@@ -45,10 +45,8 @@ adjacents:
     pattern: "Conformist"
 
 externals:
-  - name: "TCP Transport"
-    abstraction: "Adapter"
-    ref: "port://local-agent/api/outbound/tcp-transport"
-    implementation_notes: "TCP connection for sending raw CESR streams to remote KERI agents"
+  - ref: "domain://externals/transport"
+    relationship: "TCP connection for sending raw CESR streams to remote KERI agents — the tcp-transport outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "app"

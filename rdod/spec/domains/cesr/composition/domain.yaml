@@ -40,10 +40,8 @@ kernels: []
 adjacents: []
 
 externals:
-  - name: "Transport Layer"
-    abstraction: "Adapter"
-    ref: "port://cesr/composition/outbound/transport"
-    implementation_notes: "Stream delivery over TCP, UDP, HTTP, or WebSocket. The transport provides byte-level delivery; CESR stream provides the framing."
+  - ref: "domain://externals/transport"
+    relationship: "Stream delivery over TCP, UDP, HTTP, or WebSocket — the transport outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "module"

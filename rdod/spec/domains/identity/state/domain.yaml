@@ -41,20 +41,8 @@ externals:
   - ref: "domain://externals/cryptographic-primitives"
     source: "Ed25519/ECDSA public keys (Verfer) for signing key lists, Blake3-256/SHA-256 digests (Diger) for next key commitment lists, SAID computation for event digest tracking"
     relationship: "Cryptographic primitives appear directly in state machine fields — the tracker stores and compares qualified public keys, digests, and SAIDs as kernel types"
-  - name: "State Persistence Repository"
-    abstraction: "Repository"
-    ref: "port://identity/state/outbound/state-read-model"
-    implementation_notes: >
-      State cache for fast key state lookup by prefix, and KEL access for state
-      reconstruction via replay.
-      Implementations: LMDB (memory-mapped key-value store, keripy),
-      redb (embedded Rust key-value store, keriox),
-      DynamoDB (serverless key-value store, serious-keri),
-      SQLite/PostgreSQL (relational alternatives),
-      in-memory (for testing).
-      Invariants: Repository interfaces define the contract (the persistence
-      external implements it); implementations MUST satisfy the invariants on
-      each Repository port (append-only, idempotent, etc.).
+  - ref: "domain://externals/persistence"
+    relationship: "State cache for fast key state lookup and KEL access for state reconstruction — the state-read-model outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "module"

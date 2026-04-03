@@ -82,10 +82,8 @@ externals:
   - ref: "domain://externals/cryptographic-primitives"
     source: "Ed25519 (event signing), Blake3-256/SHA-256 (SAID computation, prior event digest, seal digests, next key commitments)"
     relationship: "Cryptographic algorithm types appear directly in event fields and key state structures — signatures, digests, public keys, and threshold expressions are kernel types"
-  - name: "KelRepository"
-    abstraction: "Repository"
-    ref: "port://identity/state/outbound/kel-repository"
-    implementation_notes: "Append-only persistence for KEL events with first-seen ordering, signature accumulation, witness receipt accumulation, and escrow queues partitioned by blocking condition with timeout-based sweep. The IdentityService wraps the KelRepository — the Service IS the guard, the Repository IS the storage."
+  - ref: "domain://externals/persistence"
+    relationship: "Append-only persistence for KEL events, signature accumulation, witness receipt accumulation, and escrow queues — the KelRepository outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "package"

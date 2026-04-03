@@ -37,10 +37,8 @@ adjacents:
     relationship: "Publishes and consumes domain events for cross-domain coordination"
 
 externals:
-  - name: "Duplicity Evidence Repository"
-    abstraction: "Repository"
-    ref: "port://integrity/evidence/outbound/escrow-storage"
-    implementation_notes: "Temporary escrow with timeout for likely duplicitous events, permanent append-only storage for confirmed duplicity evidence"
+  - ref: "domain://externals/persistence"
+    relationship: "Temporary escrow for likely duplicitous events and permanent duplicity evidence storage — the escrow-storage outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "module"

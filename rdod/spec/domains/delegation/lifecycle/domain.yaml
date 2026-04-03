@@ -34,10 +34,8 @@ kernels: []
 adjacents: []
 
 externals:
-  - name: "Delegation Repository"
-    abstraction: "Repository"
-    ref: "port://delegation/lifecycle/outbound/delegation-repository"
-    implementation_notes: "Persistence for the delegation approval workflow — tracks pending approvals, pending witnesses, delegable events, approved seals, and unverified seals."
+  - ref: "domain://externals/persistence"
+    relationship: "Delegation approval workflow persistence — pending approvals, delegable events, approved seals, the delegation-repository outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "module"

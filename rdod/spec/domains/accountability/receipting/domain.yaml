@@ -36,10 +36,8 @@ adjacents:
     relationship: "Publishes and consumes domain events for cross-domain coordination"
 
 externals:
-  - name: "Receipt Repository"
-    abstraction: "Repository"
-    ref: "port://accountability/receipting/outbound/persistence"
-    implementation_notes: "Typed receipt storage — verified receipts (non-transferable, transferable, witness-indexed) and unverified receipt escrows."
+  - ref: "domain://externals/persistence"
+    relationship: "Typed receipt storage for verified and unverified receipts — the persistence outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "module"

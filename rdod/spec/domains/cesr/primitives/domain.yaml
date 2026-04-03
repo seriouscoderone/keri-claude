@@ -63,23 +63,7 @@ adjacents: []
 
 externals:
   - ref: "domain://externals/cryptographic-primitives"
-    source: "Ed25519 (32-byte keys, 64-byte sigs), X25519 (32-byte keys), ECDSA secp256k1 (33-byte pub, 64-byte sig), ECDSA secp256r1 (33-byte pub, 64-byte sig), Ed448 (57-byte keys, 114-byte sigs), Blake3-256/512, Blake2b-256/512, SHA2-256/512, SHA3-256/512"
     relationship: "Each cryptographic algorithm output type maps to a specific code table entry — the code IS the algorithm identifier"
-  - name: "Cryptographic Library"
-    abstraction: "Adapter"
-    ref: "port://cesr/primitives/outbound/crypto"
-    implementation_notes: >
-      Interface: sign(private_key: bytes, message: bytes) -> bytes;
-      verify(public_key: bytes, signature: bytes, message: bytes) -> bool;
-      digest(algorithm: DigestAlgorithm, data: bytes) -> bytes;
-      generate_keypair(algorithm: string) -> (public_key, private_key);
-      derive_key(salt: bytes, path: string, algorithm: string) -> bytes.
-      Implementations: libsodium (Ed25519 signing, X25519 key exchange, Blake2b hashing),
-      blake3 (Blake3-256 hashing), argon2 (password-based key stretching for Signify salts),
-      ed25519-dalek/k256/p256 (Rust).
-      Invariants: Algorithm selection is determined by the CESR code (not a runtime choice);
-      implementations MUST support Ed25519 and Blake3-256 at minimum;
-      key material MUST be zeroed after use (ZeroizeOnDrop pattern).
 
 implementation_guidance:
   suggested_type: "module"

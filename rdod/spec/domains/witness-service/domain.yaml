@@ -48,14 +48,10 @@ externals:
   - ref: "domain://externals/cryptographic-primitives"
     source: "Ed25519 for receipt signatures — witnesses sign with their own non-transferable keys"
     relationship: "Cryptographic signing primitives used directly in receipt generation"
-  - name: "Witness Repository"
-    abstraction: "Repository"
-    ref: "port://witness-service/outbound/witness-repository"
-    implementation_notes: "Append-only KERL persistence — event logs and receipts per monitored AID."
-  - name: "HTTP Server"
-    abstraction: "Adapter"
-    ref: "port://witness-service/api/outbound/http-server"
-    implementation_notes: "Event receipt endpoint, OOBI endpoint (/.well-known/keri/oobi/{aid}/{role}/{eid}), and query endpoint."
+  - ref: "domain://externals/persistence"
+    relationship: "Append-only KERL persistence for event logs and receipts per monitored AID — the witness-repository outbound port delegates to this external"
+  - ref: "domain://externals/transport"
+    relationship: "HTTP endpoints for event submission, OOBI resolution, and queries — the http-server outbound port delegates to this external"
 
 implementation_guidance:
   suggested_type: "service"
