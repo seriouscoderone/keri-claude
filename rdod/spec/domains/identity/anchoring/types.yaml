@@ -1,11 +1,26 @@
 domain_ref: "identity/anchoring"
 
-imports:
-  - type: "types://cesr/primitives#Seal"
-    usage: "All seal types (DigestSeal, MerkleRootSeal, SourceEventSeal, EventSeal, LastEstSeal, BackerSeal, TypedDigestSeal) are defined in cesr/primitives"
-  - type: "types://cesr/primitives#DigestAlgorithm"
-    usage: "Digest algorithm enum for seal digest computation"
+# Seal types are defined canonically in types://cesr/primitives#Seal (DigestSeal,
+# MerkleRootSeal, SourceEventSeal, EventSeal, LastEstSeal, BackerSeal, TypedDigestSeal).
+# Digest algorithm enum: types://cesr/primitives#DigestAlgorithm.
+# This domain uses those types directly via kernel adoption — no local redefinition needed.
 
-# Local seal types removed — canonical definitions are in cesr/primitives.
-# EventLocationSeal ({i,s,t,p}) removed — not protocol-normative (keripy implementation only).
-types: []
+types:
+  - name: "CommitmentContext"
+    description: "The semantic context of a seal (cryptographic commitment) within a Key Event. A seal's meaning depends on where it appears: in an interaction event it commits data; in a delegating event it approves delegation; in a TEL-anchoring event it authorizes a credential operation. This type captures the adopter-centric purpose, not the wire-format encoding (which is handled by cesr/primitives#Seal)."
+    variants:
+      - name: "default"
+        fields:
+          - name: "purpose"
+            type: "string"
+            required: true
+            description: "The adopter-facing purpose: 'commit' (anchor data), 'approve' (delegation), 'authorize' (credential operation), 'cross-reference' (link to another KEL event)"
+            constraints:
+              enum: ["commit", "approve", "authorize", "cross-reference"]
+          - name: "seal_type"
+            type: "types://cesr/primitives#Seal"
+            required: true
+            description: "The underlying CESR seal type"
+        invariants:
+          - "Commitment persistence: a seal remains valid regardless of subsequent Key State changes"
+          - "The seal's purpose is determined by the event context, not the seal's wire format"

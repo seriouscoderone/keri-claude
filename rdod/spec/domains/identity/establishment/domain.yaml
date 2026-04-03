@@ -18,6 +18,12 @@ description: >
   out "seal types" or "event serialization" would create artificial boundaries — seal
   structure lives in cesr/primitives, serialization lives in cesr/composition, and threshold
   satisfaction imports from identity/thresholds. This domain owns the pipeline, not the primitives.
+
+  Abstract dependencies: port://identity/establishment/inbound/threshold-satisfaction is resolved
+  by domain://identity/thresholds (signing threshold satisfaction — resolved at composition time,
+  not a build-time import); port://identity/establishment/inbound/witness-threshold-check is
+  resolved by domain://accountability (witness threshold / TOAD check — resolved at composition
+  time, not a build-time import).
 version: "0.1.0"
 tier: "domain"
 
@@ -57,14 +63,6 @@ externals:
     abstraction: "Repository (read-only)"
     ref: "port://identity/establishment/outbound/state-lookup"
     implementation_notes: "Reads current key state and KEL to provide validation context for incoming events."
-
-abstract_dependencies:
-  - port: "port://identity/establishment/inbound/threshold-satisfaction"
-    resolved_by: "domain://identity/thresholds"
-    notes: "Signing threshold satisfaction — resolved at composition time, not a build-time import"
-  - port: "port://identity/establishment/inbound/witness-threshold-check"
-    resolved_by: "domain://accountability"
-    notes: "Witness threshold (TOAD) check — resolved at composition time, not a build-time import"
 
 implementation_guidance:
   suggested_type: "module"

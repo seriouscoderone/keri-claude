@@ -2,12 +2,15 @@ domain_ref: "cesr/primitives"
 
 types:
   - name: "Matter"
-    description: "Base type for all CESR-qualified cryptographic primitives. Encapsulates a (code, raw) pair with domain transforms to/from qb64 (Text) and qb2 (Binary)."
-    code_assignments:
-      one_char_uppercase: "All 26 uppercase one-char codes (A-Z) are assigned — see code-table.yaml"
-      one_char_lowercase_assigned: "Only lowercase 'a' (Salt_256) is assigned"
-      one_char_lowercase_reserved: "Lowercase b-z are parser-recognized but UNASSIGNED/RESERVED — error handling should distinguish 'reserved/unassigned' from 'invalid'"
-      encryption_codes: "C (X25519), O (X25519_Private), P (X25519_CipherSeed), 1AAH (ECDSA_256r1_Seed) — included in code table with Sizage entries; behavioral types (Encrypter/Decrypter) deferred to future encryption subdomain"
+    description: >
+      Base type for all CESR-qualified cryptographic primitives. Encapsulates a (code, raw) pair
+      with domain transforms to/from qb64 (Text) and qb2 (Binary). Code assignments: all 26
+      uppercase one-char codes (A-Z) are assigned (see code-table.yaml); only lowercase 'a'
+      (Salt_256) is assigned — lowercase b-z are parser-recognized but UNASSIGNED/RESERVED
+      (error handling should distinguish 'reserved/unassigned' from 'invalid'); encryption codes
+      C (X25519), O (X25519_Private), P (X25519_CipherSeed), 1AAH (ECDSA_256r1_Seed) are
+      included in code table with Sizage entries — behavioral types (Encrypter/Decrypter)
+      deferred to future encryption subdomain.
     variants:
       - name: "default"
         fields:
@@ -33,6 +36,8 @@ types:
           - "qb64 length is always a multiple of 4 characters (quadlet-aligned)"
           - "qb2 length is always a multiple of 3 bytes (triplet-aligned)"
           - "Construction from any one representation yields the other two"
+          - "Qualification (type-level operation): constructing a Matter from raw bytes, qb64, or qb2 is idempotent — the same input always yields the same qualified primitive. Errors: InvalidPrimitiveCodeError, RawSizeMismatchError, InvalidQB64Error, InvalidQB2Error."
+          - "Subtype-specific validation: Verfer construction additionally verifies key algorithm compatibility; Diger validates digest length; Siger/Cigar may raise SignatureVerificationError or DigestMismatchError on verify()."
 
   - name: "SigningThreshold"
     description: "CESR-encoded threshold expression (Tholder). Three encoding variants for representing signing quorum requirements. Tholder owns BOTH encoding/decoding AND satisfaction logic — satisfy() is a core part of Tholder, not delegated to a separate domain. This is a deliberate design choice following keripy."
@@ -348,6 +353,7 @@ types:
           - "main_index_size + other_index_size = soft_size"
           - "Used for dual-indexed signatures (Siger) where ondex differs from index"
           - "full_size is always a multiple of 4 (quadlet alignment)"
+          - "Code resolution (type-level operation): given a CESR type code string, returns the corresponding IndexedSizage entry. This is an idempotent lookup — the code table is fixed at compile/init time. Raises InvalidPrimitiveCodeError for unrecognized codes."
 
   - name: "Xizage"
     description: "Extended indexed sizage for dual-indexed CESR codes. Defines the symmetric split of the soft part into main index and ondex portions."

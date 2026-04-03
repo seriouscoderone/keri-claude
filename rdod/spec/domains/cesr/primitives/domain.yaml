@@ -7,15 +7,21 @@ id: "cesr/primitives"
 name: "CESR Primitives"
 
 description: >
-  The subdomain responsible for qualifying raw cryptographic material and data
-  values as self-framing CESR primitives. Defines the Matter base type and its
-  specialized agent-noun subtypes (Verfer, Diger, Siger, etc.), the code table
-  entries that map type codes to cryptographic algorithms and raw sizes, and the
-  three-domain (T, B, R) representation transforms (qb64, qb2, raw). Follows
-  the KERI naming convention: gerund-module, agent-noun class, -Dex code table.
+  Kernel providing CESR-qualified cryptographic primitives and data types.
+  Defines the Matter base type and its specialized agent-noun subtypes
+  (Verfer, Diger, Siger, etc.), the code table entries that map type codes
+  to cryptographic algorithms and raw sizes, and the three-domain (T, B, R)
+  representation transforms (qb64, qb2, raw). Follows the KERI naming
+  convention: gerund-module, agent-noun class, -Dex code table.
+
+  NOTE: This is a kernel, not a full domain. The ports defined in ports.yaml
+  represent type-level convenience operations (qualification, code resolution)
+  called only by the parent cesr domain — they are NOT domain interface
+  contracts. The real API surface is the types themselves (Matter, Verfer,
+  Diger, etc.) which downstream domains import and use directly.
 
 version: "0.1.0"
-tier: "domain"
+tier: "kernel"
 
 source_material:
   - type: document

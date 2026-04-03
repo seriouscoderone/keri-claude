@@ -19,6 +19,12 @@ ports:
   - id: "port://accountability/consensus/inbound/first-seen-check"
     type: inbound
     name: "First-seen Check"
+    description: >
+      Guard: When a second event at the same (aid, sn) arrives with a different SAID, check
+      superseding rules (A0-C1) before accepting — superseding creates a fork, not a first-seen
+      override. Idempotency refinement: same SAID is idempotent (accumulate signatures, no state
+      change to event status); different SAID is non-idempotent (may trigger duplicity detection
+      or superseding evaluation).
     semantics: command
     idempotent: false
     contract:
@@ -26,8 +32,4 @@ ports:
       output: "types://accountability/consensus#AlreadySeen"
       errors:
         - "errors://accountability/consensus#FirstSeenConflictError"
-      guard: "When a second event at the same (aid, sn) arrives with a different SAID, check superseding rules (A0-C1) before accepting — superseding creates a fork, not a first-seen override"
-      idempotency_refinement:
-        same_said: "Idempotent — accumulate signatures, no state change to event status"
-        different_said: "Non-idempotent — may trigger duplicity detection or superseding evaluation"
     refs: ["domain://accountability"]

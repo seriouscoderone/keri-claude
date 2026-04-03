@@ -40,63 +40,21 @@ types:
           - "Text format: '--' + selector + 5 Base64 chars (8 chars total)"
 
   - name: "CESRGroup"
-    description: "A count-code-prefixed group of CESR primitives. Groups are self-framing and composable — they can nest."
-    genus_specific_codes:
-      keri_acdc_2_00:
-        - code: "-K"
-          name: "ControllerIdxSigs"
-          structure: "Vec<Siger>"
-        - code: "-L"
-          name: "WitnessIdxSigs"
-          structure: "Vec<Siger>"
-        - code: "-M"
-          name: "NonTransReceiptCouples"
-          structure: "Vec<(Prefixer, Cigar)>"
-        - code: "-N"
-          name: "TransReceiptQuadruples"
-          structure: "Vec<(Prefixer, Seqner, Saider, Siger)>"
-        - code: "-O"
-          name: "FirstSeenReplayCouples"
-          structure: "Vec<(Seqner, Dater)>"
-        - code: "-P"
-          name: "PathedMaterial"
-          structure: "Vec<(Pather, CesrGroup)>"
-        - code: "-Q"
-          name: "DigestSealSingles"
-          structure: "Vec<Saider>"
-        - code: "-R"
-          name: "MerkleRootSealSingles"
-          structure: "Vec<Diger>"
-        - code: "-S"
-          name: "SealSourceCouples"
-          structure: "Vec<(Seqner, Saider)>"
-        - code: "-T"
-          name: "SealSourceTriples"
-          structure: "Vec<(Seqner, Saider, Diger)>"
-        - code: "-U"
-          name: "SealSourceLastSingles"
-          structure: "Vec<Prefixer>"
-        - code: "-V"
-          name: "BackerRegistrarSealCouples"
-          structure: "Vec<(Prefixer, Saider)>"
-        - code: "-W"
-          name: "TypedDigestSealCouples"
-          structure: "Vec<(Bexter, Saider)>"
-        - code: "-X"
-          name: "TransIdxSigGroups"
-          structure: "Vec<(Prefixer, Seqner, Saider, ControllerIdxSigs)>"
-        - code: "-Y"
-          name: "TransLastIdxSigGroups"
-          structure: "Vec<(Prefixer, ControllerIdxSigs)>"
-        - code: "-Z"
-          name: "PathedMaterialQuadlets"
-          structure: "raw bytes (opaque)"
-        - code: "-a"
-          name: "BlindedStateCouples"
-          structure: "blinded state attachment"
-        - code: "-b"
-          name: "BlindedStateDiscCouples"
-          structure: "blinded state disclosure attachment"
+    description: >
+      A count-code-prefixed group of CESR primitives. Groups are self-framing and composable —
+      they can nest. KERI/ACDC 2.00 genus-specific group codes: -K ControllerIdxSigs Vec<Siger>,
+      -L WitnessIdxSigs Vec<Siger>, -M NonTransReceiptCouples Vec<(Prefixer, Cigar)>,
+      -N TransReceiptQuadruples Vec<(Prefixer, Seqner, Saider, Siger)>,
+      -O FirstSeenReplayCouples Vec<(Seqner, Dater)>, -P PathedMaterial Vec<(Pather, CesrGroup)>,
+      -Q DigestSealSingles Vec<Saider>, -R MerkleRootSealSingles Vec<Diger>,
+      -S SealSourceCouples Vec<(Seqner, Saider)>, -T SealSourceTriples Vec<(Seqner, Saider, Diger)>,
+      -U SealSourceLastSingles Vec<Prefixer>, -V BackerRegistrarSealCouples Vec<(Prefixer, Saider)>,
+      -W TypedDigestSealCouples Vec<(Bexter, Saider)>,
+      -X TransIdxSigGroups Vec<(Prefixer, Seqner, Saider, ControllerIdxSigs)>,
+      -Y TransLastIdxSigGroups Vec<(Prefixer, ControllerIdxSigs)>,
+      -Z PathedMaterialQuadlets raw bytes (opaque),
+      -a BlindedStateCouples blinded state attachment,
+      -b BlindedStateDiscCouples blinded state disclosure attachment.
     variants:
       - name: "attachment"
         fields:

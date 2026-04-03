@@ -6,6 +6,9 @@ ports:
   - id: "port://accountability/dissemination/inbound/event-propagation"
     type: inbound
     name: "Event Propagation"
+    description: >
+      Caller provides resolved Endpoints (not witness AIDs); witness AID -> Endpoint resolution
+      is the caller's responsibility via discovery/OOBI resolution.
     semantics: command
     idempotent: false
     contract:
@@ -15,32 +18,34 @@ ports:
         - "errors://accountability/dissemination#DisseminationTimeoutError"
         - "errors://accountability/dissemination#WitnessUnreachableError"
         - "errors://accountability/dissemination#WitnessRejectionError"
-      notes: "Caller provides resolved Endpoints (not witness AIDs); witness AID -> Endpoint resolution is the caller's responsibility via discovery/OOBI resolution"
     refs: ["domain://accountability"]
 
   - id: "port://accountability/dissemination/inbound/witness-management"
     type: inbound
     name: "Witness Management"
+    description: >
+      Delegates to identity/state key state query for witness configuration — does NOT maintain
+      independent witness state.
     semantics: query
     idempotent: true
     contract:
       input: "types://cesr/primitives#AID"
       output: "types://accountability/dissemination#WitnessConfig"
       errors: []
-      notes: "Delegates to identity/state key state query for witness configuration — does NOT maintain independent witness state"
     refs: ["domain://accountability"]
 
   # Outbound — witness config dependency
   - id: "port://accountability/dissemination/outbound/witness-state"
     type: outbound
     name: "Witness State Query"
+    description: >
+      Borrows witness configuration from identity/state — single source of truth.
     semantics: query
     idempotent: true
     contract:
       input: "types://cesr/primitives#AID"
       output: "types://accountability/dissemination#WitnessConfig"
       errors: []
-      notes: "Borrows witness configuration from identity/state — single source of truth"
     refs: ["domain://identity/state"]
 
   # Outbound — what dissemination calls

@@ -19,9 +19,19 @@ types:
           - "Used as input to superseding rule evaluation"
 
   - name: "SupersedingRule"
-    description: "Imported from types://integrity/recovery#SupersedingRule — the canonical superseding rule enum. Delegation/recovery uses B1-B3 and C/C1 rules with delegation-specific context (seal verification, delegator KEL traversal) but does not redefine the superseding logic."
-    import: "types://integrity/recovery#SupersedingRule"
-    notes: "See integrity/recovery/types.yaml for the canonical definition of all rule variants (A0, A1, A2, B1, B2, B3, C, C1)"
+    description: >
+      Alias for types://integrity/recovery#SupersedingRule — the canonical superseding rule enum.
+      Delegation/recovery uses B1-B3 and C/C1 rules with delegation-specific context (seal
+      verification, delegator KEL traversal) but does not redefine the superseding logic. See
+      integrity/recovery/types.yaml for the canonical definition of all rule variants (A0, A1,
+      A2, B1, B2, B3, C, C1).
+    variants:
+      - name: "default"
+        fields:
+          - name: "rule"
+            type: "types://integrity/recovery#SupersedingRule"
+            required: true
+            description: "The canonical superseding rule from the integrity/recovery domain"
 
   - name: "NotSuperseding"
     description: "Result when no superseding rule applies between two candidate events."
