@@ -51,14 +51,7 @@ For parallel execution, split the layer's domains into 2-4 groups by cluster aff
 
 ### 2.2 Plan each domain
 
-For each domain, read ALL spec files and produce an implementation plan covering:
-- Types and data structures (from types.yaml)
-- Port interfaces (from ports.yaml)
-- Error handling (from errors.yaml)
-- Verification and invariants (from verification.yaml)
-- State machines and validation pipelines
-- Cross-domain protocols (from protocols.yaml)
-- Integration scenario assertions
+For each domain, read ALL spec files and produce a full implementation plan per the **[Implementation Plan Template](implementation-plan-template.md)**. The template defines exactly what to cover (sections A through J) and the output format (12 sections per domain). The most important output is section 12: **Open Questions**.
 
 ### 2.3 Surface open questions
 
