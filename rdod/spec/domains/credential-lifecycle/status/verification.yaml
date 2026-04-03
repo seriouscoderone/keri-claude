@@ -141,7 +141,7 @@ properties:
     notes: "Cache consistency check — replay is authoritative"
 
 contracts:
-  - port_ref: "port://credential-lifecycle/status/inbound/state-query"
+  - port_ref: "port://credential-lifecycle/status/inbound/authorize"
     preconditions:
       - formal:
           language: python
@@ -157,7 +157,7 @@ contracts:
           expression: "result == replay_state(get_events(regid, acdc_said))"
         description: "Returned snapshot matches what TEL replay would produce"
 
-  - port_ref: "port://credential-lifecycle/status/inbound/state-query"
+  - port_ref: "port://credential-lifecycle/status/inbound/authorize"
     preconditions:
       - formal:
           language: python
@@ -187,7 +187,7 @@ contracts:
           expression: "result == replay_state(events)"
         description: "Reconstruction produces the same state as sequential replay"
 
-  - port_ref: "port://credential-lifecycle/status/inbound/state-query"
+  - port_ref: "port://credential-lifecycle/status/inbound/authorize"
     preconditions:
       - description: "TEL event must reference an existing registry"
         formal:

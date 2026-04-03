@@ -172,7 +172,7 @@ terms:
       - "Out-of-Order -> accepted (when prior event arrives)"
       - "Partially-Signed -> accepted OR -> Partially-Witnessed (if sigs pass but witness threshold fails) OR -> Partially-Delegated (if sigs pass but delegation missing)"
       - "Partially-Witnessed -> accepted (when witness receipts arrive)"
-      - "Partially-Delegated -> accepted (when delegator's anchoring event arrives) OR -> Partially-Witnessed (if delegation resolves but witnesses still insufficient)"
+      - "Partially-Delegated -> accepted (when delegator's approval event arrives) OR -> Partially-Witnessed (if delegation resolves but witnesses still insufficient)"
       - "Likely Duplicitous -> permanent storage (forensic evidence, never auto-resolved)"
       - "Escrow processing order matters: OOE first, then receipt escrows, then PSE, then PWE, then PDE"
     examples:
@@ -328,7 +328,7 @@ terms:
       - "Self-sovereign: inception uses icp event type, no di field"
       - "Delegated: inception uses dip event type, di field contains delegator's AID"
       - "Delegated rotation uses drt event type (not rot)"
-      - "Delegator must anchor a seal in their own KEL approving each delegated establishment event"
+      - "Delegator must commit a seal in their own KEL approving each delegated establishment event"
     examples:
       - "Self-sovereign: {t: 'icp', ...} — independent root of trust"
       - "Delegated: {t: 'dip', di: '<delegator-aid>', ...} — requires delegator approval"
@@ -428,7 +428,7 @@ events:
 
   - name: "InteractionAnchored"
     payload: "aid: AID, sn: int, seals: [Seal], said: SAID"
-    triggers: "Controller anchors external data to the KEL via an interaction event"
+    triggers: "Controller commits external data to the KEL via an interaction event"
 
   - name: "KeyStateComputed"
     payload: "aid: AID, key_state: KeyState, from_event: EstablishmentEvent"

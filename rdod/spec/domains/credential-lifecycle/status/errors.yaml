@@ -27,7 +27,7 @@ errors:
       - field: "attempted_operation"
         type: "string"
         description: "The operation that was rejected (upd with ts='issued', upd with ts='revoked', bup with ts='issued', bup with ts='revoked')"
-    related_port: "port://credential-lifecycle/status/inbound/state-query"
+    related_port: "port://credential-lifecycle/status/inbound/authorize"
 
   - name: "MissingRegistryError"
     description: "Registry identifier not found in the Tevers (TEL event verifiers)"
@@ -42,11 +42,11 @@ errors:
       - field: "credential_said"
         type: "string"
         description: "The credential SAID referencing the missing registry"
-    related_port: "port://credential-lifecycle/status/inbound/state-query"
+    related_port: "port://credential-lifecycle/status/inbound/authorize"
 
-  - name: "MissingAnchorError"
-    description: "TEL event lacks a verified anchor seal in the issuer's KEL"
-    cause: "The issuer's KEL does not contain a seal binding this TEL event — non-repudiability cannot be established until the anchor appears"
+  - name: "MissingAuthorizationError"
+    description: "TEL event lacks a verified authorization in the issuer's identity history"
+    cause: "The issuer's identity history does not contain a commitment authorizing this TEL event — non-repudiability cannot be established until the authorization appears"
     recovery: "escrow"
     recovery_target: "MAE"
     severity: "transient"
@@ -59,8 +59,8 @@ errors:
         description: "The REGID of the registry"
       - field: "tel_event_said"
         type: "string"
-        description: "The SAID of the TEL event awaiting anchor"
-    related_port: "port://credential-lifecycle/status/inbound/state-query"
+        description: "The SAID of the TEL event awaiting authorization"
+    related_port: "port://credential-lifecycle/status/inbound/authorize"
 
   - name: "MissingIssuerError"
     description: "Issuer AID not found in the Kevers (key event verifiers)"
@@ -75,7 +75,7 @@ errors:
       - field: "credential_said"
         type: "string"
         description: "The SAID of the credential from the missing issuer"
-    related_port: "port://credential-lifecycle/status/inbound/state-query"
+    related_port: "port://credential-lifecycle/status/inbound/authorize"
 
   - name: "MissingSchemaError"
     description: "Credential schema SAID not found in the local cache"
@@ -90,7 +90,7 @@ errors:
       - field: "credential_said"
         type: "string"
         description: "The SAID of the credential referencing the schema"
-    related_port: "port://credential-lifecycle/status/inbound/state-query"
+    related_port: "port://credential-lifecycle/status/inbound/authorize"
 
   - name: "FailedSchemaValidationError"
     description: "Credential does not validate against its declared JSON schema"
@@ -107,7 +107,7 @@ errors:
       - field: "reason"
         type: "string"
         description: "Schema validation failure details"
-    related_port: "port://credential-lifecycle/status/inbound/state-query"
+    related_port: "port://credential-lifecycle/status/inbound/authorize"
 
   - name: "MissingChainError"
     description: "Chained credential in the edge section cannot be verified"
@@ -125,7 +125,7 @@ errors:
       - field: "edge_label"
         type: "string"
         description: "The edge label identifying the chain"
-    related_port: "port://credential-lifecycle/status/inbound/state-query"
+    related_port: "port://credential-lifecycle/status/inbound/authorize"
 
   - name: "RevokedChainError"
     description: "A credential in the edge chain has been revoked"
@@ -142,7 +142,7 @@ errors:
       - field: "edge_label"
         type: "string"
         description: "The edge label identifying the revoked chain"
-    related_port: "port://credential-lifecycle/status/inbound/state-query"
+    related_port: "port://credential-lifecycle/status/inbound/authorize"
 
   - name: "ValidationError"
     description: "TEL event or credential failed structural validation"
@@ -156,11 +156,11 @@ errors:
       - field: "reason"
         type: "string"
         description: "Specific validation failure reason"
-    related_port: "port://credential-lifecycle/status/inbound/state-query"
+    related_port: "port://credential-lifecycle/status/inbound/authorize"
 
-  - name: "TelRepositoryStateError"
-    description: "TEL Repository guard rejected a TEL event because the credential is in an invalid state for the requested transition"
-    cause: "The credential's lifecycle state (NotIssued, Issued, Revoked) does not permit the submitted TEL event — the state machine rejects the transition at the repository guard"
+  - name: "StatusServiceStateError"
+    description: "StatusService rejected a credential state change because the credential is in an invalid state for the requested transition"
+    cause: "The credential's lifecycle state (NotIssued, Issued, Revoked) does not permit the submitted state change — the StatusService rejects the transition"
     recovery: "abort"
     severity: "fatal"
     context:
@@ -175,9 +175,9 @@ errors:
         description: "The TEL event ilk that was rejected"
     related_port: "port://credential-lifecycle/status/outbound/tel-repository"
 
-  - name: "TelRepositoryValidationError"
-    description: "TEL Repository guard rejected a TEL event due to structural validation failure"
-    cause: "The TEL event failed guard validation — malformed body, invalid sequence number, missing registry, failed anchor check, missing issuer key state, or schema/chain validation failure"
+  - name: "StatusServiceValidationError"
+    description: "StatusService rejected a credential state change due to structural validation failure"
+    cause: "The state change failed StatusService validation — malformed body, invalid sequence number, missing registry, failed authorization check, missing issuer key state, or schema/chain validation failure"
     recovery: "abort"
     severity: "fatal"
     context:
@@ -186,5 +186,5 @@ errors:
         description: "The REGID (if parseable)"
       - field: "reason"
         type: "string"
-        description: "Specific guard validation failure reason"
+        description: "Specific StatusService validation failure reason"
     related_port: "port://credential-lifecycle/status/outbound/tel-repository"

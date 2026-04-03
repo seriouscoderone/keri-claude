@@ -27,7 +27,7 @@ terms:
       - "habery = Habery(name='controller', salt=salt) → creates collection with shared Baser and Manager"
       - "hab = habery.makeHab('myaid', icount=1, ncount=1, wits=[wit1, wit2]) → inception with 2 witnesses"
       - "hab.rotate(toad=2, cuts=[old_wit], adds=[new_wit]) → key rotation with witness change"
-      - "hab.interact(data=[seal]) → interaction event anchoring a seal"
+      - "hab.interact(data=[seal]) → interaction event committing a seal"
       - "Alternatively, a Controller object creates the equivalent of an Identifier Repository; its incept method creates a new identifier"
     related_terms: ["Local Key Manager", "Local Event Processor", "Local Database", "CLI Interface"]
 
@@ -120,14 +120,14 @@ terms:
     definition: "Full TEL (Transaction Event Log) processing and credential storage running locally on the controller's device. The Registry Collection manages registry TELs, the Verifier validates received credentials, and the Credentialer issues credentials — all in-process, no cloud agent needed."
     invariants:
       - "Registry TEL events (rip, upd, bup) created and stored in the local Event Database"
-      - "Credential issuance anchors ACDC SAID to the controller's KEL via interaction event"
-      - "Credential revocation via TEL revocation event, anchored to KEL"
+      - "Credential issuance authorizes ACDC SAID via the controller's KEL interaction event"
+      - "Credential revocation via TEL revocation event, authorized via KEL"
       - "Received credentials validated by local Verifier against issuer's KEL and registry TEL"
       - "Credential storage in local database — no cloud wallet"
       - "IPEX exchange messages (apply, offer, agree, grant, admit, spurn) are constructed and dispatched directly from the local agent — no cloud agent intermediary for credential exchange"
     examples:
       - "Create a local Registry Collection with the Identifier Repository → local registry"
-      - "Issue credential via the Registry Collection, anchor to KEL"
+      - "Issue credential via the Registry Collection, authorize via KEL"
       - "kli vc issue --name controller --alias myaid --registry myreg --schema schema_said --data @cred.json"
       - "kli vc list --name controller --alias myaid → list credentials in local wallet"
     related_terms: ["Habitat", "Local Database", "Local Event Processor"]
@@ -182,7 +182,7 @@ events:
 
   - name: "CredentialIssuedLocally"
     payload: "said: SAID, schema: SAID, recipient: AID, registry: string"
-    triggers: "Local Credentialer issues a credential and anchors it to the KEL"
+    triggers: "Local Credentialer issues a credential and authorizes it via the KEL"
 
   - name: "CredentialRevokedLocally"
     payload: "said: SAID, registry: string, revocation_sn: int"

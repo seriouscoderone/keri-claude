@@ -2,12 +2,17 @@
 domain_ref: "credential-lifecycle/verification"
 
 ports:
-  # Inbound -- what clients call
-  - id: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+  # Inbound -- VerificationService interface
+  - id: "port://credential-lifecycle/verification/inbound/verify"
     type: inbound
-    name: "TEL Event Validation"
+    name: "Verify Credential"
     semantics: command
     idempotent: false
+    description: >
+      Primary VerificationService operation — verifies the full authorization
+      chain for a credential: was it authorized by a valid issuer whose identity
+      history commits the authorization? Checks registry state, schema
+      conformance, edge chain integrity, and issuer key state.
     contract:
       input: "types://credential-lifecycle/verification#VerifiableEvent"
       output: "types://credential-lifecycle/verification#TelValidationPassed"
@@ -23,11 +28,15 @@ ports:
         - "errors://credential-lifecycle/verification#IncompleteVerifiableEventError"
     refs: ["domain://credential-lifecycle"]
 
-  - id: "port://credential-lifecycle/verification/inbound/process-escrows"
+  - id: "port://credential-lifecycle/verification/inbound/reprocess-pending"
     type: inbound
-    name: "Escrow Processing"
+    name: "Reprocess Pending Verifications"
     semantics: command
     idempotent: false
+    description: >
+      Drains verification escrow queues — re-verifies credentials whose
+      blocking condition (missing registry, missing chain, missing schema) may
+      have been resolved.
     contract:
       input: "types://credential-lifecycle/verification#TelNotification"
       output: "types://credential-lifecycle/verification#TelEscrowReprocessed"
@@ -35,12 +44,16 @@ ports:
         - "errors://credential-lifecycle/verification#EscrowTimeoutError"
     refs: ["domain://credential-lifecycle"]
 
-  # Outbound -- what verification calls
-  - id: "port://credential-lifecycle/verification/outbound/kel-and-state-lookup"
+  # Outbound -- VerificationService dependencies
+  - id: "port://credential-lifecycle/verification/outbound/authorization-lookup"
     type: outbound
-    name: "KEL and State Lookup"
+    name: "Authorization Lookup"
     semantics: query
     idempotent: true
+    description: >
+      Queries the IdentityService and StatusService to check whether the
+      authorization chain for a credential is complete — issuer's identity
+      history, credential status, and registry state.
     contract:
       input: "types://cesr/primitives#SAID"
       output: "types://credential-lifecycle/status#LifecycleStateSnapshot"
@@ -50,11 +63,14 @@ ports:
       - "Read-only: this port never mutates state, only queries it"
       - "Consistency: returned state reflects all events processed up to the point of the query"
 
-  - id: "port://credential-lifecycle/verification/outbound/escrow-repository"
+  - id: "port://credential-lifecycle/verification/outbound/verification-repository"
     type: outbound
-    name: "Verification Escrow Repository"
+    name: "Verification Repository"
     semantics: command
     idempotent: false
+    description: >
+      Persistence for credentials pending verification — partitioned by missing
+      prerequisite type (missing registry, missing chain, missing schema).
     contract:
       input: "types://credential-lifecycle/verification#VerifiableEvent"
       output: "types://credential-lifecycle/verification#VerifiableEvent"

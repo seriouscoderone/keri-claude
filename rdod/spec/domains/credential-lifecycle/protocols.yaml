@@ -2,7 +2,7 @@ domain_ref: "credential-lifecycle"
 
 protocols:
   - name: "CredentialIssuance"
-    description: "Issue a new credential — create ACDC, record in TEL, anchor in issuer's KEL. The credential becomes verifiable by any party that resolves the issuer's OOBI."
+    description: "Issue a new credential — create ACDC, record in TEL, authorize via issuer's KEL. The credential becomes verifiable by any party that resolves the issuer's OOBI."
     participants:
       - domain: "domain://credential-lifecycle/status"
         role: "Records issuance event in TEL, transitions credential to Issued state"
@@ -33,7 +33,7 @@ protocols:
       - seq: 2
         domain: "domain://credential-lifecycle/status"
         action: "construct_acdc"
-        port: "port://credential-lifecycle/status/inbound/state-query"
+        port: "port://credential-lifecycle/status/inbound/authorize"
         input:
           description: "Schema SAID, issuer AID, attributes, optional: recipient AID, privacy flag, edges, rules, registry SAID"
         output:
@@ -41,7 +41,7 @@ protocols:
       - seq: 3
         domain: "domain://credential-lifecycle/status"
         action: "construct_issuance_event"
-        port: "port://credential-lifecycle/status/inbound/state-query"
+        port: "port://credential-lifecycle/status/inbound/authorize"
         input:
           description: "Credential SAID, registry SAID, datetime"
           types:
@@ -81,7 +81,7 @@ protocols:
       - seq: 6
         domain: "domain://credential-lifecycle/status"
         action: "accept_issuance"
-        port: "port://credential-lifecycle/status/inbound/state-query"
+        port: "port://credential-lifecycle/status/inbound/authorize"
         input:
           description: "TEL event + KEL anchor confirmed"
         output:
@@ -107,7 +107,7 @@ protocols:
       - seq: 1
         domain: "domain://credential-lifecycle/status"
         action: "verify_credential_issued"
-        port: "port://credential-lifecycle/status/inbound/state-query"
+        port: "port://credential-lifecycle/status/inbound/authorize"
         input:
           description: "Credential SAID"
         output:
@@ -121,7 +121,7 @@ protocols:
       - seq: 2
         domain: "domain://credential-lifecycle/status"
         action: "construct_revocation_event"
-        port: "port://credential-lifecycle/status/inbound/state-query"
+        port: "port://credential-lifecycle/status/inbound/authorize"
         input:
           description: "Credential SAID, registry SAID, prior TEL event SAID, datetime"
           types:
@@ -157,7 +157,7 @@ protocols:
       - seq: 5
         domain: "domain://credential-lifecycle/status"
         action: "accept_revocation"
-        port: "port://credential-lifecycle/status/inbound/state-query"
+        port: "port://credential-lifecycle/status/inbound/authorize"
         input:
           description: "TEL event + KEL anchor confirmed"
         output:

@@ -84,7 +84,7 @@ properties:
     strategy: "Generate grants with and without TEL events; verify presence required"
     notes: "LEGACY (v1 -- do NOT implement): iss for backerless, bis for backed registries"
 
-  - invariant: "Grant contains the KEL anchor seal binding the TEL event to the issuer's KEL"
+  - invariant: "Grant contains the KEL authorization seal binding the TEL event to the issuer's KEL"
     term: "Credential Artifacts in Grant"
     technique: property-based
     formal:
@@ -200,9 +200,9 @@ validation_constraints:
     on_failure: "reject — ACDC integrity failure"
 
   - id: "C3_tel_anchor_verify"
-    constraint: "TEL issuance event must reference the ACDC SAID (tel_event.ta == acdc.d) and be anchored in the issuer's KEL via seal"
+    constraint: "TEL issuance event must reference the ACDC SAID (tel_event.ta == acdc.d) and be authorized in the issuer's KEL via seal"
     depends_on: ["C2_acdc_said_verify"]
-    on_failure: "escrow — missing TEL or KEL anchor"
+    on_failure: "escrow — missing TEL or KEL authorization"
 
   - id: "C4_proof_of_issuance"
     constraint: "Issuer's commitment (signature or seal) must verify against the most compact form's SAID"

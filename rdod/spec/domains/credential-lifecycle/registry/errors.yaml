@@ -66,8 +66,8 @@ errors:
   # There is no registry rotation, so no sequence number validation for management events beyond inception.
 
   - name: "MissingKELSealError"
-    description: "Registry management event is not anchored in the issuer's KEL"
-    cause: "A registry inception (rip) event was submitted without a corresponding anchor seal in the issuer's KEL"
+    description: "Registry management event is not authorized via the issuer's KEL"
+    cause: "A registry inception (rip) event was submitted without a corresponding authorization seal in the issuer's KEL"
     recovery: "escrow"
     recovery_target: "MAE"
     severity: "transient"
@@ -80,7 +80,7 @@ errors:
         description: "The issuer whose KEL lacks the seal"
       - field: "event_said"
         type: "string"
-        description: "The SAID of the unanchored registry event"
+        description: "The SAID of the unauthorized registry event"
     related_port: "port://credential-lifecycle/registry/inbound/registry-management"
 
   - name: "ConfigTraitMutationError"

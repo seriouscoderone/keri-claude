@@ -2,19 +2,25 @@
 domain_ref: "credential-lifecycle/status"
 
 ports:
-  # Inbound -- what clients call
-  - id: "port://credential-lifecycle/status/inbound/state-query"
+  # Inbound -- StatusService interface
+  - id: "port://credential-lifecycle/status/inbound/authorize"
     type: inbound
-    name: "State Query and Computation"
-    semantics: query
-    idempotent: true
+    name: "Authorize State Change"
+    semantics: command
+    idempotent: false
+    description: >
+      Primary StatusService operation — validates a credential lifecycle state
+      change (registry existence, issuer key state, KEL authorization, schema,
+      edge chain) and authorizes it. Produces a StatusWriteOutcome: accepted
+      (committed to TEL), escrowed (held pending missing prerequisites), or
+      rejected.
     contract:
       input: "types://credential-lifecycle/status#StateQueryInput"
-      output: "types://credential-lifecycle/status#StateChanged"
+      output: "types://credential-lifecycle/status#StatusWriteOutcome"
       errors:
         - "errors://credential-lifecycle/status#InvalidCredentialStateError"
         - "errors://credential-lifecycle/status#MissingRegistryError"
-        - "errors://credential-lifecycle/status#MissingAnchorError"
+        - "errors://credential-lifecycle/status#MissingAuthorizationError"
         - "errors://credential-lifecycle/status#MissingIssuerError"
         - "errors://credential-lifecycle/status#MissingSchemaError"
         - "errors://credential-lifecycle/status#FailedSchemaValidationError"
@@ -52,19 +58,18 @@ ports:
 
   - id: "port://credential-lifecycle/status/outbound/tel-repository"
     type: outbound
-    name: "TEL Repository"
+    name: "TelRepository"
     semantics: command
     idempotent: false
     description: >
-      Guarded Repository for the Transaction Event Log — same pattern as the
-      KEL Repository. Validates TEL events against the credential lifecycle
-      state machine, registry existence, issuer key state, KEL anchoring,
-      schema, and edge chain before accepting. Escrow queues hold events
-      pending missing prerequisites.
+      TelRepository — append-only persistence for the Transaction Event Log and
+      escrow queues. The StatusService IS the guard; the TelRepository IS the
+      storage. All writes go through the StatusService, never directly to the
+      repository.
     contract:
       input: "types://credential-lifecycle/status#TELEvent"
-      output: "types://credential-lifecycle/status#TelWriteOutcome"
+      output: "types://credential-lifecycle/status#StatusWriteOutcome"
       errors:
-        - "errors://credential-lifecycle/status#TelRepositoryStateError"
-        - "errors://credential-lifecycle/status#TelRepositoryValidationError"
+        - "errors://credential-lifecycle/status#StatusServiceStateError"
+        - "errors://credential-lifecycle/status#StatusServiceValidationError"
     refs: ["external://persistence"]

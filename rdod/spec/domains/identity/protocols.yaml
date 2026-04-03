@@ -168,14 +168,14 @@ protocols:
       failure: "Rotation escrowed or rejected — prior key state remains active"
 
   - name: "DelegatedInception"
-    description: "Create a delegated identifier requiring approval from a delegator. Two-party flow: delegate constructs the event, delegator anchors approval in their KEL."
+    description: "Create a delegated identifier requiring approval from a delegator. Two-party flow: delegate constructs the event, delegator commits approval in their KEL."
     participants:
       - domain: "domain://identity/establishment"
         role: "Validates the delegated inception event"
       - domain: "domain://delegation/authorization"
         role: "Verifies delegator's approval seal"
       - domain: "domain://identity/anchoring"
-        role: "Delegator anchors approval seal via interaction event"
+        role: "Delegator commits approval seal via interaction event"
       - domain: "domain://accountability/receipting"
         role: "Witnesses receipt both the delegate's and delegator's events"
     trigger: "Delegate requests inception with delegator AID specified"
@@ -215,7 +215,7 @@ protocols:
         input:
           description: "Delegate's dip event SAID, delegator's AID"
         output:
-          description: "Delegator's interaction event containing seal anchoring this dip"
+          description: "Delegator's interaction event containing seal committing to this dip"
         depends_on: [2]
         preconditions:
           - "verification://delegation/authorization#Cooperative Delegation"
@@ -226,10 +226,10 @@ protocols:
             compensation: "Partially-Delegated Escrow (PDE) — retried when delegator's ixn arrives"
       - seq: 4
         domain: "domain://identity/anchoring"
-        action: "delegator_anchors_seal"
+        action: "delegator_commits_approval"
         port: "port://identity/anchoring/inbound/data-anchoring"
         input:
-          description: "Delegator creates ixn with digest seal of delegate's dip SAID"
+          description: "Delegator creates ixn with digest seal committing to delegate's dip SAID"
           types:
             - ref: "types://identity/establishment#InteractionEvent"
               fields: ["a"]
@@ -281,7 +281,7 @@ protocols:
       - seq: 2
         domain: "domain://identity/state"
         action: "send_query"
-        port: "port://identity/state/inbound/state-tracking"
+        port: "port://identity/state/inbound/commit"
         input:
           description: "Signed qry message sent to target's known endpoints"
         output:
@@ -295,7 +295,7 @@ protocols:
       - seq: 3
         domain: "domain://identity/state"
         action: "process_reply"
-        port: "port://identity/state/inbound/state-tracking"
+        port: "port://identity/state/inbound/commit"
         input:
           description: "Signed rpy with key state data"
         output:
@@ -324,7 +324,7 @@ protocols:
       - domain: "domain://delegation/authorization"
         role: "Verifies delegator's re-approval seal"
       - domain: "domain://identity/anchoring"
-        role: "Delegator anchors re-approval seal via interaction event"
+        role: "Delegator commits re-approval seal via interaction event"
       - domain: "domain://accountability/receipting"
         role: "Witnesses receipt both delegate's and delegator's events"
     trigger: "Delegate requests key rotation for a delegated identifier"
@@ -391,10 +391,10 @@ protocols:
             compensation: "PDE — retried when delegator's event arrives"
       - seq: 5
         domain: "domain://identity/anchoring"
-        action: "delegator_anchors_seal"
+        action: "delegator_commits_approval"
         port: "port://identity/anchoring/inbound/data-anchoring"
         input:
-          description: "Delegator creates ixn with seal of delegate's drt SAID"
+          description: "Delegator creates ixn with seal committing to delegate's drt SAID"
           types:
             - ref: "types://identity/establishment#InteractionEvent"
               fields: ["a"]

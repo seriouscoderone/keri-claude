@@ -12,7 +12,7 @@ terms:
       - "Field order: [v, t, d, u, i, n, dt] -- all required"
       - "Sequence number n must be 0"
       - "SAID of this event becomes the REGID referenced by the rd field in ACDCs"
-      - "Must be anchored (sealed) in the issuer's KEL"
+      - "Must be authorized via a seal in the issuer's KEL"
       - "Registry mode (blindable or non-blindable) set at inception is immutable -- no rotation in v2"
     examples:
       - "Registry inception with issuer AID, non-blindable mode, and UUID for unique identification"
@@ -85,5 +85,5 @@ rules:
   - "Registry inception (rip) must have sequence number 0"
   - "Registry mode (blindable or non-blindable) is set at inception and cannot be changed -- configuration is immutable in v2"
   - "LEGACY (v1 -- do NOT implement): registry rotation (vrt) was valid for registries with backers -- no v2 equivalent"
-  - "Every registry management event must be anchored in the issuer's KEL"
+  - "Every registry management event must be authorized via the issuer's KEL"
   - "REGID is the SAID of the inception event -- it uniquely identifies the registry"

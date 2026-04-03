@@ -195,7 +195,7 @@ properties:
     notes: "Seal approval is the gate to KEL insertion — all four steps must pass, no shortcuts."
 
 contracts:
-  - port_ref: "port://delegation/lifecycle/inbound/delegation-validation"
+  - port_ref: "port://delegation/lifecycle/inbound/approve"
     preconditions:
       - formal:
           language: python
@@ -215,7 +215,7 @@ contracts:
           expression: "lambda result: result.is_failure() implies result.failure_step in (1, 2, 3, 4)"
         description: "Failure result identifies which specific step failed"
 
-  - port_ref: "port://delegation/lifecycle/inbound/escrow-management"
+  - port_ref: "port://delegation/lifecycle/inbound/check-approval-status"
     preconditions:
       - formal:
           language: python
@@ -231,7 +231,7 @@ contracts:
           expression: "lambda delegator_aid, events: all(e.delegator_aid == delegator_aid for e in events)"
         description: "get_escrowed_for_delegator returns only events for the specified delegator"
 
-  - port_ref: "port://delegation/lifecycle/outbound/escrow-store"
+  - port_ref: "port://delegation/lifecycle/outbound/delegation-repository"
     preconditions:
       - formal:
           language: python
@@ -315,10 +315,10 @@ validation_constraints:
   - id: "C3_delegator_seal_exists"
     constraint: "Delegator's KEL must contain an event with a seal whose digest matches the delegated event's SAID"
     depends_on: ["C2_delegator_identified"]
-    on_failure: "escrow to PDE — seal not yet anchored"
+    on_failure: "escrow to PDE — approval not yet committed"
 
   - id: "C4_seal_digest_matches"
-    constraint: "seal.d in delegator's anchor MUST equal SAID(delegated event)"
+    constraint: "seal.d in delegator's approval commitment MUST equal SAID(delegated event)"
     depends_on: ["C3_delegator_seal_exists"]
     on_failure: "reject — DelegatorSealMismatchError"
 

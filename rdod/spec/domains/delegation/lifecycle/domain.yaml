@@ -25,7 +25,7 @@ source_material:
 domain_clients:
   - ref: "domain://delegation"
     relationship: "Parent delegation domain delegates validation pipeline and escrow management for delegated events"
-    via_port: "port://delegation/lifecycle/inbound/delegation-validation"
+    via_port: "port://delegation/lifecycle/inbound/approve"
 
 subdomains: []
 
@@ -34,10 +34,10 @@ kernels: []
 adjacents: []
 
 externals:
-  - name: "Delegation Escrow Repository"
+  - name: "Delegation Repository"
     abstraction: "Repository"
-    ref: "port://delegation/lifecycle/outbound/escrow-store"
-    implementation_notes: "Escrow storage for delegation-specific queues — partially-delegated events, delegable events, approved seals, and unverified seals."
+    ref: "port://delegation/lifecycle/outbound/delegation-repository"
+    implementation_notes: "Persistence for the delegation approval workflow — tracks pending approvals, pending witnesses, delegable events, approved seals, and unverified seals."
 
 implementation_guidance:
   suggested_type: "module"
@@ -48,7 +48,7 @@ implementation_guidance:
     digest verification. Events failing at the seal-lookup step go to .pdes (partially-delegated
     escrow) or .delegables (if the delegator's event hasn't arrived at all). The
     processEscrowPartialDels() method sweeps .pdes periodically, promoting events when the
-    delegator's anchoring event is found. In keriox, the DelegationEscrow subscribes to
+    delegator's approval commitment is found. In keriox, the DelegationEscrow subscribes to
     KeyEventAdded notifications and retries escrowed delegated events when the delegator's
     KEL advances.
 

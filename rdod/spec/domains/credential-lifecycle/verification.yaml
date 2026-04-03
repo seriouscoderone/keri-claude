@@ -29,7 +29,7 @@ properties:
         )
     notes: "Strict monotonic sequence with no gaps, starting at zero"
 
-  - invariant: "Each event must be sealed (anchored) in the controlling KEL"
+  - invariant: "Each event must be authorized via a seal in the controlling KEL"
     term: "TEL"
     technique: property-based
     formal:
@@ -40,7 +40,7 @@ properties:
           seal_sn=tel_event.n, seal_said=said_compute(tel_event)
         )
     strategy: "Generate TEL events with and without KEL seals; verify only sealed events accepted"
-    notes: "KEL seal is the cryptographic anchor for TEL events"
+    notes: "KEL seal is the cryptographic authorization for TEL events"
 
   - invariant: "Registry inception rip event must have sequence number 0"
     term: "Registry Inception"
@@ -165,12 +165,12 @@ validation_constraints:
     depends_on: ["C1_registry_known", "C2_credential_identified"]
     on_failure: "reject — InvalidCredentialStateTransition"
 
-  - id: "C4_kel_anchor_verified"
-    constraint: "Issuer's KEL must contain an anchor seal binding this TEL event"
+  - id: "C4_kel_authorization_verified"
+    constraint: "Issuer's KEL must contain an authorization seal binding this TEL event"
     depends_on: ["C2_credential_identified"]
     on_failure: "escrow — issuer's KEL not yet available"
 
   - id: "C5_accept"
     constraint: "All constraints satisfied — TEL event accepted, credential state updated"
-    depends_on: ["C3_state_transition_valid", "C4_kel_anchor_verified"]
+    depends_on: ["C3_state_transition_valid", "C4_kel_authorization_verified"]
     on_failure: null

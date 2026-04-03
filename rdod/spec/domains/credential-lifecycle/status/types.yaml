@@ -156,8 +156,8 @@ types:
         invariants:
           - "Common case: attempting to issue an already-issued credential, or revoke a not-yet-issued one"
 
-  - name: "TelWriteOutcome"
-    description: "Result of submitting a TEL event to the TEL Repository guard. Same guarded-repository pattern as the KEL Repository."
+  - name: "StatusWriteOutcome"
+    description: "Result of submitting a credential lifecycle state change to the StatusService. The StatusService validates and authorizes the change before committing to the TelRepository."
     variants:
       - name: "accepted"
         fields:
@@ -180,7 +180,7 @@ types:
           - name: "escrow_reason"
             type: "string"
             required: true
-            description: "Blocking condition — missing registry, missing anchor, missing issuer key state, missing schema, missing chain"
+            description: "Blocking condition — missing registry, missing authorization, missing issuer key state, missing schema, missing chain"
         invariants:
           - "Stored in escrow queue keyed by blocking condition (MRE, MAE, MRI, MSE, MCE)"
           - "Re-enters the guard when the blocking condition resolves"

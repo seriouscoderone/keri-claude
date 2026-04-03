@@ -4,8 +4,8 @@ id: "identity"
 name: "KERI Identity Management"
 description: >
   Create and manage cryptographic identifiers — inception creates an AID bound to initial keys,
-  rotation changes the controlling keys via pre-rotation commitment, interaction events anchor
-  external data, and state tracking maintains the current authoritative key configuration.
+  rotation changes the controlling keys via pre-rotation commitment, interaction events commit
+  external data to the identity history, and state tracking maintains the current authoritative key configuration.
   This domain merges the event-driven lifecycle of key events (the KEL) with the computed
   key state that results from processing those events. It is the core of what KERI does:
   establishing, evolving, and querying the cryptographic identity of an AID.
@@ -33,8 +33,8 @@ published_language:
     description: "Entity controlling an AID — referenced by all domains that authenticate"
   - term: "Escrow Cascade"
     description: "Event flow between escrow queues as blocking conditions resolve — referenced by accountability, delegation, integrity, thresholds"
-  - term: "KEL Repository"
-    description: "Guarded Repository pattern — validation guard + escrow + persistence. Referenced by credential-lifecycle for the TEL Repository."
+  - term: "KelRepository"
+    description: "Append-only persistence for the Key Event Log and escrow queues. The IdentityService wraps the KelRepository — the Service IS the guard, the Repository IS the storage. Referenced by credential-lifecycle for the TelRepository."
 domain_clients: []
 
 subdomains:
@@ -49,7 +49,7 @@ subdomains:
     via_port: "port://identity/thresholds/inbound/threshold-satisfaction"
   - ref: "domain://identity/state"
     relationship: "Owns the Kever state machine — per-AID state tracking, state reconstruction from the KEL, establishment subsequence management, last establishment data, configuration trait enforcement, and the authoritative answer to 'what is this AID's current key state?'"
-    via_port: "port://identity/state/inbound/state-tracking"
+    via_port: "port://identity/state/inbound/commit"
   - ref: "domain://identity/anchoring"
     relationship: "Owns interaction events — binding external data to the KEL via cryptographic seals"
     via_port: "port://identity/anchoring/inbound/data-anchoring"
@@ -82,14 +82,10 @@ adjacents:
     pattern: "Partnership"
 
 externals:
-  - name: "Event Repository"
+  - name: "KelRepository"
     abstraction: "Repository"
-    ref: "port://identity/outbound/event-repository"
-    implementation_notes: "Append-only repository for KEL events with first-seen ordering, signature accumulation, and witness receipt accumulation"
-  - name: "Escrow Repository"
-    abstraction: "Repository"
-    ref: "port://identity/outbound/escrow-repository"
-    implementation_notes: "Temporary storage for events pending validation — partitioned by escrow type with timeout-based sweep"
+    ref: "port://identity/state/outbound/kel-repository"
+    implementation_notes: "Append-only persistence for KEL events with first-seen ordering, signature accumulation, witness receipt accumulation, and escrow queues partitioned by blocking condition with timeout-based sweep. The IdentityService wraps the KelRepository — the Service IS the guard, the Repository IS the storage."
 
 implementation_guidance:
   suggested_type: "package"
@@ -101,30 +97,34 @@ implementation_guidance:
     implementations must enforce normative field ordering, SAID computation, and deterministic
     key state derivation per the specification.
 
-    Guarded Repository pattern (applies to KEL Repository here and TEL Repository in
-    credential-lifecycle): A repository that enforces aggregate invariants on write — not
-    just CRUD storage. The guard validates before storing, producing one of three outcomes:
-    accept (write to the log), escrow (write to a pending queue), or reject (refuse the
-    write). The raw storage is an external://persistence adapter; the guard is domain logic
-    that wraps it.
-    Structure — guard: domain logic that validates the write (signature checks, threshold
-    satisfaction, witness receipts, delegation approval, duplicity detection); log:
-    append-only storage, the aggregate's source of truth (writes only happen after the guard
-    approves); escrow: pending writes, events the guard said 'not yet' to (each escrow type
-    corresponds to a specific missing prerequisite, re-enters the guard when the prerequisite
-    arrives); raw_persistence: external://persistence adapter (LMDB, DynamoDB, SQLite, etc.).
-    Outcomes — accept: guard approves, event appended to the log, domain event published;
-    escrow: guard says 'not yet', event stored in escrow queue keyed by blocking condition,
-    reprocessed when condition resolves; reject: guard says 'no', event refused, error
+    The Service-wraps-Repository pattern: The IdentityService IS the guard — it validates
+    events, enforces thresholds, and routes to escrow. The KelRepository IS the storage —
+    the append-only log and escrow queues. The adopter interacts with the IdentityService
+    (commit events, query state). The KelRepository is an internal persistence detail.
+
+    The same pattern applies to StatusService/TelRepository (credential-lifecycle/status),
+    DelegationService (delegation/lifecycle), and VerificationService
+    (credential-lifecycle/verification). Each Service owns its domain-specific validation
+    logic; each Repository provides persistence underneath.
+
+    Structure — Service (guard): domain logic that validates writes (signature checks,
+    threshold satisfaction, witness receipts, delegation approval, duplicity detection);
+    Repository (storage): append-only log (the aggregate's source of truth — writes only
+    happen after the Service approves) + escrow queues (pending writes — events the Service
+    said 'not yet' to, each escrow type corresponds to a specific missing prerequisite,
+    re-enters the Service when the prerequisite arrives); raw_persistence:
+    external://persistence adapter (LMDB, DynamoDB, SQLite, etc.).
+    Outcomes — accept: Service approves, event committed to the log, domain event published;
+    escrow: Service says 'not yet', event stored in escrow queue keyed by blocking condition,
+    reprocessed when condition resolves; reject: Service says 'no', event refused, error
     returned to caller.
-    Invariants: the log is NEVER written to directly (all writes go through the guard); the
-    guard calls domain-specific checkers (it doesn't implement the checks itself); escrow is
-    part of the repository, not a separate concern (it's the 'pending writes' queue);
-    reprocessing re-enters the guard, not the log (escrowed events are fully re-validated);
-    the guard is what makes the repository a KERI repository, not just a database (the
+    Invariants: the log is NEVER written to directly (all writes go through the Service);
+    the Service calls domain-specific checkers (it doesn't implement the checks itself);
+    escrow is part of the repository, not a separate concern (it's the 'pending writes'
+    queue); reprocessing re-enters the Service, not the log (escrowed events are fully
+    re-validated); the Service is what makes this a KERI domain, not just a database (the
     acceptance rules ARE the protocol's value).
-    Example: KelRepository(store: PersistencePort, sigVerifier, witnessChecker,
-    delegationChecker, duplicityChecker).append(event, signatures) -> Accept | Escrow | Reject.
+    Example: IdentityService.commit(event, signatures) -> Accept | Escrow | Reject.
 
     Identifier Type Dimensions: Every KERI identifier is characterized by five orthogonal
     dimensions (Transferability, Delegation, Witnessing, Signing Model, Operational Constraints) expressed through

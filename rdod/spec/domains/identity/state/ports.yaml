@@ -2,15 +2,20 @@
 domain_ref: "identity/state"
 
 ports:
-  # Inbound — what the parent key-state domain calls
-  - id: "port://identity/state/inbound/state-tracking"
+  # Inbound — IdentityService interface
+  - id: "port://identity/state/inbound/commit"
     type: inbound
-    name: "State Tracking"
+    name: "Commit Event"
     semantics: command
     idempotent: false
+    description: >
+      Primary IdentityService operation — validates a key event (signatures,
+      thresholds, witnesses, delegation) and commits it to the identity history.
+      Produces a WriteOutcome: accepted (committed to log), escrowed (held
+      pending missing prerequisites), or rejected.
     contract:
       input: "types://identity/establishment#KeyEvent"
-      output: "types://identity/state#KeyState"
+      output: "types://identity/state#WriteOutcome"
       errors:
         - "errors://identity/state#OutOfOrderKeyStateError"
         - "errors://identity/state#UnverifiedReplyError"
@@ -61,14 +66,13 @@ ports:
 
   - id: "port://identity/state/outbound/kel-repository"
     type: outbound
-    name: "KEL Repository"
+    name: "KelRepository"
     semantics: command
     idempotent: false
     description: >
-      Guarded Repository — wraps raw persistence with a validation guard.
-      The guard calls domain-specific checkers (signature verification,
-      threshold satisfaction, witness receipts, delegation approval) before
-      allowing writes. Escrow is part of the repository, not a separate concern.
+      KelRepository — append-only persistence for the Key Event Log and escrow
+      queues. The IdentityService IS the guard; the KelRepository IS the storage.
+      All writes go through the IdentityService, never directly to the repository.
     contract:
       input: "types://identity/establishment#SignedEventMessage"
       output: "types://identity/state#WriteOutcome"
@@ -76,10 +80,10 @@ ports:
         - "errors://identity/establishment#ValidationError"
     refs: ["external://persistence"]
     invariants:
-      - "The KEL is NEVER written to directly — all writes go through the guard"
-      - "Escrow is part of the repository, not a separate persistence concern"
-      - "Reprocessing re-enters the guard — escrowed events are fully re-validated"
-      - "The guard is what makes this a KERI repository, not just a database"
+      - "The KEL is NEVER written to directly — all writes go through the IdentityService"
+      - "Escrow queues are part of the repository, not a separate persistence concern"
+      - "Reprocessing re-enters the IdentityService — escrowed events are fully re-validated"
+      - "The IdentityService is the guard; the KelRepository is the storage"
 
   - id: "port://identity/state/outbound/escrow-drain"
     type: outbound
@@ -87,9 +91,9 @@ ports:
     semantics: command
     idempotent: true
     description: >
-      Periodically drains escrow queues — re-submits pending events through
-      the validation guard. Events whose blocking condition has resolved
-      are promoted to the KEL. Timed-out events are pruned.
+      IdentityService periodically drains escrow queues by re-submitting events
+      through its own validation guard. Events whose blocking condition has
+      resolved are promoted to the KEL. Timed-out events are pruned.
     contract:
       input: "string"
       output: "types://identity/state#EscrowReprocessResult"

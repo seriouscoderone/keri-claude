@@ -25,9 +25,62 @@ types:
             constraints:
               enum: ["PDE", "MDE"]
         invariants:
-          - "PDE (partially-delegated) events are promoted when the delegator's anchor seal is confirmed"
+          - "PDE (partially-delegated) events are promoted when the delegator's approval commitment is confirmed"
           - "MDE (missing-delegable) events are promoted when the delegator approves locally"
           - "After promotion, the event is removed from the escrow and appended to the KEL"
+
+  - name: "DelegationWriteOutcome"
+    description: "Result of submitting a delegation request to the DelegationService."
+    variants:
+      - name: "approved"
+        fields:
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the approved delegated event"
+          - name: "delegator_approval_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number in the delegator's identity history where the approval was committed"
+        invariants:
+          - "The delegated event has been accepted into the delegatee's identity history"
+          - "The delegator's approval has been committed to the delegator's identity history"
+      - name: "pending_approval"
+        fields:
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the delegated event awaiting approval"
+          - name: "delegator_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "AID of the delegator whose approval is needed"
+        invariants:
+          - "Witnesses have acknowledged the event but the delegator has not yet committed approval"
+      - name: "pending_witnesses"
+        fields:
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the delegated event awaiting witness receipts"
+          - name: "witnesses_received"
+            type: "integer"
+            required: true
+            description: "Number of witness receipts received so far"
+          - name: "witnesses_needed"
+            type: "integer"
+            required: true
+            description: "Number of witness receipts needed (TOAD)"
+        invariants:
+          - "Waiting for sufficient witness receipts before requesting delegator approval"
+      - name: "rejected"
+        fields:
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Why the delegation was permanently rejected"
+        invariants:
+          - "Delegation permanently rejected — invalid signatures, DND trait, or seal mismatch"
 
   - name: "SignedEstablishmentEvent"
     description: "An establishment event bundled with its controller signatures, used in delegation validation."

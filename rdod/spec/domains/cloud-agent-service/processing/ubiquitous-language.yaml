@@ -65,7 +65,7 @@ terms:
 
   - term: "Long-running Operation"
     synonyms: ["Operation", "Monitor"]
-    definition: "An async task tracked by KERIA's Monitor — witness receipting, delegation approval, group formation, credential issuance, registry anchoring, OOBI resolution, end-role setup. Edge clients poll via GET /operations/{name}."
+    definition: "An async task tracked by KERIA's Monitor — witness receipting, delegation approval, group formation, credential issuance, registry authorization, OOBI resolution, end-role setup. Edge clients poll via GET /operations/{name}."
     invariants:
       - "Operations named {type}.{oid} — type identifies the workflow, oid the resource"
       - "Types: witness, delegation, group, query, registry, credential, endrole, oobi"
@@ -74,7 +74,7 @@ terms:
       - "Returned as HTTP 202 Accepted with operation handle"
     examples:
       - "POST /identifiers returns op name 'witness.EDP1...' — poll until done"
-      - "POST /credentials returns op name 'credential.EDP1...' — poll until TEL anchored"
+      - "POST /credentials returns op name 'credential.EDP1...' — poll until TEL authorized"
     related_terms: ["Processing Unit", "Counselor", "Boatswain", "Registrar", "Credentialer"]
 
   - term: "Postman"

@@ -31,11 +31,11 @@ terms:
 
   - term: "Credential Artifacts in Grant"
     synonyms: []
-    definition: "The grant message embeds all artifacts needed for the recipient to verify the credential: the ACDC itself, the issuance TEL update event (upd or bup with ts='issued'), and the KEL anchor seal. This bundle enables the recipient to independently verify the credential's authenticity, chain, and revocation status."
+    definition: "The grant message embeds all artifacts needed for the recipient to verify the credential: the ACDC itself, the issuance TEL update event (upd or bup with ts='issued'), and the KEL authorization seal. This bundle enables the recipient to independently verify the credential's authenticity, chain, and revocation status."
     invariants:
       - "Grant contains the full ACDC (or selective disclosure variant)"
       - "Grant contains the issuance TEL event (upd for non-blindable, bup for blindable registries)"
-      - "Grant contains the KEL anchor seal binding the TEL event to the issuer's KEL"
+      - "Grant contains the KEL authorization seal binding the TEL event to the issuer's KEL"
       - "Recipient can independently verify the credential without additional round-trips to the issuer"
     examples:
       - "Grant message carrying an ACDC, its upd(ts='issued') event from the TEL, and the seal from the issuer's KEL interaction event"
@@ -71,7 +71,7 @@ terms:
 
   - term: "Three-Link Verification Chain"
     synonyms: ["ACDC → TEL → KEL Chain"]
-    definition: "The full verification chain for a credential in a grant: (1) the ACDC itself, verified by its SAID; (2) the TEL issuance event, whose ta field must match the ACDC SAID; (3) the KEL anchor seal, whose digest must match the TEL event SAID. This three-link chain binds the credential to the issuer's key state at the time of issuance."
+    definition: "The full verification chain for a credential in a grant: (1) the ACDC itself, verified by its SAID; (2) the TEL issuance event, whose ta field must match the ACDC SAID; (3) the KEL authorization seal, whose digest must match the TEL event SAID. This three-link chain binds the credential to the issuer's key state at the time of issuance."
     invariants:
       - "Link 1: ACDC SAID verifies the credential's content integrity"
       - "Link 2: TEL event ta field == ACDC SAID — binds issuance to this specific credential"

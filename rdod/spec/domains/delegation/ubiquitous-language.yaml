@@ -55,17 +55,17 @@ terms:
 
   - term: "Boatswain"
     synonyms: []
-    definition: "Tracks delegation approval progress. Monitors whether a delegator has anchored the required seal approving a delegated event."
+    definition: "Tracks delegation approval progress. Monitors whether a delegator has committed the required approval seal for a delegated event."
     invariants:
       - "Agent owns one Boatswain instance"
       - "Monitor queries Boatswain to detect delegation operation completion"
     examples:
-      - "Delegated inception: Boatswain waits for delegator's anchoring seal -> marks complete"
+      - "Delegated inception: Boatswain waits for delegator's approval commitment -> marks complete"
     related_terms: ["Delegated Inception", "Delegated Rotation", "Partially-Delegated Escrow"]
 
   - term: "Partially-Delegated Escrow"
     synonyms: ["PDE"]
-    definition: "Holds delegated events (dip/drt) that pass signature validation but whose delegator has not yet anchored the approving seal in its own KEL. Events are reprocessed when the delegator's anchoring event arrives."
+    definition: "Holds delegated events (dip/drt) that pass signature validation but whose delegator has not yet committed the approving seal in its own KEL. Events are reprocessed when the delegator's approval event arrives."
     invariants:
       - "Triggered when the delegator's KEL does not contain a seal committing to this delegated event"
       - "Indexed by AID prefix and sequence number in the Partially-Delegated escrow"
@@ -84,29 +84,29 @@ terms:
       - "Distinct from Delegable Event Escrow: delegables are locally-originated events awaiting external approval; MDE holds events where verification of the attached seal failed"
       - "Reprocessed when the delegator's KEL is updated (new events may allow seal verification)"
     examples:
-      - "Delegated inception with source seal attachment arrives but the delegator's anchoring event is not yet confirmed -> MDE. Delegator's event is confirmed -> reprocessed -> delegation validated."
+      - "Delegated inception with source seal attachment arrives but the delegator's approval event is not yet confirmed -> MDE. Delegator's event is confirmed -> reprocessed -> delegation validated."
     related_terms: ["Partially-Delegated Escrow", "Delegable Event Escrow", "Delegation Validation"]
 
   - term: "Delegable Event Escrow"
     synonyms: []
-    definition: "Holds locally-originated delegated events (dip/drt created by this node's delegatee) that are awaiting the delegator's approval. Unlike PDE which holds remote delegated events, this escrow holds the local controller's own delegated events before the delegator has anchored its approving seal."
+    definition: "Holds locally-originated delegated events (dip/drt created by this node's delegatee) that are awaiting the delegator's approval. Unlike PDE which holds remote delegated events, this escrow holds the local controller's own delegated events before the delegator has committed its approving seal."
     invariants:
       - "Only applies to events the local node has originated as a delegatee"
       - "Indexed by AID prefix and sequence number in the Delegable Event escrow"
-      - "Cleared when the delegator's anchoring event is detected"
+      - "Cleared when the delegator's approval event is detected"
       - "Distinct from PDE: delegables are local events awaiting external approval, PDE are remote events awaiting external evidence"
     examples:
-      - "Local node creates a dip for a new delegated AID -> escrowed in Delegable Event escrow -> waits for delegator to anchor seal -> cleared on approval"
+      - "Local node creates a dip for a new delegated AID -> escrowed in Delegable Event escrow -> waits for delegator to commit approval seal -> cleared on approval"
     related_terms: ["Partially-Delegated Escrow", "Delegation Validation", "Event Locality"]
 
 events:
   - name: "DelegatedInceptionCreated"
     payload: "delegatee_aid: AID, delegator_aid: AID, key_state: KeyState, seal: DelegationSeal"
-    triggers: "A delegatee creates a delegated inception event and the delegator anchors the corresponding seal"
+    triggers: "A delegatee creates a delegated inception event and the delegator commits the corresponding approval seal"
 
   - name: "DelegatedRotationPerformed"
     payload: "delegatee_aid: AID, delegator_aid: AID, new_keys: [PublicKey], seal: DelegationSeal"
-    triggers: "A delegatee creates a delegated rotation event and the delegator anchors the corresponding seal"
+    triggers: "A delegatee creates a delegated rotation event and the delegator commits the corresponding approval seal"
 
 rules:
   - "Delegation requires cooperation — both the delegator seal and the delegatee's di field must exist"

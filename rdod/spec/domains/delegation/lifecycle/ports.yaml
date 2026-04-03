@@ -2,46 +2,73 @@
 domain_ref: "delegation/lifecycle"
 
 ports:
-  # Inbound — what clients call
-  - id: "port://delegation/lifecycle/inbound/delegation-validation"
+  # Inbound — DelegationService interface
+  - id: "port://delegation/lifecycle/inbound/approve"
     type: inbound
-    name: "Delegation Validation"
+    name: "Approve Delegation"
     semantics: command
     idempotent: false
+    description: >
+      Primary DelegationService operation — orchestrates the multi-step delegation
+      approval workflow: witness acknowledgment, delegator approval request,
+      approval verification, publication. Produces a DelegationWriteOutcome:
+      approved (delegation accepted), pending-approval (waiting for delegator),
+      pending-witnesses (waiting for witness receipts), or rejected.
     contract:
       input: "types://delegation/lifecycle#SignedEstablishmentEvent"
-      output: "types://delegation/lifecycle#PromotedEvent"
+      output: "types://delegation/lifecycle#DelegationWriteOutcome"
       errors:
         - "errors://delegation/lifecycle#DelegatorNotFoundError"
         - "errors://delegation/lifecycle#DelegationSealMismatchError"
         - "errors://delegation/lifecycle#DelegationNotPermittedError"
     refs: ["domain://delegation"]
 
-  - id: "port://delegation/lifecycle/inbound/escrow-management"
+  - id: "port://delegation/lifecycle/inbound/check-approval-status"
     type: inbound
-    name: "Delegation Escrow Management"
-    semantics: command
-    idempotent: false
+    name: "Check Approval Status"
+    semantics: query
+    idempotent: true
+    description: >
+      Query whether a pending delegation has been approved by the delegator.
     contract:
       input: "types://delegation/lifecycle#SignedEstablishmentEvent"
-      output: "void"
+      output: "types://delegation/lifecycle#DelegationWriteOutcome"
       errors:
         - "errors://delegation/lifecycle#DelegatorNotFoundError"
     refs: ["domain://delegation"]
 
-  # Outbound — Repository interface for persistence
-  - id: "port://delegation/lifecycle/outbound/escrow-store"
+  # Outbound — persistence and service dependencies
+  - id: "port://delegation/lifecycle/outbound/delegation-repository"
     type: outbound
-    name: "Delegation Escrow Repository"
+    name: "Delegation Repository"
     semantics: command
     idempotent: false
+    description: >
+      Persistence for the delegation approval workflow — tracks pending approvals
+      (waiting for delegator), pending witnesses (waiting for receipts), and
+      pending publications.
     contract:
       input: "types://delegation/lifecycle#SignedEstablishmentEvent"
       output: "void"
       errors: []
     refs: ["persistence"]
     invariants:
-      - "Partially-delegated events await delegator anchor seal confirmation"
-      - "Delegable events await local delegator approval before anchoring"
+      - "Pending-approval events await delegator commitment confirmation"
+      - "Delegable events await local delegator approval before committing"
       - "Removal is idempotent — removing a non-existent entry is a no-op"
-      - "Anchor seal records link delegator to delegatee via the seal SAID"
+      - "Approval records link delegator to delegatee via the seal SAID"
+
+  - id: "port://delegation/lifecycle/outbound/identity-service"
+    type: outbound
+    name: "Identity Service (Commit Approval)"
+    semantics: command
+    idempotent: false
+    description: >
+      The DelegationService requests the delegator to commit an approval to
+      their identity history via the IdentityService. This is how the delegator
+      approves a delegation — by committing a seal to their own event log.
+    contract:
+      input: "types://delegation/lifecycle#SignedEstablishmentEvent"
+      output: "types://identity/state#WriteOutcome"
+      errors: []
+    refs: ["domain://identity"]

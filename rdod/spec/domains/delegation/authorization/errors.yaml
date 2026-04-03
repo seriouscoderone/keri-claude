@@ -13,8 +13,8 @@ domain_ref: "delegation/authorization"
 
 errors:
   - name: "MissingDelegatorSealError"
-    description: "Delegator has not anchored a seal approving this delegated event"
-    cause: "No interaction or rotation event in the delegator's KEL contains an anchor seal matching the delegated event's (prefix, sn, SAID) — the delegator has not yet approved the delegation"
+    description: "Delegator has not committed an approval seal for this delegated event"
+    cause: "No interaction or rotation event in the delegator's KEL contains an approval seal matching the delegated event's (prefix, sn, SAID) — the delegator has not yet approved the delegation"
     recovery: "escrow"
     recovery_target: "PDE"
     severity: "transient"
@@ -85,7 +85,7 @@ errors:
 
   - name: "SealMismatchError"
     description: "Delegation seal fields do not match the delegated event"
-    cause: "The anchor seal found in the delegator's KEL has a prefix, sn, or SAID that does not match the delegated event being validated — the seal does not authorize this specific event"
+    cause: "The approval seal found in the delegator's KEL has a prefix, sn, or SAID that does not match the delegated event being validated — the seal does not authorize this specific event"
     recovery: "abort"
     severity: "fatal"
     context:

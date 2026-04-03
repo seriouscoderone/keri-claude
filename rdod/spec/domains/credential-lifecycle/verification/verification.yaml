@@ -106,7 +106,7 @@ properties:
     notes: "Event-driven reprocessing, not polling"
 
 contracts:
-  - port_ref: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+  - port_ref: "port://credential-lifecycle/verification/inbound/verify"
     preconditions:
       - formal:
           language: python
@@ -123,7 +123,7 @@ contracts:
             or isinstance(result, InvalidTransitionError)
         description: "Result is either acceptance (with correct SAID), escrow, or rejection"
 
-  - port_ref: "port://credential-lifecycle/verification/inbound/process-escrows"
+  - port_ref: "port://credential-lifecycle/verification/inbound/reprocess-pending"
     preconditions:
       - formal:
           language: python
@@ -136,7 +136,7 @@ contracts:
             all(r.result in ('Accept', 'Reject', 'ReEscrow') for r in results)
         description: "Each reprocessed event is either accepted, rejected, or re-escrowed"
 
-  - port_ref: "port://credential-lifecycle/verification/outbound/kel-and-state-lookup"
+  - port_ref: "port://credential-lifecycle/verification/outbound/authorization-lookup"
     preconditions:
       - formal:
           language: python

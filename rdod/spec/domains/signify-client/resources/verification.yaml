@@ -104,7 +104,7 @@ properties:
     strategy: "Valid alias strings, witness lists, and toad values — verified by AID usability and operation pollability"
     notes: "create() produces a working AID and a trackable operation, not just structural fields"
 
-  - invariant: "Issuance produces a credential SAID and a pollable TEL-anchoring operation"
+  - invariant: "Issuance produces a credential SAID and a pollable TEL-authorization operation"
     term: "Credential Resource"
     technique: property-based
     formal:
@@ -115,7 +115,7 @@ properties:
               name="test", registry_name="reg",
               schema_said=schema_said, recipient=recipient, data={}
           )
-          # The operation must track credential + TEL anchoring
+          # The operation must track credential + TEL authorization
           assert result.operation.name starts with "credential."
           # The operation must be pollable through to completion
           status = client.operations().get(result.operation.name)

@@ -52,7 +52,7 @@ types:
           - name: "kel_seal"
             type: "types://cesr/primitives#Seal"
             required: true
-            description: "KEL event seal anchoring the TEL event to the issuer's KEL"
+            description: "KEL event seal authorizing the TEL event via the issuer's KEL"
         invariants:
           - "Route: /ipex/grant"
           - "Sent by discloser"
@@ -101,11 +101,11 @@ types:
           - name: "kel_seal"
             type: "types://cesr/primitives#Seal"
             required: true
-            description: "KEL event seal anchoring the TEL event"
+            description: "KEL event seal authorizing the TEL event"
         invariants:
           - "All three MUST be present — missing any one makes the grant unverifiable"
           - "ACDC SAID must match the TEL event's credential reference"
-          - "TEL event must be anchored by the KEL seal"
+          - "TEL event must be authorized by the KEL seal"
           - "KEL seal must be verifiable against the issuer's current key state"
 
   - name: "GrantMessage"
@@ -130,7 +130,7 @@ types:
           - name: "kel_seal"
             type: "types://cesr/primitives#Seal"
             required: true
-            description: "KEL event seal anchoring the TEL event to the issuer's KEL"
+            description: "KEL event seal authorizing the TEL event via the issuer's KEL"
         invariants:
           - "MUST bundle all three artifacts — missing any makes the grant unverifiable"
           - "Sent by discloser after agree (negotiated) or directly (direct issuance)"

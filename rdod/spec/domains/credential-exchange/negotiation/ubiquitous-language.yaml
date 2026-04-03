@@ -48,10 +48,10 @@ terms:
 
   - term: "Agree"
     synonyms: []
-    definition: "An IPEX message from the Disclosee to the Discloser accepting the offered terms — providing a signature and/or anchored seal on the offer or its SAID as contractual acceptance."
+    definition: "An IPEX message from the Disclosee to the Discloser accepting the offered terms — providing a signature and/or committed seal on the offer or its SAID as contractual acceptance."
     invariants:
       - "Response to an offer"
-      - "Contains signature and/or anchored seal on the offer or its SAID"
+      - "Contains signature and/or committed seal on the offer or its SAID"
       - "Constitutes non-repudiable acceptance of the contractual terms in the offer"
       - "Discloser may respond with grant or spurn"
     examples:
@@ -74,10 +74,10 @@ terms:
 
   - term: "Admit"
     synonyms: []
-    definition: "An IPEX message from the Disclosee to the Discloser confirming receipt of the grant disclosure — providing a signature and/or anchored seal on the grant or its SAID."
+    definition: "An IPEX message from the Disclosee to the Discloser confirming receipt of the grant disclosure — providing a signature and/or committed seal on the grant or its SAID."
     invariants:
       - "Response to a grant"
-      - "Contains signature and/or anchored seal on the grant or its SAID"
+      - "Contains signature and/or committed seal on the grant or its SAID"
       - "Constitutes non-repudiable confirmation of receipt"
     examples:
       - "Issuee admits receipt of an issued credential"
@@ -169,11 +169,11 @@ terms:
 
   - term: "IPEX Message Construction"
     synonyms: ["ipexApplyExn() [keripy]", "ipexOfferExn() [keripy]", "ipexAgreeExn() [keripy]", "ipexGrantExn() [keripy]", "ipexAdmitExn() [keripy]", "ipexSpurnExn() [keripy]"]
-    definition: "Module-level functions that build IPEX exchange messages (EXN type). Each function takes the sending Hab, recipient, message text, and message-type-specific data. Grant includes the full credential (ACDC), issuance TEL event, and anchor seal. Admit references the grant by SAID."
+    definition: "Module-level functions that build IPEX exchange messages (EXN type). Each function takes the sending Hab, recipient, message text, and message-type-specific data. Grant includes the full credential (ACDC), issuance TEL event, and authorization seal. Admit references the grant by SAID."
     invariants:
       - "Each function produces a complete EXN message with the appropriate '/ipex/*' route"
       - "All functions require the sending Hab (identifier context) and recipient AID"
-      - "ipexGrantExn() bundles the ACDC, issuance TEL event (upd or bup with ts='issued'), and KEL anchor seal"
+      - "ipexGrantExn() bundles the ACDC, issuance TEL event (upd or bup with ts='issued'), and KEL authorization seal"
       - "ipexAdmitExn() references the grant message by its SAID"
       - "ipexSpurnExn() references the rejected message by its SAID"
     examples:

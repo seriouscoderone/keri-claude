@@ -89,7 +89,7 @@ scenarios:
         - domain: "domain://identity/state"
           condition: "Delegator has established KeyState"
         - domain: "domain://delegation"
-          condition: "Delegator has not anchored any seal for this delegate"
+          condition: "Delegator has not committed any approval seal for this delegate"
     end_state_assertions:
       - domain: "domain://identity/state"
         assertion: "Delegated AID exists with sn=0, delegator field set, transferable=true"
@@ -98,14 +98,14 @@ scenarios:
         assertion: "Delegated inception event (dip) logged with di field matching delegator"
         verifiable_by: "get_event(delegate_aid, sn=0).t == 'dip'; event.di == delegator_aid"
       - domain: "domain://delegation/authorization"
-        assertion: "Delegator's KEL contains an interaction event with seal anchoring the dip SAID"
+        assertion: "Delegator's KEL contains an interaction event with seal committing to the dip SAID"
         verifiable_by: "delegator KEL has ixn with seal.d == delegate_dip.d"
       - domain: "domain://accountability/receipting"
         assertion: "Both delegate's dip and delegator's ixn have witness receipts"
         verifiable_by: "receipts exist for both events"
     failure_scenarios:
       - name: "delegator_timeout"
-        inject_failure_at: "step 3 (await_delegator_seal) — delegator never anchors approval"
+        inject_failure_at: "step 3 (await_delegator_seal) — delegator never commits approval"
         expected_state:
           - domain: "domain://identity/establishment"
             assertion: "Event held in Partially-Delegated Escrow (PDE)"
@@ -172,7 +172,7 @@ scenarios:
 
   - name: "CredentialIssuance_happy"
     protocol: "protocols://credential-lifecycle#CredentialIssuance"
-    description: "Issue a credential — create ACDC, record in TEL, anchor in issuer's KEL."
+    description: "Issue a credential — create ACDC, record in TEL, authorize via issuer's identity history."
     setup:
       description: "Issuer AID with established key state, registry created, JSON schema available"
       preconditions:
@@ -187,7 +187,7 @@ scenarios:
         assertion: "Credential in Issued state; TEL issuance event recorded"
         verifiable_by: "reger.saved.get(keys=(creder.said,)) is not None"
       - domain: "domain://identity/anchoring"
-        assertion: "Issuer's KEL contains an ixn with seal anchoring the TEL event SAID"
+        assertion: "Issuer's KEL contains an ixn with seal authorizing the TEL event SAID"
         verifiable_by: "issuer KEL has ixn with seal referencing TEL event"
       - domain: "domain://credential-lifecycle/verification"
         assertion: "ACDC → TEL → KEL chain is verifiable"
@@ -200,7 +200,7 @@ scenarios:
             assertion: "MissingRegistryError raised; no credential created"
     reference_implementation:
       source: "keripy tests/vc/test_protocoling.py::test_ipex (issuance section)"
-      notes: "Asserts creder.said, issuer.issue(), anchor seal, reger.saved verification"
+      notes: "Asserts creder.said, issuer.issue(), authorization seal, reger.saved verification"
 
   - name: "CredentialRevocation_happy"
     protocol: "protocols://credential-lifecycle#CredentialRevocation"
@@ -215,7 +215,7 @@ scenarios:
         assertion: "Credential in Revoked state (terminal); TEL revocation event recorded"
         verifiable_by: "credential state == Revoked; upd/bup event with ts='revoked' in TEL"
       - domain: "domain://identity/anchoring"
-        assertion: "Issuer's KEL contains ixn anchoring the revocation TEL event"
+        assertion: "Issuer's KEL contains ixn authorizing the revocation TEL event"
         verifiable_by: "issuer KEL has ixn with revocation seal"
     reference_implementation:
       source: "keripy tests/vdr/test_eventing.py"
@@ -245,7 +245,7 @@ scenarios:
         verifiable_by: "recipient reger.saved.get(keys=(creder.said,)) is not None"
     failure_scenarios:
       - name: "chain_verification_failure"
-        inject_failure_at: "step 2 (verify_credential_chain) — KEL anchor missing"
+        inject_failure_at: "step 2 (verify_credential_chain) — KEL authorization missing"
         expected_state:
           - domain: "domain://credential-exchange/negotiation"
             assertion: "Grant escrowed awaiting issuer's KEL events"
@@ -461,7 +461,7 @@ scenarios:
       - step: 4
         escrow: "Partially-Delegated Escrow (PDE)"
         owning_domain: "domain://delegation"
-        trigger: "Signatures and witnesses satisfied, but delegator's anchoring seal not yet found in delegator's KEL"
+        trigger: "Signatures and witnesses satisfied, but delegator's approval seal not yet found in delegator's KEL"
         resolution: "Delegator creates an ixn with a seal referencing the delegate's dip SAID → seal discovered in delegator's KEL → event exits PDE"
         reprocessing_trigger: "Domain Event Bus: KeyEventAccepted for the delegator's AID (new event in delegator's KEL may contain the seal)"
         timeout: "86400s (24 hours)"

@@ -24,7 +24,7 @@ errors:
       - field: "missing_component"
         type: "string"
         description: "What's missing: issuer_kel, kel_seal, tel_event"
-    related_port: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+    related_port: "port://credential-lifecycle/verification/inbound/verify"
 
   - name: "SchemaValidationError"
     description: "Credential attributes do not conform to the declared schema"
@@ -41,7 +41,7 @@ errors:
       - field: "validation_errors"
         type: "array[string]"
         description: "Schema validation error messages"
-    related_port: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+    related_port: "port://credential-lifecycle/verification/inbound/verify"
 
   - name: "RevokedCredentialError"
     description: "Credential is in Revoked state and cannot be used for presentation"
@@ -55,7 +55,7 @@ errors:
       - field: "revocation_datetime"
         type: "string"
         description: "When the credential was revoked"
-    related_port: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+    related_port: "port://credential-lifecycle/verification/inbound/verify"
 
   - name: "RegistryStateUnavailableError"
     description: "The registry's rip/management TEL is not yet available"
@@ -70,7 +70,7 @@ errors:
       - field: "event_said"
         type: "string"
         description: "The SAID of the TEL event awaiting registry state"
-    related_port: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+    related_port: "port://credential-lifecycle/verification/inbound/verify"
 
   - name: "MissingSealError"
     description: "The issuer's KEL event exists but does not contain the expected anchor seal"
@@ -90,7 +90,7 @@ errors:
       - field: "issuer_aid"
         type: "string"
         description: "The issuer's AID"
-    related_port: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+    related_port: "port://credential-lifecycle/verification/inbound/verify"
 
   - name: "IssuerKELUnavailableError"
     description: "The issuer's KEL event at the anchor seal point has not been received"
@@ -108,7 +108,7 @@ errors:
       - field: "tel_event_said"
         type: "string"
         description: "The SAID of the TEL event awaiting issuer KEL"
-    related_port: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+    related_port: "port://credential-lifecycle/verification/inbound/verify"
 
   - name: "InvalidTransitionError"
     description: "TEL event represents an invalid credential state transition"
@@ -125,7 +125,7 @@ errors:
       - field: "attempted_transition"
         type: "string"
         description: "The transition the event attempted (e.g., upd with ts='issued', upd with ts='revoked', bup with ts='issued', bup with ts='revoked')"
-    related_port: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+    related_port: "port://credential-lifecycle/verification/inbound/verify"
 
   - name: "OutOfOrderTELError"
     description: "TEL event sequence number does not match the expected next sequence number"
@@ -143,7 +143,7 @@ errors:
       - field: "expected_sn"
         type: "integer"
         description: "The expected next sequence number"
-    related_port: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+    related_port: "port://credential-lifecycle/verification/inbound/verify"
 
   - name: "IncompleteVerifiableEventError"
     description: "TEL event is missing its attached KEL anchor seal"
@@ -157,7 +157,7 @@ errors:
       - field: "missing_field"
         type: "string"
         description: "The missing component (attached_seal, seal.s, seal.d)"
-    related_port: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+    related_port: "port://credential-lifecycle/verification/inbound/verify"
 
   - name: "EscrowTimeoutError"
     description: "Escrowed TEL event exceeded its time-to-live and was pruned"
@@ -174,4 +174,4 @@ errors:
       - field: "age_seconds"
         type: "integer"
         description: "How long the event was escrowed before pruning"
-    related_port: "port://credential-lifecycle/verification/inbound/process-escrows"
+    related_port: "port://credential-lifecycle/verification/inbound/reprocess-pending"

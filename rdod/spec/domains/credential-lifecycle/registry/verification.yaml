@@ -59,7 +59,7 @@ properties:
     strategy: "Attempt vrt event on any registry"
     notes: "v2 has no registry rotation. Registry config (blindable/non-blindable) is immutable after rip inception. LEGACY (v1 -- do NOT implement): vrt events rotated backer sets; NoBackers registries rejected vrt."
 
-  - invariant: "Every registry management event (rip) MUST be anchored via a seal in the issuer's KEL; an event without a corresponding KEL seal MUST be rejected"
+  - invariant: "Every registry management event (rip) MUST be authorized via a seal in the issuer's KEL; an event without a corresponding KEL seal MUST be rejected"
     term: "Registry Inception"
     technique: property-based
     formal:
@@ -77,7 +77,7 @@ properties:
                 with pytest.raises(ValidationError, match='missing KEL seal'):
                     validate_registry_event(event, kel)
     strategy: "st.booleans() for seal presence"
-    notes: "KEL seal is the cryptographic anchor — without it, the registry event is unauthenticated."
+    notes: "KEL seal is the cryptographic authorization — without it, the registry event is unauthenticated."
 
   - invariant: "LEGACY (v1 -- do NOT implement): VRT event sequence number handling does not apply in v2. Registry management TEL has only the rip inception event (sn == 0). There is no registry rotation in v2 — registry config is immutable after inception."
     term: "Registry Rotation"

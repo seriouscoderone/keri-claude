@@ -7,7 +7,7 @@ domain_ref: "delegation"
 
 properties:
   # Two-Event Binding invariants
-  - invariant: "A delegated event MUST be anchored in the delegator's KEL via a seal containing the delegate event's SAID. Specifically: the delegator's KEL MUST contain an event (ixn or rot) whose anchor list includes a seal with {i: delegate_prefix, s: delegate_sn, d: delegate_said}. If no such seal exists, the delegated event MUST NOT be accepted — it MUST be escrowed to PDE."
+  - invariant: "A delegated event MUST be approved by the delegator via a commitment in the delegator's KEL containing the delegate event's SAID. Specifically: the delegator's KEL MUST contain an event (ixn or rot) whose seal list includes a seal with {i: delegate_prefix, s: delegate_sn, d: delegate_said}. If no such seal exists, the delegated event MUST NOT be accepted — it MUST be escrowed to PDE."
     term: "Delegated Inception"
     technique: property-based
     formal:
@@ -31,10 +31,10 @@ properties:
                     "Missing delegation seal MUST route to PDE escrow"
                 )
     strategy: "delegated_inception_strategy(), kel_strategy()"
-    notes: "Two-way binding: delegate event references delegator via di, delegator seals delegate via anchor."
+    notes: "Two-way binding: delegate event references delegator via di, delegator approves delegate via commitment."
 
   # Cooperative Delegation invariants
-  - invariant: "BOTH delegate and delegator MUST agree for any delegated establishment event to be valid. Neither party can unilaterally establish or rotate the delegated identifier. If the delegator does NOT anchor the delegate's event, the event remains in PDE escrow indefinitely. If the delegate does NOT produce the event, the delegator's seal is inert."
+  - invariant: "BOTH delegate and delegator MUST agree for any delegated establishment event to be valid. Neither party can unilaterally establish or rotate the delegated identifier. If the delegator does NOT commit approval of the delegate's event, the event remains in PDE escrow indefinitely. If the delegate does NOT produce the event, the delegator's seal is inert."
     term: "Delegated Inception"
     technique: property-based
     formal:
@@ -42,7 +42,7 @@ properties:
       expression: |
         @given(dip=delegated_inception_strategy())
         def test_cooperative_delegation_required(dip):
-            # Case 1: Delegate produces event, delegator has not anchored
+            # Case 1: Delegate produces event, delegator has not committed approval
             empty_delegator_kel = KEL()
             result = validate_delegation(dip, empty_delegator_kel)
             assert not result.is_verified(), (
@@ -50,7 +50,7 @@ properties:
             )
             assert result.escrow_type == 'PDE'
 
-            # Case 2: Delegator anchors seal, but delegate event does not exist
+            # Case 2: Delegator commits approval seal, but delegate event does not exist
             delegator_kel_with_seal = build_kel_with_seal(dip.di, dip.i, dip.sn, dip.said)
             # Without the delegate event, there is nothing to validate
             assert find_delegation_seal(delegator_kel_with_seal, dip.i, dip.sn, dip.said) is not None
@@ -59,7 +59,7 @@ properties:
     notes: "Cooperative = both parties required. Unilateral action by either side is insufficient."
 
   # Delegation Scope invariants
-  - invariant: "A delegated identifier MUST NOT produce establishment events (dip, drt) without a corresponding delegator seal anchoring each event. Non-establishment events (ixn) do NOT require delegator approval — only the delegated identifier's own signing keys are needed."
+  - invariant: "A delegated identifier MUST NOT produce establishment events (dip, drt) without a corresponding delegator seal approving each event. Non-establishment events (ixn) do NOT require delegator approval — only the delegated identifier's own signing keys are needed."
     term: "Delegated Rotation"
     technique: property-based
     formal:
@@ -218,7 +218,7 @@ properties:
     notes: "Chain verification is recursive — a broken link invalidates everything below."
 
   # Superseding Recovery in Delegation invariants
-  - invariant: "A delegator can effectively revoke a delegation by NOT anchoring subsequent establishment events for the delegate. Without a new delegator seal, the delegate MUST NOT produce new establishment events — the delegated identifier becomes frozen at its current key state."
+  - invariant: "A delegator can effectively revoke a delegation by NOT committing approval for subsequent establishment events for the delegate. Without a new delegator seal, the delegate MUST NOT produce new establishment events — the delegated identifier becomes frozen at its current key state."
     term: "Delegation Chain"
     technique: property-based
     formal:
@@ -229,7 +229,7 @@ properties:
         def test_delegation_revocation_by_omission(delegate, delegator):
             # Build a drt without delegator seal
             drt = build_delegated_rotation(delegate.aid)
-            # Delegator does not anchor it
+            # Delegator does not commit approval
             seal = find_delegation_seal(delegator, drt.i, drt.sn, drt.said)
             assert seal is None
             result = validate_delegation(drt, delegator)
@@ -238,7 +238,7 @@ properties:
             )
             # The delegate is frozen — cannot rotate or establish new keys
     strategy: "delegated_kel_strategy(), kel_strategy()"
-    notes: "Revocation by omission: delegator simply does not anchor new establishment events."
+    notes: "Revocation by omission: delegator simply does not commit approval for new establishment events."
 
   # Partially-Delegated Escrow invariants
   - invariant: "If the delegator's KEL does not contain a seal committing to the delegated event, the event MUST be escrowed to PDE (Partially-Delegated Escrow). On reprocessing, if the delegator's seal is found, the event advances to the next validation step (may cascade to PWE if witness receipts are insufficient)."
@@ -254,7 +254,7 @@ properties:
             result = validate_delegation(dip, empty_delegator_kel)
             assert result.escrow_type == 'PDE'
 
-            # Delegator anchors seal — reprocess
+            # Delegator commits approval seal — reprocess
             delegator_kel = build_kel_with_seal(dip.di, dip.i, dip.sn, dip.said)
             result = reprocess_from_pde(dip, delegator_kel)
             assert result.escrow_type in ('accepted', 'PWE'), (

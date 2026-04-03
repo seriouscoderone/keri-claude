@@ -8,20 +8,20 @@ terms:
     invariants:
       - "Both parties must participate — neither can act unilaterally"
       - "Delegatee's inception event references delegator's AID via di field"
-      - "Delegator must anchor a seal in its own KEL approving the delegated event"
+      - "Delegator must commit an approval seal in its own KEL approving the delegated event"
       - "The two-way binding provides cryptographically verifiable proof of mutual agreement"
       - "A single delegating event may contain multiple delegation seals (batch delegation)"
     examples:
-      - "Ean (delegator) anchors a seal in its ixn event referencing Fay's (delegatee) dip event. Fay's dip includes di=Ean's AID."
+      - "Ean (delegator) commits an approval seal in its ixn event referencing Fay's (delegatee) dip event. Fay's dip includes di=Ean's AID."
       - "A corporate root AID delegating departmental AIDs, each requiring mutual approval"
     related_terms: ["Delegator", "Delegatee", "Delegation Seal", "Two-way Binding"]
 
   - term: "Delegator"
     synonyms: []
-    definition: "The controller of the AID that approves delegation by anchoring seals in its own KEL for delegated establishment events. The delegator retains establishment control authority over the delegated identifier."
+    definition: "The controller of the AID that approves delegation by committing approval seals in its own KEL for delegated establishment events. The delegator retains establishment control authority over the delegated identifier."
     invariants:
       - "Retains establishment control authority over the delegated AID"
-      - "Must anchor delegation seals in its KEL for each delegated establishment event"
+      - "Must commit delegation seals in its KEL for each delegated establishment event"
       - "Can revoke delegation by refusing to approve (seal) subsequent establishment events"
       - "The delegator's KEL must be verified to validate any delegated event"
     examples:
@@ -43,7 +43,7 @@ terms:
 
   - term: "Delegation Seal"
     synonyms: ["Delegating Event Seal", "Anchor Seal"]
-    definition: "An event seal embedded in a delegating event in the delegator's KEL that cryptographically anchors a delegated establishment event. Contains the delegatee's AID, sequence number, and SAID of the delegated event."
+    definition: "An event seal embedded in a delegating event in the delegator's KEL that cryptographically commits to a delegated establishment event. Contains the delegatee's AID, sequence number, and SAID of the delegated event."
     invariants:
       - "Contains: i (delegatee AID), s (delegated event sn), d (delegated event SAID)"
       - "The seal digest (d field) commits to the entire content of the delegated event"
@@ -52,7 +52,7 @@ terms:
       - "The combination of seal in delegator's KEL and di in delegatee's inception creates a two-way peg"
     examples:
       - "Seal: {i:'EHqSsH1Im...', s:'0', d:'EHqSsH1Im...'} in Ean's ixn event — approves Fay's inception"
-      - "Seal in a rotation event: Ean's rot anchoring Fay's drt — both are establishment events"
+      - "Seal in a rotation event: Ean's rot approving Fay's drt — both are establishment events"
     related_terms: ["Cooperative Delegation", "Two-way Binding", "Delegating Event"]
 
   - term: "Delegating Event"
@@ -94,9 +94,9 @@ terms:
 
   - term: "Delegation Seal Source"
     synonyms: ["SourceSeal [keriox]", "deSourceCouple [keripy]"]
-    definition: "A (sequence_number, digest) couple that links a delegated event to the delegator's anchoring event. The delegator must include a seal in their own KEL (via interaction or rotation event) that commits to the delegated event's digest. This couple allows validators to locate the specific approval event."
+    definition: "A (sequence_number, digest) couple that links a delegated event to the delegator's approval event. The delegator must include a seal in their own KEL (via interaction or rotation event) that commits to the delegated event's digest. This couple allows validators to locate the specific approval event."
     invariants:
-      - "Contains a sequence number and SAID digest identifying the delegator's anchoring event"
+      - "Contains a sequence number and SAID digest identifying the delegator's approval event"
       - "In keriox: SourceSeal struct with sn and digest fields"
       - "In keripy: deSourceCouple is a (Seqner, Saider) couple attached to delegated events"
       - "The couple allows validators to locate the specific event in the delegator's KEL that approves the delegation"
@@ -109,7 +109,7 @@ terms:
 events:
   - name: "DelegationSealAnchored"
     payload: "delegator_aid: AID, delegatee_aid: AID, delegated_event_sn: int, delegated_event_said: SAID, delegating_event_sn: int"
-    triggers: "A delegator anchors a delegation seal in its own KEL approving a delegated establishment event"
+    triggers: "A delegator commits a delegation seal in its own KEL approving a delegated establishment event"
 
   - name: "TwoWayBindingEstablished"
     payload: "delegatee_aid: AID, delegator_aid: AID, seal: DelegationSeal, di_field: AID"

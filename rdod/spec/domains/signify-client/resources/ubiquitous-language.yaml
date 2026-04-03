@@ -48,7 +48,7 @@ terms:
     invariants:
       - "Accessed via client.credentials()"
       - "issue() requires registry, schema SAID, recipient, and credential data"
-      - "Issuance returns a long-running operation (credential + TEL anchoring)"
+      - "Issuance returns a long-running operation (credential + TEL authorization)"
     examples:
       - "await client.credentials().issue(name, registryName, schemaSaid, recipientAid, data)"
       - "await client.credentials().list() → [{sad: ACDC, status: TELState}]"
@@ -84,7 +84,7 @@ terms:
     definition: "Client-side resource class for credential registry management — create registries for TEL-based credential state tracking."
     invariants:
       - "Accessed via client.registries()"
-      - "create() provisions a new registry anchored to an AID's KEL"
+      - "create() provisions a new registry authorized via an AID's KEL"
       - "Each registry gets its own TEL for tracking credential state"
     examples:
       - "await client.registries().create({name: 'myaid', registryName: 'myreg'})"
@@ -92,7 +92,7 @@ terms:
 
   - term: "End-Role"
     synonyms: ["Endpoint Role"]
-    definition: "An authorization declaring which endpoints serve specific roles (witness, agent, watcher) for an AID. Published via signed reply messages anchored to the KEL."
+    definition: "An authorization declaring which endpoints serve specific roles (witness, agent, watcher) for an AID. Published via signed reply messages committed to the KEL."
     invariants:
       - "Roles: witness, controller, agent, watcher, mediator"
       - "Must be signed by the AID's controller"
@@ -130,7 +130,7 @@ events:
 rules:
   - "All resource operations require KRAM-authenticated requests — unsigned requests are rejected"
   - "Long-running operations must be polled — the agent cannot push completion to the edge"
-  - "End-role authorizations must be signed and anchored before other agents/witnesses will accept them"
+  - "End-role authorizations must be signed and committed before other agents/witnesses will accept them"
   - "Credential issuance requires a registry — the registry must be created before any credential can be issued"
   - "Exchange messages are the sole mechanism for IPEX negotiation and multi-sig coordination"
   - "The cloud agent is untrusted with respect to key material — it can request but never produce signatures"

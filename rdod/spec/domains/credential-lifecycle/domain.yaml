@@ -8,10 +8,10 @@ name: "Credential Lifecycle"
 
 description: >
   Issue, track, and revoke credentials — managing a credential from creation
-  through revocation. Transaction Event Logs (TELs) provide hash-chained,
-  KEL-sealed event structures that track dynamic ACDC state without requiring
-  direct signatures on TEL events. TELs support both public (unblinded)
-  and private (blinded) state registries.
+  through revocation. Transaction Event Logs (TELs) provide hash-chained event
+  structures authorized by the issuer's identity history that track dynamic ACDC
+  state without requiring direct signatures on TEL events. TELs support both
+  public (unblinded) and private (blinded) state registries.
 
   Boundary guide for consumers — three sibling domains cover credentials:
   credential-lifecycle owns the state machine (issue, revoke, verify status).
@@ -62,7 +62,7 @@ subdomains:
   - ref: "domain://credential-lifecycle/status"
     relationship: "Credential and registry state machines — tracks lifecycle (NotIssued -> Issued -> Revoked) and registry management state"
   - ref: "domain://credential-lifecycle/verification"
-    relationship: "Multi-step validation pipeline for TEL events — KEL anchor verification, escrow management, escrow reprocessing triggers"
+    relationship: "Multi-step validation pipeline for TEL events — KEL authorization verification, escrow management, escrow reprocessing triggers"
   - ref: "domain://credential-lifecycle/registry"
     relationship: "Credential registry management — creating, configuring, and managing the containers that track groups of credentials"
 
@@ -79,7 +79,7 @@ adjacents:
     relationship: "Partnership — credential-lifecycle creates credentials with privacy properties that privacy domain governs during disclosure"
     pattern: "Partnership"
   - ref: "domain://identity"
-    relationship: "Conformist — credential TEL events are anchored to issuer's KEL via identity/anchoring"
+    relationship: "Conformist — credential status changes are authorized by the issuer's identity history via the IdentityService"
     pattern: "Conformist"
     via_port: "port://identity/anchoring/inbound/data-anchoring"
 
@@ -103,15 +103,17 @@ implementation_guidance:
   notes: >
     The TEL is implemented alongside the KEL in KERI infrastructure. Registry events
     use ACDC protocol version strings and message types (rip, bup, upd). The key
-    insight is that TEL events derive their non-repudiability from the KEL seal, not
-    from direct signatures. Blinded registries require a shared secret salt between
-    issuer and discloser for hierarchically deterministic UUID derivation.
+    insight is that TEL events derive their non-repudiability from the issuer's
+    identity history authorization, not from direct signatures. Blinded registries
+    require a shared secret salt between issuer and discloser for hierarchically
+    deterministic UUID derivation.
 
-    Guarded Repository pattern (TEL): The TEL Repository applies the same Guarded
-    Repository pattern defined in domain://identity (see identity/domain.yaml
-    implementation_guidance for the full pattern). The guard validates TEL events
-    (KEL anchor verification, registry state transitions, escrow management) before
-    appending to the Transaction Event Log.
+    Service-wraps-Repository pattern (TEL): The StatusService applies the same
+    Service-wraps-Repository pattern defined in domain://identity (see
+    identity/domain.yaml implementation_guidance for the full pattern). The
+    StatusService validates credential state changes (KEL authorization verification,
+    registry state transitions, escrow management) before committing to the
+    TelRepository.
 
 issues: []
 

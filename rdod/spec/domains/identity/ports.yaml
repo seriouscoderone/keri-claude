@@ -43,39 +43,5 @@ ports:
       errors: []
     refs: ["domain://identity"]
 
-  # Outbound — Repository interfaces for persistence
-
-  - id: "port://identity/outbound/event-repository"
-    type: outbound
-    name: "Event Repository"
-    semantics: command
-    idempotent: false
-    contract:
-      input: "types://identity/establishment#KeyEvent"
-      output: "void"
-      errors:
-        - "errors://identity/establishment#LikelyDuplicitousError"
-    refs: ["persistence"]
-    invariants:
-      - "Events are append-only — once written for a given AID and sequence number, immutable"
-      - "First-seen ordinal is assigned exactly once per event and never changes"
-      - "Signatures accumulate — new signatures are appended, never overwrite existing"
-      - "Witness receipts accumulate — new receipts are appended, never overwrite existing"
-      - "Key state cache may be overwritten (it is derived from the KEL, not source-of-truth)"
-      - "get_kel returns events ordered by ascending sequence number"
-
-  - id: "port://identity/outbound/escrow-repository"
-    type: outbound
-    name: "Escrow Repository"
-    semantics: command
-    idempotent: false
-    contract:
-      input: "types://identity#EscrowedEvent"
-      output: "void"
-      errors: []
-    refs: ["persistence"]
-    invariants:
-      - "Escrowed events are temporary — they are promoted to the KEL or pruned at timeout"
-      - "Each event is in exactly one escrow type at a time"
-      - "Removal is idempotent — removing a non-existent entry is a no-op"
-      - "get_all_by_type supports sweep processing for timeout-based cleanup"
+  # Outbound — KelRepository is defined in identity/state subdomain
+  # See port://identity/state/outbound/kel-repository and externals in domain.yaml

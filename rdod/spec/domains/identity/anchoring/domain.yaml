@@ -3,13 +3,13 @@ template_version: "2.0"
 id: "identity/anchoring"
 name: "Data Anchoring"
 description: >
-  Interaction events — binding data to your identifier via cryptographic seals. Interaction
-  events (ixn) are non-establishment events that anchor external data to the KEL without
+  Interaction events — committing data to your identifier via cryptographic seals. Interaction
+  events (ixn) are non-establishment events that commit external data to the KEL without
   changing key state. They use the a (anchor) field to embed cryptographic digests, event
   references, and merkle tree roots that bind external data to the AID's verifiable history.
   Seal types include digest seals, event seals (i, s, d fields), merkle tree root seals,
-  and delegation seals. Interaction events are the primary mechanism for anchoring ACDC
-  credentials, delegation approvals, and other external commitments.
+  and delegation seals. Interaction events are the primary mechanism for committing ACDC
+  credential authorizations, delegation approvals, and other external commitments.
 version: "0.1.0"
 tier: "domain"
 
@@ -46,7 +46,7 @@ implementation_guidance:
     In keripy, interaction events are created by the interact() method on Hab/Habery. Seal
     construction uses SealDigest, SealEvent, and SealLast namedtuples from coring.py. In keriox,
     InteractionEvent carries seal data in its payload. Interaction events are the primary mechanism
-    for anchoring ACDC credential issuance/revocation, delegation approval seals, and arbitrary
+    for committing ACDC credential authorization/revocation, delegation approval seals, and arbitrary
     data commitments. They are lightweight because they do not change key state.
 
 issues: []

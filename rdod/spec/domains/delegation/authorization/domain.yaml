@@ -6,7 +6,7 @@ description: >
   Delegator approves or denies — cooperative delegation mechanism. How delegator and delegatee
   create a cryptographically verifiable mutual commitment through seals and the di field. This subdomain owns the two-way
   binding protocol: the delegatee references the delegator via the di field in its inception event,
-  and the delegator anchors a seal in its own KEL committing to the delegated event's digest.
+  and the delegator commits a seal in its own KEL approving the delegated event's digest.
   Together these form a cryptographic peg that neither party can forge unilaterally.
 version: "0.1.0"
 tier: "domain"
@@ -44,7 +44,7 @@ implementation_guidance:
     In keripy, the delegation seal is constructed as a dict with i (delegatee AID), s (sn), and
     d (SAID) fields, embedded in the delegator's interaction or rotation event. The delegatee's dip
     event includes the di field. The deSourceCouple (Seqner + Saider) is attached to delegated events
-    to point validators back to the delegator's anchoring event. In keriox, the SourceSeal struct
+    to point validators back to the delegator's approval event. In keriox, the SourceSeal struct
     (sn + digest) serves the same purpose, carried alongside delegated events to enable validator
     lookup of the delegator's approval.
 

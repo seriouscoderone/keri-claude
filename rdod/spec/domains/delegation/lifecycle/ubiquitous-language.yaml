@@ -8,12 +8,12 @@ terms:
     invariants:
       - "Step 1: Verify event signatures against delegatee's key state"
       - "Step 2: Verify the di field references a valid delegator AID"
-      - "Step 3: Locate the delegator's anchoring seal in the delegator's KEL"
+      - "Step 3: Locate the delegator's approval commitment in the delegator's KEL"
       - "Step 4: Verify the seal commits to this delegated event's digest"
       - "If any step fails, the event is escrowed to the appropriate queue (Partially-Delegated escrow, Delegable Event escrow) or rejected"
     examples:
       - "Fay's drt arrives: (1) verify Fay's signatures, (2) check di=Ean, (3) find seal in Ean's KEL, (4) verify seal digest matches drt SAID"
-      - "Seal not found in Ean's KEL — event escrowed to Partially-Delegated escrow pending Ean's anchoring event"
+      - "Seal not found in Ean's KEL — event escrowed to Partially-Delegated escrow pending Ean's approval commitment"
     related_terms: ["Partially-Delegated Escrow", "Delegable Event Escrow", "Approved Delegation Seals"]
 
   # Inherits: "Partially-Delegated Escrow" from domain://delegation
@@ -24,10 +24,10 @@ terms:
     invariants:
       - "Contains delegated events whose delegator seal has not yet been found"
       - "Timeout: 3600 seconds — escrowed events are pruned after expiry"
-      - "When the delegator's anchoring event arrives and contains the matching seal, the escrowed event is promoted to the KEL"
+      - "When the delegator's approval event arrives and contains the matching seal, the escrowed event is promoted to the KEL"
       - "Reprocessed when the delegator's KEL is updated with new events"
     examples:
-      - "Fay's dip event arrives but Ean's anchoring ixn hasn't been processed yet — dip goes to Partially-Delegated escrow"
+      - "Fay's dip event arrives but Ean's approval ixn hasn't been processed yet — dip goes to Partially-Delegated escrow"
       - "When Ean's ixn with the matching seal is accepted, Fay's dip is promoted from Partially-Delegated escrow to the KEL"
     related_terms: ["Delegation Validation", "Delegable Event Escrow", "Approved Delegation Seals"]
 
@@ -35,7 +35,7 @@ terms:
     synonyms: []
     definition: "Holds events that need delegation approval but the delegator's event hasn't been processed yet. Distinguished from PDE: delegables are waiting for the delegator's event to even arrive, while PDE events have the delegator's event but are waiting for it to contain the right seal."
     invariants:
-      - "Contains events where the delegator's anchoring event has not yet arrived at all"
+      - "Contains events where the delegator's approval event has not yet arrived at all"
       - "Distinguished from Partially-Delegated Escrow: Delegable Event escrow waits for delegator event arrival, Partially-Delegated escrow waits for seal match"
       - "Drained when the delegator's KEL advances"
       - "Events are promoted to Partially-Delegated escrow or directly to the KEL once the delegator's event arrives"
@@ -46,9 +46,9 @@ terms:
 
   - term: "Approved Delegation Seals"
     synonyms: []
-    definition: "Storage for delegation seals that have been verified — the delegator's KEL contains a seal matching the delegated event. Transitions from unverified to approved when the delegator's anchoring event is found."
+    definition: "Storage for delegation seals that have been verified — the delegator's KEL contains a seal matching the delegated event. Transitions from unverified to approved when the delegator's approval commitment is found."
     invariants:
-      - "Contains seals whose corresponding delegator anchor event has been located and verified"
+      - "Contains seals whose corresponding delegator approval event has been located and verified"
       - "Represents the transition from unverified delegation to approved delegation"
       - "A delegated event can only be fully accepted once its seal moves to approved status"
     examples:
@@ -67,7 +67,7 @@ events:
 
   - name: "DelegationSealApproved"
     payload: "delegator_aid: AID, delegatee_aid: AID, seal_said: SAID"
-    triggers: "A delegation seal transitions from unverified to approved status after the delegator's anchoring event is located and verified"
+    triggers: "A delegation seal transitions from unverified to approved status after the delegator's approval commitment is located and verified"
 
 rules:
   - "Validators must verify both the delegatee's signatures and the delegator's seal before accepting a delegated event"

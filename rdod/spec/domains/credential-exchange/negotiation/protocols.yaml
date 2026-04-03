@@ -27,9 +27,9 @@ protocols:
       - seq: 2
         domain: "domain://credential-lifecycle/verification"
         action: "verify_credential_chain"
-        port: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+        port: "port://credential-lifecycle/verification/inbound/verify"
         input:
-          description: "ACDC → TEL → KEL anchor verification"
+          description: "ACDC → TEL → KEL authorization verification"
         output:
           description: "Credential chain validated"
         depends_on: [1]
@@ -102,7 +102,7 @@ protocols:
       - seq: 4
         domain: "domain://credential-lifecycle/status"
         action: "issue_credential"
-        port: "port://credential-lifecycle/status/inbound/state-query"
+        port: "port://credential-lifecycle/status/inbound/authorize"
         input:
           description: "Issuer creates ACDC and TEL issuance event"
           types:

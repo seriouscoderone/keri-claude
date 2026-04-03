@@ -41,7 +41,7 @@ types:
         invariants:
           - "Field order: [v, t, d, u, i, n, dt]"
           - "d and i are both computed as SAID"
-          - "Must be anchored in the issuer's KEL via a seal"
+          - "Must be authorized in the issuer's KEL via a seal"
           - "n is the sequence number field (not s as in legacy vcp events)"
 
   - name: "BlindableUpdateEvent"
@@ -94,7 +94,7 @@ types:
           - "Each bup event carries a fresh BLID with new UUID for decorrelation"
           - "An observer cannot distinguish state-changing updates from no-op decorrelation updates"
           - "ts determines the credential state transition — not the event type"
-          - "Must be anchored in the issuer's KEL via a seal"
+          - "Must be authorized in the issuer's KEL via a seal"
           - "Builder: UpdateEvent.builder().blindable().registry(regid).credential(said).state('issued').build()"
 
   - name: "NonBlindableUpdateEvent"
@@ -146,7 +146,7 @@ types:
           - "Field order: [v, t, d, rd, n, p, dt, ta, ts]"
           - "No blinding — credential state transitions are publicly observable"
           - "ts determines the credential state transition — not the event type"
-          - "Must be anchored in the issuer's KEL via a seal"
+          - "Must be authorized in the issuer's KEL via a seal"
           - "Builder: UpdateEvent.builder().nonBlindable().registry(regid).credential(said).state('revoked').build()"
 
   - name: "RegistryRotationEvent"
@@ -179,7 +179,7 @@ types:
             constraints:
               enum: ["blindable", "non-blindable"]
         invariants:
-          - "Produces a RegistryInceptionEvent (rip) anchored in the issuer's KEL"
+          - "Produces a RegistryInceptionEvent (rip) authorized in the issuer's KEL"
 
   - name: "RegistryRecord"
     description: "Stored metadata for a credential registry, persisted when the registry is created."

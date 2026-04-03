@@ -33,14 +33,14 @@ source_material:
 domain_clients:
   - ref: "domain://credential-lifecycle"
     relationship: "Parent domain delegates all incoming TEL event validation to this subdomain"
-    via_port: "port://credential-lifecycle/verification/inbound/validate-tel-event"
+    via_port: "port://credential-lifecycle/verification/inbound/verify"
 
 subdomains: []
 
 kernels:
   - ref: "external://cryptographic-primitives"
     source: "Blake3-256 digest comparison for seal verification (comparing TEL event SAID against the seal digest in the issuer's KEL)"
-    relationship: "Digest comparison is a kernel operation invoked during KEL anchor verification"
+    relationship: "Digest comparison is a kernel operation invoked during KEL authorization verification"
 
 adjacents:
   - ref: "domain://keri-messaging"
@@ -48,13 +48,13 @@ adjacents:
     relationship: "Publishes and consumes domain events for cross-domain coordination"
 
 externals:
-  - name: "KEL and State Lookup"
+  - name: "Authorization Lookup"
     abstraction: "Repository (read-only)"
-    ref: "port://credential-lifecycle/verification/outbound/kel-and-state-lookup"
-    implementation_notes: "Reads issuer's KEL to verify anchor seals, and reads registry and credential state for validation context."
-  - name: "Verification Escrow Repository"
+    ref: "port://credential-lifecycle/verification/outbound/authorization-lookup"
+    implementation_notes: "Queries the IdentityService and StatusService to check whether the authorization chain for a credential is complete — issuer's identity history, credential status, and registry state."
+  - name: "Verification Repository"
     abstraction: "Repository"
-    ref: "port://credential-lifecycle/verification/outbound/escrow-repository"
+    ref: "port://credential-lifecycle/verification/outbound/verification-repository"
     implementation_notes: "Transient storage for TEL events that cannot be immediately validated, partitioned by escrow type"
 
 implementation_guidance:
