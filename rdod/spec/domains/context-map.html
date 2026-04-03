@@ -1029,10 +1029,8 @@ const RDOD_DATA = {
     "adjacents": [],
     "externals": [
       {
-        "name": "Network Transport",
-        "abstraction": "Adapter",
-        "ref": "port://accountability/dissemination/outbound/transport",
-        "implementation_notes": "Interface: send(endpoint: Endpoint, payload: bytes) -> Result<Sent, TransportError>; receive(listen_address: string) -> AsyncStream<bytes>. Implementations: HTTP/HTTPS (cloud deployments, KERIA, witness HTTP API), TCP (bare metal CESR streams for high-throughput local deployments), UDP (lightweight for receipt dissemination), WebSocket (bidirectional for browser extension communication). Invariants: Transport is payload-agnostic (delivers bytes, domain parses them); CESR framing handles message boundaries (transport does not need to delimit); implementations MUST support at least HTTP, other transports are optional.\n"
+        "ref": "domain://externals/transport",
+        "relationship": "Event and receipt propagation over HTTP, TCP, UDP, or WebSocket — the transport outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -1634,10 +1632,8 @@ const RDOD_DATA = {
         "relationship": "Witness receipt signatures and event digest verification use kernel cryptographic types directly"
       },
       {
-        "name": "Network Transport",
-        "abstraction": "Adapter",
-        "ref": "port://accountability/outbound/transport",
-        "implementation_notes": "Message delivery for events, receipts, and gossip between controller, witnesses, and validators. Implementations: HTTP, TCP, WebSocket, round-robin, gossip protocol"
+        "ref": "domain://externals/transport",
+        "relationship": "Message delivery for events, receipts, and gossip between controller, witnesses, and validators — the transport outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -2225,10 +2221,8 @@ const RDOD_DATA = {
     ],
     "externals": [
       {
-        "name": "Receipt Repository",
-        "abstraction": "Repository",
-        "ref": "port://accountability/receipting/outbound/persistence",
-        "implementation_notes": "Typed receipt storage — verified receipts (non-transferable, transferable, witness-indexed) and unverified receipt escrows."
+        "ref": "domain://externals/persistence",
+        "relationship": "Typed receipt storage for verified and unverified receipts — the persistence outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -3077,10 +3071,8 @@ const RDOD_DATA = {
     "adjacents": [],
     "externals": [
       {
-        "name": "Transport Layer",
-        "abstraction": "Adapter",
-        "ref": "port://cesr/composition/outbound/transport",
-        "implementation_notes": "Stream delivery over TCP, UDP, HTTP, or WebSocket. The transport provides byte-level delivery; CESR stream provides the framing."
+        "ref": "domain://externals/transport",
+        "relationship": "Stream delivery over TCP, UDP, HTTP, or WebSocket — the transport outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -6561,14 +6553,7 @@ const RDOD_DATA = {
     "externals": [
       {
         "ref": "domain://externals/cryptographic-primitives",
-        "source": "Ed25519 (32-byte keys, 64-byte sigs), X25519 (32-byte keys), ECDSA secp256k1 (33-byte pub, 64-byte sig), ECDSA secp256r1 (33-byte pub, 64-byte sig), Ed448 (57-byte keys, 114-byte sigs), Blake3-256/512, Blake2b-256/512, SHA2-256/512, SHA3-256/512",
         "relationship": "Each cryptographic algorithm output type maps to a specific code table entry — the code IS the algorithm identifier"
-      },
-      {
-        "name": "Cryptographic Library",
-        "abstraction": "Adapter",
-        "ref": "port://cesr/primitives/outbound/crypto",
-        "implementation_notes": "Interface: sign(private_key: bytes, message: bytes) -> bytes; verify(public_key: bytes, signature: bytes, message: bytes) -> bool; digest(algorithm: DigestAlgorithm, data: bytes) -> bytes; generate_keypair(algorithm: string) -> (public_key, private_key); derive_key(salt: bytes, path: string, algorithm: string) -> bytes. Implementations: libsodium (Ed25519 signing, X25519 key exchange, Blake2b hashing), blake3 (Blake3-256 hashing), argon2 (password-based key stretching for Signify salts), ed25519-dalek/k256/p256 (Rust). Invariants: Algorithm selection is determined by the CESR code (not a runtime choice); implementations MUST support Ed25519 and Blake3-256 at minimum; key material MUST be zeroed after use (ZeroizeOnDrop pattern).\n"
       }
     ],
     "implementation_guidance": {
@@ -7468,7 +7453,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "crypto-library"
+          "domain://externals/cryptographic-primitives"
         ]
       }
     ],
@@ -9639,16 +9624,12 @@ const RDOD_DATA = {
     ],
     "externals": [
       {
-        "name": "Agent Repository",
-        "abstraction": "Repository",
-        "ref": "port://cloud-agent-service/outbound/agent-repository",
-        "implementation_notes": "Manages agent instances, credential wallets, contact books, and pending operations per provisioned controller."
+        "ref": "domain://externals/persistence",
+        "relationship": "Agent instances, credential wallets, contact books, and pending operations per provisioned controller — the agent-repository outbound port delegates to this external"
       },
       {
-        "name": "HTTP Server",
-        "abstraction": "Adapter",
-        "ref": "port://cloud-agent-service/outbound/http-server",
-        "implementation_notes": "Exposes boot, admin, and message router endpoints on separate ports."
+        "ref": "domain://externals/transport",
+        "relationship": "Boot, admin, and message router HTTP endpoints on separate ports — the http-server outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -10197,28 +10178,8 @@ const RDOD_DATA = {
     "adjacents": [],
     "externals": [
       {
-        "name": "Escrow Repository",
-        "abstraction": "Repository",
-        "ref": "port://cloud-agent-service/processing/outbound/escrow-repository",
-        "implementation_notes": "Time-bounded escrow of partially-complete protocol exchanges."
-      },
-      {
-        "name": "Operation Repository",
-        "abstraction": "Repository",
-        "ref": "port://cloud-agent-service/processing/outbound/operation-repository",
-        "implementation_notes": "Tracks long-running operations so clients can poll for completion."
-      },
-      {
-        "name": "Credential Index Repository",
-        "abstraction": "Repository",
-        "ref": "port://cloud-agent-service/processing/outbound/credential-index-repository",
-        "implementation_notes": "Searchable index over credential attributes for client queries."
-      },
-      {
-        "name": "Timer",
-        "abstraction": "Service",
-        "ref": "port://cloud-agent-service/processing/outbound/timer",
-        "implementation_notes": "Provides escrow timeouts and operation expiration."
+        "ref": "domain://externals/persistence",
+        "relationship": "Escrow storage, operation tracking, and credential index — the escrow-repository, operation-repository, and credential-index-repository outbound ports delegate to this external"
       }
     ],
     "implementation_guidance": {
@@ -10562,7 +10523,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "timer"
+          "domain://externals/persistence"
         ]
       }
     ],
@@ -12190,10 +12151,8 @@ const RDOD_DATA = {
     ],
     "externals": [
       {
-        "name": "Transport",
-        "abstraction": "Message delivery between agents",
-        "ref": "port://credential-exchange/negotiation/outbound/message-transport",
-        "implementation_notes": "Delivers constructed EXN messages to recipient agents. Implementations: HTTP, TCP, or agent-to-agent message relay."
+        "ref": "domain://externals/transport",
+        "relationship": "EXN message delivery to recipient agents — the message-transport outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -16733,10 +16692,8 @@ const RDOD_DATA = {
     ],
     "externals": [
       {
-        "name": "Registry Repository",
-        "abstraction": "Repository",
-        "ref": "port://credential-lifecycle/registry/outbound/registry-repository",
-        "implementation_notes": "Stores registry metadata, name-to-REGID mappings, and cached management state."
+        "ref": "domain://externals/persistence",
+        "relationship": "Registry metadata, name-to-REGID mappings, and cached management state — the registry-repository outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -17554,10 +17511,8 @@ const RDOD_DATA = {
     "adjacents": [],
     "externals": [
       {
-        "name": "State Snapshot Repository",
-        "abstraction": "Repository",
-        "ref": "port://credential-lifecycle/status/outbound/status-read-model",
-        "implementation_notes": "Read/write credential and registry state snapshots — materialized views reconstructable from TEL events."
+        "ref": "domain://externals/persistence",
+        "relationship": "Credential and registry state snapshot storage — materialized views reconstructable from TEL events, the status-read-model outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -18943,16 +18898,8 @@ const RDOD_DATA = {
         "relationship": "Digest comparison is a kernel operation invoked during KEL authorization verification"
       },
       {
-        "name": "Authorization Lookup",
-        "abstraction": "Repository (read-only)",
-        "ref": "port://credential-lifecycle/verification/outbound/authorization-lookup",
-        "implementation_notes": "Queries the IdentityService and StatusService to check whether the authorization chain for a credential is complete — issuer's identity history, credential status, and registry state."
-      },
-      {
-        "name": "Verification Repository",
-        "abstraction": "Repository",
-        "ref": "port://credential-lifecycle/verification/outbound/verification-repository",
-        "implementation_notes": "Transient storage for TEL events that cannot be immediately validated, partitioned by escrow type"
+        "ref": "domain://externals/persistence",
+        "relationship": "Transient escrow storage for TEL events awaiting validation and authorization chain lookup — the verification-repository and authorization-lookup outbound ports delegate to this external"
       }
     ],
     "implementation_guidance": {
@@ -21554,10 +21501,8 @@ const RDOD_DATA = {
     "adjacents": [],
     "externals": [
       {
-        "name": "Delegation Repository",
-        "abstraction": "Repository",
-        "ref": "port://delegation/lifecycle/outbound/delegation-repository",
-        "implementation_notes": "Persistence for the delegation approval workflow — tracks pending approvals, pending witnesses, delegable events, approved seals, and unverified seals."
+        "ref": "domain://externals/persistence",
+        "relationship": "Delegation approval workflow persistence — pending approvals, delegable events, approved seals, the delegation-repository outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -25459,10 +25404,8 @@ const RDOD_DATA = {
         "relationship": "Cryptographic algorithm types appear directly in event fields and key state structures — signatures, digests, public keys, and threshold expressions are kernel types"
       },
       {
-        "name": "KelRepository",
-        "abstraction": "Repository",
-        "ref": "port://identity/state/outbound/kel-repository",
-        "implementation_notes": "Append-only persistence for KEL events with first-seen ordering, signature accumulation, witness receipt accumulation, and escrow queues partitioned by blocking condition with timeout-based sweep. The IdentityService wraps the KelRepository — the Service IS the guard, the Repository IS the storage."
+        "ref": "domain://externals/persistence",
+        "relationship": "Append-only persistence for KEL events, signature accumulation, witness receipt accumulation, and escrow queues — the KelRepository outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -31206,10 +31149,8 @@ const RDOD_DATA = {
         "relationship": "Cryptographic primitives appear directly in state machine fields — the tracker stores and compares qualified public keys, digests, and SAIDs as kernel types"
       },
       {
-        "name": "State Persistence Repository",
-        "abstraction": "Repository",
-        "ref": "port://identity/state/outbound/state-read-model",
-        "implementation_notes": "State cache for fast key state lookup by prefix, and KEL access for state reconstruction via replay. Implementations: LMDB (memory-mapped key-value store, keripy), redb (embedded Rust key-value store, keriox), DynamoDB (serverless key-value store, serious-keri), SQLite/PostgreSQL (relational alternatives), in-memory (for testing). Invariants: Repository interfaces define the contract (the persistence external implements it); implementations MUST satisfy the invariants on each Repository port (append-only, idempotent, etc.).\n"
+        "ref": "domain://externals/persistence",
+        "relationship": "State cache for fast key state lookup and KEL access for state reconstruction — the state-read-model outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -36076,10 +36017,8 @@ const RDOD_DATA = {
     ],
     "externals": [
       {
-        "name": "Duplicity Evidence Repository",
-        "abstraction": "Repository",
-        "ref": "port://integrity/evidence/outbound/escrow-storage",
-        "implementation_notes": "Temporary escrow with timeout for likely duplicitous events, permanent append-only storage for confirmed duplicity evidence"
+        "ref": "domain://externals/persistence",
+        "relationship": "Temporary escrow for likely duplicitous events and permanent duplicity evidence storage — the escrow-storage outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -38431,10 +38370,8 @@ const RDOD_DATA = {
     ],
     "externals": [
       {
-        "name": "TCP Transport",
-        "abstraction": "Adapter",
-        "ref": "port://local-agent/api/outbound/tcp-transport",
-        "implementation_notes": "TCP connection for sending raw CESR streams to remote KERI agents"
+        "ref": "domain://externals/transport",
+        "relationship": "TCP connection for sending raw CESR streams to remote KERI agents — the tcp-transport outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -38632,7 +38569,9 @@ const RDOD_DATA = {
           "output": "TCP connection result",
           "errors": []
         },
-        "refs": []
+        "refs": [
+          "domain://externals/transport"
+        ]
       }
     ],
     "_verification": {
@@ -39009,28 +38948,12 @@ const RDOD_DATA = {
         "relationship": "Cryptographic algorithm types used directly for local key generation, signing, hashing, and key stretching"
       },
       {
-        "name": "Event Log Repository",
-        "abstraction": "Repository",
-        "ref": "port://local-agent/outbound/event-log-repository",
-        "implementation_notes": "Append-only store for the controller's own key event logs and associated signatures."
+        "ref": "domain://externals/persistence",
+        "relationship": "Event logs, escrow queues, and credential storage — the event-log-repository, escrow-repository, and credential-repository outbound ports delegate to this external"
       },
       {
-        "name": "Escrow Repository",
-        "abstraction": "Repository",
-        "ref": "port://local-agent/outbound/escrow-repository",
-        "implementation_notes": "Temporary holding area for events that cannot yet be fully verified."
-      },
-      {
-        "name": "Credential Repository",
-        "abstraction": "Repository",
-        "ref": "port://local-agent/outbound/credential-repository",
-        "implementation_notes": "Stores issued and received ACDC credentials and their associated TEL events."
-      },
-      {
-        "name": "Network Transport",
-        "abstraction": "Adapter",
-        "ref": "port://local-agent/outbound/witness-comms",
-        "implementation_notes": "Direct HTTP communication with witnesses and watchers — no cloud agent proxy."
+        "ref": "domain://externals/transport",
+        "relationship": "Direct HTTP communication with witnesses and watchers — the witness-comms and watcher-comms outbound ports delegate to this external"
       }
     ],
     "implementation_guidance": {
@@ -43748,10 +43671,8 @@ const RDOD_DATA = {
         "relationship": "All cryptographic primitives — key derivation, signing, encryption — are kernel operations. This subdomain composes them into the Keeper abstraction and Encrypter"
       },
       {
-        "name": "Key Repository",
-        "abstraction": "Repository",
-        "ref": "port://signify-client/key-management/outbound/key-repository",
-        "implementation_notes": "Encrypted key material at rest — backend is implementation-defined."
+        "ref": "domain://externals/persistence",
+        "relationship": "Encrypted key material at rest — the key-repository outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -45933,16 +45854,12 @@ const RDOD_DATA = {
     ],
     "externals": [
       {
-        "name": "Watcher Repository",
-        "abstraction": "Repository",
-        "ref": "port://watcher-service/outbound/watcher-repository",
-        "implementation_notes": "Cached KEL copies from multiple witness sources and permanent duplicity evidence records."
+        "ref": "domain://externals/persistence",
+        "relationship": "Cached KEL copies from multiple witness sources and permanent duplicity evidence records — the watcher-repository outbound port delegates to this external"
       },
       {
-        "name": "HTTP Server",
-        "abstraction": "Adapter",
-        "ref": "port://watcher-service/api/outbound/http-server",
-        "implementation_notes": "Query endpoint for validators and OOBI resolution."
+        "ref": "domain://externals/transport",
+        "relationship": "HTTP query endpoint for validators and OOBI resolution — the http-server outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
@@ -47142,16 +47059,12 @@ const RDOD_DATA = {
         "relationship": "Cryptographic signing primitives used directly in receipt generation"
       },
       {
-        "name": "Witness Repository",
-        "abstraction": "Repository",
-        "ref": "port://witness-service/outbound/witness-repository",
-        "implementation_notes": "Append-only KERL persistence — event logs and receipts per monitored AID."
+        "ref": "domain://externals/persistence",
+        "relationship": "Append-only KERL persistence for event logs and receipts per monitored AID — the witness-repository outbound port delegates to this external"
       },
       {
-        "name": "HTTP Server",
-        "abstraction": "Adapter",
-        "ref": "port://witness-service/api/outbound/http-server",
-        "implementation_notes": "Event receipt endpoint, OOBI endpoint (/.well-known/keri/oobi/{aid}/{role}/{eid}), and query endpoint."
+        "ref": "domain://externals/transport",
+        "relationship": "HTTP endpoints for event submission, OOBI resolution, and queries — the http-server outbound port delegates to this external"
       }
     ],
     "implementation_guidance": {
