@@ -40,20 +40,27 @@ ports:
       errors: []
     refs: ["domain://credential-lifecycle"]
 
-  # Outbound -- what state calls
-  - id: "port://credential-lifecycle/status/outbound/state-snapshot-repository"
+  # Outbound — CQRS read model (query-only projection of the TEL)
+  - id: "port://credential-lifecycle/status/outbound/status-read-model"
     type: outbound
-    name: "State Snapshot Repository"
-    semantics: command
+    name: "Status Read Model"
+    semantics: query
     idempotent: true
+    description: >
+      CQRS read model — a query-only projection of the current credential
+      lifecycle state, derived from the TEL. The StatusService updates this
+      projection internally as a side effect of authorizing state changes
+      (not via this port). Consumers only read from it. Can always be
+      reconstructed by replaying TEL events from the TelRepository.
     contract:
-      input: "types://credential-lifecycle/status#LifecycleStateSnapshot"
+      input: "types://cesr/primitives#SAID"
       output: "types://credential-lifecycle/status#LifecycleStateSnapshot"
       errors: []
-    refs: ["persistence"]
+    refs: ["external://persistence"]
     invariants:
-      - "Last-write-wins: saving a snapshot overwrites any previous snapshot for the same key"
-      - "Snapshot is a materialized view: it can always be reconstructed from the underlying TEL events"
+      - "Query-only — consumers never write to the read model directly"
+      - "The StatusService updates the projection internally after each successful authorization"
+      - "Always reconstructable — replay TEL events to rebuild from scratch"
       - "Registry keyed by SAID: all lookups use the registry's self-addressing identifier"
 
   - id: "port://credential-lifecycle/status/outbound/tel-repository"

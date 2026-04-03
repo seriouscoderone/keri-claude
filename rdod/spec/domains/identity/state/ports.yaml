@@ -47,22 +47,29 @@ ports:
         - "errors://identity/state#QueryNotFoundError"
     refs: ["domain://identity"]
 
-  # Outbound — Repository interface for persistence
-  - id: "port://identity/state/outbound/persistence"
+  # Outbound — CQRS read model (query-only projection of the KEL)
+  - id: "port://identity/state/outbound/state-read-model"
     type: outbound
-    name: "State Persistence Repository"
-    semantics: command
-    idempotent: false
+    name: "State Read Model"
+    semantics: query
+    idempotent: true
+    description: >
+      CQRS read model — a query-only projection of the current key state,
+      derived from the KEL. The IdentityService updates this projection
+      internally as a side effect of committing events (not via this port).
+      Consumers only read from it. Can always be reconstructed by replaying
+      the KEL from the KelRepository.
     contract:
-      input: "types://identity/state#KeyState"
-      output: "void"
-      errors:
-        - "errors://identity/state#MissingEntryError"
-    refs: ["persistence"]
+      input: "types://cesr/primitives#AID"
+      output: "types://identity/state#KeyState"
+      errors: []
+    refs: ["external://persistence"]
     invariants:
-      - "Cached state may be overwritten — it is derived from the KEL, not source-of-truth"
-      - "replay_events returns events ordered by ascending sequence number within the range"
-      - "Event lookup by SAID is read-only — state reconstruction never writes events"
+      - "Query-only — consumers never write to the read model directly"
+      - "Returns null/empty when AID not found — the IdentityService translates this to QueryNotFoundError at the inbound port"
+      - "The IdentityService updates the projection internally after each successful commit"
+      - "Always reconstructable — replay the KEL to rebuild from scratch"
+      - "Returns the state as of the latest committed event (not eventual — immediately consistent)"
 
   - id: "port://identity/state/outbound/kel-repository"
     type: outbound
