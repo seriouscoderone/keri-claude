@@ -63,10 +63,7 @@ subdomains:
   - ref: "domain://accountability/dissemination"
     relationship: "Event and receipt propagation — round-robin and gossip protocols, witness designation, witnessing policy, direct/indirect operational modes"
 
-kernels:
-  - ref: "external://cryptographic-primitives"
-    source: "Ed25519 (witness receipt signatures), Blake3-256/SHA-256 (event verification)"
-    relationship: "Witness receipt signatures and event digest verification use kernel cryptographic types directly"
+kernels: []
 
 adjacents:
   - ref: "domain://cesr"
@@ -74,6 +71,9 @@ adjacents:
     relationship: "CESR primitives (Cigar, Siger, Verfer, AID) adopted natively for receipt signatures and witness identification"
 
 externals:
+  - ref: "domain://externals/cryptographic-primitives"
+    source: "Ed25519 (witness receipt signatures), Blake3-256/SHA-256 (event verification)"
+    relationship: "Witness receipt signatures and event digest verification use kernel cryptographic types directly"
   - name: "Network Transport"
     abstraction: "Adapter"
     ref: "port://accountability/outbound/transport"

@@ -1,0 +1,24 @@
+domain_ref: "externals/persistence"
+
+ports:
+  - id: "port://externals/persistence/inbound/key-value"
+    type: inbound
+    name: "Key-Value Operations"
+    semantics: command
+    idempotent: false
+    description: >
+      Core key-value operations: put, get, delete, iterate. All Repository
+      interfaces (KelRepository, TelRepository, etc.) are built on top of
+      these primitives. The persistence adapter implements this interface;
+      the domain's Service wraps it with domain-specific guard logic.
+    contract:
+      input: "key (bytes) + value (bytes)"
+      output: "value (bytes) or void"
+      errors:
+        - "StorageError"
+        - "KeyNotFoundError"
+    refs: []
+    invariants:
+      - "Writes are durable — acknowledged writes survive process restart"
+      - "Ordered iteration follows lexicographic key ordering"
+      - "Append-only semantics are enforced by the Repository, not the persistence layer"

@@ -58,7 +58,7 @@ ports:
       input: "types://cesr/primitives#SAID"
       output: "types://credential-lifecycle/status#LifecycleStateSnapshot"
       errors: []
-    refs: ["persistence"]
+    refs: ["domain://externals/persistence"]
     invariants:
       - "Read-only: this port never mutates state, only queries it"
       - "Consistency: returned state reflects all events processed up to the point of the query"
@@ -75,7 +75,7 @@ ports:
       input: "types://credential-lifecycle/verification#VerifiableEvent"
       output: "types://credential-lifecycle/verification#VerifiableEvent"
       errors: []
-    refs: ["persistence"]
+    refs: ["domain://externals/persistence"]
     invariants:
       - "Escrow is transient: events are removed once the blocking condition is resolved"
       - "Escrow type partitioning: each escrow type is an independent namespace"

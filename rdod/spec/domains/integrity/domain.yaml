@@ -48,17 +48,17 @@ subdomains:
   - ref: "domain://integrity/detection"
     relationship: "Owns watcher/juror/judge roles, ambient verifiability, and eclipse attack modeling"
 
-kernels:
-  - ref: "external://cryptographic-primitives"
-    source: "Ed25519 (signature verification on conflicting events), Blake3-256/SHA-256 (event digest comparison)"
-    relationship: "Duplicity detection requires verifying signatures on both conflicting events — cryptographic verification is a kernel operation"
+kernels: []
 
 adjacents:
   - ref: "domain://cesr"
     pattern: "conformist"
     relationship: "CESR primitives (Verfer, Diger, SAID) adopted natively for duplicity evidence verification"
 
-externals: []
+externals:
+  - ref: "domain://externals/cryptographic-primitives"
+    source: "Ed25519 (signature verification on conflicting events), Blake3-256/SHA-256 (event digest comparison)"
+    relationship: "Duplicity detection requires verifying signatures on both conflicting events — cryptographic verification is a kernel operation"
 
 implementation_guidance:
   suggested_type: "module"

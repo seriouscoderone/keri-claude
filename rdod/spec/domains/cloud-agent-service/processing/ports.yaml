@@ -54,7 +54,7 @@ ports:
       output: "types://cloud-agent-service/processing#EscrowedItem"
       errors:
         - "errors://cloud-agent-service/processing#EscrowTimeoutError"
-    refs: ["persistence"]
+    refs: ["domain://externals/persistence"]
 
   - id: "port://cloud-agent-service/processing/outbound/operation-repository"
     type: outbound
@@ -69,7 +69,7 @@ ports:
       output: "types://cloud-agent-service/processing#ServerOperation"
       errors:
         - "errors://cloud-agent-service/processing#OperationLookupError"
-    refs: ["persistence"]
+    refs: ["domain://externals/persistence"]
 
   - id: "port://cloud-agent-service/processing/outbound/credential-index-repository"
     type: outbound
@@ -83,7 +83,7 @@ ports:
       input: "types://cloud-agent-service/processing#CredentialFilter"
       output: "array[types://cesr/primitives#SAID]"
       errors: []
-    refs: ["persistence"]
+    refs: ["domain://externals/persistence"]
 
   - id: "port://cloud-agent-service/processing/outbound/timer"
     type: outbound

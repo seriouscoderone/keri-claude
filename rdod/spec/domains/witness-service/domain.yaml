@@ -35,10 +35,7 @@ subdomains:
     relationship: "Inbound message boundary — receives key events, verifies signatures, applies first-seen rule, returns receipts"
     via_port: "port://witness-service/api/inbound/event-submission"
 
-kernels:
-  - ref: "external://cryptographic-primitives"
-    source: "Ed25519 for receipt signatures — witnesses sign with their own non-transferable keys"
-    relationship: "Cryptographic signing primitives used directly in receipt generation"
+kernels: []
 
 adjacents:
   - ref: "domain://identity"
@@ -48,6 +45,9 @@ adjacents:
     is_cross_cutting: false
 
 externals:
+  - ref: "domain://externals/cryptographic-primitives"
+    source: "Ed25519 for receipt signatures — witnesses sign with their own non-transferable keys"
+    relationship: "Cryptographic signing primitives used directly in receipt generation"
   - name: "Witness Repository"
     abstraction: "Repository"
     ref: "port://witness-service/outbound/witness-repository"

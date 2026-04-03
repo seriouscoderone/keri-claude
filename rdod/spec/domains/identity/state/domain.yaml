@@ -33,14 +33,14 @@ domain_clients:
 
 subdomains: []
 
-kernels:
-  - ref: "external://cryptographic-primitives"
-    source: "Ed25519/ECDSA public keys (Verfer) for signing key lists, Blake3-256/SHA-256 digests (Diger) for next key commitment lists, SAID computation for event digest tracking"
-    relationship: "Cryptographic primitives appear directly in state machine fields — the tracker stores and compares qualified public keys, digests, and SAIDs as kernel types"
+kernels: []
 
 adjacents: []
 
 externals:
+  - ref: "domain://externals/cryptographic-primitives"
+    source: "Ed25519/ECDSA public keys (Verfer) for signing key lists, Blake3-256/SHA-256 digests (Diger) for next key commitment lists, SAID computation for event digest tracking"
+    relationship: "Cryptographic primitives appear directly in state machine fields — the tracker stores and compares qualified public keys, digests, and SAIDs as kernel types"
   - name: "State Persistence Repository"
     abstraction: "Repository"
     ref: "port://identity/state/outbound/state-read-model"

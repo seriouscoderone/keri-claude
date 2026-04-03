@@ -1,0 +1,40 @@
+template_version: "2.0"
+id: "externals/persistence"
+name: "Persistence"
+description: >
+  Generic persistence adapter for key-value and append-only storage. Each domain
+  defines its own Repository interface (KelRepository, TelRepository, etc.);
+  this external provides the underlying storage engine. The domain's Service
+  wraps the Repository — the Service IS the guard, the Repository IS the storage.
+version: "0.1.0"
+tier: "external"
+
+source_material: []
+
+published_language:
+  - term: "Key-Value Store"
+    description: "Storage engine that maps keys to values with ordered iteration"
+
+domain_clients:
+  - ref: "domain://identity/state"
+    relationship: "IdentityService uses persistence for KelRepository and State Read Model"
+  - ref: "domain://credential-lifecycle/status"
+    relationship: "StatusService uses persistence for TelRepository and Status Read Model"
+
+subdomains: []
+kernels: []
+adjacents: []
+externals: []
+
+implementation_guidance:
+  suggested_type: "adapter"
+  language_affinity: "any"
+  notes: >
+    Implementations: LMDB (keripy — memory-mapped key-value), redb (keriox —
+    embedded Rust key-value), DynamoDB (serious-keri — serverless), SQLite/PostgreSQL
+    (relational alternatives), in-memory (testing). Repository interfaces define
+    the contract; the persistence adapter implements it. Implementations MUST
+    satisfy the invariants on each Repository port (append-only, idempotent, ordered).
+
+issues: []
+tags: ["external", "persistence", "adapter", "infrastructure", "storage"]

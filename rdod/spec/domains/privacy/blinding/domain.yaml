@@ -31,14 +31,14 @@ domain_clients:
 
 subdomains: []
 
-kernels:
-  - ref: "external://cryptographic-primitives"
-    source: "Blake3-256 (BLID digest computation), argon2/HKDF (salt-based hierarchically deterministic UUID derivation)"
-    relationship: "Cryptographic algorithm types used for BLID computation and blinding UUID derivation from shared secret salt"
+kernels: []
 
 adjacents: []
 
-externals: []
+externals:
+  - ref: "domain://externals/cryptographic-primitives"
+    source: "Blake3-256 (BLID digest computation), argon2/HKDF (salt-based hierarchically deterministic UUID derivation)"
+    relationship: "Cryptographic algorithm types used for BLID computation and blinding UUID derivation from shared secret salt"
 
 implementation_guidance:
   suggested_type: "module"

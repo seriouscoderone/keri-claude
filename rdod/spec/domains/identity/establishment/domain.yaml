@@ -40,14 +40,14 @@ domain_clients:
 
 subdomains: []
 
-kernels:
-  - ref: "external://cryptographic-primitives"
-    source: "Ed25519/ECDSA signature verification (verifySigs), Blake3-256 digest comparison (pre-rotation binding)"
-    relationship: "Signature verification and digest comparison are kernel operations invoked at multiple validation steps"
+kernels: []
 
 adjacents: []
 
 externals:
+  - ref: "domain://externals/cryptographic-primitives"
+    source: "Ed25519/ECDSA signature verification (verifySigs), Blake3-256 digest comparison (pre-rotation binding)"
+    relationship: "Signature verification and digest comparison are kernel operations invoked at multiple validation steps"
   - name: "Key State and KEL Lookup"
     abstraction: "Repository (read-only)"
     ref: "port://identity/establishment/outbound/state-lookup"

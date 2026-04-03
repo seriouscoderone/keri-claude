@@ -62,7 +62,7 @@ ports:
       input: "types://credential-lifecycle#Credential"
       output: "types://credential-lifecycle#CredentialStateSnapshot"
       errors: []
-    refs: ["external://persistence"]
+    refs: ["domain://externals/persistence"]
     invariants:
       - "Credential immutability: once stored, credential bytes for a SAID cannot be modified"
       - "Index consistency: storing a credential automatically indexes it by issuer, subject, and schema"

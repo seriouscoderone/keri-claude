@@ -38,10 +38,7 @@ subdomains:
   - ref: "domain://privacy/aggregation"
     relationship: "Aggregate computation, inclusion proofs, most compact form algorithm, Compactor engine, SAD path signatures"
 
-kernels:
-  - ref: "external://cryptographic-primitives"
-    source: "SAID computation for blinded commitments, UUID entropy requirements (>= 128 bits cryptographic entropy)"
-    relationship: "Cryptographic algorithm types used for computing blinded SAIDs over UUID-protected blocks and generating high-entropy UUIDs"
+kernels: []
 
 adjacents:
   - ref: "domain://cesr"
@@ -51,7 +48,10 @@ adjacents:
     relationship: "Customer-Supplier — chain-link confidentiality gating requires knowledge of whether the IPEX agree step has completed before full disclosure is permitted"
     pattern: "Customer-Supplier"
 
-externals: []
+externals:
+  - ref: "domain://externals/cryptographic-primitives"
+    source: "SAID computation for blinded commitments, UUID entropy requirements (>= 128 bits cryptographic entropy)"
+    relationship: "Cryptographic algorithm types used for computing blinded SAIDs over UUID-protected blocks and generating high-entropy UUIDs"
 
 implementation_guidance:
   suggested_type: "module"

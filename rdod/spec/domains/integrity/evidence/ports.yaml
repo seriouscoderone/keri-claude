@@ -42,7 +42,7 @@ ports:
       errors:
         - "errors://integrity/evidence#DELAppendError"
         - "errors://integrity/evidence#LDETimeoutError"
-    refs: ["persistence"]
+    refs: ["domain://externals/persistence"]
     invariants:
       - "Likely-duplicitous escrow is temporary — events are promoted to confirmed evidence or pruned at timeout"
       - "Confirmed duplicity evidence is append-only — once recorded, it is permanent"

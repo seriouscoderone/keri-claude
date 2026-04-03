@@ -30,14 +30,14 @@ domain_clients:
 
 subdomains: []
 
-kernels:
-  - ref: "external://cryptographic-primitives"
-    source: "Blake3-256/SHA-256 (seal digest computation), Ed25519 (interaction event signing)"
-    relationship: "Seal digests are kernel types — the anchoring subdomain uses digest computation to create content commitments"
+kernels: []
 
 adjacents: []
 
-externals: []
+externals:
+  - ref: "domain://externals/cryptographic-primitives"
+    source: "Blake3-256/SHA-256 (seal digest computation), Ed25519 (interaction event signing)"
+    relationship: "Seal digests are kernel types — the anchoring subdomain uses digest computation to create content commitments"
 
 implementation_guidance:
   suggested_type: "module"

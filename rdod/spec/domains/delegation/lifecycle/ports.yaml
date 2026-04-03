@@ -51,7 +51,7 @@ ports:
       input: "types://delegation/lifecycle#SignedEstablishmentEvent"
       output: "void"
       errors: []
-    refs: ["persistence"]
+    refs: ["domain://externals/persistence"]
     invariants:
       - "Pending-approval events await delegator commitment confirmation"
       - "Delegable events await local delegator approval before committing"

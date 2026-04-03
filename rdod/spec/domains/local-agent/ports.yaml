@@ -45,7 +45,7 @@ ports:
       output: "types://identity/state#KeyState"
       errors:
         - "errors://local-agent#DatabaseOpenError"
-    refs: ["persistence"]
+    refs: ["domain://externals/persistence"]
 
   - id: "port://local-agent/outbound/escrow-repository"
     type: outbound
@@ -59,7 +59,7 @@ ports:
       input: "types://local-agent#EscrowedItem"
       output: "types://local-agent#EscrowedItem"
       errors: []
-    refs: ["persistence"]
+    refs: ["domain://externals/persistence"]
 
   - id: "port://local-agent/outbound/credential-repository"
     type: outbound
@@ -73,7 +73,7 @@ ports:
       input: "types://cesr/primitives#SAID"
       output: "types://credential-lifecycle#Credential"
       errors: []
-    refs: ["persistence"]
+    refs: ["domain://externals/persistence"]
 
   # Outbound — direct witness HTTP communication
   - id: "port://local-agent/outbound/witness-comms"

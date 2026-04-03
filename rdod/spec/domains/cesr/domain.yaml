@@ -46,10 +46,7 @@ subdomains:
     relationship: "CESR drives stream composition — grouping primitives with count codes for pipelining and cold-start parsing"
     via_port: "port://cesr/composition/inbound/stream-composition"
 
-kernels:
-  - ref: "external://cryptographic-primitives"
-    source: "Ed25519 (signing/verification), X25519 (encryption), ECDSA secp256k1/secp256r1, Ed448, Blake3-256/512, Blake2b-256/512, SHA2-256/512, SHA3-256/512, argon2 (key stretching)"
-    relationship: "Cryptographic algorithm output types appear directly as CESR primitive code entries — each algorithm maps to one or more fixed-size code table entries"
+kernels: []
 
 # Note: CESR's relationships with KERI and ACDC are fully captured in domain_clients above.
 # CESR is a pure encoding layer — it does not call into KERI or ACDC. Those domains call
@@ -58,7 +55,10 @@ kernels:
 # actual dependency direction.
 adjacents: []
 
-externals: []
+externals:
+  - ref: "domain://externals/cryptographic-primitives"
+    source: "Ed25519 (signing/verification), X25519 (encryption), ECDSA secp256k1/secp256r1, Ed448, Blake3-256/512, Blake2b-256/512, SHA2-256/512, SHA3-256/512, argon2 (key stretching)"
+    relationship: "Cryptographic algorithm output types appear directly as CESR primitive code entries — each algorithm maps to one or more fixed-size code table entries"
 
 implementation_guidance:
   suggested_type: "library"

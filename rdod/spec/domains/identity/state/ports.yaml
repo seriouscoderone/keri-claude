@@ -63,7 +63,7 @@ ports:
       input: "types://cesr/primitives#AID"
       output: "types://identity/state#KeyState"
       errors: []
-    refs: ["external://persistence"]
+    refs: ["domain://externals/persistence"]
     invariants:
       - "Query-only — consumers never write to the read model directly"
       - "Returns null/empty when AID not found — the IdentityService translates this to QueryNotFoundError at the inbound port"
@@ -85,7 +85,7 @@ ports:
       output: "types://identity/state#WriteOutcome"
       errors:
         - "errors://identity/establishment#ValidationError"
-    refs: ["external://persistence"]
+    refs: ["domain://externals/persistence"]
     invariants:
       - "The KEL is NEVER written to directly — all writes go through the IdentityService"
       - "Escrow queues are part of the repository, not a separate persistence concern"
@@ -105,4 +105,4 @@ ports:
       input: "string"
       output: "types://identity/state#EscrowReprocessResult"
       errors: []
-    refs: ["external://persistence"]
+    refs: ["domain://externals/persistence"]

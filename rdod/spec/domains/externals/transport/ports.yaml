@@ -1,0 +1,35 @@
+domain_ref: "externals/transport"
+
+ports:
+  - id: "port://externals/transport/inbound/send"
+    type: inbound
+    name: "Send Message"
+    semantics: command
+    idempotent: false
+    description: >
+      Send CESR-encoded bytes to an endpoint. Transport is payload-agnostic —
+      it delivers bytes without interpreting them. CESR framing handles message
+      boundaries.
+    contract:
+      input: "Endpoint + bytes"
+      output: "void"
+      errors:
+        - "ConnectionRefusedError"
+        - "TimeoutError"
+        - "EndpointUnreachableError"
+    refs: []
+
+  - id: "port://externals/transport/inbound/receive"
+    type: inbound
+    name: "Receive Messages"
+    semantics: event
+    idempotent: true
+    description: >
+      Listen on a network address and yield incoming CESR-encoded byte streams.
+      Returns an async stream of raw bytes — the consumer parses them.
+    contract:
+      input: "Listen address (string)"
+      output: "AsyncStream of bytes"
+      errors:
+        - "BindError"
+    refs: []

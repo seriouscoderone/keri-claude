@@ -1,0 +1,16 @@
+domain_ref: "externals/persistence"
+
+imports: []
+
+terms:
+  - term: "Key-Value Store"
+    definition: "A storage engine that maps byte-string keys to byte-string values with support for ordered iteration and range queries"
+    invariants:
+      - "Writes are durable — once acknowledged, data survives process restart"
+      - "Ordered iteration follows lexicographic key ordering"
+    examples:
+      - "LMDB — memory-mapped, ACID, ordered keys"
+      - "DynamoDB — serverless, partition+sort key, eventually consistent reads"
+
+events: []
+rules: []

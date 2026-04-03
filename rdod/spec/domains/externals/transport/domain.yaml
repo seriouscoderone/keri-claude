@@ -1,0 +1,41 @@
+template_version: "2.0"
+id: "externals/transport"
+name: "Network Transport"
+description: >
+  Network transport adapter for delivering CESR-encoded messages between KERI
+  participants. Provides byte-level delivery over HTTP, TCP, UDP, or WebSocket.
+  Transport is payload-agnostic — it delivers bytes; the domain parses them.
+  CESR framing handles message boundaries, so transport does not need to delimit.
+version: "0.1.0"
+tier: "external"
+
+source_material: []
+
+published_language:
+  - term: "Endpoint"
+    description: "A network address where a KERI participant can receive messages"
+
+domain_clients:
+  - ref: "domain://accountability/dissemination"
+    relationship: "Dissemination uses transport to send events and receipts to witnesses"
+  - ref: "domain://cesr/composition"
+    relationship: "CESR composition uses transport for stream delivery"
+  - ref: "domain://discovery"
+    relationship: "Discovery uses transport for OOBI resolution"
+
+subdomains: []
+kernels: []
+adjacents: []
+externals: []
+
+implementation_guidance:
+  suggested_type: "adapter"
+  language_affinity: "any"
+  notes: >
+    Implementations: HTTP/HTTPS (most common for cloud — KERIA, witness HTTP API),
+    TCP (bare metal CESR streams for high-throughput local), UDP (lightweight for
+    receipt dissemination), WebSocket (bidirectional for browser extension).
+    Implementations MUST support at least HTTP; other transports are optional.
+
+issues: []
+tags: ["external", "transport", "adapter", "infrastructure"]

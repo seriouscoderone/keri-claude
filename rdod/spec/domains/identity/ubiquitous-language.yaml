@@ -230,7 +230,7 @@ terms:
       - "Three outcomes: Accept (event appended, domain event published), Escrow (event queued by blocking condition), Reject (event refused)"
       - "Escrow is part of the repository — the guard's 'not yet' response stores the event for later re-evaluation"
       - "Reprocessing re-enters the guard — escrowed events are fully re-validated, not assumed valid"
-      - "The raw persistence layer (external://persistence) is an adapter — the guard is domain logic that wraps it"
+      - "The raw persistence layer (domain://externals/persistence) is an adapter — the guard is domain logic that wraps it"
       - "This pattern applies identically to the TEL Repository in credential-lifecycle"
     examples:
       - "Event arrives → guard checks signatures (identity/thresholds) → insufficient → Escrow to PSE → later: new signature arrives → guard re-checks → threshold satisfied → checks witnesses (accountability) → TOAD met → checks delegation (delegation) → seal found → Accept → written to KEL"

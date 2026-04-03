@@ -1,0 +1,44 @@
+template_version: "2.0"
+id: "externals/cryptographic-primitives"
+name: "Cryptographic Primitives"
+description: >
+  Platform-provided cryptographic algorithms. Every KERI domain that signs,
+  verifies, hashes, or derives keys depends on this external. Algorithm
+  selection is determined by the CESR code — not a runtime choice. Each
+  algorithm maps to one or more fixed-size code table entries.
+version: "0.1.0"
+tier: "external"
+
+source_material: []
+
+published_language:
+  - term: "Signing Algorithm"
+    description: "Asymmetric signing — Ed25519, ECDSA secp256k1, ECDSA secp256r1, Ed448"
+  - term: "Digest Algorithm"
+    description: "Cryptographic hashing — Blake3-256, Blake2b-256, SHA2-256, SHA3-256, and 512-bit variants"
+  - term: "Key Derivation"
+    description: "Deterministic key derivation from salt — argon2 (key stretching), HKDF"
+
+domain_clients:
+  - ref: "domain://cesr/primitives"
+    relationship: "CESR primitives delegate all cryptographic operations to this external"
+  - ref: "domain://identity"
+    relationship: "Identity domains use signing for event authorization and hashing for SAID computation"
+
+subdomains: []
+kernels: []
+adjacents: []
+externals: []
+
+implementation_guidance:
+  suggested_type: "adapter"
+  language_affinity: "any"
+  notes: >
+    Implementations: libsodium (Ed25519 signing, X25519 key exchange, Blake2b —
+    Python/TS/JS), blake3 crate/package (Blake3 hashing), argon2 (password-based
+    key stretching for Signify salts), ed25519-dalek/k256/p256 (Rust ECDSA curves).
+    Implementations MUST support Ed25519 and Blake3-256 at minimum. Key material
+    MUST be zeroed after use (ZeroizeOnDrop pattern).
+
+issues: []
+tags: ["external", "cryptography", "adapter", "infrastructure"]

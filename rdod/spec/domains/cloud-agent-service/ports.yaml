@@ -22,7 +22,7 @@ ports:
       output: "types://cloud-agent-service/provisioning#AgentInstance"
       errors:
         - "errors://cloud-agent-service#AgentUnavailableError"
-    refs: ["persistence"]
+    refs: ["domain://externals/persistence"]
 
   - id: "port://cloud-agent-service/outbound/http-server"
     type: outbound
@@ -33,7 +33,7 @@ ports:
       input: "Server configuration (boot_port, admin_port, router_port)"
       output: "Running HTTP server handle"
       errors: []
-    refs: ["transport"]
+    refs: ["domain://externals/transport"]
 
   - id: "port://cloud-agent-service/outbound/witness-forward"
     type: outbound

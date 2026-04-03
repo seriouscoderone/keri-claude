@@ -41,7 +41,7 @@ ports:
       input: "types://accountability/consensus#Receipt"
       output: "types://accountability/consensus#Receipt"
       errors: []
-    refs: ["persistence"]
+    refs: ["domain://externals/persistence"]
     invariants:
       - "Stored receipts are append-only — once written, they accumulate and are never overwritten"
       - "Escrowed receipts are temporary — promoted to stored receipts or discarded"
