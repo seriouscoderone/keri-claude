@@ -1,0 +1,56 @@
+spec: cesr-specification
+generated: 2026-04-03
+version: 1
+
+findings:
+  - id: CESR-Z2-001
+    zoom: Z2
+    spec_section: "§A.7-A.8 SAD Path Signatures / SAD Path Language"
+    spec_line: 3146
+    score: awkward
+
+    problem: >
+      The CESR spec's Annex A introduces SAD extension concepts not fully
+      covered by the UL: SAD (Self-Addressing Data) as a named concept,
+      SAD Path Language (dotted-notation for addressing nested SAD fields),
+      and SAD Path Signatures (transposable signature attachments on SADs).
+      The Sadder type exists in cesr/composition but the conceptual vocabulary
+      for working with SADs is incomplete.
+
+    proposed_items:
+      - route: ul_term
+        route_domain: cesr/composition
+        term: "SAD"
+        synonyms: ["Self-Addressing Data"]
+        definition: >
+          A serialized data structure that contains its own SAID (self-addressing
+          identifier) as a field. SADs are the unit of signed, verifiable data in
+          CESR — any SAD can be independently signed, streamed, and verified.
+          ACDCs, KERI events, and exchange messages are all SADs.
+
+      - route: ul_term
+        route_domain: cesr/composition
+        term: "SAD Path Language"
+        definition: >
+          A dotted-notation path expression language for addressing nested fields
+          within a SAD. Uses special indices: -0 for the SAID of a nested SAD,
+          -1 for the full serialized value. Paths can be encoded as CESR Primitives
+          for streaming. Used by SAD Path Signatures to specify which nested subset
+          of a SAD is being signed.
+
+      - route: types
+        route_domain: cesr/composition
+        term: "SADPathSignature"
+        definition: >
+          A transposable signature attachment on a SAD or nested subset of a SAD.
+          The signature includes a SAD Path that specifies the location of the
+          signed content. Transposability means the signature can be moved across
+          envelope boundaries without losing cryptographic integrity.
+
+      - route: verification
+        route_domain: cesr/composition
+        term: "Transposability"
+        definition: >
+          The property that a SAD Path Signature maintains cryptographic integrity
+          when moved across envelope boundaries — e.g., extracted from a nested
+          SAD and attached at a different level of the stream hierarchy.
