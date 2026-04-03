@@ -84,18 +84,15 @@ adjacents:
     via_port: "port://identity/anchoring/inbound/data-anchoring"
 
 externals:
-  - name: "TEL Event Repository"
+  - name: "Credential Store"
     abstraction: "Repository"
-    ref: "port://credential-lifecycle/outbound/tel-event-repository"
-    implementation_notes: "Append-only storage for TEL events, keyed by registry SAID and sequence number"
-  - name: "Credential Repository"
-    abstraction: "Repository"
-    ref: "port://credential-lifecycle/outbound/credential-repository"
-    implementation_notes: "Stores ACDC credential bytes keyed by SAID, with indexes by issuer, subject, and schema"
-  - name: "TEL Escrow Repository"
-    abstraction: "Repository"
-    ref: "port://credential-lifecycle/outbound/tel-escrow-repository"
-    implementation_notes: "Transient storage for TEL events awaiting missing dependencies, partitioned by escrow type"
+    ref: "port://credential-lifecycle/outbound/credential-store"
+    implementation_notes: >
+      Stores raw ACDC credential bytes keyed by SAID, with indexes by issuer,
+      subject, and schema. Separate from the TelRepository (which stores TEL
+      events and escrow queues) — this stores the credential content itself.
+      The StatusService manages TEL events via TelRepository; this store holds
+      the actual credential payloads that those events refer to.
 
 implementation_guidance:
   suggested_type: "module"

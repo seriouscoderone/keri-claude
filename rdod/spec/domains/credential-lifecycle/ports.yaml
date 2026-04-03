@@ -31,11 +31,16 @@ ports:
     delegates_to: "port://privacy/blinding/inbound/blinded-state"
 
   # Outbound — what credential-lifecycle calls (delegated to subdomains)
-  - id: "port://credential-lifecycle/outbound/kel-sealing"
+  - id: "port://credential-lifecycle/outbound/commit-authorization"
     type: outbound
-    name: "KEL Sealing"
+    name: "Commit Authorization"
     semantics: command
     idempotent: false
+    description: >
+      Requests the issuer's IdentityService to commit an authorization for a
+      credential operation (issuance, revocation) to their identity history.
+      This is how the issuer authorizes TEL state changes — by committing a
+      seal to their own event log via the IdentityService.
     contract:
       input: "types://credential-lifecycle#SealRequest"
       output: "types://identity/establishment#InteractionEvent"
@@ -43,48 +48,22 @@ ports:
         - "errors://credential-lifecycle/registry#MissingKELSealError"
     refs: ["domain://identity"]
 
-  - id: "port://credential-lifecycle/outbound/tel-event-repository"
+  - id: "port://credential-lifecycle/outbound/credential-store"
     type: outbound
-    name: "TEL Event Repository"
+    name: "Credential Store"
     semantics: command
     idempotent: true
-    contract:
-      input: "types://credential-lifecycle/status#TELEvent"
-      output: "types://credential-lifecycle/status#TELEvent"
-      errors: []
-    refs: ["persistence"]
-    invariants:
-      - "Append-only: events for a registry are ordered by sequence number and never modified or deleted"
-      - "Idempotent append: re-appending an event with the same registry SAID and sequence number is a no-op"
-      - "Timestamp immutability: once a timestamp is recorded for an event, it cannot be overwritten"
-      - "Sequence continuity: get_tel returns events in unbroken ascending sequence number order"
-
-  - id: "port://credential-lifecycle/outbound/credential-repository"
-    type: outbound
-    name: "Credential Repository"
-    semantics: command
-    idempotent: true
+    description: >
+      Stores raw ACDC credential bytes keyed by SAID. Separate from the
+      TelRepository (which the StatusService manages for TEL events and escrow).
+      This store holds the actual credential payloads — the content that TEL
+      events refer to.
     contract:
       input: "types://credential-lifecycle#Credential"
       output: "types://credential-lifecycle#CredentialStateSnapshot"
       errors: []
-    refs: ["persistence"]
+    refs: ["external://persistence"]
     invariants:
       - "Credential immutability: once stored, credential bytes for a SAID cannot be modified"
       - "Index consistency: storing a credential automatically indexes it by issuer, subject, and schema"
-      - "Idempotent processing marker: calling mark_processed multiple times for the same SAID is a no-op"
-
-  - id: "port://credential-lifecycle/outbound/tel-escrow-repository"
-    type: outbound
-    name: "TEL Escrow Repository"
-    semantics: command
-    idempotent: false
-    contract:
-      input: "types://credential-lifecycle#TELEscrowedEvent"
-      output: "types://credential-lifecycle#TELEscrowedEvent"
-      errors: []
-    refs: ["persistence"]
-    invariants:
-      - "Escrow is transient: events are removed once the missing dependency is satisfied"
-      - "Escrow type partitioning: each escrow type is an independent namespace"
-      - "Temporal ordering: escrowed events within a type are retrievable in escrowed_at order"
+      - "Idempotent: re-storing the same credential SAID is a no-op"
