@@ -231,7 +231,9 @@ types:
 
   - name: "KeyEventMessage"
     description: "The serialized wire-format representation of a Key Event, composed of the event body (KERI Field Map) plus attached signatures, witness receipts, and other CESR-encoded cryptographic qualifications. A Key Event Message is what is transmitted; the Key Event within it is what is validated and stored."
-    invariants:
-      - "Contains exactly one Key Event body"
-      - "Includes attached signature groups (indexed or non-indexed)"
-      - "May include attached receipt groups"
+    variants:
+      - name: "default"
+        invariants:
+          - "Contains exactly one Key Event body"
+          - "Includes attached signature groups (indexed or non-indexed)"
+          - "May include attached receipt groups"
