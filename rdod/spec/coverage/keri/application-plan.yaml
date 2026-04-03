@@ -1,0 +1,285 @@
+spec: keri-specification
+status: approved  # all items accepted 2026-04-03
+generated: 2026-04-03
+
+# =============================================
+# APPLICATION PLAN
+# =============================================
+# Ordered by domain dependency (Layer 0 first).
+# Each item needs your approval: accepted / rejected / modified.
+# Mark each with your decision before Phase 6.
+# =============================================
+
+# --- TIER 1: HIGH IMPACT UL TERMS ---
+# These appear across multiple zoom levels and affect many sentences.
+
+ul_terms:
+  - id: 1
+    term: Identity Recovery
+    domain: integrity/recovery
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z2-010", "KERI-Z2-008c", "KERI-Z2-008e"]
+    tier: 1
+    description: >
+      The adopter-facing concept for recovering from key compromise.
+      Collapses SupersedingRecovery, Reconciliation, Trunk, DisputedBranch,
+      ReserveRotation, SQAR into one parent concept. The mechanisms become
+      types underneath.
+    decision: accepted  # accepted / rejected / modified
+
+  - id: 2
+    term: Controller
+    domain: identity
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z1-002"]
+    tier: 1
+    description: >
+      Entity holding private keys for an AID. Primary protocol actor.
+      Spec term used hundreds of times.
+    decision: accepted
+
+  - id: 3
+    term: End-Verifiability
+    domain: identity
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z0-001"]
+    tier: 1
+    description: >
+      The property that any Verifier can independently verify cryptographic
+      control over an AID without intermediary infrastructure. KERI's
+      core value proposition. Spec defines precisely at §5.3.
+    decision: accepted
+
+  - id: 4
+    term: Verifier
+    domain: identity
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z1-007"]
+    tier: 1
+    description: >
+      Role that checks event structure and signatures against Key State.
+      Distinct from Validator. Spec §A.2.1.
+    decision: accepted
+
+  - id: 5
+    term: Validator
+    domain: identity
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z1-007"]
+    tier: 1
+    description: >
+      Role that first verifies, then applies policy constraints (TOAD,
+      delegation) before accepting events into KEL. Spec §A.2.2.
+    decision: accepted
+
+  - id: 6
+    term: Key Event
+    domain: identity
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z1-004"]
+    tier: 1
+    description: >
+      Umbrella term for any event in a KEL — inception, rotation,
+      interaction, and their delegated variants. Two classes:
+      Establishment Events and Non-Establishment Events.
+    decision: accepted
+
+# --- TIER 2: MEDIUM IMPACT UL TERMS ---
+
+  - id: 7
+    term: Self-Certifying Identifier
+    domain: identity
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z1-001"]
+    tier: 2
+    description: >
+      Identifier cryptographically bound to keypair at inception.
+      Foundational concept from which AID derives. Spec term (SCID).
+    decision: accepted
+
+  - id: 8
+    term: Principal Controller
+    domain: discovery
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z3-006"]
+    tier: 2
+    description: >
+      OKEA model: the AID that authorizes other components to act
+      on its behalf. Service operators say "I'm a Player for this Principal."
+    decision: accepted
+
+  - id: 9
+    term: Player
+    domain: discovery
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z3-006"]
+    tier: 2
+    description: >
+      OKEA model: a component AID authorized to act in a Role for
+      a Principal Controller. Pairs with Principal Controller.
+    decision: accepted
+
+  - id: 10
+    term: RUN
+    domain: discovery
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z3-007"]
+    tier: 2
+    description: >
+      Read, Update, Nullify — the peer-to-peer data management paradigm
+      replacing CRUD. No Create, no Delete. Underpins all BADA policy.
+    decision: accepted
+
+# --- TIER 3: LOWER IMPACT UL TERMS ---
+
+  - id: 11
+    term: Juror
+    domain: watcher-service
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z2-004"]
+    tier: 3
+    description: Watcher that records duplicity evidence. Spec term.
+    decision: accepted
+
+  - id: 12
+    term: Jury
+    domain: watcher-service
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z2-004"]
+    tier: 3
+    description: Pool of Jurors. Spec term.
+    decision: accepted
+
+  - id: 13
+    term: Judge
+    domain: watcher-service
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z2-004"]
+    tier: 3
+    description: Watcher evaluating evidence from Juries. Spec term.
+    decision: accepted
+
+  - id: 14
+    term: Disclosure Prompt
+    domain: keri-messaging
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z3-001"]
+    tier: 3
+    description: >
+      Adopter name for `pro` message: prompts peer to disclose
+      sealed-confidential data.
+    decision: accepted
+
+  - id: 15
+    term: Sealed Disclosure
+    domain: keri-messaging
+    file: ubiquitous-language.yaml
+    finding_ids: ["KERI-Z3-001"]
+    tier: 3
+    description: >
+      Adopter name for `bar` message: delivers sealed-confidential data.
+    decision: accepted
+
+# --- TYPES (developer-facing, grouped by domain) ---
+
+types:
+  - domain: identity
+    file: types.yaml
+    items:
+      - { name: InteractionEvent, finding: "KERI-Z1-004" }
+      - { name: SequenceNumber, finding: "KERI-Z4-001" }
+      - { name: PriorEventDigest, finding: "KERI-Z4-001" }
+    decision: accepted
+
+  - domain: identity/key-commitment
+    file: types.yaml
+    items:
+      - { name: ForwardBlindedCommitment, finding: "KERI-Z2-002" }
+      - { name: KeyRevelation, finding: "KERI-Z2-007" }
+      - { name: ReserveKey, finding: "KERI-Z2-007" }
+    decision: accepted
+
+  - domain: identity/establishment
+    file: types.yaml
+    items:
+      - { name: PartialRotation, finding: "KERI-Z2-008" }
+      - { name: AugmentedRotation, finding: "KERI-Z2-008" }
+      - { name: ReserveRotation, finding: "KERI-Z2-008" }
+    decision: accepted
+
+  - domain: identity/thresholds
+    file: types.yaml
+    items:
+      - { name: WitnessRemoveList, finding: "KERI-Z4-001" }
+      - { name: WitnessAddList, finding: "KERI-Z4-001" }
+    decision: accepted
+
+  - domain: delegation
+    file: types.yaml
+    items:
+      - { name: DelegatingEvent, finding: "KERI-Z2-009" }
+      - { name: DelegatedEvent, finding: "KERI-Z2-009" }
+      - { name: DelegatedInceptionEvent, finding: "KERI-Z3-003" }
+      - { name: DelegatedRotationEvent, finding: "KERI-Z3-003" }
+      - { name: DelegatedEstablishment, finding: "KERI-Z3-003" }
+      - { name: CustodialRotation, finding: "KERI-Z2-008" }
+    decision: accepted
+
+  - domain: integrity/recovery
+    file: types.yaml
+    items:
+      - { name: SupersedingRecovery, finding: "KERI-Z2-010" }
+      - { name: Reconciliation, finding: "KERI-Z2-010" }
+      - { name: Trunk, finding: "KERI-Z2-010" }
+      - { name: DisputedBranch, finding: "KERI-Z2-010" }
+      - { name: SQAR, finding: "KERI-Z2-008" }
+    decision: accepted
+
+  - domain: integrity
+    file: types.yaml
+    items:
+      - { name: "Attack taxonomy (5 types)", finding: "KERI-Z3-005" }
+    decision: accepted
+
+  - domain: accountability
+    file: types.yaml
+    items:
+      - { name: Backer, finding: "KERI-Z4-002" }
+      - { name: RegistrarBacker, finding: "KERI-Z4-002" }
+    decision: accepted
+
+  - domain: keri-messaging
+    file: types.yaml
+    items:
+      - { name: KeyEventMessage, finding: "KERI-Z1-005" }
+    decision: accepted
+
+# --- VERIFICATION RULES ---
+
+verification_rules:
+  - domain: identity
+    file: verification.yaml
+    items:
+      - { name: "Control Authority Binding invariant", finding: "KERI-Z1-003" }
+      - { name: "Event Locality (local vs remote)", finding: "KERI-Z3-002" }
+    decision: accepted
+
+  - domain: integrity/recovery
+    file: verification.yaml
+    items:
+      - { name: "Superseding Rules (A, B, C)", finding: "KERI-Z2-010" }
+    decision: accepted
+
+  - domain: discovery
+    file: verification.yaml
+    items:
+      - { name: "BADA Acceptance Rules (anchored + signed)", finding: "KERI-Z1-008" }
+    decision: accepted
+
+# --- EDUCATION (docs, not RDOD changes) ---
+
+education:
+  - term: Autonomic Namespace
+    finding: "KERI-Z2-003"
+    action: "Add to glossary or KERI documentation, not RDOD UL"
+    decision: accepted

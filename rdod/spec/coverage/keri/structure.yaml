@@ -1,0 +1,128 @@
+spec: keri-specification
+spec_path: scripts/markdown/keri-specification.md
+rdod_path: rdod/spec/domains/
+generated: 2026-04-03
+
+zoom_levels:
+  Z0:
+    count: 1
+    headings:
+      - { heading: "Key Event Receipt Infrastructure (KERI)", line: 1 }
+  Z1:
+    count: 9
+    headings:
+      - { heading: "Introduction", line: 32, substantive: true }
+      - { heading: "Scope", line: 110, substantive: true }
+      - { heading: "Normative references", line: 134, substantive: false }
+      - { heading: "Terms and Definitions", line: 148, substantive: false }
+      - { heading: "KERI foundational overview", line: 381, substantive: true }
+      - { heading: "KERI data structures and labels", line: 1217, substantive: true }
+      - { heading: "KERI key management", line: 3160, substantive: true }
+      - { heading: "Annex A", line: 4393, substantive: true }
+      - { heading: "Bibliography", line: 7072, substantive: false }
+  Z2:
+    count: 35
+    # H3 sections — representative examples:
+    # Infrastructure and ecosystem overview (383)
+    # KERI's identifier system security overlay (611)
+    # Self-certifying identifier (789)
+    # Autonomic identifier (809)
+    # Key rotation/pre-rotation (825)
+    # CESR Encoding (871)
+    # Seals (1648)
+    # Key event messages (1912)
+    # Receipt Messages (2358)
+    # Routed Messages (2410)
+    # Signing and sealing KERI data structures (2940)
+    # Pre-rotation (3310)
+    # Fractionally weighted threshold (3522)
+    # Cooperative Delegation (4000)
+    # Security Properties of Pre-rotation (4072)
+    # Validation (4584)
+    # Superseding Recovery and Reconciliation (4782)
+    # KAWA (4940)
+    # OOBIs (6177)
+    # BADA (6615)
+  Z3:
+    count: 104
+    # H4 sections — the "workhorse" level
+    # Controller Application, Direct exchange, Indirect exchange
+    # Tetrad bindings, field labels, seal types
+    # Message bodies (inception, rotation, interaction, delegation)
+    # Indexed/non-indexed signatures, endorsements
+    # Key labeling cases, pre-rotation details
+    # Reserve/Custodial rotation, SQAR
+    # Dead-attacks, Live-attacks
+    # First Seen Policy, Reconciliation, Superseding rules
+    # OOBI types, BADA rules, OKEA
+  Z4:
+    count: 50
+    # H5 sections — field-level details
+    # Version string, message type, SAID, AID, sequence number fields
+    # Threshold fields, key list, next key digest list
+    # Backer threshold, configuration traits
+    # CESR field encodings (DateTime, Threshold, Route)
+    # Native CESR message bodies (icp, ixn, rot, dip, drt, rct)
+
+# Domain mapping — which RDOD domains cover which spec sections
+domain_map:
+  - spec_section: "Introduction"
+    rdod_domains:
+      - identity
+      - accountability
+      - cesr
+      - discovery
+    notes: "Covers all high-level concepts: AID, KEL, pre-rotation, direct/indirect modes, KAWA"
+
+  - spec_section: "Scope"
+    rdod_domains:
+      - identity
+      - cesr
+    notes: "Key management scope, cryptographic agility, secure attribution"
+
+  - spec_section: "KERI foundational overview"
+    rdod_domains:
+      - identity
+      - identity/establishment
+      - accountability
+      - accountability/consensus
+      - accountability/dissemination
+      - cesr
+      - cesr/primitives
+      - keri-messaging
+      - discovery
+    notes: "Detailed architecture: Controller, witnesses, watchers, SCID, AID, pre-rotation, CESR, bindings, ANs"
+
+  - spec_section: "KERI data structures and labels"
+    rdod_domains:
+      - keri-messaging
+      - cesr
+      - cesr/composition
+      - identity
+      - identity/establishment
+      - accountability/receipting
+      - credential-lifecycle
+    notes: "Wire format: field maps, labels, seals, key events, receipts, routed messages, signatures"
+
+  - spec_section: "KERI key management"
+    rdod_domains:
+      - identity/establishment
+      - identity/key-commitment
+      - identity/thresholds
+      - delegation
+      - delegation/authorization
+      - delegation/lifecycle
+      - delegation/recovery
+      - integrity
+    notes: "Pre-rotation mechanics, thresholds, delegation, reserve rotation, SQAR, attack analysis"
+
+  - spec_section: "Annex A"
+    rdod_domains:
+      - accountability/consensus
+      - integrity
+      - integrity/detection
+      - integrity/evidence
+      - integrity/recovery
+      - discovery
+      - identity
+    notes: "Security analysis, validation, duplicity, recovery, KAWA details, OOBIs, BADA"

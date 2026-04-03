@@ -1,0 +1,796 @@
+spec: keri-specification
+generated: 2026-04-03
+version: 2
+
+findings:
+  - id: KERI-Z0-001
+    zoom: Z0
+    spec_section: "§1 Key Event Receipt Infrastructure (KERI)"
+    spec_line: 1
+    score: awkward
+
+    attempted_sentence: >
+      KERI enables an adopter to establish and rotate cryptographic control
+      over Autonomic Identifiers through an append-only Key Event Log,
+      providing end-verifiable secure attribution without reliance on
+      trusted third parties.
+
+    problem: >
+      The UL names the infrastructure (AID, KEL, Inception Event, Rotation Event)
+      but not the value it delivers. "End-verifiability" — the property that any
+      party can independently verify cryptographic control without relying on
+      intermediary infrastructure — is KERI's defining value proposition. It appears
+      50+ times across the spec (Introduction, Scope, OOBI section). "Secure
+      attribution" — the ability to cryptographically attribute data to its source —
+      is the practical consequence. Neither concept has a UL term.
+
+    proposed_fix:
+      domain: identity
+      file: ubiquitous-language.yaml
+      action: add_term
+      term: End-Verifiability
+      definition: >
+        The property that any recipient can independently verify the
+        cryptographic control authority over an AID at any point in time,
+        using only the KEL and cryptographic libraries, without depending
+        on any intermediary infrastructure or trusted third party. This is
+        KERI's fundamental security guarantee and the basis for ambient
+        verifiability.
+      invariants:
+        - "Verification requires only the KEL and standard cryptographic libraries"
+        - "No trusted third party or intermediary infrastructure is needed"
+        - "Verification is possible by anyone, anywhere, at any time (ambient)"
+      related_terms: ["AID", "KEL", "Key State", "Verifier"]
+
+    alternatives_considered:
+      - name: Ambient Verifiability
+        rejected_because: >
+          More specific to the "anyone, anywhere, at any time" property.
+          Could be a synonym rather than the primary term. The spec uses
+          "end-verifiable" more frequently than "ambient."
+      - name: Secure Attribution
+        rejected_because: >
+          This is the consequence of end-verifiability, not the property
+          itself. Could be a related term or separate entry.
+
+    simplifies:
+      - "Z0 mission statement becomes fully fluent"
+      - "Z1 Introduction sentences can reference the value proposition by name"
+      - "OOBI section (§A.8) repeatedly says 'everything in KERI is end-verifiable' — term gives this a UL anchor"
+    depends_on: []
+    revisions: []
+
+  - id: KERI-Z1-001
+    zoom: Z1
+    spec_section: "§2 Introduction"
+    spec_line: 43
+    score: gap
+
+    attempted_sentence: >
+      KERI provides an identifier system security overlay through
+      Self-Certifying Identifiers as a cryptographic root-of-trust,
+      formalized as Autonomic Identifiers with control provenance
+      tracked in a Key Event Log.
+
+    problem: >
+      Self-Certifying Identifier (SCID) is the foundational concept from
+      which AID derives. The Introduction uses it 10+ times. The spec
+      defines SCID as an identifier cryptographically bound to a keypair
+      at inception (self-contained unless transferred). AID is a variant
+      of SCID with transferable control via KEL. The UL has AID but not
+      SCID, which means the conceptual foundation is missing.
+
+    proposed_fix:
+      domain: identity
+      file: ubiquitous-language.yaml
+      action: add_term
+      term: Self-Certifying Identifier
+      synonyms: ["SCID"]
+      definition: >
+        An identifier that is cryptographically bound to a keypair at
+        inception, requiring no external authority to establish the binding.
+        The identifier is derived from the public key or a digest thereof,
+        making the binding self-evident and independently verifiable.
+        An AID is a variant of SCID that extends self-certification with
+        transferable control provenance via a Key Event Log.
+      invariants:
+        - "The binding between identifier and initial keypair is self-evident from the identifier's derivation"
+        - "No trusted third party is needed to establish or verify the binding"
+      related_terms: ["AID", "Inception Event", "End-Verifiability"]
+
+    alternatives_considered:
+      - name: Cryptographic Root-of-Trust
+        rejected_because: >
+          Too generic — describes a property, not the specific identifier concept.
+          SCID is the spec's own well-established term.
+
+    simplifies:
+      - "Introduction sentences become fluent"
+      - "Explains the AID → SCID derivation chain"
+      - "Clarifies why non-transferable AIDs exist (they are pure SCIDs)"
+    depends_on: []
+    revisions: []
+
+  - id: KERI-Z1-002
+    zoom: Z1
+    spec_section: "§3 Scope"
+    spec_line: 112
+    score: awkward
+
+    attempted_sentence: >
+      KERI manages the Key State of an AID — the binding between an
+      identifier, its controlling keypairs, the Controller entity, and the
+      KEL that records state transitions.
+
+    problem: >
+      "Controller" is referenced in the AID definition and used extensively
+      throughout the spec (the entity that holds private keys and controls
+      the AID), but it is not a standalone UL term. At Z1 and Z2, nearly
+      every process description needs to name the actor who initiates events,
+      and "Controller" is that actor. Without it as a first-class term,
+      sentences awkwardly refer to "the entity that controls the AID" or
+      just "the adopter."
+
+    proposed_fix:
+      domain: identity
+      file: ubiquitous-language.yaml
+      action: add_term
+      term: Controller
+      definition: >
+        The entity (or set of entities in multi-sig) that holds the private
+        signing keys for an AID and is authorized to generate and sign Key Events.
+        The Controller is the primary actor in the KERI protocol — the one who
+        establishes, rotates, delegates, and abandons identifiers.
+      invariants:
+        - "A Controller MUST hold the current private signing keys for the AID"
+        - "In multi-sig, the Controller is the collective set of key holders"
+        - "The Controller is identified by the AID it controls, not by any external identity"
+      related_terms: ["AID", "Key State", "Signing Threshold", "Event Processor"]
+
+    alternatives_considered:
+      - name: Key Holder
+        rejected_because: >
+          Too passive — the Controller actively manages the AID, not just holds keys.
+      - name: Identity Owner
+        rejected_because: >
+          "Owner" implies property rights. The Controller has cryptographic
+          control, which is a technical relationship, not a legal one.
+
+    simplifies:
+      - "Every Z2 workflow sentence can name the actor: 'The Controller does X through ServiceY'"
+      - "Clarifies multi-sig: the Controller is the collective, not any individual"
+      - "Parallels spec terminology exactly"
+    depends_on: []
+    revisions: []
+
+  - id: KERI-Z1-003
+    zoom: Z1
+    spec_section: "§3 Scope"
+    spec_line: 112
+    score: awkward
+
+    attempted_sentence: >
+      KERI manages the Key State of an AID — the binding between an
+      identifier, its controlling keypairs, the Controller entity, and the
+      KEL that records state transitions.
+
+    problem: >
+      The Scope section describes "strong bindings" between four elements:
+      identifier, keypairs, controller, and data structure (KEL). The spec
+      later formalizes these as "Tetrad bindings" (§5.5.2, line 1031).
+      This four-way binding is the fundamental invariant of KERI — break
+      any binding and the system fails. The UL has Key State (which
+      captures the keypair-to-identifier binding) but not the full
+      tetrad concept.
+
+    proposed_fix:
+      domain: identity
+      file: ubiquitous-language.yaml
+      action: add_term
+      term: Control Authority Binding
+      synonyms: ["Tetrad Binding"]
+      definition: >
+        The cryptographically enforced four-way binding between an AID,
+        its current controlling keypairs (Key State), the Controller entity
+        that holds the private keys, and the KEL that records the history
+        of state transitions. This binding is KERI's fundamental security
+        invariant — all four elements must be consistent for the AID to
+        be considered under valid control.
+      invariants:
+        - "The AID is derived from or anchored to the initial keypair (SCID property)"
+        - "The Key State tracks the current authoritative keypairs"
+        - "The KEL provides a verifiable history of all state transitions"
+        - "The Controller holds the private keys corresponding to the current Key State"
+      related_terms: ["AID", "Key State", "KEL", "Controller", "Self-Certifying Identifier"]
+
+    alternatives_considered:
+      - name: Tetrad Binding
+        rejected_because: >
+          "Tetrad" is spec jargon. The adopter concept is about establishing
+          and maintaining control authority. However, keeping "Tetrad Binding"
+          as a synonym preserves the spec cross-reference.
+      - name: Identifier Security Binding
+        rejected_because: >
+          Too generic — doesn't convey the specific four-element structure.
+
+    simplifies:
+      - "Scope section becomes fluent: 'KERI maintains the Control Authority Binding for each AID'"
+      - "Security analysis (attacks) can reference which binding is being attacked"
+      - "Gives Z3 invariant statements a named concept to anchor against"
+    depends_on: ["KERI-Z1-002"]
+    revisions: []
+
+  - id: KERI-Z1-004
+    zoom: Z1
+    spec_section: "§5 KERI foundational overview"
+    spec_line: 391
+    score: gap
+
+    attempted_sentence: >
+      The Controller manages an AID through five functions: keypair
+      generation, keypair storage, Key Event generation, event signing,
+      and event validation — all mediated through the Event Processor.
+
+    problem: >
+      "Key Event" as a general category — encompassing Inception Events,
+      Rotation Events, Interaction Events, and their delegated variants —
+      has no UL term. The UL has specific event types (Inception Event,
+      Rotation Event, Establishment Event) but no umbrella term. The spec
+      uses "key event" hundreds of times as a general concept.
+
+      Additionally, "Interaction Event" (ixn) — the non-establishment event
+      that anchors data to the KEL via seals — is not in the UL despite
+      being one of only three core event types.
+
+    proposed_fix:
+      domain: identity
+      file: ubiquitous-language.yaml
+      action: add_term
+      term: Key Event
+      definition: >
+        Any event in the Key Event Log. Key Events divide into two classes:
+        Establishment Events (Inception Event, Rotation Event, and their
+        delegated variants) that change Key State, and Non-Establishment
+        Events (Interaction Events) that anchor data commitments without
+        changing Key State. Every Key Event has a sequence number, a SAID,
+        and must be signed by the current Controller.
+      invariants:
+        - "Every Key Event has a unique sequence number within its KEL"
+        - "Every Key Event has a SAID computed over its content"
+        - "Establishment Events change Key State; Non-Establishment Events do not"
+      related_terms: ["KEL", "Establishment Event", "Interaction Event", "SAID"]
+
+    proposed_fix_2:
+      domain: identity
+      file: ubiquitous-language.yaml
+      action: add_term
+      term: Interaction Event
+      synonyms: ["Non-Establishment Event"]
+      definition: >
+        A Key Event that anchors data commitments (seals/authorizations) to
+        the KEL without changing the Key State. Interaction Events allow a
+        Controller to commit to external data, authorize credential operations,
+        or record other verifiable commitments, all under the current Key State.
+      invariants:
+        - "Does NOT change Key State (signing keys, rotation keys, witness set remain the same)"
+        - "Carries a seal list for data commitments"
+        - "Sequence number is one greater than the prior event"
+      related_terms: ["Key Event", "Establishment Event", "KEL"]
+
+    simplifies:
+      - "Every sentence that currently says 'inception, rotation, or interaction event' can say 'Key Event'"
+      - "The Establishment vs Non-Establishment distinction becomes nameable"
+      - "Z2 workflow sentences can describe 'the Controller generates a Key Event' without enumerating types"
+    depends_on: []
+    revisions: []
+
+  - id: KERI-Z1-005
+    zoom: Z1
+    spec_section: "§6 KERI data structures and labels"
+    spec_line: 1912
+    score: awkward
+
+    attempted_sentence: >
+      The KERI Message Types define the event vocabulary: Inception Events,
+      Rotation Events, Interaction Events, Delegated Inception Events,
+      Receipts, and Exchange Messages.
+
+    problem: >
+      Same Interaction Event gap as KERI-Z1-004. Also, the relationship
+      between "Key Event" (the domain concept) and "Key Event Message"
+      (the wire format) needs clarification. The spec distinguishes
+      between the event (the logical thing that happened) and the message
+      (the serialized representation sent over the wire). The UL should
+      capture this distinction.
+
+    proposed_fix:
+      domain: keri-messaging
+      file: ubiquitous-language.yaml
+      action: add_term
+      term: Key Event Message
+      definition: >
+        The serialized wire-format representation of a Key Event, composed
+        of the event body (KERI Field Map) plus attached signatures, witness
+        receipts, and other cryptographic qualifications. A Key Event Message
+        is what is transmitted; the Key Event within it is what is validated
+        and stored in the KEL.
+      invariants:
+        - "Contains exactly one Key Event body"
+        - "Includes attached signature groups (indexed or non-indexed)"
+        - "May include attached receipt groups"
+      related_terms: ["Key Event", "KERI Field Map", "KERI Message Types"]
+
+    simplifies:
+      - "Clarifies the event vs message distinction throughout the spec"
+      - "Z3 validation rules can reference 'the Key Event within the message'"
+    depends_on: ["KERI-Z1-004"]
+    revisions: []
+
+  - id: KERI-Z1-006
+    zoom: Z1
+    spec_section: "§6 KERI data structures and labels — Seals"
+    spec_line: 1648
+    score: collapse
+
+    attempted_sentence: >
+      Seals embed cryptographic commitments within events: Digest Seals
+      commit to arbitrary data hashes, Event Seals reference specific
+      events in other logs, and Registrar Backer Seals authorize
+      credential registry operations.
+
+    problem: >
+      The spec uses "seal" as a single concept, but DDD analysis reveals
+      it serves multiple adopter-facing purposes. Per the CLAUDE.md DDD
+      philosophy, "seal" should collapse into adopter-centric verbs.
+      The identity/anchoring subdomain likely handles some of this, but
+      the full expansion needs documentation.
+
+    expansion_mapping:
+      - spec_term: "seal (general)"
+        ul_verb: "commit"
+        ul_context: "Controller commits data to the KEL via an Interaction Event"
+      - spec_term: "digest seal"
+        ul_verb: "commit to data"
+        ul_context: "Anchoring a hash of external data in the KEL"
+      - spec_term: "event seal / source event seal"
+        ul_verb: "cross-reference"
+        ul_context: "Referencing a specific event in another identifier's KEL"
+      - spec_term: "delegator seal"
+        ul_verb: "approve"
+        ul_context: "Delegator approves a delegate's inception or rotation"
+      - spec_term: "registrar backer seal"
+        ul_verb: "authorize"
+        ul_context: "Issuer authorizes a credential registry operation"
+
+    proposed_fix:
+      domain: identity
+      file: ubiquitous-language.yaml
+      action: add_term
+      term: Seal Taxonomy
+      definition: >
+        A reference document mapping the spec's "seal" concept to
+        adopter-centric operations. The word "seal" in the protocol
+        refers to a cryptographic commitment embedded in an event.
+        In adopter language, seals serve different purposes depending
+        on context: committing data, cross-referencing events, approving
+        delegations, or authorizing credential operations.
+      note: >
+        This may be better captured as a cross-reference in the
+        identity/anchoring subdomain rather than a standalone term.
+        Defer to Z2-Z3 analysis for final placement.
+
+    simplifies:
+      - "Every Z2 sentence about seals can use the specific adopter verb instead"
+      - "Readers who don't know KERI understand 'approve' and 'authorize' immediately"
+    depends_on: []
+    revisions: []
+
+  - id: KERI-Z1-007
+    zoom: Z1
+    spec_section: "§A.2 Validation"
+    spec_line: 4584
+    score: gap
+
+    attempted_sentence: >
+      A Verifier establishes the Key State at event issuance and checks
+      structural validity plus signature verification. A Validator extends
+      this with Witness receipt checks and delegation validation before
+      accepting events into the KEL.
+
+    problem: >
+      Verifier and Validator are two of the most important roles in the
+      KERI spec, with precise and distinct definitions (§A.2.1, §A.2.2):
+
+      - Verifier: checks event structure (SAID, field appearance, prior
+        digests) and signature validity against the Key State at issuance.
+      - Validator: first acts as Verifier, then applies additional
+        constraints (witnessing, delegation) before accepting into KEL.
+
+      The UL has "Event Processor" (identity domain) which partially
+      overlaps with Validator but conflates the two-stage process. The
+      spec's distinction is important because: (a) a Verifier can operate
+      without a full KEL (just needs the inception event for non-transferable
+      AIDs), (b) Validation is the gateway to KEL acceptance, and
+      (c) different roles (witness, watcher, controller) may verify
+      without fully validating.
+
+    proposed_fix:
+      domain: identity
+      file: ubiquitous-language.yaml
+      action: add_term
+      term: Verifier
+      definition: >
+        A component or role that cryptographically verifies an event's
+        structure and signatures. Verification includes: checking the event's
+        SAID, validating field structure, confirming prior event digest chain,
+        and verifying signatures against the Key State at the time of issuance.
+        A Verifier establishes control authority but does not accept events
+        into the KEL.
+      invariants:
+        - "Must determine the controlling Key State at the time of event issuance"
+        - "For non-transferable AIDs, only the Inception Event is needed"
+        - "For transferable AIDs, the complete sequence of Establishment Events is needed"
+      related_terms: ["Validator", "Key State", "Establishment Event"]
+
+    proposed_fix_2:
+      domain: identity
+      file: ubiquitous-language.yaml
+      action: add_term
+      term: Validator
+      definition: >
+        A component or role that determines whether a verified event should
+        be accepted into the KEL. A Validator first acts as a Verifier
+        (structural and signature checks), then applies additional constraints:
+        witness receipt sufficiency (TOAD), delegation authorization, and
+        any other policy rules. Validation is the gateway to KEL acceptance.
+      invariants:
+        - "Must first verify the event (act as Verifier)"
+        - "Must check witness receipt threshold (TOAD) for witnessed identifiers"
+        - "Must check delegation authorization for delegated identifiers"
+        - "Acceptance into KEL is the final act of successful validation"
+      related_terms: ["Verifier", "KEL", "TOAD", "Event Processor"]
+
+    simplifies:
+      - "Z2 workflow sentences can distinguish who does what: 'Verifier checks, Validator accepts'"
+      - "Z3 validation rules can reference the correct role"
+      - "Annex A (§A.2-A.4) becomes describable — currently the largest gap"
+      - "Event Processor can be defined in terms of Validator (it IS the Validator implementation)"
+    depends_on: []
+    revisions: []
+
+  - id: KERI-Z1-008
+    zoom: Z1
+    spec_section: "§A.9 BADA"
+    spec_line: 6615
+    score: awkward
+
+    attempted_sentence: >
+      The BADA policy governs data acceptance: KEL-anchored updates have
+      highest trust, Endpoint Authorization tracks authorized service
+      endpoints per Role, and the First-Seen Rule provides monotonic
+      data acceptance.
+
+    problem: >
+      BADA distinguishes two update categories with different trust levels:
+      (1) KEL-anchored updates — data changes sealed to the KEL via an
+      Interaction Event, providing full auditability, and (2) signed-but-
+      not-anchored updates — signed by the Controller but not sealed to
+      the KEL, providing authentication without auditability. The UL has
+      BADA as a term but doesn't name these two categories, which are
+      central to BADA's trust model.
+
+    proposed_fix:
+      domain: discovery
+      file: ubiquitous-language.yaml
+      action: add_term
+      term: Anchored Update
+      synonyms: ["KEL-Anchored Update"]
+      definition: >
+        A data update that is committed to the Controller's KEL via an
+        Interaction Event seal, providing both authentication (signed by
+        Controller) and auditability (recorded in the append-only log).
+        Anchored updates have the highest trust level under BADA policy.
+      invariants:
+        - "Must be sealed to the KEL via an Interaction Event"
+        - "Supersedes any prior signed-only update for the same data"
+      related_terms: ["BADA", "Interaction Event", "Signed Update"]
+
+    proposed_fix_2:
+      domain: discovery
+      file: ubiquitous-language.yaml
+      action: add_term
+      term: Signed Update
+      synonyms: ["Signed-Not-Anchored Update"]
+      definition: >
+        A data update signed by the Controller but not committed to the KEL.
+        Provides authentication but not auditability. Under BADA policy,
+        signed updates are accepted when no anchored update exists, but are
+        superseded by any anchored update.
+      invariants:
+        - "Must be signed by a current or prior Controller Key State"
+        - "Superseded by any Anchored Update for the same data"
+      related_terms: ["BADA", "Anchored Update", "Key State"]
+
+    simplifies:
+      - "BADA rules become statable: 'An Anchored Update supersedes any Signed Update'"
+      - "OKEA endpoint authorization becomes clearer at Z3"
+    depends_on: ["KERI-Z1-004"]
+    revisions: []
+
+  # ===== Z2 FINDINGS =====
+
+  - id: KERI-Z2-001
+    zoom: Z2
+    spec_section: "§5.3 End-verifiable"
+    spec_line: 702
+    score: awkward
+    problem: >
+      The spec's two-sided infrastructure model — "promulgation infrastructure"
+      (Controller's witnesses) and "confirmation infrastructure" (Validator's
+      watchers) — has no UL terms. This bifurcation is fundamental to KERI's
+      security model.
+    proposed_terms: ["Promulgation Infrastructure", "Confirmation Infrastructure"]
+    domain: identity
+    depends_on: ["KERI-Z1-002", "KERI-Z1-007"]
+
+  - id: KERI-Z2-002
+    zoom: Z2
+    spec_section: "§5.6 Key rotation/pre-rotation"
+    spec_line: 825
+    score: awkward
+    problem: >
+      "Forward-blinded commitment" — committing to a key digest that won't be
+      revealed until rotation — is the essential pre-rotation mechanism. Not
+      explicitly named in the UL despite identity/key-commitment subdomain existing.
+    proposed_terms: ["Forward-Blinded Commitment"]
+    domain: identity/key-commitment
+    depends_on: []
+
+  - id: KERI-Z2-003
+    zoom: Z2
+    spec_section: "§5.10 Autonomic Namespaces"
+    spec_line: 1135
+    score: gap
+    problem: >
+      Autonomic Namespace (AID-rooted namespace inheriting End-Verifiability)
+      is an important spec concept with no UL term. Low priority — may be
+      outside core RDOD scope.
+    proposed_terms: ["Autonomic Namespace"]
+    domain: identity
+    priority: low
+    depends_on: []
+
+  - id: KERI-Z2-004
+    zoom: Z2
+    spec_section: "§5.1.3 Indirect exchange"
+    spec_line: 485
+    score: gap
+    problem: >
+      Watcher role hierarchy (Juror, Jury, Judge) for duplicity evaluation
+      has no UL coverage. These roles describe how a Validator's confirmation
+      infrastructure operates in the indirect trust model.
+    proposed_terms: ["Juror", "Jury", "Judge"]
+    domain: watcher-service
+    depends_on: ["KERI-Z1-007"]
+
+  - id: KERI-Z2-005
+    zoom: Z2
+    spec_section: "§6.2 Seals"
+    spec_line: 1648
+    score: awkward
+    problem: >
+      The property that commitments (seals) survive key rotation — enabling
+      unbounded-term verifiable issuances — has no UL term. The UL describes
+      WHAT seals are but not WHY they're valuable (persistence across key states).
+    proposed_terms: ["Commitment Persistence"]
+    domain: identity/anchoring
+    depends_on: ["KERI-Z1-006"]
+
+  - id: KERI-Z2-006
+    zoom: Z2
+    spec_section: "§6.5 Routed Messages"
+    spec_line: 2410
+    score: awkward
+    problem: >
+      Individual routed message types (Query, Reply, Prod, Bare) are not
+      individually named in the UL. They're grouped under "KERI Message Types"
+      but Z2 workflows (OOBI resolution, endpoint authorization) need to
+      reference specific types.
+    proposed_terms: ["Query Message", "Reply Message", "Prod Message", "Bare Message"]
+    domain: keri-messaging
+    depends_on: []
+
+  - id: KERI-Z2-007
+    zoom: Z2
+    spec_section: "§7.4 Rotation using pre-rotation"
+    spec_line: 3411
+    score: awkward
+    problem: >
+      Two concepts within rotation aren't named: (a) Key Revelation /
+      Unblinding — revealing a previously committed key; (b) Reserve Key —
+      a committed key NOT revealed, held for future rotation. Both needed
+      for Partial Rotation and Reserve Rotation descriptions.
+    proposed_terms: ["Key Revelation", "Reserve Key"]
+    domain: identity/key-commitment
+    depends_on: ["KERI-Z2-002"]
+
+  - id: KERI-Z2-008
+    zoom: Z2
+    spec_section: "§7.5.1 General Pre-rotation"
+    spec_line: 3650
+    score: gap
+    problem: >
+      Five rotation variant patterns unnamed: Partial Rotation, Augmented
+      Rotation, Reserve Rotation, Custodial Rotation, SQAR. These describe
+      specific use cases of the general pre-rotation mechanism.
+    proposed_terms: ["Partial Rotation", "Augmented Rotation", "Reserve Rotation", "Custodial Rotation", "SQAR"]
+    domain: identity/establishment
+    depends_on: ["KERI-Z2-002", "KERI-Z2-007"]
+
+  - id: KERI-Z2-009
+    zoom: Z2
+    spec_section: "§7.6 Cooperative Delegation"
+    spec_line: 4000
+    score: awkward
+    problem: >
+      The spec precisely distinguishes "delegating event" (in Delegator's KEL,
+      contains seal) from "delegated event" (in Delegatee's KEL, references
+      Delegator). The cooperative pairing mechanism may not be explicitly named.
+    proposed_terms: ["Delegating Event", "Delegated Event"]
+    domain: delegation
+    depends_on: []
+
+  - id: KERI-Z2-010
+    zoom: Z2
+    spec_section: "§A.3 Superseding Recovery and Reconciliation"
+    spec_line: 4782
+    score: gap
+    problem: >
+      The LARGEST Z2 gap. The entire recovery section introduces critical
+      vocabulary with no UL coverage: Superseding Recovery, Reconciliation,
+      Trunk/Disputed Branch, Superseding Rules, KEL Fork. This is arguably
+      a DISCOVERY — a recovery vocabulary set would simplify not just this
+      section but also delegation attack analysis and SQAR.
+    proposed_terms: ["Superseding Recovery", "Reconciliation", "Trunk", "Disputed Branch", "Superseding Rules"]
+    domain: integrity/recovery
+    priority: high
+    depends_on: ["KERI-Z1-007"]
+
+  # ===== Z3 FINDINGS =====
+
+  - id: KERI-Z3-001
+    zoom: Z3
+    spec_section: "§6.5.2 Routing Security"
+    spec_line: 2446
+    score: awkward
+    route: ul_term
+    route_domain: keri-messaging
+    problem: >
+      Prod (`pro`) and Bare (`bar`) message types need adopter-facing names.
+      They handle sealed-confidential data: Prod prompts disclosure, Bare
+      delivers it. "Prod" and "Bare" don't communicate purpose.
+    proposed_terms: ["Disclosure Prompt (pro)", "Sealed Disclosure (bar)"]
+    depends_on: []
+
+  - id: KERI-Z3-002
+    zoom: Z3
+    spec_section: "§A.2.3.1 Validator Roles and Event Locality"
+    spec_line: 4658
+    score: awkward
+    route: verification
+    route_domain: identity
+    problem: >
+      Event Locality (local vs remote) governs which validation rules apply.
+      Local events come from protected sources; remote events from untrusted.
+      Not a UL term — a verification rule context.
+    proposed_terms: ["EventLocality"]
+    depends_on: ["KERI-Z1-007"]
+
+  - id: KERI-Z3-003
+    zoom: Z3
+    spec_section: "§A.2.3 Event Types and Classes"
+    spec_line: 4642
+    score: gap
+    route: types
+    route_domain: delegation
+    problem: >
+      Delegated event type names need explicit type definitions:
+      DelegatedInceptionEvent, DelegatedRotationEvent, DelegatedEstablishment
+      sub-class. These appear in validation rules and delegation workflows.
+    proposed_terms: ["DelegatedInceptionEvent", "DelegatedRotationEvent", "DelegatedEstablishment"]
+    depends_on: ["KERI-Z2-009"]
+
+  - id: KERI-Z3-004
+    zoom: Z3
+    spec_section: "§A.2.3.1 Validator Roles"
+    spec_line: 4658
+    score: awkward
+    route: types
+    route_domain: identity
+    route_reason: "Low priority — the individual roles exist, just the umbrella grouping concept"
+    problem: >
+      "Parties to the event" — validators playing specific roles for a
+      specific event (controller, witness, delegator, delegatee, or general
+      validator). The individual roles exist but the umbrella concept doesn't.
+    proposed_terms: ["EventParty"]
+    priority: low
+    depends_on: ["KERI-Z1-007"]
+
+  - id: KERI-Z3-005
+    zoom: Z3
+    spec_section: "§7.7.1-7.7.3 Dead-Attacks / Live-Attacks"
+    spec_line: 4113
+    score: gap
+    route: types
+    route_domain: integrity
+    problem: >
+      Five attack types form a taxonomy: NonEstablishmentDeadAttack,
+      EstablishmentDeadAttack, NonEstablishmentLiveAttack,
+      EstablishmentLiveAttack, DelegatedEventLiveAttack. The adopter
+      doesn't name these — they say "Identity Recovery" — but the types
+      are needed for security analysis documentation.
+    proposed_terms: ["attack type taxonomy (5 types)"]
+    depends_on: []
+
+  - id: KERI-Z3-006
+    zoom: Z3
+    spec_section: "§A.8.5 OKEA"
+    spec_line: 6819
+    score: gap
+    route: ul_term
+    route_domain: discovery
+    problem: >
+      OKEA introduces a three-layer authorization model: Principal Controller
+      (the AID that authorizes), Player (a component AID authorized to act),
+      and their relationship to Roles and Endpoints. A service operator says
+      "I'm a Player in the Witness Role for this Principal." The discovery
+      UL has Role and Endpoint Authorization but not Principal or Player.
+    proposed_terms: ["Principal Controller", "Player"]
+    depends_on: []
+
+  - id: KERI-Z3-007
+    zoom: Z3
+    spec_section: "§A.8.5 RUN off the CRUD"
+    spec_line: 6769
+    score: gap
+    route: ul_term
+    route_domain: discovery
+    problem: >
+      RUN (Read, Update, Nullify) is the peer-to-peer data management paradigm
+      replacing CRUD. No Create (only Update of vacuous records), no Delete
+      (only Nullify — mark invalid without erasing). This underpins all BADA
+      data management. An operator running KERI infrastructure operates
+      within this paradigm.
+    proposed_terms: ["RUN"]
+    depends_on: []
+
+  # ===== Z4 FINDINGS =====
+
+  - id: KERI-Z4-001
+    zoom: Z4
+    spec_section: "§6.1.1-6.1.3 Field labels"
+    spec_line: 1257
+    score: gap
+    route: types
+    route_domain: identity
+    problem: >
+      Four field-level types missing: SequenceNumber (sn — distinct from
+      FirstSeenNumber fn), PriorEventDigest (p — backward chain link),
+      WitnessRemoveList (br), WitnessAddList (ba). Developers implementing
+      Builders need these type names.
+    proposed_terms: ["SequenceNumber", "PriorEventDigest", "WitnessRemoveList", "WitnessAddList"]
+    depends_on: []
+
+  - id: KERI-Z4-002
+    zoom: Z4
+    spec_section: "§6.1.3.7 Backer threshold"
+    spec_line: 1516
+    score: awkward
+    route: types
+    route_domain: accountability
+    problem: >
+      "Backer" is the spec's umbrella for Witness (signature-based) and
+      Registrar Backer (ledger-based). The UL has Witness and TOAD but may
+      not formally define Backer as the umbrella type with two variants.
+    proposed_terms: ["Backer", "RegistrarBacker"]
+    depends_on: []
