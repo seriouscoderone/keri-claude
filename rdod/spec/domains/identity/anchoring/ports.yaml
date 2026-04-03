@@ -9,7 +9,7 @@ ports:
     semantics: command
     idempotent: false
     contract:
-      input: "types://identity/anchoring#DigestSeal"
+      input: "types://cesr/primitives#Seal"
       output: "types://identity/establishment#InteractionEvent"
       errors:
         - "errors://identity/anchoring#AnchoringNotPermittedError"
@@ -24,6 +24,6 @@ ports:
     idempotent: true
     contract:
       input: "AID prefix and sequence number"
-      output: "array of types://identity/anchoring#DigestSeal"
+      output: "array of types://cesr/primitives#Seal"
       errors: []
     refs: ["domain://identity"]

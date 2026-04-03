@@ -2,7 +2,7 @@ domain_ref: "delegation/authorization"
 
 types:
   - name: "DelegationSeal"
-    description: "The seal a delegator commits in their own KEL to approve a delegated event. Created via an interaction event in the delegator's KEL."
+    description: "The seal a delegator commits in their own KEL to approve a delegated event. Created via an interaction event (ixn), rotation event (rot), or inception event (icp) in the delegator's KEL."
     variants:
       - name: "default"
         fields:
@@ -54,21 +54,22 @@ types:
           - "Both the delegator's sealing event and the delegatee's event must be independently valid"
 
   - name: "DelegationSealSource"
-    description: "A pointer to the delegating event in the delegator's KEL, attached to the delegated event."
+    description: "A CESR attachment (SealSourceCouples, code -S) consisting of a (Seqner, Diger) couple that links a delegated event to the delegator's approval event. This is an ATTACHMENT type, NOT an event body field — the event body has di (delegator prefix) but the source seal couple is external."
     variants:
       - name: "default"
         fields:
           - name: "sn"
             type: "integer"
             required: true
-            description: "Sequence number of the delegator's event containing the seal"
+            description: "Sequence number of the delegator's event containing the seal (Seqner)"
           - name: "said"
             type: "string"
             required: true
-            description: "SAID of the delegator's event containing the seal"
+            description: "SAID of the delegator's event containing the seal (Diger)"
         invariants:
+          - "Transmitted as a CESR SealSourceCouples (-S) attachment, not part of the event body"
           - "Used by validators to locate the approval seal without scanning the full delegator KEL"
-          - "Attached as a source seal (couple or quadruple) in the delegated event message"
+          - "The event body has di (delegator prefix); the source seal couple is a separate attachment"
 
   - name: "DiFieldValue"
     description: "The delegator AID reference embedded in a delegated inception event's di field."

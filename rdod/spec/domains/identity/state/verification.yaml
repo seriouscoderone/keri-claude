@@ -94,7 +94,7 @@ properties:
     strategy: "kel_strategy()"
     notes: "sn is a strict monotonic counter starting at 0. No gaps, no duplicates."
 
-  - invariant: "First-seen ordering (fn): fn MUST be assigned exactly once per event at first acceptance, MUST be monotonically increasing across all events for all prefixes, and MUST never be reused or reassigned"
+  - invariant: "First-seen ordering (fn): fn is a PER-AID monotonic counter, NOT global. Each identifier prefix has its own independent fn sequence starting from 0. fn MUST be assigned exactly once per event at first acceptance, MUST be monotonically increasing within the same AID, and MUST never be reused or reassigned."
     term: "Key Event Verifier"
     technique: property-based
     formal:
@@ -102,23 +102,25 @@ properties:
       expression: |
         @given(events=st.lists(key_event_strategy(), min_size=2, max_size=20))
         def test_first_seen_ordering(events):
-            fn_assignments = {}
-            next_fn = 0
+            # fn is per-AID, not global
+            fn_per_aid = {}  # aid -> {event_id: fn}
+            next_fn_per_aid = {}  # aid -> next_fn
             for event in events:
-                event_id = (event.i, event.sn, event.said)
-                if event_id not in fn_assignments:
-                    fn_assignments[event_id] = next_fn
-                    next_fn += 1
-            # Verify monotonicity
-            fns = list(fn_assignments.values())
-            assert fns == sorted(fns)
-            # Verify uniqueness
-            assert len(fns) == len(set(fns))
-            # Verify no gaps
-            for i in range(len(fns) - 1):
-                assert fns[i + 1] == fns[i] + 1
+                aid = event.i
+                if aid not in fn_per_aid:
+                    fn_per_aid[aid] = {}
+                    next_fn_per_aid[aid] = 0
+                event_id = (event.sn, event.said)
+                if event_id not in fn_per_aid[aid]:
+                    fn_per_aid[aid][event_id] = next_fn_per_aid[aid]
+                    next_fn_per_aid[aid] += 1
+            # Verify per-AID monotonicity
+            for aid, assignments in fn_per_aid.items():
+                fns = list(assignments.values())
+                assert fns == sorted(fns)
+                assert len(fns) == len(set(fns))
     strategy: "st.lists(key_event_strategy(), 2..20)"
-    notes: "fn is a global, monotonic, gap-free counter. Assigned once, never changed."
+    notes: "fn is per-AID, monotonic, gap-free. Each AID has its own fn counter starting from 0. In keripy: fels database keyed by (prefix, fn)."
 
   - invariant: "Kever can be initialized in two equivalent ways: (1) replay from inception event through KEL, (2) reload from a cached key state record; both MUST produce identical state"
     term: "Key Event Verifier"

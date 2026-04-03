@@ -40,20 +40,6 @@ types:
           - "witners: witness receipt requests — collecting receipts to satisfy TOAD"
           - "queries: key state queries — resolving OOBI and key state lookups"
 
-  - name: "OpType"
-    description: "Category of long-running operation tracked by the cloud agent. Nine distinct operation types cover the full range of async work."
-    variants:
-      - name: "default"
-        fields:
-          - name: "value"
-            type: "string"
-            required: true
-            constraints:
-              enum: ["oobi", "witness", "delegation", "group", "query", "registry", "credential", "endrole", "done"]
-        invariants:
-          - "Determines the completion check strategy for polling"
-          - "done is a terminal pseudo-type indicating the operation completed synchronously"
-
   - name: "SignedEventMessage"
     description: "A key event bundled with partial signatures for multi-sig assembly."
     variants:
@@ -128,7 +114,7 @@ types:
           - "(prefix, sn) uniquely identifies the escrow slot"
 
   - name: "OperationType"
-    description: "Alias for OpType — retained for backward compatibility in port contracts. Prefer OpType for new references."
+    description: "Category of long-running operation tracked by the cloud agent. Eight distinct workflow types cover the full range of async work. Completion is modeled as an operation status (done flag on ServerOperation), not as a type variant."
     variants:
       - name: "default"
         fields:
@@ -136,10 +122,10 @@ types:
             type: "string"
             required: true
             constraints:
-              enum: ["oobi", "witness", "delegation", "group", "query", "registry", "credential", "endrole", "done"]
+              enum: ["oobi", "witness", "delegation", "group", "query", "registry", "credential", "endrole"]
         invariants:
           - "Determines which completion check runs when the client polls"
-          - "Semantically identical to OpType — implementations should normalize to a single enum"
+          - "'done' is NOT a type — completion is tracked via ServerOperation.done boolean"
 
   - name: "OperationName"
     description: "Unique name identifying a long-running operation for status polling."
@@ -155,7 +141,7 @@ types:
           - "Used as the path parameter in GET /operations/{name}"
 
   - name: "ServerOperation"
-    description: "Long-running operation record tracked server-side by the cloud agent. Created when an admin API request triggers async work; polled by edge clients via GET /operations/{name}. Dual representation: this is the server's internal record; the edge client sees OperationStatus (signify-client/resources)."
+    description: "Long-running operation record tracked server-side by the cloud agent. Created when an admin API request triggers async work; polled by edge clients via GET /operations/{name}. Normalized shared fields with client-side OperationStatus (signify-client/resources): both use 'name', 'done', 'result', 'error', 'operation_type'."
     variants:
       - name: "default"
         fields:
@@ -171,18 +157,18 @@ types:
             type: "types://cloud-agent-service/processing#OperationType"
             required: true
             description: "Category of work this operation tracks"
-          - name: "response"
+          - name: "result"
             type: "map"
             required: false
-            description: "Success payload — present only when done is true and no error occurred"
+            description: "Success payload — present only when done is true and no error occurred. Named 'result' to match the client-side OperationStatus (signify-client/resources) field naming."
           - name: "error"
             type: "map"
             required: false
             description: "Error payload — present only when done is true and the operation failed"
         invariants:
           - "name follows the {type}.{qualifier} convention (e.g., witness.EDP1..., credential.ESAID...)"
-          - "done=false implies both response and error are absent"
-          - "done=true implies exactly one of response or error is present (XOR)"
+          - "done=false implies both result and error are absent"
+          - "done=true implies exactly one of result or error is present (XOR)"
           - "Once done=true, the operation is in a terminal state and will not revert"
           - "name is unique per agent instance"
 

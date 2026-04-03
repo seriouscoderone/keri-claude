@@ -30,9 +30,14 @@ domain_clients:
 
 subdomains: []
 
-kernels: []
+kernels:
+  - ref: "kernel://cesr/primitives"
+    relationship: "Typed CESR primitives (SAID, AID, Diger) for seal digest computation and seal type references"
 
-adjacents: []
+adjacents:
+  - ref: "domain://identity/establishment"
+    relationship: "Imports InteractionEvent type from identity/establishment. The KeyEvent union is the canonical event taxonomy owned by establishment; anchoring adds seal management behavior on top."
+    via_port: "types://identity/establishment#InteractionEvent"
 
 externals:
   - ref: "domain://externals/cryptographic-primitives"

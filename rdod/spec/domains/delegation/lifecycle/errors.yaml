@@ -39,11 +39,11 @@ errors:
         description: "SAID of the delegated event"
 
   - name: "DelegationNotPermittedError"
-    description: "Delegator has the DND (Do Not Delegate) configuration trait"
-    cause: "The delegator's inception event includes the DND trait — it cannot act as a delegator"
+    description: "Delegator has the DND (Do Not Delegate) configuration trait — DND is an inception-only, immutable trait"
+    cause: "The delegator's INCEPTION event includes the DND trait — it cannot act as a delegator. DND is checked against the inception event, not current key state, because it is immutable and inception-only; it cannot be retroactively applied via rotation."
     recovery: "abort"
     severity: "fatal"
     context:
       - field: "delegator_aid"
         type: "string"
-        description: "The AID that has DND set"
+        description: "The AID that has DND set in its inception event"

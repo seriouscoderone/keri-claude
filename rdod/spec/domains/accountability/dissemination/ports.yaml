@@ -15,18 +15,33 @@ ports:
         - "errors://accountability/dissemination#DisseminationTimeoutError"
         - "errors://accountability/dissemination#WitnessUnreachableError"
         - "errors://accountability/dissemination#WitnessRejectionError"
+      notes: "Caller provides resolved Endpoints (not witness AIDs); witness AID -> Endpoint resolution is the caller's responsibility via discovery/OOBI resolution"
     refs: ["domain://accountability"]
 
   - id: "port://accountability/dissemination/inbound/witness-management"
     type: inbound
     name: "Witness Management"
-    semantics: command
-    idempotent: false
+    semantics: query
+    idempotent: true
     contract:
       input: "types://cesr/primitives#AID"
       output: "types://accountability/dissemination#WitnessConfig"
       errors: []
+      notes: "Delegates to identity/state key state query for witness configuration — does NOT maintain independent witness state"
     refs: ["domain://accountability"]
+
+  # Outbound — witness config dependency
+  - id: "port://accountability/dissemination/outbound/witness-state"
+    type: outbound
+    name: "Witness State Query"
+    semantics: query
+    idempotent: true
+    contract:
+      input: "types://cesr/primitives#AID"
+      output: "types://accountability/dissemination#WitnessConfig"
+      errors: []
+      notes: "Borrows witness configuration from identity/state — single source of truth"
+    refs: ["domain://identity/state"]
 
   # Outbound — what dissemination calls
   - id: "port://accountability/dissemination/outbound/transport"

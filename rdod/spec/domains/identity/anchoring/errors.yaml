@@ -23,8 +23,8 @@ errors:
         description: "The AID with EO set"
 
   - name: "NonTransferableAnchoringError"
-    description: "Non-transferable identifier cannot produce interaction events"
-    cause: "Interaction events require a transferable identifier (non-empty next key commitments at inception)"
+    description: "Non-transferable identifier cannot produce any key events after inception — including interaction events"
+    cause: "Non-transferable identifiers CANNOT produce any key events after inception. Per normative spec: 'no more key events MUST be allowed in that KEL.' This applies to witnesses and all non-transferable AIDs."
     recovery: "abort"
     severity: "fatal"
     context:
@@ -34,7 +34,7 @@ errors:
 
   - name: "InvalidSealError"
     description: "Seal in the anchor list is malformed"
-    cause: "A seal object in the a field does not conform to any recognized seal type (digest, event, or event-location)"
+    cause: "A seal object in the a field does not conform to any recognized seal type from the normative CESR seal table (DigestSeal, MerkleRootSeal, SourceEventSeal, EventSeal, LastEstSeal, BackerSeal, TypedDigestSeal)"
     recovery: "abort"
     severity: "fatal"
     context:

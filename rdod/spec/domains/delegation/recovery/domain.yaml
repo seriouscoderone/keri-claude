@@ -5,10 +5,11 @@ name: "Delegation Recovery"
 description: >
   Recovery from key compromise via the delegation hierarchy. Covers the joint compromise
   requirement (must compromise both delegatee and delegator keys), the delegated superseding
-  rules (B1-B3-C) that govern how one delegated rotation can supersede another based on
-  delegating event ordering, custodial delegation where the delegator controls pre-rotated keys,
-  and the security properties of multi-level delegation chains. This is pure protocol logic —
-  no cryptography, no persistence — just the rules governing delegation-based recovery.
+  rules (B1-B3-C, imported from integrity/recovery) that govern how one delegated rotation
+  can supersede another based on delegating event ordering, and the security properties of
+  multi-level delegation chains. Custodial delegation is a deployment pattern, not a separate
+  protocol concept. This is pure protocol logic — no cryptography, no persistence — just the
+  rules governing delegation-based recovery.
 version: "0.1.0"
 tier: "domain"
 
@@ -29,7 +30,10 @@ subdomains: []
 
 kernels: []
 
-adjacents: []
+adjacents:
+  - ref: "domain://integrity/recovery"
+    relationship: "Imports SupersedingRule enum — integrity/recovery owns the canonical superseding rules (A0-C1); delegation/recovery adds delegation-specific context (seal verification, delegator KEL traversal)"
+    via_port: "port://integrity/recovery/inbound/superseding-rules"
 
 externals: []
 

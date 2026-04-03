@@ -1,36 +1,54 @@
 domain_ref: "credential-lifecycle/status"
 
 types:
-  - name: "TELEvent"
-    description: "Union type for any event in a Transaction Event Log. Discriminated by the t field."
+  - name: "TelEventUnion"
+    description: "Union type for any event in a Transaction Event Log. Discriminated by the t field. Formerly TELEvent — renamed for clarity against TelEventId. At Layer 0, event variant fields use opaque SAID references for registry types — resolved to concrete imports at Layer 6."
     variants:
       - name: "registry_inception"
         fields:
-          - name: "event"
-            type: "types://credential-lifecycle/registry#RegistryInceptionEvent"
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
             required: true
-            description: "Registry inception event (rip)"
+            description: "SAID of the registry inception event (rip) — forward reference to registry domain"
+          - name: "ilk"
+            type: "string"
+            required: true
+            description: "Event type discriminator"
+            constraints:
+              enum: ["rip"]
         invariants:
           - "t field is 'rip'"
       - name: "blindable_update"
         fields:
-          - name: "event"
-            type: "types://credential-lifecycle/registry#BlindableUpdateEvent"
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
             required: true
-            description: "Blindable update event (bup)"
+            description: "SAID of the blindable update event (bup) — forward reference to registry domain"
+          - name: "ilk"
+            type: "string"
+            required: true
+            description: "Event type discriminator"
+            constraints:
+              enum: ["bup"]
         invariants:
           - "t field is 'bup'"
       - name: "non_blindable_update"
         fields:
-          - name: "event"
-            type: "types://credential-lifecycle/registry#NonBlindableUpdateEvent"
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
             required: true
-            description: "Non-blindable update event (upd)"
+            description: "SAID of the non-blindable update event (upd) — forward reference to registry domain"
+          - name: "ilk"
+            type: "string"
+            required: true
+            description: "Event type discriminator"
+            constraints:
+              enum: ["upd"]
         invariants:
           - "t field is 'upd'"
 
-  - name: "TelEvent"
-    description: "Any TEL event (rip, upd, or bup) with its core identifying fields for state computation."
+  - name: "TelEventId"
+    description: "The identifying tuple for any TEL event (rip, upd, or bup) — type, registry SAID, credential SAID, sequence number. Formerly TelEvent — renamed for clarity against TelEventUnion."
     variants:
       - name: "default"
         fields:
@@ -83,7 +101,7 @@ types:
           - "A cache miss is never an error — reconstruct from TEL and cache the result"
 
   - name: "StateQueryInput"
-    description: "Parameters for querying and computing a credential's current lifecycle state within a registry."
+    description: "Parameters for authorizing a credential lifecycle state change within a registry. The service derives current state internally from the TEL (CQRS pattern) — the caller provides the TEL event to authorize, not a snapshot."
     variants:
       - name: "default"
         fields:
@@ -91,12 +109,13 @@ types:
             type: "string"
             required: true
             description: "REGID of the registry to query"
-          - name: "credential_snapshot"
-            type: "types://credential-lifecycle/status#LifecycleStateSnapshot"
+          - name: "tel_event"
+            type: "types://credential-lifecycle/status#TelEventUnion"
             required: true
-            description: "The credential state snapshot to validate and compute against"
+            description: "The TEL event to authorize — the service reconstructs current state from the TEL"
         invariants:
           - "Registry must exist and be resolvable by REGID"
+          - "Service derives current state internally — caller does not provide a snapshot"
 
   - name: "StateReconstructionInput"
     description: "Parameters for reconstructing the current state of a registry or credential from its TEL event history."
@@ -108,7 +127,7 @@ types:
             required: true
             description: "REGID of the registry whose state is being reconstructed"
           - name: "events"
-            type: "array[types://credential-lifecycle/status#TelEvent]"
+            type: "array[types://credential-lifecycle/status#TelEventId]"
             required: true
             description: "Ordered list of TEL events to replay for state reconstruction"
         invariants:
@@ -182,7 +201,7 @@ types:
             required: true
             description: "Blocking condition — missing registry, missing authorization, missing issuer key state, missing schema, missing chain"
         invariants:
-          - "Stored in escrow queue keyed by blocking condition (MRE, MAE, MRI, MSE, MCE)"
+          - "Stored in escrow queue keyed by blocking condition (MRE, MAE, MRI, MSE, MCE, OOT)"
           - "Re-enters the guard when the blocking condition resolves"
       - name: "rejected"
         fields:
@@ -212,3 +231,33 @@ types:
             type: "integer"
             required: true
             description: "Sequence number of the event that caused the state change"
+
+  - name: "Creder"
+    description: "ACDC credential facade — extends the generic SAD serializer (Sadder from cesr/composition) with ACDC-specific field accessors: issuer AID, schema SAID, subject, status, edges, rules. Provides the credential-domain view of a self-addressing data structure."
+    variants:
+      - name: "default"
+        fields:
+          - name: "sad"
+            type: "types://cesr/composition#Sadder"
+            required: true
+            description: "The underlying generic SAD serializer"
+          - name: "issuer"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "Issuer AID (i field)"
+          - name: "schema"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "Schema SAID (s field)"
+          - name: "subject"
+            type: "map"
+            required: false
+            description: "Attribute section (a field) — may be compact SAID"
+          - name: "status"
+            type: "types://cesr/primitives#SAID"
+            required: false
+            description: "Registry SAID for credential status (ri field)"
+        invariants:
+          - "Extends Sadder with ACDC-specific field accessors"
+          - "SAID computed using the Sadder's saidify algorithm"
+          - "All ACDC-specific fields are derived from the underlying SAD field map"

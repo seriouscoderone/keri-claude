@@ -94,10 +94,10 @@ errors:
     related_port: "port://identity/establishment/inbound/validate-delegation"
 
   - name: "MissingDelegableApprovalError"
-    description: "Delegable event source seal cannot be verified against the delegator"
-    cause: "Delegation source seal attachment is present but cannot be matched to a confirmed delegating event in the delegator's KEL"
+    description: "Local delegator has not yet created the approval event for a delegable event"
+    cause: "Delegation source seal attachment is present but the local delegator has not yet created the anchoring event. This is party-role-based: Delegable is for the local delegator (pending approval creation), vs PDE for remote validators (pending delegator KEL event receipt)."
     recovery: "escrow"
-    recovery_target: "MDE"
+    recovery_target: "Delegable"
     severity: "transient"
     context:
       - field: "prefix"
@@ -134,7 +134,7 @@ errors:
 
   - name: "MisfitEventSourceError"
     description: "Remote source submitted an event that must be locally sourced"
-    cause: "Event for a locally-owned, locally-witnessed, or locally-delegated identifier was submitted from a remote (unprotected) source"
+    cause: "Event for a locally-owned, locally-witnessed, or locally-delegated identifier was submitted from a remote (unprotected) source. The event's EventSource.local is false but the AID requires local sourcing."
     recovery: "escrow"
     recovery_target: "MFE"
     severity: "transient"
@@ -142,6 +142,9 @@ errors:
       - field: "prefix"
         type: "string"
         description: "The AID prefix"
+      - field: "event_source"
+        type: "types://identity/establishment#EventSource"
+        description: "The event source metadata — local=false for misfit events"
       - field: "reason"
         type: "string"
         description: "Why this event requires local sourcing (owned, witnessed, or delegated)"

@@ -36,6 +36,9 @@ externals:
   - ref: "domain://externals/transport"
     source: "Watcher network — polling witnesses, cross-checking KERL copies"
     relationship: "Watchers require network transport to poll witnesses and other watchers for KEL copies; this is external infrastructure not owned by the monitoring domain"
+  - ref: "domain://externals/persistence"
+    source: "DEL storage and LDE escrow — persistent forensic record and pending adjudication queue"
+    relationship: "Detection stores duplicity evidence in the DEL (append-only permanent record) and manages LDE escrow (mutable queue with timeout/sweep)"
 
 implementation_guidance:
   suggested_type: "module"

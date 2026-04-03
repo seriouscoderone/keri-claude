@@ -71,9 +71,10 @@ terms:
 
   - term: "UUID Derivation"
     synonyms: ["Hierarchically Deterministic UUID Derivation"]
-    definition: "The process of deterministically deriving the blinding UUID from the shared secret salt and the TEL event sequence number, using HKDF (HMAC-based Key Derivation Function). Ensures both issuer and discloser independently compute the same UUID for each event without communication."
+    definition: "The process of deterministically deriving the blinding UUID from a master secret and the TEL event sequence number. Two distinct KDF use cases exist: (1) Passphrase Stretching — argon2 stretches a human passphrase into a master secret salt (slow, intentional); (2) Per-Event UUID Derivation — HKDF derives per-event UUIDs from the master secret (fast, deterministic). Ensures both issuer and discloser independently compute the same UUID for each event without communication."
     invariants:
-      - "Derivation function: HKDF (HMAC-based Key Derivation Function) with the shared secret salt as input key material and the TEL sequence number as the info parameter"
+      - "Passphrase Stretching: argon2 (slow, intentional) converts a human passphrase to a high-entropy master secret salt"
+      - "Per-Event UUID Derivation: HKDF (fast, deterministic) derives per-event UUIDs from the master secret salt with the TEL sequence number as the info parameter"
       - "Output length: 256 bits (32 bytes) to preserve >= 128 bits of cryptographic strength"
       - "The derived UUID is deterministic: same (salt, sn) always produces the same UUID"
       - "Hierarchical: each sequence number produces an independent UUID with no correlation to other sequence numbers"

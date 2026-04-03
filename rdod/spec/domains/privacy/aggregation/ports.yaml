@@ -8,6 +8,10 @@ ports:
     name: "Aggregation Operations"
     semantics: query
     idempotent: true
+    description: >
+      Accepts a field label ('A' for aggregate/selective, 'a' for attribute/partial)
+      as an opaque input parameter to determine which aggregation mechanism applies.
+      No full ACDC type dependency at Layer 0.
     contract:
       input: "types://privacy/aggregation#AggregationInput"
       output: "types://cesr/primitives#SAID"

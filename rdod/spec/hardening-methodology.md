@@ -13,11 +13,25 @@ Forcing an AI to **plan the implementation** of each domain surfaces questions t
 - Access to authoritative sources (protocol specifications, reference implementations)
 - The linter passing clean before starting
 
+## Tooling
+
+All structural validation uses the `/ddd-spec` skill's scripts (from the `domain-design-toolkit` plugin):
+
+| Tool | Command | Purpose |
+|------|---------|---------|
+| **Linter** | `python skills/ddd-spec/scripts/validate_spec.py rdod/spec/domains [--strict] [--json]` | Reference resolution, mirror consistency, cycle detection, published language rules, parent-ref violations, completeness. `--strict` treats warnings as errors. |
+| **Context Map** | `python skills/ddd-spec/scripts/generate_context_map.py rdod/spec/domains` | Regenerates `context-map.html` — interactive domain neighborhood visualization. |
+| **Build Order** | `python skills/ddd-spec/scripts/build_order.py rdod/spec/domains` | Regenerates `build-order.txt`, `build-order.json`, `build-order.mmd` from domain dependency graph. |
+
 ## Phase 1: Structural Integrity
 
 Before hardening content, ensure the spec is structurally sound.
 
 ### 1.1 Run the linter
+
+```bash
+python skills/ddd-spec/scripts/validate_spec.py rdod/spec/domains --strict
+```
 
 Fix all errors and warnings. The linter checks:
 - Reference resolution (type URIs, port URIs, error URIs)
@@ -109,8 +123,16 @@ For each question:
 ### 4.2 Apply, lint, commit
 
 After each batch of fixes:
-1. Run the linter — target 0 errors, 0 warnings
-2. Regenerate the context map
+
+```bash
+# 1. Validate — target 0 errors, 0 warnings
+python skills/ddd-spec/scripts/validate_spec.py rdod/spec/domains --strict
+
+# 2. Regenerate context map and build order
+python skills/ddd-spec/scripts/generate_context_map.py rdod/spec/domains
+python skills/ddd-spec/scripts/build_order.py rdod/spec/domains
+```
+
 3. Commit with a descriptive message citing what was fixed and why
 
 ### 4.3 Advance to next layer

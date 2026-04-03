@@ -2,33 +2,100 @@ domain_ref: "privacy/disclosure"
 
 types:
   - name: "DisclosureMode"
-    description: "The mode of credential disclosure — determines how much content is revealed and through which mechanism."
+    description: >
+      Core disclosure progression FSM with three states: Compact -> Partial -> Full.
+      An optional Metadata pre-state precedes Compact. Orthogonal axes (Selective,
+      NestedPartial, BulkIssued) are modeled as properties, not FSM states.
     variants:
+      - name: "Metadata"
+        fields: []
+        invariants:
+          - "Optional pre-disclosure phase — structural fields visible but uncorrelated to actual credential"
+          - "Can progress to Compact, then follow the normal path"
       - name: "Compact"
         fields: []
         invariants:
           - "Only SAIDs revealed — zero content, existence and integrity only"
+          - "Entry point of the core FSM (or follows Metadata pre-state)"
       - name: "Partial"
         fields: []
         invariants:
           - "SAID, UUID, and optionally schema revealed — requires Private block"
-      - name: "Selective"
-        fields: []
-        invariants:
-          - "Individual attributes disclosed against aggregate commitment"
       - name: "Full"
         fields: []
         invariants:
           - "All fields expanded — terminal disclosure form"
-      - name: "Metadata"
-        fields: []
+
+  - name: "DisclosureProperties"
+    description: >
+      Orthogonal axes that modify how disclosure is performed, independent of the
+      core FSM progression. These are not FSM states but properties that can be
+      combined with any core disclosure mode.
+    variants:
+      - name: "default"
+        fields:
+          - name: "selective"
+            type: "boolean"
+            required: false
+            description: "If true, individual attributes are disclosed against aggregate commitment (per-element, uses A field). Alternative to standard Partial (per-section)."
+          - name: "nested_partial"
+            type: "boolean"
+            required: false
+            description: "If true, each top-level section is independently at a different disclosure level (hierarchical). Extends Partial to tree-structured data."
+          - name: "bulk_issued"
+            type: "boolean"
+            required: false
+            description: "If true, credential was bulk-issued — an issuance-time property, not a disclosure mode. Each bulk-issued instance independently follows the normal disclosure progression."
         invariants:
-          - "Structural fields visible but uncorrelated to actual credential — empty u field"
-      - name: "NestedPartial"
-        fields: []
+          - "Selective is orthogonal to the FSM: it determines per-element vs per-section disclosure"
+          - "NestedPartial extends Partial to hierarchical data structures"
+          - "BulkIssued is an issuance-time property — each instance follows independent FSM progression"
+
+  - name: "DisclosableBlock"
+    description: >
+      Generic interface for any block that can participate in disclosure — replaces
+      the forward reference to types://credential-lifecycle#Credential, avoiding
+      the cross-layer dependency. Only needs section SAIDs, u field presence, and
+      field labels for disclosure mode determination.
+    variants:
+      - name: "default"
+        fields:
+          - name: "said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the block"
+          - name: "has_uuid"
+            type: "boolean"
+            required: true
+            description: "Whether the block has a u (UUID) field — determines if partial disclosure is possible"
+          - name: "section_label"
+            type: "string"
+            required: true
+            description: "Field label of the section ('A' for aggregate/selective, 'a' for attribute/partial, 'e' for edges, 'r' for rules)"
         invariants:
-          - "Each top-level section independently at a different disclosure level"
-      - name: "BulkIssued"
-        fields: []
+          - "Disclosure mode determination requires only SAID, UUID presence, and section label"
+          - "No dependency on the full Credential type at Layer 0"
+
+  - name: "DisclosureRequest"
+    description: >
+      Input for disclosure mode determination. Provides the disclosable block,
+      the requested target mode, and a terms_agreed flag for the chain-link
+      confidentiality guard on the partial->full transition.
+    variants:
+      - name: "default"
+        fields:
+          - name: "block"
+            type: "types://privacy/disclosure#DisclosableBlock"
+            required: true
+            description: "The block to determine disclosure mode for"
+          - name: "target_mode"
+            type: "types://privacy/disclosure#DisclosureMode"
+            required: true
+            description: "The requested disclosure level"
+          - name: "terms_agreed"
+            type: "boolean"
+            required: false
+            description: "Whether chain-link confidentiality terms have been agreed to — required for partial->full transition. The IPEX exchange domain (higher layer) determines agreement status and passes it down."
         invariants:
-          - "Disclosure of one copy from a bulk-issued set — unlinkable across presentations"
+          - "terms_agreed is required for the partial->full transition when chain-link confidentiality applies"
+          - "At Layer 0, this is a boolean provided by the caller — the exchange domain handles agreement logic"

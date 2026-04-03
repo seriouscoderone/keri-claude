@@ -176,6 +176,20 @@ terms:
       - "CBOR kind code: 'CBOR' — e.g., version string 'KERICAACAACBORAABC.'"
     related_terms: ["Version String", "SAID", "Event Field Structure"]
 
+  - term: "Signature Accumulation"
+    synonyms: ["Idempotent Duplicate Handling", "logEvent(first=False) [keripy]"]
+    definition: "When a duplicate event (same SAID) arrives for an already-accepted event, new valid signatures are accumulated via idempotent log update. The duplicate is NOT silently discarded. Both controller and witness signatures are verified and merged into the existing accepted event's signature set. No new first-seen ordinal (fn) is assigned."
+    invariants:
+      - "Same-SAID duplicates trigger signature merge, not discard"
+      - "No new fn is assigned — the event retains its original first-seen ordinal"
+      - "Both controller signatures and witness receipts are verified and accumulated"
+      - "The event's acceptance status does not change — it remains accepted"
+      - "Signature accumulation is idempotent — merging the same signature twice has no additional effect"
+    examples:
+      - "Event at sn=3 accepted with 2 signatures. Same event arrives with a 3rd valid signature -> signature merged, fn unchanged"
+      - "Witness receipt for already-accepted event -> receipt count increases, fn unchanged"
+    related_terms: ["Event Validation Pipeline", "Dual Threshold Verification"]
+
   - term: "Establishment Event Construction"
     definition: "The domain-driven assembly of inception and rotation events. Inception events (icp/dip) establish all four identifier dimensions. Rotation events (rot/drt) modify keys, thresholds, and witness sets while preserving the identifier's core dimensions. Implementations SHOULD provide typed builders that enforce pre-rotation binding, threshold validity, and canonical field ordering."
     invariants:

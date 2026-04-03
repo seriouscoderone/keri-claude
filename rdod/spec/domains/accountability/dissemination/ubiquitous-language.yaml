@@ -60,8 +60,10 @@ terms:
     invariants:
       - "The validator acts as an implicit witness — verifies controller signatures directly"
       - "No dissemination infrastructure needed"
+      - "Auto-selected when the witness list is empty — caller does not need to specify Direct explicitly"
     examples:
       - "Two parties exchanging signed messages directly over a secure channel"
+      - "Identifier with b=[] and bt='0' — Direct mode auto-selected, no witness round-trip"
     related_terms: ["Indirect Mode", "Witnessing Policy"]
 
   # Inherits: "Indirect Mode" from domain://identity
@@ -88,8 +90,7 @@ events:
 
 rules:
   - "Witnesses are designated by the controller, not self-selected"
-  - "A witness MUST only accept local (protected) events from the controller — remote acceptance is a security vulnerability"
-  - "A witness MUST NOT accept remote (unprotected) events for its controlled AID"
+  - "The local-event-only rule (witness MUST only accept local/protected events from the controller) is enforced by the witness upon receipt, NOT by the dissemination domain — dissemination propagates events; the witness validates the source"
   - "Network load for receipt dissemination scales linearly (round-robin) or N*log(N) (gossip)"
   - "In direct mode, the validator acts as an implicit witness — no witness pool needed"
   - "In indirect mode, validators may require M receipts before accepting an event"

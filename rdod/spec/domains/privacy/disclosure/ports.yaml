@@ -8,8 +8,12 @@ ports:
     name: "Disclosure Mode Definitions"
     semantics: query
     idempotent: true
+    description: >
+      Accepts a field label ('A' or 'a') to determine which disclosure mechanism
+      applies and a terms_agreed boolean for the partial->full chain-link
+      confidentiality guard. No full ACDC or Credential type dependency at Layer 0.
     contract:
-      input: "types://credential-lifecycle#Credential"
+      input: "types://privacy/disclosure#DisclosureRequest"
       output: "types://privacy/disclosure#DisclosureMode"
       errors:
         - "errors://privacy/disclosure#InvalidDisclosureProgressionError"

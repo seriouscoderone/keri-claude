@@ -26,19 +26,24 @@ source_material:
 
 domain_clients:
   - ref: "domain://privacy"
-    relationship: "Parent privacy domain delegates blinded state operations -- bup event construction, BLID computation, and state discovery"
-    via_port: "port://privacy/blinding/inbound/blinded-state"
+    relationship: "Parent privacy domain delegates blinded state operations -- BLID computation, state discovery, and bound block construction"
+    via_port: "port://privacy/blinding/inbound/compute-blid"
+  - ref: "domain://credential-lifecycle/status"
+    relationship: "Status domain calls compute-blid during bup event validation"
+    via_port: "port://privacy/blinding/inbound/compute-blid"
 
 subdomains: []
 
 kernels: []
 
-adjacents: []
+adjacents:
+  - ref: "domain://cesr/composition"
+    relationship: "References blinded state group codes (-a for BlindedStateQuadruples, -b for BoundStateSextuples) — these are CESR-level definitions, not owned by the blinding domain"
 
 externals:
   - ref: "domain://externals/cryptographic-primitives"
-    source: "Blake3-256 (BLID digest computation), argon2/HKDF (salt-based hierarchically deterministic UUID derivation)"
-    relationship: "Cryptographic algorithm types used for BLID computation and blinding UUID derivation from shared secret salt"
+    source: "Blake3-256 (BLID digest computation), argon2 (passphrase stretching to master secret), HKDF (per-event UUID derivation from master secret)"
+    relationship: "Cryptographic algorithm types used for BLID computation and blinding UUID derivation — argon2 for slow passphrase-to-salt stretching, HKDF for fast per-event UUID derivation"
 
 implementation_guidance:
   suggested_type: "module"

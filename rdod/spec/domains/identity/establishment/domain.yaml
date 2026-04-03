@@ -40,7 +40,9 @@ domain_clients:
 
 subdomains: []
 
-kernels: []
+kernels:
+  - ref: "kernel://cesr/primitives"
+    relationship: "Typed CESR primitives (SAID, AID, Verfer, Diger, Siger) used as first-class types in event validation and key state"
 
 adjacents: []
 
@@ -52,6 +54,14 @@ externals:
     abstraction: "Repository (read-only)"
     ref: "port://identity/establishment/outbound/state-lookup"
     implementation_notes: "Reads current key state and KEL to provide validation context for incoming events."
+
+abstract_dependencies:
+  - port: "port://identity/establishment/inbound/threshold-satisfaction"
+    resolved_by: "domain://identity/thresholds"
+    notes: "Signing threshold satisfaction — resolved at composition time, not a build-time import"
+  - port: "port://identity/establishment/inbound/witness-threshold-check"
+    resolved_by: "domain://accountability"
+    notes: "Witness threshold (TOAD) check — resolved at composition time, not a build-time import"
 
 implementation_guidance:
   suggested_type: "module"

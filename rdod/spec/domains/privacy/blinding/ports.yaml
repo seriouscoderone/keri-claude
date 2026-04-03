@@ -2,21 +2,54 @@
 domain_ref: "privacy/blinding"
 
 ports:
-  # Inbound -- what the parent privacy domain calls
-  - id: "port://privacy/blinding/inbound/blinded-state"
+  # Inbound -- what the parent privacy domain (and status domain for bup validation) calls
+  - id: "port://privacy/blinding/inbound/compute-blid"
     type: inbound
-    name: "Blinded State Operations"
-    semantics: command
-    idempotent: false
+    name: "Compute BLID"
+    semantics: query
+    idempotent: true
+    description: >
+      Pure computation — derives the BLID from a blinded attribute block's field
+      values. No state, no side effects. Also consumed by credential-lifecycle/status
+      for bup event validation.
     contract:
       input: "types://privacy/blinding#BlindedAttributeBlock"
+      output: "types://cesr/primitives#SAID"
+      errors:
+        - "errors://privacy/blinding#BLIDComputationError"
+        - "errors://privacy/blinding#BLIDFieldOrderError"
+    refs: ["domain://privacy"]
+
+  - id: "port://privacy/blinding/inbound/discover-state"
+    type: inbound
+    name: "Discover Blinded State"
+    semantics: query
+    idempotent: true
+    description: >
+      Given a bup event's BLID and the shared secret salt, discovers the credential
+      state by trying all state values in the finite state set against candidate
+      ACDC SAIDs.
+    contract:
+      input: "BLID, salt, event sequence number, candidate ACDC SAIDs"
+      output: "Discovered state (credential SAID + state value) or not found"
+      errors:
+        - "errors://privacy/blinding#StateDiscoveryError"
+        - "errors://privacy/blinding#BlindingKeyMismatchError"
+    refs: ["domain://privacy"]
+
+  - id: "port://privacy/blinding/inbound/construct-bound-block"
+    type: inbound
+    name: "Construct Bound Blinded Attribute Block"
+    semantics: command
+    idempotent: false
+    description: >
+      Builder — constructs a BoundBlindedAttributeBlock by combining a blinded
+      attribute block with key state binding information.
+    contract:
+      input: "types://privacy/blinding#BlindedAttributeBlock + binding context (transaction SAID, state, key event sn/SAID)"
       output: "types://privacy/blinding#BoundBlindedAttributeBlock"
       errors:
-        - "errors://privacy/blinding#BlindingKeyMismatchError"
         - "errors://privacy/blinding#UnblindingError"
-        - "errors://privacy/blinding#BLIDComputationError"
-        - "errors://privacy/blinding#StateDiscoveryError"
-        - "errors://privacy/blinding#BLIDFieldOrderError"
     refs: ["domain://privacy"]
 
   - id: "port://privacy/blinding/inbound/uuid-derivation"

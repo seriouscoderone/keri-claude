@@ -73,13 +73,13 @@ properties:
     strategy: "st.sampled_from for all event types x st.integers for sn"
     notes: "Interaction events have no key commitment — they can never supersede any event type."
 
-  - invariant: "Superseding decision cascade: B1 (first-seen with higher witness count wins) -> if tied -> B2 (first-seen with earlier timestamp wins) -> if tied -> B3 (first-seen with lower SAID lexicographic value wins) -> MUST produce exactly one winner. The cascade is exhaustive — B3 is a total order on SAIDs and can never tie."
+  - invariant: "Superseding decision cascade: B1 (higher delegating sn wins) -> B2 (same delegating event, later seal index wins) -> B3 (same delegating sn, rotation delegating event supersedes interaction delegating event) -> if none satisfied, apply Rule C (recurse up delegation chain). B3 is an event-type comparison, NOT a SAID lexicographic tiebreaker."
     term: "Superseding Rules"
     technique: smt
     formal:
       language: z3
       expression: |
-        # B1: higher delegating sn wins
+        # B1: higher delegating sn wins (comparison uses sn, not fn)
         b1 = Implies(And(is_delegated(candidate), is_delegated(incumbent),
                          delegating_sn(candidate) > delegating_sn(incumbent)),
                      supersedes(candidate, incumbent))
@@ -88,17 +88,15 @@ properties:
                          delegating_sn(candidate) == delegating_sn(incumbent),
                          seal_index(candidate) > seal_index(incumbent)),
                      supersedes(candidate, incumbent))
-        # B3: same delegating sn, same seal index, lower SAID lexicographic wins (total order)
+        # B3: same delegating sn — rotation delegating event supersedes interaction delegating event
         b3 = Implies(And(is_delegated(candidate), is_delegated(incumbent),
                          delegating_sn(candidate) == delegating_sn(incumbent),
-                         seal_index(candidate) == seal_index(incumbent),
-                         said_lt(candidate, incumbent)),
+                         delegating_type(candidate) == ROT,
+                         delegating_type(incumbent) == IXN),
                      supersedes(candidate, incumbent))
-        # Exhaustiveness: B3 is total — SAIDs are unique, so lexicographic compare never ties
-        exhaustive = Implies(And(is_delegated(candidate), is_delegated(incumbent),
-                                 candidate_said != incumbent_said),
-                             Or(supersedes(candidate, incumbent), supersedes(incumbent, candidate)))
-    notes: "Decision cascade: B1 (delegating sn) -> B2 (seal index) -> B3 (SAID lexicographic). B3 is a total order and can never tie."
+        # If B1-B3 produce no winner, Rule C applies (recurse up delegation chain)
+        # If recursion reaches root without resolution, C1 applies (discard superseding rotation)
+    notes: "Decision cascade: B1 (delegating sn) -> B2 (seal index) -> B3 (event-type: rot beats ixn). If no B rule resolves, recurse via Rule C. B3 is NOT a SAID tiebreaker."
 
   - invariant: "B2: Same delegating event, but superseding seal appears later in the seal list"
     term: "Superseding Rules"

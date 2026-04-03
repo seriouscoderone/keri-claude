@@ -21,13 +21,14 @@ types:
           - name: "promoted_from"
             type: "string"
             required: true
-            description: "Which escrow queue the event was promoted from"
+            description: "Which escrow queue the event was promoted from — PDE (remote validator: delegator KEL available but seal not yet found) or Delegable (local delegator: has not yet created approval event)"
             constraints:
-              enum: ["PDE", "MDE"]
+              enum: ["PDE", "Delegable"]
         invariants:
-          - "PDE (partially-delegated) events are promoted when the delegator's approval commitment is confirmed"
-          - "MDE (missing-delegable) events are promoted when the delegator approves locally"
-          - "After promotion, the event is removed from the escrow and appended to the KEL"
+          - "PDE (partially-delegated) events are promoted when the delegator's approval seal is found in the delegator's KEL"
+          - "Delegable events are promoted when the local delegator creates the approval event"
+          - "The distinction is party-role-based: PDE = remote validator waiting for seal; Delegable = local delegator pending approval"
+          - "After promotion, the event enters the full validation pipeline via processEvent — PDE is not a mandatory intermediate step"
 
   - name: "DelegationWriteOutcome"
     description: "Result of submitting a delegation request to the DelegationService."

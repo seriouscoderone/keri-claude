@@ -2,59 +2,90 @@ domain_ref: "privacy/aggregation"
 
 types:
   - name: "AggregationInput"
-    description: "Input for aggregation operations — either a blinded attribute block for AGID computation or a list of SAIDs for aggregate verification."
+    description: "Input for aggregation operations — either a list of blinded attribute blocks for AGID computation or a list of SAIDs for aggregate verification."
     variants:
-      - name: "blinded_block"
+      - name: "blinded_blocks"
         fields:
-          - name: "block"
-            type: "types://privacy/blinding#BlindedAttributeBlock"
+          - name: "block_saids"
+            type: "array[types://cesr/primitives#SAID]"
             required: true
-            description: "Blinded attribute block to compute AGID from"
+            description: "List of blinded attribute block SAIDs — all block SAIDs needed for AGID computation. At Layer 0, accepts opaque SAIDs; no dependency on blinding subdomain."
+          - name: "serialization_kind"
+            type: "string"
+            required: true
+            description: "Serialization format for AGID computation — typically inferred from the ACDC's version string"
+            constraints:
+              enum: ["JSON", "CBOR", "MGPK"]
         invariants:
-          - "Used for computing the aggregate identifier (AGID) from blinded attributes"
+          - "All blocks must be provided — AGID requires the complete SAID list"
+          - "Serialization kind determines how the SAID list is serialized before digesting"
       - name: "said_list"
         fields:
           - name: "saids"
             type: "array[string]"
             required: true
             description: "List of SAIDs for aggregate verification or compaction"
+          - name: "serialization_kind"
+            type: "string"
+            required: true
+            description: "Serialization format for AGID computation"
+            constraints:
+              enum: ["JSON", "CBOR", "MGPK"]
         invariants:
           - "SAIDs must be in canonical order for reproducible aggregation"
 
   - name: "SADPath"
-    description: "A path expression identifying a specific location within a nested SAD structure. Used for selective disclosure and SAD path signatures."
+    description: "A path expression identifying a specific location within a nested SAD structure. Canonical representation is a dash-delimited string (e.g., '-a-i') matching the CESR attachment path format. A parse utility converts to array form for traversal."
     variants:
       - name: "default"
         fields:
           - name: "path"
-            type: "array[string]"
+            type: "string"
             required: true
-            description: "Ordered sequence of field labels from root to target"
+            description: "Dash-delimited path string from root to target (e.g., '-a-i')"
         invariants:
-          - "Each element is a field label in the SAD hierarchy"
-          - "Empty path refers to the root SAD"
+          - "Canonical format is dash-delimited string (e.g., '-a-i')"
+          - "Empty string refers to the root SAD"
+          - "Parse utility: split on '-' (dropping leading empty) to produce array form"
         examples:
-          - "['a', 'i'] — the issuee field inside the attributes section"
-          - "['e', 'edge1', 'd'] — the SAID of a specific edge"
+          - "'-a-i' — the issuee field inside the attributes section"
+          - "'-e-edge1-d' — the SAID of a specific edge"
 
   - name: "SadPathSig"
-    description: "A SAD path signature — a signature over a specific path within a SAD structure, enabling selective signing of credential subsections."
+    description: "A SAD path signature — a signature over a specific path within a SAD structure, enabling selective signing of credential subsections. Discriminated union: IndexedSadPathSig uses quinkey-indexed Siger primitives (.spsgs group), CoupledSadPathSig uses Verfer-Cigar couples (.spcgs group)."
     variants:
-      - name: "default"
+      - name: "indexed"
         fields:
           - name: "path"
             type: "string"
             required: true
             description: "SAD path expression identifying the signed location (e.g., '-a-i')"
-          - name: "signature"
-            type: "string"
+          - name: "signatures"
+            type: "array[types://cesr/primitives#Siger]"
             required: true
-            description: "CESR-encoded signature over the content at the path"
+            description: "Indexed signatures (Siger primitives) with quinkey indexing"
           - name: "signer_aid"
             type: "string"
             required: true
             description: "AID of the signer — verifiable against its current key state"
         invariants:
-          - "Signature is over the serialized content at the specified path, not the whole SAD"
-          - "Signer's key state must be resolvable at verification time"
-          - "Path must resolve to a valid location in the target SAD"
+          - "Uses .spsgs CESR group code for indexed SAD path signatures"
+          - "Quinkey indexing maps signature index to signer's key list"
+          - "Verification uses indexed signature verification (same as controller signatures)"
+      - name: "coupled"
+        fields:
+          - name: "path"
+            type: "string"
+            required: true
+            description: "SAD path expression identifying the signed location (e.g., '-a-i')"
+          - name: "verfer"
+            type: "types://cesr/primitives#Verfer"
+            required: true
+            description: "Public key of the signer"
+          - name: "signature"
+            type: "types://cesr/primitives#Cigar"
+            required: true
+            description: "Non-indexed signature (Cigar primitive)"
+        invariants:
+          - "Uses .spcgs CESR group code for coupled SAD path signatures"
+          - "Verification uses non-indexed signature verification (Verfer-Cigar couple)"

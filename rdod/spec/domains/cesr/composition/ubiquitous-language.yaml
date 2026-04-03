@@ -168,7 +168,9 @@ terms:
     invariants:
       - "Format: '-_' + 3-char genus (GGG) + 3-char version (VVV)"
       - "First V is major version (0-63); last VV is minor version (0-4095)"
-      - "Modifies interpretation of all subsequent count codes until another genus/version code appears"
+      - "Genus/version state is maintained per-group (within enclosing count code groups), not per-stream or per-frame"
+      - "Parser must track 'active genus' as scoped context overridable at group boundaries"
+      - "Modifies interpretation of all subsequent codes within the same enclosing count code groups"
       - "Universal across all genera — the genus/version table itself is shared"
     examples:
       - "'-_AAABAA' — KERI/ACDC genus AAA, version 1.00"
@@ -324,30 +326,9 @@ terms:
       - "Sadder.new_with_ked(ked_value) → serialize, compute SAID"
     related_terms: ["Serder", "Creder", "Saider (cesr/primitives)", "Version String"]
 
-  - term: "Serder"
-    synonyms: ["Event Serializer"]
-    definition: "KERI event serializer extending Sadder. Validates ident=='KERI'. Provides accessors for event-specific fields: verfers, digers, werfers."
-    invariants:
-      - "ident must equal 'KERI' — rejects non-KERI SADs"
-      - "verfers(): extracts signing public keys from 'k' field as [Verfer]"
-      - "digers(): extracts next key digests from 'n' field as [Diger]"
-      - "werfers(): extracts witness public keys from 'b' field as [Verfer]"
-    examples:
-      - "Serder.new_with_raw(icp_bytes) → parsed inception event with accessible verfers"
-    related_terms: ["Sadder", "Creder", "Verfer (cesr/primitives)", "Diger (cesr/primitives)"]
-
-  - term: "Creder"
-    synonyms: ["Credential Serializer"]
-    definition: "ACDC credential serializer extending Sadder. Validates ident=='ACDC'. Provides accessors for credential-specific fields: issuer, schema, subject, status, chains."
-    invariants:
-      - "ident must equal 'ACDC' — rejects non-ACDC SADs"
-      - "issuer(): extracts 'i' field (issuer AID)"
-      - "schema(): extracts 's' field (schema SAID)"
-      - "subject(): extracts 'a' field (attribute section)"
-      - "status(): extracts 'ri' field (registry identifier)"
-    examples:
-      - "Creder.new_with_raw(acdc_bytes) → parsed credential with accessible issuer/schema"
-    related_terms: ["Sadder", "Serder", "SAID (cesr/primitives)"]
+  # Serder moved to identity/establishment domain — KERI event facade extending Sadder
+  # Creder moved to credential-lifecycle/status domain — ACDC credential facade extending Sadder
+  # Both extend Sadder (defined here) with domain-specific field accessors
 
   - term: "Count Code Classification"
     definition: "CESR count codes are classified along two dimensions: universality (universal vs genus-specific) and overrideability (overrideable vs non-overrideable). Universal codes work across all CESR genera. Genus-specific codes are defined per protocol (KERI/ACDC). Overrideable universal codes can have their meaning changed by a genus/version context code."
@@ -365,8 +346,24 @@ terms:
       - "Signable codes: -E, -F, -G"
       - "Non-signable codes: all others (-A, -B, -C, -D, -H, -I, -J, genus-specific)"
       - "The boundary between signed content and signatures is defined by the count value"
+      - "Parser reads exactly 'count' quadlets/triplets of content, then expects attachment groups to follow"
+      - "Signed content ends at count boundary; signature attachments (typically -C group) follow immediately"
       - "Enables deterministic signature computation — signer and verifier agree on exactly which bytes are signed"
     related_terms: ["Count Code Classification", "ESSR Wrapper"]
+
+  - term: "Enclosed Non-Native"
+    synonyms: ["Enclosure Code", "-H Code"]
+    definition: "The -H count code wraps a complete non-native serialization (JSON, CBOR, or MGPK field map) as raw bytes within a CESR group. Required when non-native serializations appear INSIDE count code groups (as opposed to top-level interleaving)."
+    invariants:
+      - "Count code: -H## (small) or --H##### (large)"
+      - "Enclosed content includes its own version string prefix"
+      - "Count measures total size of enclosed content in quadlets/triplets"
+      - "Parser detects serialization type from the enclosed content's leading bytes"
+      - "Non-overrideable universal code — same semantics in all genera"
+      - "Top-level non-native messages do NOT use -H — they are detected by cold-start tritet"
+    examples:
+      - "A JSON KERI event embedded within a -B message group: -H## + complete JSON with version string"
+    related_terms: ["Interleaved Serialization", "Count Code Classification", "Universal Count Code"]
 
   - term: "Fixed Field vs Field Map Encoding"
     definition: "Two CESR-native encoding strategies for message bodies. Fixed Field (-F##) encodes values WITHOUT labels in a required order — maximum compactness when schema is known. Field Map (-G##) encodes labeled key-value pairs in required order — self-describing and human-debuggable. Both are signable."

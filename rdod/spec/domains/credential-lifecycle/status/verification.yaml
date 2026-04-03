@@ -213,7 +213,7 @@ contracts:
       - description: "On escrow: TEL event stored pending missing prerequisite"
         formal:
           language: "pseudocode"
-          expression: "escrowed implies tel_escrow_queue(event) in [OOT, MRE, MCE, MSE]"
+          expression: "escrowed implies tel_escrow_queue(event) in [OOT, MRE, MAE, MRI, MSE, MCE]"
 
 state_machines:
   - name: "CredentialLifecycle"
@@ -279,12 +279,12 @@ validation_constraints:
   - id: "C2_issuer_key_state"
     constraint: "Issuer's current key state must be available and event signatures must verify"
     depends_on: ["C1_registry_exists"]
-    on_failure: "escrow — missing issuer key state"
+    on_failure: "escrow to MRI — missing registry issuer key state"
 
   - id: "C3_kel_anchor"
     constraint: "TEL event must be anchored in the issuer's KEL via a seal"
     depends_on: ["C2_issuer_key_state"]
-    on_failure: "escrow to MCE — missing KEL anchor event"
+    on_failure: "escrow to MAE — missing authorization (KEL anchor event)"
 
   - id: "C4_sequence_valid"
     constraint: "Event sequence number must equal current_sn + 1 with p field matching prior event SAID"

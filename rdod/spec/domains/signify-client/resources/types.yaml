@@ -17,9 +17,9 @@ types:
           - name: "operation_type"
             type: "string"
             required: true
-            description: "Category of long-running operation — determines the expected result schema"
+            description: "Category of long-running operation — determines the expected result schema. 'done' is NOT a type — completion is tracked via the 'done' boolean field."
             constraints:
-              enum: ["oobi", "witness", "delegation", "group", "query", "registry", "credential", "endrole", "done"]
+              enum: ["oobi", "witness", "delegation", "group", "query", "registry", "credential", "endrole"]
           - name: "result"
             type: "map"
             required: false
@@ -33,6 +33,21 @@ types:
           - "result and error are both absent while done is false"
           - "When done=true, exactly one of result or error is present (XOR)"
           - "error.code follows HTTP status code conventions (e.g., 408 for timeout, 404 for not found)"
+
+  - name: "EndpointRole"
+    description: "Known endpoint roles for End-Role authorizations. The KERI spec says roles 'include but are not limited to' the listed set, so the enum is extensible."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["witness", "controller", "agent", "watcher", "registrar", "judge", "juror", "forwarder"]
+        invariants:
+          - "These are the normative roles from the KERI specification"
+          - "The role set is extensible — implementations MAY accept additional role strings"
+          - "'mediator' is NOT yet normative — pending KSWG standardization; implementations SHOULD NOT rely on it"
 
   - name: "AgentConfig"
     description: "Connection configuration for a Signify client to reach its cloud agent."

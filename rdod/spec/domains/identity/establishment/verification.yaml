@@ -764,19 +764,22 @@ validation_constraints:
 
   - id: "C7_witness_threshold_met"
     constraint: "Witness receipt count must satisfy TOAD (bt) for remote, non-locally-owned events"
-    depends_on: ["C5_signing_threshold_met"]
+    depends_on: ["C6_rotation_threshold_met"]
     on_failure: "escrow to PWE — accumulate witness receipts until TOAD met"
 
   - id: "C8_delegation_verified"
     constraint: "For delegated events (dip/drt): delegator's KEL must contain a seal with digest matching this event's SAID"
-    depends_on: ["C5_signing_threshold_met"]
+    depends_on: ["C7_witness_threshold_met"]
     on_failure: "escrow to PDE — await delegator's anchoring event"
 
   - id: "C9_accept"
     constraint: "All applicable constraints satisfied — event accepted to KEL, key state updated, first-seen ordinal assigned"
-    depends_on: ["C6_rotation_threshold_met", "C7_witness_threshold_met", "C8_delegation_verified"]
+    depends_on: ["C8_delegation_verified"]
     on_failure: null
 
-  # Note: C6 only applies to rot/drt events. C7 only applies to remote non-locally-owned events.
-  # C8 only applies to dip/drt events. An implementation checks applicability before evaluating.
-  # C5→C6, C5→C7, C5→C8 can be evaluated in parallel since they're independent branches.
+  # Note: The validation pipeline is STRICTLY SEQUENTIAL with short-circuit on escrow.
+  # Order: C1→C2→C3→C4→C5→C6→C7→C8→C9. Each check can escrow the event and halt
+  # further evaluation. The first unsatisfied check determines the escrow queue.
+  # C6 only applies to rot/drt events. C7 only applies to remote non-locally-owned events.
+  # C8 only applies to dip/drt events. An implementation checks applicability before evaluating,
+  # but the ordering matters for escrow routing — parallelization is NOT safe.

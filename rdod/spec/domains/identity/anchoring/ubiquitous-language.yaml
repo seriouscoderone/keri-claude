@@ -53,13 +53,26 @@ terms:
       - "{i: 'EHqSsH1Im...', s: '0', d: 'EHqSsH1Im...'} — references inception of another AID"
     related_terms: ["Seal", "Digest Seal", "Delegation Seal"]
 
+  - term: "Seal Security Properties"
+    synonyms: []
+    definition: "The security characteristics of seals vary based on the event type containing them. All seals are cryptographically equivalent in verification procedure — the digest comparison is identical regardless of seal location. However, seals in establishment events have stronger security guarantees than seals in interaction events."
+    invariants:
+      - "Verification procedure is identical regardless of seal location (establishment or interaction event)"
+      - "Establishment event seals are stronger: signed by pre-rotated keys (first-time use), bound to key state transitions, cannot be created by an attacker with only current signing keys"
+      - "Interaction event seals are weaker: signed by current signing keys only, an attacker with compromised current keys can create interaction events with seals"
+      - "A delegation seal MAY appear in an interaction event — interaction events are less secure than rotation events for this purpose"
+    examples:
+      - "Delegation approval in a rotation event: attacker must compromise both current AND pre-rotated keys to forge"
+      - "Delegation approval in an interaction event: attacker with only current keys could forge"
+    related_terms: ["Seal", "Interaction Event", "Digest Seal", "Event Seal"]
+
   - term: "Interaction Event Construction"
     definition: "The domain-driven assembly of interaction events (ixn) that commit data to the KEL without changing key state. The anchor section (a field) carries cryptographic seals binding external data to the identifier's event sequence. Implementations SHOULD provide typed builders for common seal types."
     invariants:
       - "Interaction events do not change key state — no kt, k, nt, n, bt, b fields"
       - "Prior (p) field links to the previous event's SAID"
       - "Anchor (a) field contains a list of seal objects"
-      - "Common seal types: digest seal, event seal, event location seal"
+      - "Common seal types: digest seal, event seal, merkle root seal, last establishment seal, backer seal, typed digest seal (all defined in cesr/primitives)"
     examples:
       - "Anchoring builder: InteractionEvent.builder().prior(priorSAID).seal(DigestSeal.of(dataSAID)).seal(EventSeal.of(pre, sn, said)).build()"
     related_terms: ["Data Anchoring", "Seal Types"]

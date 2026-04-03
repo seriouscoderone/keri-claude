@@ -121,9 +121,16 @@ errors:
         description: "The sequence number of the establishment event"
     related_port: "port://identity/key-commitment/inbound/transferability"
 
+  # KeyExposureError redefined as a builder-time constraint.
+  # The validation pipeline does NOT check for premature key exposure — digest commitment
+  # makes it structurally impossible. "Key exposure" in keripy (exposeds()) is the
+  # rotation-time verification that signing keys match pre-committed digests, which is
+  # already covered by PreRotationBindingError. This error applies only to event
+  # construction (builder-time) where a controller might accidentally include a
+  # pre-committed key in a signing key list before its activation rotation.
   - name: "KeyExposureError"
-    description: "Pre-committed key appears in the signing key list before its activation rotation"
-    cause: "A key whose digest was committed in the n field has appeared as a signing key in a prior event — violating the forward-blinded commitment secrecy requirement"
+    description: "Builder-time constraint: pre-committed key included in signing key list before its activation rotation"
+    cause: "Event construction attempted to include a key whose digest appears in the current next key commitments (n field) — the key should remain secret until the rotation that activates it. This is a construction-time safety check, not a validation pipeline check."
     recovery: "abort"
     severity: "fatal"
     context:
@@ -132,11 +139,5 @@ errors:
         description: "The AID"
       - field: "exposed_key"
         type: "string"
-        description: "The pre-committed key that was prematurely exposed"
-      - field: "commitment_sn"
-        type: "integer"
-        description: "The sn of the establishment event that committed this key's digest"
-      - field: "exposure_sn"
-        type: "integer"
-        description: "The sn of the event where the key was prematurely used"
+        description: "The pre-committed key that was included prematurely"
     related_port: "port://identity/key-commitment/inbound/key-commitment"

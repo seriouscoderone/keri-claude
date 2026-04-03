@@ -21,10 +21,27 @@ ports:
     name: "Reconciliation"
     semantics: command
     idempotent: false
+    description: >
+      Reconciliation is a command (has side effects: stores trunk designation) but
+      the domain logic is deterministic — same inputs always produce the same trunk.
     contract:
       input: "types://cesr/primitives#AID"
       output: "types://integrity/recovery#DisputedBranch"
       errors:
         - "errors://integrity/recovery#IrreconcilableError"
         - "errors://integrity/recovery#SupersedingConflictError"
+    refs: ["domain://integrity"]
+
+  - id: "port://integrity/recovery/inbound/disputed-branch-query"
+    type: inbound
+    name: "Disputed Branch Query"
+    semantics: query
+    idempotent: true
+    description: >
+      Public query interface for disputed branches — serves compliance audit and
+      dispute resolution use cases. Part of the public port surface, not internal-only.
+    contract:
+      input: "types://cesr/primitives#AID"
+      output: "types://integrity/recovery#DisputedBranch"
+      errors: []
     refs: ["domain://integrity"]

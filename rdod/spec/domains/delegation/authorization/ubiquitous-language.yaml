@@ -57,15 +57,16 @@ terms:
 
   - term: "Delegating Event"
     synonyms: []
-    definition: "An event in the delegator's KEL that contains one or more delegation seals approving delegated establishment events. Can be either an interaction event (ixn) or a rotation event (rot)."
+    definition: "An event in the delegator's KEL that contains one or more delegation seals approving delegated establishment events. Can be an interaction event (ixn), rotation event (rot), or inception event (icp) — any event type with a seal list in the anchor (a) field."
     invariants:
       - "Contains delegation seal(s) in its data payload (a field)"
-      - "Can be an interaction event or any event with a seal list"
+      - "Can be an interaction event (ixn), rotation event (rot), or inception event (icp)"
       - "A single delegating event may perform multiple delegation operations via multiple seals"
       - "The ordering of seals within the event is significant for superseding recovery (rule B2)"
+      - "Seals in establishment events (rot, icp) have stronger security guarantees than ixn seals — establishment events use pre-rotated keys (first-time use) and cannot be created by an attacker with only current signing keys"
     examples:
       - "Ean's ixn at sn=1 with a=[{i:Fay_AID, s:'0', d:Fay_inception_SAID}] — approves Fay's inception"
-      - "Ean's rot at sn=2 with a=[{i:Fay_AID, s:'1', d:Fay_rotation_SAID}] — approves Fay's rotation"
+      - "Ean's rot at sn=2 with a=[{i:Fay_AID, s:'1', d:Fay_rotation_SAID}] — approves Fay's rotation (stronger security)"
     related_terms: ["Delegation Seal", "Delegator"]
 
   - term: "di Field"
@@ -121,3 +122,4 @@ rules:
   - "Only establishment events (dip, drt) require delegator approval — interaction events are independent"
   - "A delegating event may contain multiple delegation seals for batch delegation"
   - "The ordering of seals within a delegating event is significant for superseding recovery"
+  - "The DND (Do Not Delegate) trait is immutable and inception-only — it MUST only appear in the inception event and cannot be retroactively applied via rotation. DND validation checks the delegator's INCEPTION event, not current key state"

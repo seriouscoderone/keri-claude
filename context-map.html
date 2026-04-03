@@ -2155,6 +2155,23 @@ const RDOD_DATA = {
         ]
       },
       {
+        "name": "Backer",
+        "description": "The umbrella term for components that provide accountability support for a KEL. Backers express support for key events, providing additional trust beyond the Controller's own signatures. Two variants: Witness (signature-based) and Registrar Backer (ledger-based).",
+        "invariants": [
+          "Backers are designated in the backer list (b field) of Establishment Events",
+          "The backer threshold (bt/TOAD) determines how many backers must support an event"
+        ]
+      },
+      {
+        "name": "RegistrarBacker",
+        "description": "A Backer that expresses support for key events by anchoring them on an associated ledger, rather than by signing receipts like a Witness. Activated by the RB configuration trait.",
+        "invariants": [
+          "Uses ledger anchoring instead of signatures",
+          "Activated by the RB config trait in establishment events",
+          "Deactivated by the NRB config trait"
+        ]
+      },
+      {
         "name": "ReceiptMessage",
         "description": "The receipt message (rct) that conveys witness signatures as proof of first-seen observation.",
         "variants": [
@@ -21839,6 +21856,167 @@ const RDOD_DATA = {
             ]
           }
         ]
+      },
+      {
+        "name": "DelegatingEvent",
+        "description": "An event in the Delegator's KEL that contains a seal (digest) of the Delegatee's delegated event, thereby approving the delegation operation.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "delegator_aid",
+                "type": "string",
+                "required": true,
+                "description": "AID of the delegator whose KEL contains this event"
+              },
+              {
+                "name": "event_type",
+                "type": "string",
+                "required": true,
+                "description": "The type of event used as the delegating vehicle (ixn, rot, or icp)",
+                "constraints": {
+                  "enum": [
+                    "ixn",
+                    "rot",
+                    "icp"
+                  ]
+                }
+              },
+              {
+                "name": "seals",
+                "type": "array[types://delegation/authorization#DelegationSeal]",
+                "required": true,
+                "description": "Delegation seals in the anchor list approving delegated events",
+                "constraints": {
+                  "min_length": 1
+                }
+              }
+            ],
+            "invariants": [
+              "The seals appear in the event's anchor (a) field",
+              "Each seal binds a specific delegated event by AID, sn, and SAID",
+              "A single delegating event can approve multiple delegated events"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "DelegatedEvent",
+        "description": "An Establishment Event in the Delegatee's KEL that references the Delegator's AID, binding it to a specific delegation authority. Either a Delegated Inception or Delegated Rotation.",
+        "variants": [
+          {
+            "name": "inception",
+            "fields": [
+              {
+                "name": "event",
+                "type": "types://identity/establishment#KeyEvent",
+                "required": true,
+                "description": "The delegated inception event (dip)"
+              },
+              {
+                "name": "delegator_aid",
+                "type": "string",
+                "required": true,
+                "description": "AID of the delegator (di field)"
+              }
+            ],
+            "invariants": [
+              "event.t must be 'dip'",
+              "The di field explicitly names the delegator",
+              "The AID is a self-addressing SAID of the inception event"
+            ]
+          },
+          {
+            "name": "rotation",
+            "fields": [
+              {
+                "name": "event",
+                "type": "types://identity/establishment#KeyEvent",
+                "required": true,
+                "description": "The delegated rotation event (drt)"
+              },
+              {
+                "name": "delegator_aid",
+                "type": "string",
+                "required": true,
+                "description": "AID of the delegator (inherited from inception)"
+              }
+            ],
+            "invariants": [
+              "event.t must be 'drt'",
+              "Delegator is inherited from the inception — di is immutable"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "DelegatedEstablishment",
+        "description": "Sub-class of Establishment Events consisting of Delegated Inception and Delegated Rotation event types.",
+        "variants": [
+          {
+            "name": "inception",
+            "fields": [
+              {
+                "name": "event",
+                "type": "types://identity/establishment#KeyEvent",
+                "required": true,
+                "description": "The delegated inception event (dip)"
+              }
+            ],
+            "invariants": [
+              "event.t must be 'dip'",
+              "Contains di field naming the delegator AID",
+              "The AID MUST be a self-addressing SAID of the inception event",
+              "Field order: v, t, d, i, s, kt, k, nt, n, bt, b, c, a, di"
+            ]
+          },
+          {
+            "name": "rotation",
+            "fields": [
+              {
+                "name": "event",
+                "type": "types://identity/establishment#KeyEvent",
+                "required": true,
+                "description": "The delegated rotation event (drt)"
+              }
+            ],
+            "invariants": [
+              "event.t must be 'drt'",
+              "Like a standard Rotation but requires delegation approval",
+              "Delegator cannot change after inception"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "CustodialRotation",
+        "description": "Controlled delegation of signing authority through rotation, where a custodian manages signing keys while the Controller retains rotation authority via pre-committed next keys.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "custodian_aid",
+                "type": "string",
+                "required": true,
+                "description": "AID of the custodian managing the signing keys"
+              },
+              {
+                "name": "controller_aid",
+                "type": "string",
+                "required": true,
+                "description": "AID of the Controller retaining rotation authority"
+              }
+            ],
+            "invariants": [
+              "The custodian holds current signing keys — can sign interaction events",
+              "The Controller holds pre-committed next keys — can force rotation at any time",
+              "Rotation authority always supersedes signing authority",
+              "The Controller can revoke the custodian by rotating to new keys the custodian does not hold"
+            ]
+          }
+        ]
       }
     ]
   },
@@ -23534,6 +23712,54 @@ const RDOD_DATA = {
         ]
       },
       {
+        "term": "Principal Controller",
+        "synonyms": [
+          "Principal"
+        ],
+        "definition": "In the OKEA authorization model, the AID whose Controller authorizes other component AIDs (Players) to act in Roles on its behalf. The Principal Controller signs Role authorization messages that bind Players to Roles.",
+        "invariants": [
+          "Authorizes Players via signed Role authorization messages",
+          "May implicitly authorize Players through KEL designations (e.g., Witness backers)"
+        ],
+        "related_terms": [
+          "Player",
+          "Role",
+          "Endpoint Authorization",
+          "Controller"
+        ]
+      },
+      {
+        "term": "Player",
+        "synonyms": [],
+        "definition": "In the OKEA authorization model, a component AID authorized by a Principal Controller to act in a specific Role. Each Player is itself a Controller of its own AID. A Player provides services at an Endpoint for its associated Role on behalf of the Principal.",
+        "invariants": [
+          "Must be authorized by a Principal Controller (explicitly via signed message or implicitly via KEL designation)",
+          "Signs its own Endpoint authorization messages for service URLs",
+          "Is itself a Controller of its own AID"
+        ],
+        "related_terms": [
+          "Principal Controller",
+          "Role",
+          "Endpoint Authorization"
+        ]
+      },
+      {
+        "term": "RUN",
+        "synonyms": [
+          "Read Update Nullify"
+        ],
+        "definition": "The peer-to-peer data management paradigm replacing traditional CRUD (Create, Read, Update, Delete). In RUN: there is no Create (only Update of vacuous records from the source Peer), no Delete (only Nullify — marking invalid without erasing). Combined with BADA monotonicity, RUN ensures replay-resistant and deletion-resistant authentic data management.",
+        "invariants": [
+          "No Create — the source Peer Updates, the destination Peer stores",
+          "No Delete — only Nullify (mark invalid without erasing the record)",
+          "All updates follow BADA monotonicity rules"
+        ],
+        "related_terms": [
+          "BADA",
+          "Endpoint Authorization"
+        ]
+      },
+      {
         "term": "OOBI Endpoint Independence",
         "definition": "The architectural property that any service with stored KEL data can serve OOBIs, independent of any specific KERI infrastructure role. An OOBI endpoint only needs read access to KEL data — it does not need signing keys, witness status, or agent registration. This enables standalone OOBI services, caching proxies, and percolated re-serving.",
         "invariants": [
@@ -23766,6 +23992,12 @@ const RDOD_DATA = {
           },
           "strategy": "endpoint_authorization()",
           "notes": "Role in OOBI URL must match the role in the endpoint authorization."
+        },
+        {
+          "invariant": "BADA enforces two acceptance rule sets. (1) Anchored Updates: confirm update is anchored in AID's KEL; accept if anchoring event's sn is later than prior's. (2) Signed Updates: confirm signature against indicated Key State; accept if Key State is later in KEL than prior's, or if same Key State and later datetime. Anchored Updates always supersede Signed Updates.",
+          "term": "BADA",
+          "technique": "rule-based",
+          "notes": "Two distinct mechanisms with different trust levels. Anchored provides authentication + auditability. Signed provides authentication only."
         }
       ],
       "contracts": [
@@ -26439,6 +26671,111 @@ const RDOD_DATA = {
         ]
       },
       {
+        "term": "Controller",
+        "synonyms": [
+          "AID Controller"
+        ],
+        "definition": "The entity (or set of entities in multi-sig) that holds the private signing keys for an AID and is authorized to generate and sign Key Events. The Controller is the primary actor in the KERI protocol — the one who establishes, rotates, delegates, and abandons identifiers.",
+        "invariants": [
+          "A Controller MUST hold the current private signing keys for the AID",
+          "In multi-sig, the Controller is the collective set of key holders",
+          "The Controller is identified by the AID it controls, not by any external identity"
+        ],
+        "related_terms": [
+          "AID",
+          "Key State",
+          "Signing Threshold",
+          "Key Event"
+        ]
+      },
+      {
+        "term": "End-Verifiability",
+        "synonyms": [
+          "Ambient Verifiability",
+          "End-to-End Verifiability"
+        ],
+        "definition": "The property that any Verifier can independently verify the cryptographic control authority over an AID at any point in time, using only the KEL and standard cryptographic libraries, without depending on any intermediary infrastructure or trusted third party. KERI's fundamental security guarantee.",
+        "invariants": [
+          "Verification requires only the KEL and standard cryptographic libraries",
+          "No trusted third party or intermediary infrastructure is needed",
+          "Verification is possible by anyone, anywhere, at any time (ambient)"
+        ],
+        "related_terms": [
+          "AID",
+          "KEL",
+          "Key State",
+          "Verifier",
+          "Controller"
+        ]
+      },
+      {
+        "term": "Key Event",
+        "synonyms": [],
+        "definition": "Any event in the Key Event Log. Key Events divide into two classes: Establishment Events (Inception Event, Rotation Event, and their delegated variants) that change Key State, and Non-Establishment Events (Interaction Events) that anchor data commitments without changing Key State.",
+        "invariants": [
+          "Every Key Event has a unique sequence number within its KEL",
+          "Every Key Event has a SAID computed over its content",
+          "Establishment Events change Key State; Non-Establishment Events do not",
+          "Must be signed by the current Controller"
+        ],
+        "related_terms": [
+          "KEL",
+          "Establishment Event",
+          "Interaction Event",
+          "SAID",
+          "Controller"
+        ]
+      },
+      {
+        "term": "Self-Certifying Identifier",
+        "synonyms": [
+          "SCID"
+        ],
+        "definition": "An identifier that is cryptographically bound to a keypair at inception, requiring no external authority to establish the binding. The identifier is derived from the public key or a digest thereof, making the binding self-evident and independently verifiable. An AID is a variant of SCID that extends self-certification with transferable control provenance via a Key Event Log.",
+        "invariants": [
+          "The binding between identifier and initial keypair is self-evident from the identifier's derivation",
+          "No trusted third party is needed to establish or verify the binding"
+        ],
+        "related_terms": [
+          "AID",
+          "Inception Event",
+          "End-Verifiability"
+        ]
+      },
+      {
+        "term": "Verifier",
+        "synonyms": [],
+        "definition": "A component or role that cryptographically verifies an event's structure and signatures against the Key State at the time of issuance. Verification includes: checking the event's SAID, validating field structure, confirming prior event digest chain, and verifying signatures against the controlling Key State. A Verifier establishes control authority but does not accept events into the KEL.",
+        "invariants": [
+          "Must determine the controlling Key State at the time of event issuance",
+          "For non-transferable AIDs, only the Inception Event is needed",
+          "For transferable AIDs, the complete sequence of Establishment Events is needed"
+        ],
+        "related_terms": [
+          "Validator",
+          "Key State",
+          "Establishment Event",
+          "End-Verifiability"
+        ]
+      },
+      {
+        "term": "Validator",
+        "synonyms": [],
+        "definition": "A component or role that determines whether a verified event should be accepted into the KEL. A Validator first acts as a Verifier (structural and signature checks), then applies additional constraints: witness receipt sufficiency (TOAD), delegation authorization, and any other policy rules. Validation is the gateway to KEL acceptance.",
+        "invariants": [
+          "Must first verify the event (act as Verifier)",
+          "Must check witness receipt threshold (TOAD) for witnessed identifiers",
+          "Must check delegation authorization for delegated identifiers",
+          "Acceptance into KEL is the final act of successful validation"
+        ],
+        "related_terms": [
+          "Verifier",
+          "KEL",
+          "TOAD",
+          "Controller"
+        ]
+      },
+      {
         "term": "Event Database",
         "synonyms": [],
         "definition": "Persistent storage for KELs, escrows, receipts, key state, and application data. Organized as named partitions (event store, KEL index, signature store, witness signature store, receipt store, etc.).",
@@ -26666,6 +27003,18 @@ const RDOD_DATA = {
           },
           "strategy": "misfit_event_strategy()",
           "notes": "Misfits require manual re-submission."
+        },
+        {
+          "invariant": "The four-way binding between AID, current controlling keypairs (Key State), the Controller entity, and the KEL MUST be cryptographically consistent. The AID is derived from or anchored to the initial keypair (SCID property). The Key State tracks current authoritative keypairs. The KEL provides verifiable history. The Controller holds the private keys.",
+          "term": "Controller",
+          "technique": "property-based",
+          "notes": "The fundamental security invariant of KERI — break any element and the system fails. Also known as the Tetrad Binding."
+        },
+        {
+          "invariant": "Validation rules differ by event locality. A local event comes from a protected, trustable source (e.g., the device running the validation code). A remote event comes from an unprotected, untrustable source. Controllers and Witnesses SHOULD only sign and accept local events. A general Validator MUST verify all signatures regardless of locality.",
+          "term": "Validator",
+          "technique": "rule-based",
+          "notes": "Local vs remote determines which validation rules apply per role (controller, witness, delegatee, delegator, general validator)."
         }
       ],
       "contracts": [
@@ -27068,6 +27417,72 @@ const RDOD_DATA = {
             "invariants": [
               "Each event is in exactly one escrow type at a time",
               "Escrowed events are temporary — promoted to KEL or pruned at timeout"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "InteractionEvent",
+        "description": "A Non-Establishment Key Event that anchors data commitments (seals) to the KEL without changing Key State. Field order: v, t, d, i, s, p, a.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "seal_list",
+                "type": "array[Seal]",
+                "description": "List of cryptographic commitments anchored to the KEL at this event"
+              }
+            ],
+            "invariants": [
+              "Does NOT change Key State",
+              "Carries a seal list for data commitments",
+              "Sequence number is one greater than the prior event",
+              "Must be signed by a Signing Threshold-satisfying subset of current signing keys"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "SequenceNumber",
+        "description": "A strictly monotonically increasing non-negative integer (hex-encoded) identifying an event's position in the KEL. Distinct from First-Seen Number (fn) which tracks acceptance order. Field label: s.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "value",
+                "type": "integer",
+                "constraints": {
+                  "min": 0,
+                  "max": "2^128 - 1"
+                }
+              }
+            ],
+            "invariants": [
+              "Inception and Delegated Inception events MUST have s=0",
+              "Each subsequent event's sn MUST be exactly 1 greater than the prior event",
+              "Different from First-Seen Number: sn is position, fn is acceptance order"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "PriorEventDigest",
+        "description": "The SAID of the immediately preceding event in the KEL, providing backward hash-chaining. Field label: p. Not present in inception events.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "value",
+                "type": "SAID"
+              }
+            ],
+            "invariants": [
+              "Must equal the SAID (d field) of the event at sn-1",
+              "Not present in inception events (icp, dip)",
+              "Creates tamper-evident backward chain"
             ]
           }
         ]
@@ -30438,6 +30853,45 @@ const RDOD_DATA = {
             ]
           }
         ]
+      },
+      {
+        "name": "PartialRotation",
+        "description": "A Rotation that reveals only a subset of pre-committed keys, holding others as Reserve Keys for future use.",
+        "variants": [
+          {
+            "name": "default",
+            "invariants": [
+              "The revealed subset must satisfy the prior next threshold",
+              "Unrevealed keys remain blinded as Reserve Keys"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "AugmentedRotation",
+        "description": "A Rotation that adds new signing keys not previously committed as pre-rotated keys, expanding the current key set beyond the pre-committed set.",
+        "variants": [
+          {
+            "name": "default",
+            "invariants": [
+              "New keys are added to the current signing key list",
+              "Prior next threshold must still be satisfied by the pre-committed subset"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "ReserveRotation",
+        "description": "Recovery from total signing key compromise using previously uncommitted Reserve Keys from an earlier Establishment Event.",
+        "variants": [
+          {
+            "name": "default",
+            "invariants": [
+              "Uses Reserve Keys that were held back from prior rotations",
+              "Enables recovery even after all current signing keys are compromised"
+            ]
+          }
+        ]
       }
     ]
   },
@@ -31613,6 +32067,47 @@ const RDOD_DATA = {
               "Each matched tuple contains: index (current key position), ondex (prior next-key position), expected_digest, computed_digest",
               "Cross-position matching is valid: a signature with index=2 and ondex=0 means key at position 2 in current list corresponds to position 0 in prior next-key digest list",
               "The ondex is essential for partial and augmented rotations where key positions shift"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "ForwardBlindedCommitment",
+        "description": "A cryptographic commitment to a public key made by including only the key's digest in an Establishment Event, keeping the actual key hidden (blinded). The commitment binds a future Rotation Event to reveal specific keys.",
+        "variants": [
+          {
+            "name": "default",
+            "invariants": [
+              "Only the digest is exposed; the public key remains secret until rotation",
+              "The commitment is irrevocable once the Establishment Event is accepted",
+              "Verification occurs at rotation by matching revealed keys against committed digests"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "KeyRevelation",
+        "description": "The act of including a previously committed (blinded) public key in a Rotation Event, thereby revealing it and enabling verification against its pre-committed digest. Transforms a rotation key into a signing key.",
+        "variants": [
+          {
+            "name": "default",
+            "invariants": [
+              "The revealed public key MUST match its pre-committed digest from the prior Establishment Event",
+              "Once revealed, the key transitions from rotation authority to signing authority"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "ReserveKey",
+        "description": "A pre-committed key that is NOT revealed in the current Rotation Event, remaining blinded for future use. Reserve keys enable Partial Rotation and provide a recovery mechanism.",
+        "variants": [
+          {
+            "name": "default",
+            "invariants": [
+              "Remains blinded — its public key is not exposed",
+              "Can be revealed in a future Rotation Event",
+              "Enables Reserve Rotation and recovery from key compromise"
             ]
           }
         ]
@@ -34284,6 +34779,34 @@ const RDOD_DATA = {
             ]
           }
         ]
+      },
+      {
+        "name": "WitnessRemoveList",
+        "description": "List of Witness AIDs to be removed from the current Witness list during a Rotation Event. Field label: br.",
+        "variants": [
+          {
+            "name": "default",
+            "invariants": [
+              "Each AID must currently be in the Witness list",
+              "Removals are processed before additions (ba)",
+              "A given AID MUST NOT appear more than once"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "WitnessAddList",
+        "description": "List of Witness AIDs to be appended to the current Witness list during a Rotation Event. Field label: ba.",
+        "variants": [
+          {
+            "name": "default",
+            "invariants": [
+              "Additions are processed after removals (br)",
+              "A given AID MUST NOT appear more than once",
+              "AIDs already in the Witness list after removals are skipped"
+            ]
+          }
+        ]
       }
     ],
     "_protocols": [
@@ -36325,6 +36848,135 @@ const RDOD_DATA = {
             ]
           }
         ]
+      },
+      {
+        "name": "NonEstablishmentDeadAttack",
+        "description": "Compromise of stale signing keys to forge a past interaction event. Mitigated by First-Seen Rule and witness protection.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "compromised_keys",
+                "type": "array[string]",
+                "required": true,
+                "description": "The stale signing keys that were compromised"
+              },
+              {
+                "name": "target_sn",
+                "type": "integer",
+                "required": true,
+                "description": "Sequence number of the interaction event the attacker attempts to forge"
+              }
+            ],
+            "invariants": [
+              "Keys are stale — no longer the current signing keys",
+              "Mitigated by First-Seen Rule: the legitimate event was seen first by witnesses",
+              "Mitigated by witness protection: witnesses already have receipts for the legitimate event"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "EstablishmentDeadAttack",
+        "description": "Compromise of stale pre-rotated keys to forge a past rotation event. Mitigated by First-Seen Rule and partial rotation (one-time key use).",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "compromised_keys",
+                "type": "array[string]",
+                "required": true,
+                "description": "The stale pre-rotated keys that were compromised"
+              },
+              {
+                "name": "target_sn",
+                "type": "integer",
+                "required": true,
+                "description": "Sequence number of the rotation event the attacker attempts to forge"
+              }
+            ],
+            "invariants": [
+              "Keys are stale — pre-rotation commitments have already been consumed",
+              "Mitigated by First-Seen Rule: the legitimate rotation was seen first",
+              "Mitigated by partial rotation and one-time key use: consumed keys cannot be reused"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "NonEstablishmentLiveAttack",
+        "description": "Compromise of current signing keys to forge interaction events. Mitigated by rotation to pre-committed next keys.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "compromised_keys",
+                "type": "array[string]",
+                "required": true,
+                "description": "The current signing keys that were compromised"
+              }
+            ],
+            "invariants": [
+              "Keys are live — currently the active signing keys",
+              "Mitigated by rotation: Controller rotates to pre-committed next keys, invalidating the compromised signing keys",
+              "Attacker can forge interaction events until the Controller rotates"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "EstablishmentLiveAttack",
+        "description": "Compromise of current pre-rotated keys to forge a rotation event. Most severe — requires the attacker to beat the Controller to publication.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "compromised_keys",
+                "type": "array[string]",
+                "required": true,
+                "description": "The current pre-rotated keys that were compromised"
+              }
+            ],
+            "invariants": [
+              "Most severe attack — attacker can forge a rotation event",
+              "Race condition: attacker must publish the forged rotation before the Controller rotates",
+              "If the Controller rotates first, the attacker's forged rotation is rejected by First-Seen Rule",
+              "If the attacker publishes first, the Controller must use Superseding Recovery"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "DelegatedEventLiveAttack",
+        "description": "Compromise of a Delegatee's pre-rotated keys. Mitigated by requiring Delegator approval — attacker must also compromise Delegator's keys.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "compromised_delegatee_keys",
+                "type": "array[string]",
+                "required": true,
+                "description": "The Delegatee's pre-rotated keys that were compromised"
+              },
+              {
+                "name": "delegator_aid",
+                "type": "string",
+                "required": true,
+                "description": "AID of the Delegator whose approval is required"
+              }
+            ],
+            "invariants": [
+              "Attacker must also compromise the Delegator's keys to forge a valid delegated rotation",
+              "Delegator approval acts as a second factor — compromise of Delegatee keys alone is insufficient",
+              "Joint compromise threshold is the sum of both identifiers' thresholds"
+            ]
+          }
+        ]
       }
     ],
     "_protocols": [
@@ -37594,6 +38246,31 @@ const RDOD_DATA = {
           "Judge",
           "Irreconcilable KEL"
         ]
+      },
+      {
+        "term": "Identity Recovery",
+        "synonyms": [
+          "Key Compromise Recovery"
+        ],
+        "definition": "The adopter-facing concept for recovering from key compromise. Encompasses the set of mechanisms by which a legitimate Controller regains control over an AID after its signing or pre-rotated keys have been compromised. The specific mechanisms (Superseding Recovery, Reserve Rotation, SQAR, Reconciliation) are the implementation-level types under this umbrella.",
+        "invariants": [
+          "Recovery requires that the Controller still controls some unexposed keys (pre-rotated or reserve)",
+          "Recovery produces a fork in the KEL — compromised events go to a Disputed Branch, recovered events form the Trunk",
+          "Recovery is only possible for the latest compromised rotation — earlier compromises cannot be superseded"
+        ],
+        "examples": [
+          "A Controller whose signing keys were stolen rotates to pre-committed next keys, superseding the attacker's forged events",
+          "Reserve Rotation using keys held back from an earlier establishment event"
+        ],
+        "related_terms": [
+          "Superseding Recovery",
+          "Reconciliation",
+          "Trunk",
+          "Disputed Branch",
+          "Reserve Rotation",
+          "SQAR",
+          "Duplicity"
+        ]
       }
     ],
     "_ports": [
@@ -38135,6 +38812,138 @@ const RDOD_DATA = {
             ]
           }
         ]
+      },
+      {
+        "name": "SupersedingRecovery",
+        "description": "The mechanism by which a legitimate Controller replaces a previously accepted event at the same sequence number with a Rotation Event, forking the KEL. The superseded events go to a Disputed Branch; the superseding events form the new Trunk.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "string",
+                "required": true,
+                "description": "AID of the identifier being recovered"
+              },
+              {
+                "name": "superseding_sn",
+                "type": "integer",
+                "required": true,
+                "description": "Sequence number at which the superseding rotation is placed"
+              },
+              {
+                "name": "rule_applied",
+                "type": "types://integrity/recovery#SupersedingRule",
+                "required": true,
+                "description": "The superseding rule that authorized this recovery"
+              }
+            ],
+            "invariants": [
+              "Can only supersede the latest-seen event at a given sn",
+              "Governed by formal Superseding Rules (A, B, C)"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Reconciliation",
+        "description": "The process of determining the undisputed path (Trunk) through a KEL after Superseding Recovery has created forks. A KEL is reconcilable when every Validator can find the same Trunk.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "string",
+                "required": true,
+                "description": "AID of the identifier whose KEL is being reconciled"
+              },
+              {
+                "name": "trunk_tip_sn",
+                "type": "integer",
+                "required": true,
+                "description": "Sequence number of the tip of the reconciled trunk"
+              },
+              {
+                "name": "disputed_branches",
+                "type": "array[types://integrity/recovery#DisputedBranch]",
+                "required": true,
+                "description": "All disputed branches displaced during reconciliation"
+              }
+            ],
+            "invariants": [
+              "Reconciliation produces exactly one trunk — the undisputed path",
+              "All events not on the trunk are in disputed branches",
+              "If no universal trunk can be determined, the KEL is irreconcilable"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Trunk",
+        "synonyms": [
+          "Undisputed Path"
+        ],
+        "description": "The authoritative branch of a KEL after Superseding Recovery. Events on the Trunk are the accepted, non-superseded events.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "string",
+                "required": true,
+                "description": "AID of the identifier"
+              },
+              {
+                "name": "events",
+                "type": "array[string]",
+                "required": true,
+                "description": "SAIDs of the events on the trunk, in sequence order"
+              }
+            ],
+            "invariants": [
+              "There is exactly one trunk per KEL",
+              "Superseding events create the trunk by displacing compromised events to branches",
+              "All events not on the trunk are in disputed branches"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "SQAR",
+        "synonyms": [
+          "Surprise Quantum Attack Recovery"
+        ],
+        "description": "Pre-positioning quantum-resistant key commitments so that recovery from a future quantum computing attack is possible without advance warning. Uses Reserve Keys from pre-rotation commitments.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "reserve_key_digests",
+                "type": "array[string]",
+                "required": true,
+                "description": "Digests of quantum-resistant reserve keys committed in prior establishment events",
+                "constraints": {
+                  "min_length": 1
+                }
+              },
+              {
+                "name": "commitment_sn",
+                "type": "integer",
+                "required": true,
+                "description": "Sequence number of the establishment event where the reserve keys were committed"
+              }
+            ],
+            "invariants": [
+              "Reserve keys must be committed BEFORE the quantum attack — post-hoc commitment is useless",
+              "Uses the same pre-rotation mechanism but with quantum-resistant key types",
+              "Recovery is possible only if the attacker has not also compromised the reserve keys"
+            ]
+          }
+        ]
       }
     ]
   },
@@ -38416,6 +39225,38 @@ const RDOD_DATA = {
           "KERI Message Types",
           "KRAM",
           "KERI Field Map"
+        ]
+      },
+      {
+        "term": "Disclosure Prompt",
+        "synonyms": [
+          "pro",
+          "Prod Message"
+        ],
+        "definition": "A routed message that prompts a peer to disclose sealed-confidential data. Part of the sealed-confidential message class (prod-bare) used for hidden data that is sealed to a KEL but not publicly disclosed.",
+        "invariants": [
+          "Used for sealed-confidential data — not public KEL data",
+          "Paired with Sealed Disclosure (bar) for the response"
+        ],
+        "related_terms": [
+          "Sealed Disclosure",
+          "Exchange Message"
+        ]
+      },
+      {
+        "term": "Sealed Disclosure",
+        "synonyms": [
+          "bar",
+          "Bare Message"
+        ],
+        "definition": "A routed message that delivers sealed-confidential data directly to a peer. The data is hidden but sealed to a KEL, and disclosure is managed selectively. Part of the sealed-confidential message class.",
+        "invariants": [
+          "Delivers data that was previously sealed but not publicly disclosed",
+          "The disclosed data can be verified against its KEL seal"
+        ],
+        "related_terms": [
+          "Disclosure Prompt",
+          "Exchange Message"
         ]
       }
     ],
@@ -39056,6 +39897,15 @@ const RDOD_DATA = {
               "said is computed over the serialized fields with d replaced by a placeholder"
             ]
           }
+        ]
+      },
+      {
+        "name": "KeyEventMessage",
+        "description": "The serialized wire-format representation of a Key Event, composed of the event body (KERI Field Map) plus attached signatures, witness receipts, and other CESR-encoded cryptographic qualifications. A Key Event Message is what is transmitted; the Key Event within it is what is validated and stored.",
+        "invariants": [
+          "Contains exactly one Key Event body",
+          "Includes attached signature groups (indexed or non-indexed)",
+          "May include attached receipt groups"
         ]
       }
     ]
@@ -46995,6 +47845,49 @@ const RDOD_DATA = {
           "Watcher Node",
           "Watcher AID"
         ]
+      },
+      {
+        "term": "Juror",
+        "synonyms": [],
+        "definition": "A Watcher that records and provides evidence of Duplicity to other Watchers. A Juror maintains copies of conflicting events as forensic evidence in a Duplicitous Event Log (DEL).",
+        "invariants": [
+          "Records all verified but conflicting event versions",
+          "Provides evidence to Juries and Judges on request"
+        ],
+        "related_terms": [
+          "Jury",
+          "Judge",
+          "Duplicity",
+          "DEL"
+        ]
+      },
+      {
+        "term": "Jury",
+        "synonyms": [],
+        "definition": "A highly available, fault-tolerant pool of Jurors that collectively provides Duplicity evidence. A Jury ensures redundant access to forensic evidence.",
+        "invariants": [
+          "Composed of multiple Jurors for availability",
+          "Provides collective Duplicity evidence"
+        ],
+        "related_terms": [
+          "Juror",
+          "Judge"
+        ]
+      },
+      {
+        "term": "Judge",
+        "synonyms": [],
+        "definition": "A Watcher that evaluates Key Events based on Duplicity evidence provided by one or more Juries and makes trust recommendations. A Validator may employ Judge services to aid in trust decisions.",
+        "invariants": [
+          "Evaluates evidence from Juries — does not collect evidence directly",
+          "Provides trust recommendations to Validators"
+        ],
+        "related_terms": [
+          "Juror",
+          "Jury",
+          "Validator",
+          "Duplicity"
+        ]
       }
     ],
     "_ports": [
@@ -49480,7 +50373,7 @@ function renderInfo(domain) {
       if (err.related_port) meta.push(esc(err.related_port));
       if (meta.length) html += `<div style="color:#888;font-size:10px;margin-top:2px">${meta.join(' | ')}</div>`;
       if (err.cause) html += `<div style="color:#e67e22;font-size:11px;margin-top:2px">cause: ${esc(err.cause)}</div>`;
-      if (err.recovery_target || err.escrow_queue) html += `<div style="color:#9b59b6;font-size:11px;margin-top:2px">recovery target: ${esc(err.recovery_target || err.escrow_queue)}</div>`;
+      if (err.escrow_queue) html += `<div style="color:#9b59b6;font-size:11px;margin-top:2px">escrow: ${esc(err.escrow_queue)}</div>`;
       if (err.context && err.context.length) {
         err.context.forEach(c => {
           if (typeof c === 'object') html += `<div style="color:#666;font-size:10px;padding-left:8px">${esc(c.field || '')}: <span style="color:#5cb85c">${esc(c.type || '')}</span> ${esc(c.description || '')}</div>`;
@@ -49546,28 +50439,12 @@ function renderInfo(domain) {
         html += `<div style="font-size:11px;margin-top:2px;padding-left:8px"><span style="color:#555">${s.seq}.${esc(deps)}</span> <span style="color:#4a90d9">${esc(s.domain || '')}</span> → ${esc(s.action || '')}</div>`;
         if (inp) html += `<div style="font-size:10px;color:#888;padding-left:20px">in: ${esc(inp)}</div>`;
         if (out) html += `<div style="font-size:10px;color:#5cb85c;padding-left:20px">out: ${esc(out)}</div>`;
-        if (s.notes) html += `<div style="font-size:10px;color:#888;padding-left:20px;font-style:italic">${esc(s.notes)}</div>`;
-        if (s.sub_steps && s.sub_steps.length) {
-          s.sub_steps.forEach(ss => {
-            html += `<div style="font-size:10px;color:#9b59b6;padding-left:28px">↳ ${esc(ss.action || ss.description || JSON.stringify(ss))}</div>`;
-          });
-        }
         if (s.on_failure && s.on_failure.length) {
           s.on_failure.forEach(f => {
             html += `<div style="font-size:10px;color:#ff6b6b;padding-left:20px">✗ ${esc(f.error || '')} → ${esc(f.action || '')}</div>`;
           });
         }
       });
-      if (p.invariants && p.invariants.length) {
-        html += `<div style="color:#9b59b6;font-size:10px;margin-top:3px;font-weight:600">invariants:</div>`;
-        p.invariants.forEach(inv => { html += `<div style="font-size:10px;color:#888;padding-left:8px">↳ ${esc(inv)}</div>`; });
-      }
-      if (p.failure_paths && p.failure_paths.length) {
-        html += `<div style="color:#ff6b6b;font-size:10px;margin-top:3px;font-weight:600">failure paths:</div>`;
-        p.failure_paths.forEach(fp => {
-          html += `<div style="font-size:10px;padding-left:8px"><span style="color:#888">step ${esc(String(fp.step || '?'))}:</span> <span style="color:#e67e22">${esc(fp.failure || '')}</span> → ${esc(fp.handling || '')}</div>`;
-        });
-      }
       if (p.timeout) html += `<div style="color:#888;font-size:10px;margin-top:2px">timeout: ${esc(p.timeout)}</div>`;
       if (p.compensation) html += `<div style="color:#e67e22;font-size:10px;margin-top:2px">compensation: ${esc(p.compensation)}</div>`;
       if (p.terminal_states) {

@@ -23,7 +23,7 @@ terms:
     definition: "In the context of delegation lifecycle, the Partially-Delegated Escrow manages the promotion pipeline: events sit here until the delegator's KEL shows a seal committing to the delegated event's digest, then are promoted to the KEL."
     invariants:
       - "Contains delegated events whose delegator seal has not yet been found"
-      - "Timeout: 3600 seconds — escrowed events are pruned after expiry"
+      - "Timeout: PDE events (via PSE) are pruned after 3600 seconds — configurable implementation parameter, not protocol normative"
       - "When the delegator's approval event arrives and contains the matching seal, the escrowed event is promoted to the KEL"
       - "Reprocessed when the delegator's KEL is updated with new events"
     examples:
@@ -38,7 +38,7 @@ terms:
       - "Contains events where the delegator's approval event has not yet arrived at all"
       - "Distinguished from Partially-Delegated Escrow: Delegable Event escrow waits for delegator event arrival, Partially-Delegated escrow waits for seal match"
       - "Drained when the delegator's KEL advances"
-      - "Events are promoted to Partially-Delegated escrow or directly to the KEL once the delegator's event arrives"
+      - "Promoted events enter the full validation pipeline via processEvent — outcome depends on current state: may go to KEL (all thresholds met), PSE, PWE, or PDE; PDE is not a mandatory intermediate step"
     examples:
       - "Fay's dip arrives but Ean's entire KEL is unknown — dip goes to Delegable Event escrow (not Partially-Delegated escrow)"
       - "Once Ean's KEL is fetched and processed, Fay's dip moves from Delegable Event escrow to either Partially-Delegated escrow (if seal not found) or directly to KEL (if seal matches)"
@@ -51,9 +51,24 @@ terms:
       - "Contains seals whose corresponding delegator approval event has been located and verified"
       - "Represents the transition from unverified delegation to approved delegation"
       - "A delegated event can only be fully accepted once its seal moves to approved status"
+      - "Delegation seals are event-bound (anchored to a specific sn + SAID in the delegator's KEL), NOT key-state-bound — a delegator key rotation does NOT invalidate existing seals because they are committed in immutable events"
     examples:
       - "Ean's ixn at sn=1 contains seal for Fay's dip — the seal moves from unverified to approved"
       - "Validator checks the approved seal store to confirm Fay's delegated inception has approved backing"
+    related_terms: ["Delegation Validation", "Partially-Delegated Escrow"]
+
+  - term: "Delegation Workflow Order"
+    synonyms: []
+    definition: "The normative ordering of the delegation approval workflow: (1) delegatee signs establishment event, (2) delegatee sends to witnesses for receipting, (3) delegatee sends event with controller+witness signatures to delegator for approval, (4) delegator commits approval seal, (5) publication. Witnesses come BEFORE delegator approval."
+    invariants:
+      - "Step 1: Delegatee signs the establishment event (dip or drt)"
+      - "Step 2: Delegatee propagates the event with attached signatures to witnesses for receipting"
+      - "Step 3: Delegatee propagates the event with both controller and witness signatures to the delegator for approval"
+      - "Step 4: Delegator commits an approval seal in its own KEL"
+      - "Step 5: Event is published to the network"
+      - "The escrow cascade reflects this order: PWE (missing witnesses) precedes PDE (missing delegation seal)"
+    examples:
+      - "Fay signs dip -> sends to witnesses -> receives receipts -> sends to Ean with receipts -> Ean seals approval -> dip published"
     related_terms: ["Delegation Validation", "Partially-Delegated Escrow"]
 
 events:
@@ -73,5 +88,5 @@ rules:
   - "Validators must verify both the delegatee's signatures and the delegator's seal before accepting a delegated event"
   - "Events failing validation are escrowed — not rejected — to handle asynchronous arrival of delegator events"
   - "Delegable events (Delegable Event escrow) wait for delegator event arrival; partially-delegated events (Partially-Delegated escrow) wait for seal match — these are distinct escrow states"
-  - "Escrowed events are pruned after timeout (3600 seconds default) — stale delegations do not accumulate"
+  - "Escrowed events are pruned after timeout (Delegable=1200s, PDE=3600s default — configurable implementation parameters) — stale delegations do not accumulate"
   - "When the delegator's KEL advances, all relevant escrow queues must be swept for promotable events"

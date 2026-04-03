@@ -52,4 +52,18 @@ types:
         invariants:
           - "auth.signify_resource must match the agent's controller AID"
           - "auth.signature must verify against controller's current key state"
-          - "auth.signify_timestamp must pass KRAM timeliness check"
+          - "auth.signify_timestamp must pass KRAM timeliness check against kram_timeliness_window"
+
+  - name: "KramConfig"
+    description: "Configuration parameters for KRAM (Key Rate-limited Authentication Method) request validation. KRAM is defined by the Signify protocol, not core KERI — timeliness is a configurable deployment parameter, not a protocol constant."
+    variants:
+      - name: "default"
+        fields:
+          - name: "kram_timeliness_window"
+            type: "Duration"
+            required: true
+            description: "Maximum allowed age of a KRAM signature timestamp before the request is considered stale. Recommended default deferred to keria oracle."
+        invariants:
+          - "Requests with signify_timestamp older than kram_timeliness_window are rejected"
+          - "Value is implementation-configurable — not a protocol-normative constant"
+          - "Must balance replay protection (shorter) vs clock skew tolerance (longer)"

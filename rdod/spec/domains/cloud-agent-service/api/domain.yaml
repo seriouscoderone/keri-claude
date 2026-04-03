@@ -47,6 +47,9 @@ externals:
     abstraction: "Adapter"
     ref: "port://cloud-agent-service/outbound/http-server"
     implementation_notes: "Exposes admin (3901) and message router (3902) endpoints. Implementations: Falcon/hio (keria), API Gateway+Lambda (serious-keri)"
+  - name: "KRAM Protocol"
+    abstraction: "Protocol"
+    implementation_notes: "KRAM (Key Rate-limited Authentication Method) is defined by the Signify protocol, not core KERI. Authentication format details are specified externally. See keria/src/keria/core/authing.py for reference implementation."
 
 implementation_guidance:
   suggested_type: "module"

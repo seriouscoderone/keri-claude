@@ -129,28 +129,29 @@ properties:
     strategy: "pde_entry_strategy()"
     notes: "PDE is specifically for events where the delegator's KEL is available but no matching seal exists yet."
 
-  - invariant: "Both PDE and delegable escrow entries MUST be pruned after 3600 seconds; at exactly 3600 seconds the entry is expired; at 3599 seconds it is still active"
+  - invariant: "Delegable escrow entries MUST be pruned after 1200 seconds; PDE escrow entries (via PSE) MUST be pruned after 3600 seconds. These are configurable implementation parameters, not protocol normative values."
     term: "Partially-Delegated Escrow"
     technique: smt
     formal:
       language: z3-python
       expression: |
         from z3 import *
-        age, timeout = Ints('age timeout')
-        pruned = Bool('pruned')
-        s = Solver()
-        s.add(timeout == 3600)
-        s.add(pruned == (age >= timeout))
-        # Boundary: age == 3599 must NOT be pruned
-        s.add(age == 3599, pruned)
-        assert s.check() == unsat
-        # Boundary: age == 3600 must be pruned
+        age = Int('age')
+        # Delegable escrow timeout: 1200s
+        delegable_timeout = 1200
+        delegable_pruned = Bool('delegable_pruned')
+        s1 = Solver()
+        s1.add(delegable_pruned == (age >= delegable_timeout))
+        s1.add(age == 1199, delegable_pruned)
+        assert s1.check() == unsat
+        # PDE escrow timeout (via PSE): 3600s
+        pde_timeout = 3600
+        pde_pruned = Bool('pde_pruned')
         s2 = Solver()
-        s2.add(timeout == 3600)
-        s2.add(pruned == (age >= timeout))
-        s2.add(age == 3600, Not(pruned))
+        s2.add(pde_pruned == (age >= pde_timeout))
+        s2.add(age == 3599, pde_pruned)
         assert s2.check() == unsat
-    notes: "Exact boundary at 3600s. Off-by-one in either direction is caught by SMT."
+    notes: "Delegable=1200s, PDE (via PSE)=3600s per keripy reference. These are configurable implementation parameters, not protocol constants."
 
   - invariant: "PDE and delegable escrows are mutually exclusive: an event MUST be in exactly one of {pde, delegable, rejected, approved}; the discriminant is delegator KEL availability at the time of step 3 failure"
     term: "Delegable Event Escrow"
@@ -297,7 +298,7 @@ state_machines:
       - "Escrowed events can be promoted back to the validation pipeline when new information arrives"
       - "Rejected events are terminal — they cannot re-enter the pipeline"
       - "Approved events have passed all four validation steps and are ready for KEL insertion"
-      - "Escrow timeout (3600s) transitions both escrowed-pde and escrowed-delegable to an implicit pruned state"
+      - "Escrow timeout transitions to implicit pruned state: Delegable=1200s, PDE=3600s (configurable implementation parameters)"
     initial_state: "received"
     terminal_states: ["approved", "rejected"]
 

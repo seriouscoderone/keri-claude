@@ -57,3 +57,36 @@ ports:
       output: "types://identity/state#KeyState"
       errors: []
     refs: ["domain://externals/persistence"]
+
+  # Abstract inbound port interfaces — contracts only, resolved at composition time
+  - id: "port://identity/establishment/inbound/threshold-satisfaction"
+    type: inbound
+    name: "Threshold Satisfaction"
+    semantics: query
+    idempotent: true
+    description: >
+      Abstract port interface for signing threshold satisfaction checks.
+      Accepts a threshold expression and a list of verified signature indices,
+      returns whether the threshold is satisfied. Resolved at composition time
+      by the identity/thresholds domain — not a build-time import.
+    contract:
+      input: "threshold expression (string) + verified indices (array[integer])"
+      output: "boolean"
+      errors: []
+    refs: ["domain://identity/thresholds"]
+
+  - id: "port://identity/establishment/inbound/witness-threshold-check"
+    type: inbound
+    name: "Witness Threshold Check"
+    semantics: query
+    idempotent: true
+    description: >
+      Abstract port interface for witness threshold (TOAD) satisfaction checks.
+      Accepts a TOAD value and a list of verified witness receipt indices,
+      returns whether the witness threshold is satisfied. Resolved at composition
+      time by the accountability domain — not a build-time import.
+    contract:
+      input: "toad (integer) + witness indices (array[integer])"
+      output: "boolean"
+      errors: []
+    refs: ["domain://accountability"]

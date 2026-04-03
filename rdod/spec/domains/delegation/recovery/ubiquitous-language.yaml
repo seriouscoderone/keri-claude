@@ -46,12 +46,13 @@ terms:
 
   - term: "Custodial Delegation"
     synonyms: []
-    definition: "A special form of delegation where the delegator controls the pre-rotated keys of the delegatee, giving the delegator the ability to rotate the delegatee's keys unilaterally."
+    definition: "A deployment pattern (not a separate protocol concept) where the delegator controls the pre-rotated keys of the delegatee, giving the delegator the ability to rotate the delegatee's keys unilaterally. The protocol does not distinguish custodial from non-custodial — same cooperative delegation mechanics apply."
     invariants:
       - "The delegator holds or controls the delegatee's pre-rotated private keys"
       - "Provides the delegator with full recovery capability over the delegated AID"
       - "The delegatee can still sign interaction events independently with its current signing keys"
       - "The delegator can force a rotation by exercising the pre-rotated keys"
+      - "Deployment pattern only — the protocol makes no distinction between custodial and non-custodial delegation"
     examples:
       - "A custodial wallet service delegating AIDs where the service holds backup rotation keys"
       - "A parent organization holding recovery keys for employee AIDs"

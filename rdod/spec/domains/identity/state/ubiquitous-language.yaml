@@ -17,6 +17,19 @@ terms:
       - "Verifier updated by rotation: signing keys replaced with new keys (verified against prior next key digests), new next digests committed, witnesses updated via removals/additions, last establishment data updated"
     related_terms: ["Key State", "Establishment Subsequence", "Last Establishment Data", "State Reconstruction", "Configuration Traits"]
 
+  - term: "First-Seen Ordinal"
+    synonyms: ["fn", "first_seen_sn"]
+    definition: "A per-AID monotonic counter assigned to each event when it is first accepted into the KEL. NOT a global counter — each identifier prefix has its own independent fn sequence starting from 0. fn provides ordering within a single identifier's history and enables first-seen replay."
+    invariants:
+      - "Per-AID: each AID prefix has its own fn counter starting from 0"
+      - "Monotonic: fn always increases for successive events within the same AID"
+      - "Assigned once at first acceptance — never reassigned or changed"
+      - "Duplicate events (same SAID) do NOT get a new fn — signature accumulation preserves the original fn"
+      - "In keripy: fels database keyed by (prefix, fn) via appendOn"
+    examples:
+      - "AID D1 events: icp(fn=0), ixn(fn=1), rot(fn=2). AID D2 events: icp(fn=0), ixn(fn=1). Independent counters."
+    related_terms: ["Key Event Verifier", "Signature Accumulation"]
+
   - term: "Last Establishment Data"
     synonyms: ["ee field [KSN]"]
     definition: "Snapshot of the most recent establishment event processed by the Key Event Verifier. Records the sequence number and SAID of that event, plus the witness changes (removed and added) it introduced. Used as a required reference for validating the next rotation — the rotation must occur at a sequence number greater than the last establishment event's sequence number, and witness cuts/adds are computed relative to this state."
@@ -96,6 +109,31 @@ terms:
       - "Processing a rotation: the verifier validates the rotation, then replaces signing keys, next key digests, thresholds, witnesses, and last establishment data"
       - "Processing an interaction: the verifier checks signatures against current signing keys, advances the sequence number, updates the current event reference"
     related_terms: ["Key Event Verifier", "State Reconstruction", "Establishment Event", "Interaction Event"]
+
+  - term: "KEL Append-Only Invariant"
+    synonyms: []
+    definition: "The append-only invariant applies ONLY to the accepted Key Event Log and the first-seen event log. Escrow queues are separate mutable structures supporting add, get, and remove operations. Pruning timed-out events from escrow does NOT violate the append-only invariant because escrows are NOT part of the KEL."
+    invariants:
+      - "Accepted KEL is append-only — events are never removed or modified after acceptance"
+      - "First-seen event log is append-only — fn assignments are permanent"
+      - "Escrow queues (out-of-order, partially-signed, partially-witnessed, likely-duplicitous, delegable) support CRUD: add, get, remove"
+      - "Pruning timed-out escrow events is NOT a violation of append-only"
+    examples:
+      - "Event accepted at fn=3 in the KEL: permanent, never removed"
+      - "Event in out-of-order escrow times out after 1200s: removed from escrow, NOT a KEL violation"
+    related_terms: ["Incremental State Update", "Immediate Consistency"]
+
+  - term: "Immediate Consistency"
+    synonyms: []
+    definition: "State is IMMEDIATELY consistent after escrow promotion. The full processEvent -> update -> logEvent path updates both in-memory state and persistent database synchronously. No staleness window exists. All operations are single-threaded within a processing pass."
+    invariants:
+      - "No staleness window after escrow promotion — state is updated synchronously"
+      - "In-memory state and persistent database are updated in the same operation"
+      - "All operations are single-threaded within a processing pass"
+      - "State cache is written immediately after escrow promotion"
+    examples:
+      - "Event promoted from out-of-order escrow: full validation runs, event committed to KEL, state cache updated — all synchronous"
+    related_terms: ["Incremental State Update", "State Reconstruction", "Key Event Verifier"]
 
   - term: "Stale Event"
     synonyms: ["Superseded Event"]

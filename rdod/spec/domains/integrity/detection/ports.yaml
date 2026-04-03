@@ -41,3 +41,41 @@ ports:
       errors:
         - "errors://integrity/detection#KELForkDetectedError"
     refs: ["domain://externals/transport"]
+
+  - id: "port://integrity/detection/outbound/duplicity-event-log"
+    type: outbound
+    name: "Duplicity Event Log Repository"
+    semantics: command
+    idempotent: false
+    description: >
+      Persistence port for the Duplicity Event Log (DEL). Stores permanent forensic
+      evidence of detected duplicity. The DEL is append-only — entries are never
+      removed or modified.
+    contract:
+      input: "types://integrity/detection#DuplicityEvidence"
+      output: "void"
+      errors: []
+    refs: ["domain://externals/persistence"]
+    invariants:
+      - "Append-only — evidence entries are never removed, modified, or reordered"
+      - "Each entry is independently verifiable (both events have valid signatures)"
+
+  - id: "port://integrity/detection/outbound/lde-escrow"
+    type: outbound
+    name: "Likely Duplicitous Events Escrow"
+    semantics: command
+    idempotent: false
+    description: >
+      Persistence port for the LDE (Likely Duplicitous Events) escrow queue.
+      Stores events that triggered duplicity detection pending judge adjudication.
+      Supports add, get, remove, and sweep/timeout (default 3600s per keripy).
+    contract:
+      input: "types://integrity/detection#DuplicityEvidence"
+      output: "void"
+      errors:
+        - "errors://integrity/detection#DuplicityEscrowTimeoutError"
+    refs: ["domain://externals/persistence"]
+    invariants:
+      - "Entries are pruned after timeout (default 3600s, configurable)"
+      - "Supports add, get by (prefix, sn), remove, and sweep operations"
+      - "Unlike the DEL, LDE escrow is mutable — entries can be promoted or pruned"

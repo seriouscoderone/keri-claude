@@ -10,10 +10,12 @@ terms:
       - "All subsequent different versions of an event at the same location are discarded"
       - "Consistent receipts (same version) from other witnesses are accepted and stored"
       - "Inconsistent receipts (different version at same location) are discarded from the KERL but may be logged to a DEL"
-      - "Exception: superseding recovery rotation may replace a first-seen event"
+      - "Superseding recovery does NOT break the first-seen rule — it creates a fork where the original first-seen event remains on a disputed branch and the superseding event becomes the trunk; both branches retain their fn ordinals"
+      - "Superseding rules (A0-C1) define the precise conditions under which a second event at the same sn may be accepted as a fork — the witness must check superseding rules before accepting"
     examples:
-      - "Witness W1 accepts event E at sn=5. A later different event E' at sn=5 arrives — E' is discarded"
+      - "Witness W1 accepts event E at sn=5. A later different event E' at sn=5 arrives — E' is discarded unless superseding rules are satisfied"
       - "Receipt from W2 for the same version E at sn=5 — accepted and attached to the KERL entry"
+      - "Superseding rotation at sn=3: original event E stays on disputed branch, superseding event E' becomes trunk — both retain fn ordinals"
     related_terms: ["Immune Constraint", "Proper KERL", "BFT Quorum"]
 
   - term: "Immune Constraint"
@@ -63,9 +65,12 @@ terms:
       - "For n witnesses: the minimum threshold m guarantees that any two sets of m witnesses share at least one honest member"
       - "The overlap property ensures that a dishonest controller cannot get two different events fully witnessed without detection"
       - "Used as the floor for TOAD — the controller may choose a higher threshold but not lower"
+      - "f=0 is valid for N=1 (no fault tolerance — controller accepts this risk); the spec does not impose a minimum pool size"
+      - "ample() is implementation guidance, not normative; the spec only requires the chosen threshold satisfies the immunity constraint"
     examples:
       - "ample(5) = 4: with 5 witnesses, at least 4 must receipt to guarantee quorum overlap"
       - "ample(7) = 5: with 7 witnesses tolerating 2 faults, 5 receipts needed"
+      - "ample(1) = 1: with 1 witness, f=0 — no fault tolerance, controller accepts this"
     related_terms: ["Accountability Threshold", "Immune Constraint", "First-seen Rule"]
 
   - term: "Quorum Calculation"

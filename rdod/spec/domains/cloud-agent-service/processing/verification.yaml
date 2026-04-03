@@ -84,7 +84,7 @@ properties:
     strategy: "st.sampled_from for valid operation types, st.text for resource OIDs"
     notes: "Operation naming convention is deterministic and parseable"
 
-  - invariant: "Completed operations carry a response; failed operations carry an error; incomplete operations carry neither"
+  - invariant: "Completed operations carry a result; failed operations carry an error; incomplete operations carry neither"
     term: "Long-running Operation"
     technique: property-based
     formal:
@@ -96,23 +96,23 @@ properties:
             # Poll the operation and verify the behavioral contract
             status = poll_operation(op.name)
             if status.done and status has no error:
-              # Successful completion must produce a usable response
-              response = status.response
-              assert response is not null
-              assert response can be deserialized to the expected type for op_type
+              # Successful completion must produce a usable result
+              result = status.result
+              assert result is not null
+              assert result can be deserialized to the expected type for op_type
             elif status.done and status has error:
               # Failed completion must produce a diagnostic error
               assert status.error.code is not null
               assert status.error.message is not empty
-              assert status.response is null
+              assert status.result is null
             else:
               # Incomplete operations have no final result yet
               assert not status.done
         # The behavioral guarantee: polling an operation always returns a
-        # self-consistent status — done+success implies response, done+error
+        # self-consistent status — done+success implies result, done+error
         # implies diagnostic, not-done implies still processing.
     strategy: "All valid operation types, arbitrary OIDs"
-    notes: "Operation lifecycle contract — the done/error/response triple is always internally consistent"
+    notes: "Operation lifecycle contract — the done/error/result triple is always internally consistent"
 
   - invariant: "Multi-sig assembly MUST check threshold satisfaction: the event is assembled (complete) when collected signatures >= threshold; collected < threshold MUST result in the event remaining escrowed; collected == 0 with threshold > 0 MUST NOT trigger assembly"
     term: "Multi-sig Assembly"
@@ -175,22 +175,22 @@ properties:
           status = monitor.check_completion(op)
           assert status.done == true
           # Verify the monitor queried the right subsystem by checking
-          # the response contains type-specific completion evidence:
+          # the result contains type-specific completion evidence:
           if op_type == "group":
-            assert status.response contains multi-sig assembly result
+            assert status.result contains multi-sig assembly result
           elif op_type == "delegation":
-            assert status.response contains delegation approval commitment
+            assert status.result contains delegation approval commitment
           elif op_type == "credential":
-            assert status.response contains credential SAID and TEL event
+            assert status.result contains credential SAID and TEL event
           elif op_type == "registry":
-            assert status.response contains registry prefix
+            assert status.result contains registry prefix
           elif op_type == "witness":
-            assert status.response contains witness receipt count >= toad
+            assert status.result contains witness receipt count >= toad
         # The behavioral guarantee: monitor produces correct completion
         # evidence for each operation type, proving it delegated to the
         # right component.
     strategy: "All operation types with type-specific completion workflows"
-    notes: "Monitor dispatches completion checks to the correct specialized component — verified by type-specific response content"
+    notes: "Monitor dispatches completion checks to the correct specialized component — verified by type-specific result content"
 
   - invariant: "Indexes built from credential schema — each schema field becomes a searchable index"
     term: "Seeker"
@@ -238,9 +238,9 @@ contracts:
           expression: |
             op.name == name
             AND (op.done == true OR op.done == false)
-            AND (op.done AND op.error is null implies op.response is not null)
-            AND (op.done AND op.error is not null implies op.response is null)
-        description: "get_operation returns the operation with correct name and consistent done/error/response state"
+            AND (op.done AND op.error is null implies op.result is not null)
+            AND (op.done AND op.error is not null implies op.result is null)
+        description: "get_operation returns the operation with correct name and consistent done/error/result state"
 
   - port_ref: "port://cloud-agent-service/processing/inbound/multisig"
     preconditions:
@@ -307,7 +307,7 @@ state_machines:
         guard: "elapsed_time > operation_timeout"
     invariants:
       - "Client polls via GET /operations/{name} — returns 200 with done=true or 202 with done=false"
-      - "Done operations include the response payload"
+      - "Done operations include the result payload"
       - "Failed operations include error details (code, message)"
       - "Operations are persisted — survive agent restart"
       - "Operation names are immutable once created — {type}.{oid} never changes"

@@ -67,7 +67,7 @@ types:
           - name: "first_seen_sn"
             type: "integer"
             required: true
-            description: "First-seen ordinal for ordering"
+            description: "First-seen ordinal (fn) for ordering — per-AID monotonic counter, NOT global. Each identifier prefix has its own independent fn sequence starting from 0. fn provides ordering within a single identifier's history."
         invariants:
           - "Derived entirely from processing KEL events — not directly authored"
           - "signing_keys correspond to the latest establishment event's k field"
@@ -200,12 +200,17 @@ types:
             type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the accepted event, now appended to the KEL"
-          - name: "first_seen"
-            type: "boolean"
+          - name: "first_seen_number"
+            type: "integer | null"
             required: true
-            description: "Whether this is the first time this event was seen (vs. idempotent duplicate with new sigs)"
+            description: "First-seen ordinal assigned to this event. Null when this is a duplicate event (same SAID) whose new signatures were merged — no new fn is assigned. Non-null integer when this is the first acceptance."
+          - name: "datetime"
+            type: "string"
+            required: true
+            description: "ISO 8601 datetime of acceptance"
         invariants:
-          - "The event has been appended to the KEL and is now part of the authoritative log"
+          - "When first_seen_number is non-null: event newly appended to KEL with that fn"
+          - "When first_seen_number is null: duplicate signature accumulation — signatures merged, fn unchanged"
           - "Key state has been updated to reflect this event"
       - name: "escrowed"
         fields:

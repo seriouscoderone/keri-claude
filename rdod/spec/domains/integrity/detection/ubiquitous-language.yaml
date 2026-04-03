@@ -6,13 +6,14 @@ terms:
   - term: "Watcher"
     synonyms: []
     specializes: "Watcher"
-    definition: "In the context of the detection subdomain, a watcher monitors for duplicity by collecting and comparing KEL copies from multiple sources — witnesses, other watchers, or the controller itself. Specializes the parent definition with the detection-specific behaviors: cross-source comparison, ambient duplicity detection through sufficient watcher diversity, and independence from any single source."
+    definition: "In the context of the detection subdomain, a watcher is a logical role/interface that monitors for duplicity by collecting and comparing KEL copies from multiple sources — witnesses, other watchers, or the controller itself. The watcher-service domain provides the concrete implementation. Detection defines the behavioral contract; watcher-service implements it."
     invariants:
       - "Under the validator's control, NOT the controller's"
       - "Collects KEL copies from multiple independent sources"
       - "Compares event histories to detect inconsistencies (different events at the same sn)"
       - "A sufficient number and diversity of watchers makes duplicity detection ambient"
       - "Does not need to trust any single source — cross-checks multiple sources"
+      - "Watcher is a logical role/interface in this domain — the watcher-service provides the concrete implementation"
     examples:
       - "A watcher polling 5 witnesses and comparing their KERL copies for a monitored AID"
       - "A watcher detecting that Witness W1 has event E at sn=5 while Witness W2 has event E' at sn=5"
@@ -20,12 +21,13 @@ terms:
 
   - term: "Juror"
     synonyms: []
-    definition: "An entity that keeps a log of duplicitous evidence (DEL) and can present that evidence when requested. May run in concert with a witness."
+    definition: "A logical role with interface separation that keeps a log of duplicitous evidence (DEL) and can present that evidence when requested. May run in concert with a witness. Jurors and judges are logical roles, not necessarily separate processes — the separation is enforced by the interface contract."
     invariants:
       - "Maintains a Duplicate Event Log (DEL) of inconsistent receipts and events"
       - "May be run by a witness to keep track of inconsistent receipts it receives"
       - "Provides evidence on demand to judges and validators"
       - "Does not make trust decisions — only collects and presents evidence"
+      - "Logical role with interface separation — may run in the same process as a judge, but the interface contract is strictly separated"
     examples:
       - "A juror attached to a witness, logging all inconsistent receipts received for monitored AIDs"
       - "A juror presenting duplicity evidence to a judge for a trust decision"
@@ -33,12 +35,13 @@ terms:
 
   - term: "Judge"
     synonyms: []
-    definition: "An entity that makes trust decisions based on duplicity evidence collected by watchers and jurors. Determines whether an AID should be trusted given the evidence."
+    definition: "A logical role with interface separation that makes trust decisions based on duplicity evidence collected by watchers and jurors. Determines whether an AID should be trusted given the evidence. Jurors and judges are logical roles, not necessarily separate processes — the separation is enforced by the interface contract: jurors collect evidence (no trust decisions), judges make trust decisions (no evidence collection)."
     invariants:
       - "Under the validator's control"
       - "Evaluates duplicity evidence to make trust/no-trust decisions"
       - "May determine which of divergent KERLs is authoritative in case of recovery"
       - "The final arbiter of trust for the validator"
+      - "Logical role with interface separation — may run in the same process as a juror"
     examples:
       - "A judge receiving evidence of two conflicting events and deciding to stop trusting the associated AID"
       - "A judge accepting a superseding recovery rotation as legitimate and choosing the recovered trunk"
@@ -78,6 +81,7 @@ terms:
       - "Defense: a diverse set of watchers makes it difficult to prevent detection"
       - "Consequence: detected live duplicity destroys the identifier's value to detecting validators"
       - "Inception duplicity (fork at sn=0): two different inception events for the same AID prefix MUST be treated as duplicity — the first-seen inception is authoritative, the conflicting inception is evidence. No superseding recovery is possible for inception events (Rule A2 applies — only rotation can supersede, and inception is not a rotation)."
+      - "Inception duplicity is irreconcilable for non-delegated AIDs — there is no mechanism to resolve competing inceptions without delegation authority. For delegated AIDs, the delegator's cooperative approval provides an additional trust anchor but a conflicting inception still indicates fundamental compromise."
     related_terms: ["Dead Duplicity", "Duplicity Evidence", "Watcher"]
 
   - term: "Dead Duplicity"

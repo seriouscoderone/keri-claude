@@ -23,7 +23,7 @@ errors:
       - field: "expected_uuid"
         type: "string"
         description: "The expected derived UUID"
-    related_port: "port://privacy/blinding/inbound/blinded-state"
+    related_port: "port://privacy/blinding/inbound/discover-state"
 
   - name: "UnblindingError"
     description: "Cannot unblind a credential status entry"
@@ -34,7 +34,7 @@ errors:
       - field: "blinded_id"
         type: "string"
         description: "The blinded identifier that failed unblinding"
-    related_port: "port://privacy/blinding/inbound/blinded-state"
+    related_port: "port://privacy/blinding/inbound/construct-bound-block"
 
   - name: "InsufficientSaltEntropyError"
     description: "Shared secret salt has fewer than 128 bits of cryptographic entropy"
@@ -52,7 +52,7 @@ errors:
 
   - name: "UUIDDerivationError"
     description: "UUID derivation from shared secret salt and sequence number failed"
-    cause: "The hierarchically deterministic key derivation function (argon2/HKDF) failed to produce a valid UUID from the salt and event sequence number"
+    cause: "The HKDF-based per-event UUID derivation failed to produce a valid UUID from the master secret salt and event sequence number (argon2 is used separately for passphrase-to-salt stretching, not per-event derivation)"
     recovery: "abort"
     severity: "fatal"
     context:
@@ -93,7 +93,7 @@ errors:
       - field: "block_type"
         type: "string"
         description: "Whether this is a basic (4-field) or bound (6-field) block"
-    related_port: "port://privacy/blinding/inbound/blinded-state"
+    related_port: "port://privacy/blinding/inbound/compute-blid"
 
   - name: "StateDiscoveryError"
     description: "State discovery exhausted all possible states without finding a BLID match"
@@ -110,7 +110,7 @@ errors:
       - field: "states_tried"
         type: "integer"
         description: "Number of state combinations attempted"
-    related_port: "port://privacy/blinding/inbound/blinded-state"
+    related_port: "port://privacy/blinding/inbound/discover-state"
 
   - name: "BLIDFieldOrderError"
     description: "Blinded attribute block fields are concatenated in the wrong order"
@@ -124,4 +124,4 @@ errors:
       - field: "block_type"
         type: "string"
         description: "Whether this is a basic or bound block"
-    related_port: "port://privacy/blinding/inbound/blinded-state"
+    related_port: "port://privacy/blinding/inbound/compute-blid"

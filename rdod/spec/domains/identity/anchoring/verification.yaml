@@ -191,7 +191,7 @@ properties:
     strategy: "aid_with_config_strategy() (with/without EO), interaction_event_strategy()"
     notes: "EO enforcement: immediate rejection (not escrowed), AnchoringNotPermittedError error, checked before sig verification."
 
-  - invariant: "Interaction event anchoring uses identical seal types as establishment event anchoring: DigestSeal (d field only), EventSeal (i, s, d fields), EventLocationSeal (i, s, t, p fields). The only difference is operational context — establishment events advance key state while interaction events do not. Seal verification (digest comparison, referenced event lookup) is identical in both cases."
+  - invariant: "Interaction event anchoring uses identical seal types as establishment event anchoring: DigestSeal ({d}), MerkleRootSeal ({rd}), SourceEventSeal ({s,d}), EventSeal ({i,s,d}), LastEstSeal ({i}), BackerSeal ({bi,d}), TypedDigestSeal ({t,d}). All seal types are defined in cesr/primitives. The only difference is operational context — establishment events advance key state while interaction events do not. Seal verification (digest comparison, referenced event lookup) is identical in both cases. Note: EventLocationSeal ({i,s,t,p}) is a keripy implementation type NOT in the normative CESR spec — removed."
     term: "Interaction Event"
     technique: property-based
     formal:
@@ -202,7 +202,7 @@ properties:
         def test_seal_type_parity(aid, data):
             seal_digest = SealDigest(d=digest(data))
             seal_event = SealEvent(i=aid.prefix, s=0, d=digest(data))
-            seal_location = SealEventLocation(i=aid.prefix, s=0, t='ixn', p=digest(data))
+            seal_backer = BackerSeal(bi=aid.prefix, d=digest(data))
             # All three seal types work in interaction events
             ixn = create_interaction(aid.prefix, aid.expected_sn,
                                      seals=[seal_digest, seal_event, seal_location])
@@ -230,7 +230,7 @@ properties:
                 "rot MUST advance key state"
             )
     strategy: "eo_aid_strategy(), st.binary(1..4096)"
-    notes: "Identical seal types (DigestSeal, EventSeal, EventLocationSeal) in both ixn and rot. Only operational context differs: rot advances key state, ixn does not."
+    notes: "Identical seal types (defined in cesr/primitives) in both ixn and rot. EventLocationSeal removed — not normative. Only operational context differs: rot advances key state, ixn does not."
 
   # Interaction Event Superseding invariants
   - invariant: "An interaction event at sequence number sn can be superseded by a rotation event at the same sequence number during recovery. The superseding rotation MUST satisfy all rotation validation rules AND MUST have sn equal to the ixn being superseded."

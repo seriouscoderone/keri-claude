@@ -88,9 +88,30 @@ ports:
     refs: ["domain://externals/persistence"]
     invariants:
       - "The KEL is NEVER written to directly — all writes go through the IdentityService"
-      - "Escrow queues are part of the repository, not a separate persistence concern"
+      - "The accepted KEL and first-seen event log are APPEND-ONLY — events are never removed after acceptance"
+      - "Escrow queues are mutable structures (add/get/remove) — NOT part of the append-only KEL"
       - "Reprocessing re-enters the IdentityService — escrowed events are fully re-validated"
       - "The IdentityService is the guard; the KelRepository is the storage"
+
+  - id: "port://identity/state/inbound/bada-acceptance"
+    type: inbound
+    name: "BADA Reply Acceptance"
+    semantics: command
+    idempotent: true
+    description: >
+      Best Available Data Algorithm (BADA) acceptance for reply messages (rpy ilk).
+      This is a PUBLIC interface (explicit service method), not an internal mechanism.
+      BADA applies to reply messages, NOT key events. Comparison uses:
+      - Transferable endorsers: (sn of endorser's establishment event + datetime)
+      - Non-transferable endorsers: (datetime only)
+      A reply is stale if it has a lower sn than the stored reply, or the same sn
+      but an earlier datetime.
+    contract:
+      input: "reply message with endorser AID and datetime"
+      output: "boolean (accepted or stale)"
+      errors:
+        - "errors://identity/state#UnverifiedReplyError"
+    refs: ["domain://identity"]
 
   - id: "port://identity/state/outbound/escrow-drain"
     type: outbound
@@ -101,6 +122,8 @@ ports:
       IdentityService periodically drains escrow queues by re-submitting events
       through its own validation guard. Events whose blocking condition has
       resolved are promoted to the KEL. Timed-out events are pruned.
+      Note: escrow-drain operates on MUTABLE escrow queues (add/remove/prune),
+      not on the append-only KEL. Pruning does not violate the append-only invariant.
     contract:
       input: "string"
       output: "types://identity/state#EscrowReprocessResult"

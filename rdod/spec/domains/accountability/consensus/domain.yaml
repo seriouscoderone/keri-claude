@@ -11,8 +11,10 @@ description: >
   the immune constraint, accountability thresholds, proper KERL properties, and BFT quorum
   calculations. This subdomain owns the invariants that make KAWA work: why a single-phase
   agreement suffices, what threshold guarantees uniqueness of agreement, and what "proper"
-  means for a receipted log. It does not handle receipt creation, storage, or network
-  propagation — only the rules and computations that govern correctness.
+  means for a receipted log. Consensus is a pure computation/rules service — it computes
+  whether thresholds are met but does NOT store receipts or maintain persistence. Receipt
+  storage belongs to an external persistence layer. Receipt type definition lives here
+  (it is a domain concept), but storage is external.
 
 version: "0.1.0"
 tier: "domain"

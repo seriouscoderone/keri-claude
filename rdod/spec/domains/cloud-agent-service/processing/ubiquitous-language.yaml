@@ -70,7 +70,7 @@ terms:
       - "Operations named {type}.{oid} — type identifies the workflow, oid the resource"
       - "Types: witness, delegation, group, query, registry, credential, endrole, oobi"
       - "Monitor checks completion by querying the relevant component (Counselor for group, Boatswain for delegation, etc.)"
-      - "Operations have a done flag, optional error, and response payload"
+      - "Operations have a done flag, optional error, and result payload"
       - "Returned as HTTP 202 Accepted with operation handle"
     examples:
       - "POST /identifiers returns op name 'witness.EDP1...' — poll until done"
@@ -104,11 +104,11 @@ terms:
 
 events:
   - name: "OperationCreated"
-    payload: "name: string, type: OpType, oid: string"
+    payload: "name: string, type: OperationType, oid: string"
     triggers: "An async operation is submitted to the Monitor"
 
   - name: "OperationCompleted"
-    payload: "name: string, type: OpType, done: true, response: object"
+    payload: "name: string, type: OperationType, done: true, result: object"
     triggers: "Monitor detects completion via component query (Counselor, Boatswain, etc.)"
 
   - name: "MultisigAssembled"

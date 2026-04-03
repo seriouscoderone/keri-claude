@@ -464,6 +464,36 @@ terms:
       - "Signer dropped → 32 bytes of Ed25519 seed overwritten with zeros"
     related_terms: ["Signer", "Salter"]
 
+  - term: "Mid-Padding Algorithm"
+    synonyms: ["qb64 Mid-Padding", "_infil()"]
+    definition: "The algorithm for encoding raw cryptographic material into qb64 text domain representation. Places zero-valued pad bits between the code and raw data, avoiding trailing '=' characters."
+    invariants:
+      - "Formula: ps = (3 - ((raw_size + lead_size) % 3)) % 3"
+      - "Constraint: ps == code_size % 4"
+      - "Steps: (1) compute ps, (2) prepend (ps + ls) zero bytes to raw, (3) Base64-encode, (4) skip first ps chars, (5) prepend code string"
+      - "The padding is in the MIDDLE — between code prefix and encoded raw value"
+      - "Avoids trailing '=' Base64 padding by adjusting the input alignment"
+    examples:
+      - "Ed25519 key (code='D', 32 bytes raw, ls=0): ps=(3-32%3)%3=1, prepend 1 zero byte, Base64-encode 33 bytes=44 chars, skip 1 char, prepend 'D' → 44 char qb64"
+    related_terms: ["Qualification", "qb64", "Sizage", "Matter"]
+
+  - term: "Sizage Table"
+    synonyms: ["Code Table Sizes"]
+    definition: "An explicitly enumerated table mapping each CESR code to its (hs, ss, xs, fs, ls) tuple. The Sizage table is NOT formula-derivable — each code has its own specific size entry."
+    invariants:
+      - "hs = hard size (type-identifying characters)"
+      - "ss = soft size (index/count characters)"
+      - "xs = extra size (variable portion)"
+      - "fs = full size (total qb64 character count, 0 for variable-length)"
+      - "ls = lead size (number of lead padding bytes)"
+      - "Complete table must be extracted from keripy's Matter.Sizes, Indexer.Sizes, and Counter sizes"
+      - "Every code table entry MUST have a corresponding Sizage entry"
+    examples:
+      - "Code 'D' (Ed25519): hs=1, ss=0, xs=0, fs=44, ls=0"
+      - "Code 'E' (Blake3_256): hs=1, ss=0, xs=0, fs=44, ls=0"
+      - "Code '0B' (Ed25519_Sig): hs=2, ss=0, xs=0, fs=88, ls=0"
+    related_terms: ["Code Table", "Matter", "Mid-Padding Algorithm"]
+
 events:
   - name: "PrimitiveQualified"
     payload: "code: Code, raw: bytes, qb64: str, qb2: bytes"

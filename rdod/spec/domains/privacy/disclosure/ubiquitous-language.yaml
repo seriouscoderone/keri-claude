@@ -120,8 +120,11 @@ events:
     triggers: "Discloser offers contractual terms via metadata or partial disclosure before full disclosure"
 
 rules:
-  - "Disclosure modes are ordered from most private to most revealing: compact < partial < nested partial < full"
+  - "Core FSM progression: metadata (optional pre-state) -> compact -> partial -> full"
+  - "Orthogonal axes: selective (per-element), nested partial (hierarchical), bulk-issued (issuance-time) — these are NOT FSM states"
   - "Selective disclosure is orthogonal to the privacy ordering — it selects which attributes to disclose at any mode level"
-  - "Chain-link confidentiality gates the transition from partial to full disclosure via contractual acceptance"
+  - "Chain-link confidentiality gates the transition from partial to full disclosure via contractual acceptance (terms_agreed boolean)"
+  - "Metadata is a pre-disclosure phase that can progress to compact, then follow the normal path"
+  - "Bulk-issued is not a disclosure mode but an issuance-time mechanism — each bulk-issued instance independently follows the normal disclosure progression"
   - "oneOf composition must list the compact (SAID) variant first in the schema"
   - "anyOf composition order must not correlate to actual array order — preventing positional inference"

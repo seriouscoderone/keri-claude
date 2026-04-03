@@ -36,6 +36,9 @@ externals:
     relationship: "All cryptographic primitives — key derivation, signing, encryption — are kernel operations. This subdomain composes them into the Keeper abstraction and Encrypter"
   - ref: "domain://externals/persistence"
     relationship: "Encrypted key material at rest — the key-repository outbound port delegates to this external"
+  - name: "KRAM Protocol"
+    abstraction: "Protocol"
+    implementation_notes: "KRAM (Key Rate-limited Authentication Method) is defined by the Signify protocol, not core KERI. This subdomain produces KRAM authentication headers (SignifyAuth) per the Signify specification."
 
 implementation_guidance:
   suggested_type: "module"

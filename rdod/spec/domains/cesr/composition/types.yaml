@@ -41,6 +41,62 @@ types:
 
   - name: "CESRGroup"
     description: "A count-code-prefixed group of CESR primitives. Groups are self-framing and composable — they can nest."
+    genus_specific_codes:
+      keri_acdc_2_00:
+        - code: "-K"
+          name: "ControllerIdxSigs"
+          structure: "Vec<Siger>"
+        - code: "-L"
+          name: "WitnessIdxSigs"
+          structure: "Vec<Siger>"
+        - code: "-M"
+          name: "NonTransReceiptCouples"
+          structure: "Vec<(Prefixer, Cigar)>"
+        - code: "-N"
+          name: "TransReceiptQuadruples"
+          structure: "Vec<(Prefixer, Seqner, Saider, Siger)>"
+        - code: "-O"
+          name: "FirstSeenReplayCouples"
+          structure: "Vec<(Seqner, Dater)>"
+        - code: "-P"
+          name: "PathedMaterial"
+          structure: "Vec<(Pather, CesrGroup)>"
+        - code: "-Q"
+          name: "DigestSealSingles"
+          structure: "Vec<Saider>"
+        - code: "-R"
+          name: "MerkleRootSealSingles"
+          structure: "Vec<Diger>"
+        - code: "-S"
+          name: "SealSourceCouples"
+          structure: "Vec<(Seqner, Saider)>"
+        - code: "-T"
+          name: "SealSourceTriples"
+          structure: "Vec<(Seqner, Saider, Diger)>"
+        - code: "-U"
+          name: "SealSourceLastSingles"
+          structure: "Vec<Prefixer>"
+        - code: "-V"
+          name: "BackerRegistrarSealCouples"
+          structure: "Vec<(Prefixer, Saider)>"
+        - code: "-W"
+          name: "TypedDigestSealCouples"
+          structure: "Vec<(Bexter, Saider)>"
+        - code: "-X"
+          name: "TransIdxSigGroups"
+          structure: "Vec<(Prefixer, Seqner, Saider, ControllerIdxSigs)>"
+        - code: "-Y"
+          name: "TransLastIdxSigGroups"
+          structure: "Vec<(Prefixer, ControllerIdxSigs)>"
+        - code: "-Z"
+          name: "PathedMaterialQuadlets"
+          structure: "raw bytes (opaque)"
+        - code: "-a"
+          name: "BlindedStateCouples"
+          structure: "blinded state attachment"
+        - code: "-b"
+          name: "BlindedStateDiscCouples"
+          structure: "blinded state disclosure attachment"
     variants:
       - name: "attachment"
         fields:
@@ -84,7 +140,8 @@ types:
               enum: [0, 1, 2, 3, 4, 5, 6, 7]
         invariants:
           - "Computed as: byte >> 5"
-          - "0=whitespace, 1=CESR count code, 2=CESR op code, 3=JSON, 4=MGPK FixMap, 5=CBOR map, 6=MGPK Map16/32, 7=CESR binary"
+          - "0=annotated T-domain (whitespace: LF 0x0A, CR 0x0D, tab 0x09) — parser strips whitespace and re-dispatches; NOT content-bearing"
+          - "1=CESR count code, 2=CESR op code, 3=JSON, 4=MGPK FixMap, 5=CBOR map, 6=MGPK Map16/32, 7=CESR binary"
 
   - name: "VersionString"
     description: "Self-describing header encoding protocol, version, serialization format, and message size."
@@ -94,38 +151,39 @@ types:
           - name: "protocol"
             type: "string"
             required: true
-            description: "4-char protocol identifier"
+            description: "4-char protocol identifier (PPPP)"
             constraints:
               enum: ["KERI", "ACDC"]
           - name: "major"
             type: "integer"
             required: true
-            description: "Protocol major version"
+            description: "Protocol major version (M — 1 Base64 char)"
           - name: "minor"
             type: "integer"
             required: true
-            description: "Protocol minor version"
+            description: "Protocol minor version (mm — 2 Base64 chars)"
           - name: "cesr_major"
             type: "integer"
             required: true
-            description: "CESR genus major version"
+            description: "CESR genus major version (G — 1 Base64 char)"
           - name: "cesr_minor"
             type: "integer"
             required: true
-            description: "CESR genus minor version"
+            description: "CESR genus minor version (gg — 2 Base64 chars)"
           - name: "kind"
             type: "string"
             required: true
-            description: "Serialization format"
+            description: "Serialization format (KKKK — 4 chars)"
             constraints:
               enum: ["JSON", "CBOR", "MGPK", "CESR"]
           - name: "size"
             type: "integer"
             required: true
-            description: "Total serialized message size in bytes"
+            description: "Total serialized message size in bytes (BBBB — 4 Base64 digits, max 16,777,216)"
         invariants:
           - "v2 format: PPPPMmmGggKKKKBBBB. (19 characters, period terminated)"
-          - "Size is Base64-encoded (max 16,777,216)"
+          - "Regex: [A-Z]{4}[A-Za-z0-9_-]{3}[A-Za-z0-9_-]{3}(JSON|CBOR|MGPK|CESR)[A-Za-z0-9_-]{4}\\."
+          - "BBBB is Base64-encoded total serialization length (max 16,777,216 = 64^4)"
           - "Must be the FIRST field in any field map"
       - name: "v1"
         fields:

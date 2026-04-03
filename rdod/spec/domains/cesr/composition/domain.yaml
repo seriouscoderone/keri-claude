@@ -13,6 +13,7 @@ description: >
   core-affinity and concurrent processing.
 version: "0.1.0"
 tier: "domain"
+layer: 1  # Moved from Layer 0 to Layer 1 (OQ-29): depends on cesr/primitives types (Matter, Siger, Cigar, Diger, Prefixer, Seqner)
 
 source_material:
   - type: document
@@ -21,12 +22,10 @@ source_material:
     reference: "parside — Rust CESR stream parser library (implementation survey)"
 
 published_language:
-  - term: "Serder"
-    description: "KERI event serializer — message-level SAD composition"
-  - term: "Creder"
-    description: "ACDC credential serializer — credential-level SAD composition"
   - term: "Sadder"
-    description: "Base SAD serializer — inhale/exhale operations for self-addressing data"
+    description: "Base SAD serializer — inhale/exhale operations for self-addressing data (generic, protocol-agnostic)"
+  # Serder (KERI event facade) moved to identity/establishment — adds KERI event awareness (verfers, digers)
+  # Creder (ACDC credential facade) moved to credential-lifecycle/status — adds ACDC awareness (issuer, schema)
 
 domain_clients:
   - ref: "domain://cesr"
