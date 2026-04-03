@@ -44,7 +44,10 @@ kernels:
   - ref: "kernel://cesr/primitives"
     relationship: "Typed CESR primitives (SAID, AID, Verfer, Diger, Siger) used as first-class types in event validation and key state"
 
-adjacents: []
+adjacents:
+  - ref: "domain://identity/anchoring"
+    relationship: "Anchoring imports the InteractionEvent type from this domain's KeyEvent union — establishment owns the canonical event taxonomy; anchoring adds seal management behavior"
+    via_port: "types://identity/establishment#InteractionEvent"
 
 externals:
   - ref: "domain://externals/cryptographic-primitives"

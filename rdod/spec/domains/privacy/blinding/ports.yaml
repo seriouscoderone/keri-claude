@@ -20,6 +20,23 @@ ports:
         - "errors://privacy/blinding#BLIDFieldOrderError"
     refs: ["domain://privacy"]
 
+  - id: "port://privacy/blinding/inbound/blinded-state"
+    type: inbound
+    name: "Blinded State"
+    semantics: command
+    idempotent: true
+    description: >
+      Derives the blinded state for a credential registry event — given a shared
+      secret salt, sequence number, and registry SAID, computes the blinded attribute
+      block and returns it with a derived BLID. Delegates from
+      credential-lifecycle's blinded-state port; also invoked as a protocol step
+      when a registry is blindable.
+    contract:
+      input: "Shared secret salt, sequence number, registry SAID"
+      output: "types://privacy/blinding#BlindedAttributeBlock"
+      errors: []
+    refs: ["domain://credential-lifecycle", "domain://privacy"]
+
   - id: "port://privacy/blinding/inbound/discover-state"
     type: inbound
     name: "Discover Blinded State"
@@ -44,9 +61,9 @@ ports:
     idempotent: false
     description: >
       Builder — constructs a BoundBlindedAttributeBlock by combining a blinded
-      attribute block with key state binding information.
+      attribute block with binding context (transaction SAID, state, key event sn/SAID).
     contract:
-      input: "types://privacy/blinding#BlindedAttributeBlock + binding context (transaction SAID, state, key event sn/SAID)"
+      input: "types://privacy/blinding#BlindedAttributeBlock"
       output: "types://privacy/blinding#BoundBlindedAttributeBlock"
       errors:
         - "errors://privacy/blinding#UnblindingError"

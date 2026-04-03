@@ -60,9 +60,9 @@ types:
       - name: "default"
         fields:
           - name: "kram_timeliness_window"
-            type: "Duration"
+            type: "integer"
             required: true
-            description: "Maximum allowed age of a KRAM signature timestamp before the request is considered stale. Recommended default deferred to keria oracle."
+            description: "Maximum allowed age of a KRAM signature timestamp in seconds before the request is considered stale. Recommended default deferred to keria oracle."
         invariants:
           - "Requests with signify_timestamp older than kram_timeliness_window are rejected"
           - "Value is implementation-configurable — not a protocol-normative constant"

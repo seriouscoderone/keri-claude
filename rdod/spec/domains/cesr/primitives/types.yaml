@@ -295,8 +295,29 @@ types:
         invariants:
           - "Functionally equivalent to Diger — used when the context is 'a hash value' rather than 'a CESR primitive'"
 
-  # EventSeal removed — consolidated into Seal.event variant (OQ-8)
-  # Use types://cesr/primitives#Seal with variant "event" for {i,s,d} seals
+  - name: "EventSeal"
+    description: "A seal that references a specific key event by AID prefix (i), sequence number (s), and event SAID (d). Used to cross-reference events across KELs — for example, a delegation seal references the delegated event."
+    variants:
+      - name: "default"
+        fields:
+          - name: "i"
+            type: "string"
+            required: true
+            description: "AID prefix of the identifier whose event is referenced"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Hex-encoded sequence number of the referenced event"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "CESR qb64 encoded SAID of the referenced event"
+        invariants:
+          - "Equivalent to Seal.event variant — provided as a standalone type for cross-domain references"
+          - "CESR count code: EventSeal"
+
+  # Note: EventSeal was previously consolidated into Seal.event variant (OQ-8)
+  # Restored as standalone type to satisfy cross-domain type references
 
   - name: "IndexedSizage"
     description: "Sizage entry for indexed CESR codes that carry dual indices (main and other)."
@@ -429,3 +450,25 @@ types:
         invariants:
           - "Minimum 128 bits of entropy"
           - "Used as seed for hierarchical deterministic key derivation"
+
+  - name: "Verfer"
+    description: "A public key verification primitive — holds a qualified public key that can verify signatures. The CESR agent-noun for a verifier key. Wraps a raw public key with its derivation code (algorithm identifier)."
+    variants:
+      - name: "default"
+        fields:
+          - name: "code"
+            type: "string"
+            required: true
+            description: "CESR derivation code identifying the key algorithm (D=Ed25519, 1AAA=secp256k1, 1AAI=secp256r1, 1AAC=Ed448)"
+          - name: "raw"
+            type: "bytes"
+            required: true
+            description: "Raw public key material"
+          - name: "qb64"
+            type: "string"
+            required: false
+            description: "Qualified Base64 representation — code prefix + Base64url-encoded key"
+        invariants:
+          - "Subtype of Matter — inherits code + raw ↔ qb64 ↔ qb2 equivalence"
+          - "verify(data, signature) returns True iff signature is valid for data under this public key"
+          - "code determines the expected raw key length and verification algorithm"

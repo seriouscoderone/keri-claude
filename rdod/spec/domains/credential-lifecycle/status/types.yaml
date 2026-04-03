@@ -261,3 +261,41 @@ types:
           - "Extends Sadder with ACDC-specific field accessors"
           - "SAID computed using the Sadder's saidify algorithm"
           - "All ACDC-specific fields are derived from the underlying SAD field map"
+
+  - name: "TELEvent"
+    description: "A Transaction Event Log event that records credential state changes (issuance, revocation, updates). The TEL is anchored to a KEL via seals. TEL events include registry inception (vcp), registry rotation (vrt), issuance (iss/bis), revocation (rev/brv), and update (upd/bup)."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event_type"
+            type: "string"
+            required: true
+            description: "The TEL event type ilk"
+            constraints:
+              enum: ["vcp", "vrt", "iss", "bis", "rev", "brv", "upd", "bup"]
+          - name: "registry_id"
+            type: "string"
+            required: true
+            description: "SAID of the registry inception event"
+          - name: "said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of this TEL event"
+          - name: "sequence_number"
+            type: "integer"
+            required: true
+            description: "Monotonically increasing sequence number within the registry's TEL"
+            constraints:
+              min: 0
+          - name: "prior_event_said"
+            type: "string"
+            required: true
+            description: "SAID of the previous TEL event — forms the hash chain"
+          - name: "seal"
+            type: "types://cesr/primitives#Seal"
+            required: false
+            description: "Optional anchor seal back to the issuer's KEL"
+        invariants:
+          - "TEL events form an append-only log per registry, anchored to the issuer's KEL via seals"
+          - "sequence_number must equal prior event's sequence_number + 1"
+          - "prior_event_said must match the SAID of the immediately preceding event in the TEL"

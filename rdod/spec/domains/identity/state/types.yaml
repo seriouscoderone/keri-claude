@@ -201,9 +201,9 @@ types:
             required: true
             description: "SAID of the accepted event, now appended to the KEL"
           - name: "first_seen_number"
-            type: "integer | null"
-            required: true
-            description: "First-seen ordinal assigned to this event. Null when this is a duplicate event (same SAID) whose new signatures were merged — no new fn is assigned. Non-null integer when this is the first acceptance."
+            type: "integer"
+            required: false
+            description: "First-seen ordinal assigned to this event. Absent when this is a duplicate event (same SAID) whose new signatures were merged — no new fn is assigned. Present as integer when this is the first acceptance."
           - name: "datetime"
             type: "string"
             required: true

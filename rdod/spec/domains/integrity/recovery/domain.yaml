@@ -31,6 +31,9 @@ kernels: []
 adjacents:
   - ref: "domain://integrity/detection"
     relationship: "Recovery consumes DuplicityNotice events from detection as inbound triggers — detection only detects duplicity and emits evidence; recovery evaluates whether superseding is possible and executes it"
+  - ref: "domain://delegation/recovery"
+    relationship: "Delegation/recovery imports the canonical superseding rules (A0-C1) owned by this domain and adds delegation-specific context (seal verification, delegator KEL traversal)"
+    via_port: "port://integrity/recovery/inbound/superseding-rules"
 
 externals: []
 

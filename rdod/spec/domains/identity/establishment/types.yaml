@@ -462,9 +462,9 @@ types:
             required: true
             description: "SAID of the accepted event"
           - name: "first_seen_number"
-            type: "integer | null"
-            required: true
-            description: "First-seen ordinal assigned to this event. Null when this is a duplicate event (same SAID) whose new signatures were merged into the existing accepted event — no new fn is assigned."
+            type: "integer"
+            required: false
+            description: "First-seen ordinal assigned to this event. Absent when this is a duplicate event (same SAID) whose new signatures were merged into the existing accepted event — no new fn is assigned."
           - name: "key_state"
             type: "types://identity/state#KeyState"
             required: true

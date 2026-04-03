@@ -225,3 +225,34 @@ types:
           - "CesrGroup: count-code-prefixed group of CESR primitives"
           - "NonNativePayload: JSON, CBOR, or MGPK serialized message body"
           - "Annotated: CESR native event encoding with embedded type information"
+
+  - name: "Sadder"
+    description: "A Self-Addressed Data (SAD) container — a serialized field map that includes a SAID (d field) computed over its own content. Provides the canonical serialization and SAID verification for any self-addressed data structure including events, credentials, and exchanges."
+    variants:
+      - name: "default"
+        fields:
+          - name: "raw"
+            type: "bytes"
+            required: true
+            description: "Canonical serialized form of the field map"
+          - name: "said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "The self-addressing identifier — digest of the serialized content"
+          - name: "kind"
+            type: "string"
+            required: true
+            description: "Serialization format used for the raw bytes"
+            constraints:
+              enum: ["JSON", "CBOR", "MGPK", "CESR"]
+          - name: "size"
+            type: "integer"
+            required: true
+            description: "Byte count of the raw serialization"
+            constraints:
+              min: 0
+        invariants:
+          - "The d field in the serialized form contains the SAID computed over the content"
+          - "SAID verification: replace d field with placeholder, serialize, hash, compare to said"
+          - "raw length must equal size"
+          - "Serialization format determined by kind — must match the VersionString if present"
