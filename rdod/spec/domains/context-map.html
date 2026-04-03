@@ -350,15 +350,15 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
       {
-        "ref": "external://cryptographic-primitives",
+        "ref": "domain://externals/cryptographic-primitives",
         "source": "Ed25519/ECDSA signature verification for receipt validation, Blake3-256/SHA-256 for event digest verification",
         "relationship": "Receipt validation requires verifying witness signatures against their public keys — kernel cryptographic primitives appear directly in quorum checks"
       }
     ],
-    "adjacents": [],
-    "externals": [],
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
@@ -1235,7 +1235,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "transport"
+          "domain://externals/transport"
         ]
       }
     ],
@@ -1619,13 +1619,7 @@ const RDOD_DATA = {
         "relationship": "Event and receipt propagation — round-robin and gossip protocols, witness designation, witnessing policy, direct/indirect operational modes"
       }
     ],
-    "kernels": [
-      {
-        "ref": "external://cryptographic-primitives",
-        "source": "Ed25519 (witness receipt signatures), Blake3-256/SHA-256 (event verification)",
-        "relationship": "Witness receipt signatures and event digest verification use kernel cryptographic types directly"
-      }
-    ],
+    "kernels": [],
     "adjacents": [
       {
         "ref": "domain://cesr",
@@ -1634,6 +1628,11 @@ const RDOD_DATA = {
       }
     ],
     "externals": [
+      {
+        "ref": "domain://externals/cryptographic-primitives",
+        "source": "Ed25519 (witness receipt signatures), Blake3-256/SHA-256 (event verification)",
+        "relationship": "Witness receipt signatures and event digest verification use kernel cryptographic types directly"
+      },
       {
         "name": "Network Transport",
         "abstraction": "Adapter",
@@ -1828,7 +1827,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "transport"
+          "domain://externals/transport"
         ]
       }
     ],
@@ -2489,7 +2488,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ],
         "invariants": [
           "Stored receipts are append-only — once written, they accumulate and are never overwritten",
@@ -3881,7 +3880,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "transport"
+          "domain://externals/transport"
         ]
       }
     ],
@@ -5166,15 +5165,15 @@ const RDOD_DATA = {
         "via_port": "port://cesr/composition/inbound/stream-composition"
       }
     ],
-    "kernels": [
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
       {
-        "ref": "external://cryptographic-primitives",
+        "ref": "domain://externals/cryptographic-primitives",
         "source": "Ed25519 (signing/verification), X25519 (encryption), ECDSA secp256k1/secp256r1, Ed448, Blake3-256/512, Blake2b-256/512, SHA2-256/512, SHA3-256/512, argon2 (key stretching)",
         "relationship": "Cryptographic algorithm output types appear directly as CESR primitive code entries — each algorithm maps to one or more fixed-size code table entries"
       }
     ],
-    "adjacents": [],
-    "externals": [],
     "implementation_guidance": {
       "suggested_type": "library",
       "language_affinity": "any",
@@ -6557,15 +6556,14 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [
-      {
-        "ref": "external://cryptographic-primitives",
-        "source": "Ed25519 (32-byte keys, 64-byte sigs), X25519 (32-byte keys), ECDSA secp256k1 (33-byte pub, 64-byte sig), ECDSA secp256r1 (33-byte pub, 64-byte sig), Ed448 (57-byte keys, 114-byte sigs), Blake3-256/512, Blake2b-256/512, SHA2-256/512, SHA3-256/512",
-        "relationship": "Each cryptographic algorithm output type maps to a specific code table entry — the code IS the algorithm identifier"
-      }
-    ],
+    "kernels": [],
     "adjacents": [],
     "externals": [
+      {
+        "ref": "domain://externals/cryptographic-primitives",
+        "source": "Ed25519 (32-byte keys, 64-byte sigs), X25519 (32-byte keys), ECDSA secp256k1 (33-byte pub, 64-byte sig), ECDSA secp256r1 (33-byte pub, 64-byte sig), Ed448 (57-byte keys, 114-byte sigs), Blake3-256/512, Blake2b-256/512, SHA2-256/512, SHA3-256/512",
+        "relationship": "Each cryptographic algorithm output type maps to a specific code table entry — the code IS the algorithm identifier"
+      },
       {
         "name": "Cryptographic Library",
         "abstraction": "Adapter",
@@ -9740,7 +9738,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ]
       },
       {
@@ -9755,7 +9753,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "transport"
+          "domain://externals/transport"
         ]
       },
       {
@@ -10515,7 +10513,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ]
       },
       {
@@ -10533,7 +10531,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ]
       },
       {
@@ -10549,7 +10547,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ]
       },
       {
@@ -11470,7 +11468,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ]
       }
     ],
@@ -12662,7 +12660,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "transport"
+          "domain://externals/transport"
         ]
       }
     ],
@@ -14052,13 +14050,7 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [
-      {
-        "ref": "external://cryptographic-primitives",
-        "source": "Ed25519/ECDSA signature verification for PoI/PoD, Blake3-256 digest comparison for SAID matching",
-        "relationship": "Signature verification and digest comparison are kernel operations invoked at every verification step"
-      }
-    ],
+    "kernels": [],
     "adjacents": [
       {
         "ref": "domain://credential-lifecycle/verification",
@@ -14067,7 +14059,13 @@ const RDOD_DATA = {
         "via_port": "port://credential-lifecycle/verification/inbound/verify"
       }
     ],
-    "externals": [],
+    "externals": [
+      {
+        "ref": "domain://externals/cryptographic-primitives",
+        "source": "Ed25519/ECDSA signature verification for PoI/PoD, Blake3-256 digest comparison for SAID matching",
+        "relationship": "Signature verification and digest comparison are kernel operations invoked at every verification step"
+      }
+    ],
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
@@ -15552,7 +15550,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "external://persistence"
+          "domain://externals/persistence"
         ],
         "invariants": [
           "Credential immutability: once stored, credential bytes for a SAID cannot be modified",
@@ -16918,7 +16916,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ],
         "invariants": [
           "Name uniqueness: each registry name maps to exactly one registry record",
@@ -17885,7 +17883,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "external://persistence"
+          "domain://externals/persistence"
         ],
         "invariants": [
           "Query-only — consumers never write to the read model directly",
@@ -17910,7 +17908,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "external://persistence"
+          "domain://externals/persistence"
         ]
       }
     ],
@@ -18930,13 +18928,7 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [
-      {
-        "ref": "external://cryptographic-primitives",
-        "source": "Blake3-256 digest comparison for seal verification (comparing TEL event SAID against the seal digest in the issuer's KEL)",
-        "relationship": "Digest comparison is a kernel operation invoked during KEL authorization verification"
-      }
-    ],
+    "kernels": [],
     "adjacents": [
       {
         "ref": "domain://keri-messaging",
@@ -18945,6 +18937,11 @@ const RDOD_DATA = {
       }
     ],
     "externals": [
+      {
+        "ref": "domain://externals/cryptographic-primitives",
+        "source": "Blake3-256 digest comparison for seal verification (comparing TEL event SAID against the seal digest in the issuer's KEL)",
+        "relationship": "Digest comparison is a kernel operation invoked during KEL authorization verification"
+      },
       {
         "name": "Authorization Lookup",
         "abstraction": "Repository (read-only)",
@@ -19171,7 +19168,7 @@ const RDOD_DATA = {
           "The KEL event's anchor (a) field must contain a seal matching the TEL event's sn and SAID",
           "If the issuer's KEL event at the stated position is not yet known, the TEL event is escrowed to Missing Issuer Escrow",
           "If the KEL event exists but does not contain the matching seal, validation fails with MissingSealError",
-          "Digest comparison (SAID matching) is the core cryptographic operation -- delegated to external://cryptographic-primitives",
+          "Digest comparison (SAID matching) is the core cryptographic operation -- delegated to domain://externals/cryptographic-primitives",
           "Anchor verification is performed within the TEL Event Processor's event processing pipeline",
           "KEL lookup retrieves the issuer's event at the stated position for seal comparison"
         ],
@@ -19247,7 +19244,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ],
         "invariants": [
           "Read-only: this port never mutates state, only queries it",
@@ -19267,7 +19264,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ],
         "invariants": [
           "Escrow is transient: events are removed once the blocking condition is resolved",
@@ -19920,15 +19917,15 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
       {
-        "ref": "external://cryptographic-primitives",
+        "ref": "domain://externals/cryptographic-primitives",
         "source": "Blake3-256/SHA-256 (SAID digest computation for delegation seals — the seal's d field commits to the delegated event's digest), AID derivation incorporating the di field value",
-        "relationship": "Delegation binding relies on digest computation to create the seal commitment and AID derivation that incorporates the delegator reference — kernel types appear directly"
+        "relationship": "Delegation binding relies on digest computation to create the seal commitment and AID derivation that incorporates the delegator reference"
       }
     ],
-    "adjacents": [],
-    "externals": [],
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
@@ -20793,13 +20790,7 @@ const RDOD_DATA = {
         "relationship": "Owns delegated inception and rotation event lifecycle — validation pipeline and escrow queues"
       }
     ],
-    "kernels": [
-      {
-        "ref": "external://cryptographic-primitives",
-        "source": "Ed25519 (signing both delegator and delegatee events), Blake3-256/SHA-256 (delegation seal digests, delegatee AID derivation)",
-        "relationship": "Delegation verification requires cryptographic verification of both delegator and delegatee signatures and digest verification of the delegation seal — kernel types appear directly"
-      }
-    ],
+    "kernels": [],
     "adjacents": [
       {
         "ref": "domain://cesr",
@@ -20807,7 +20798,13 @@ const RDOD_DATA = {
         "relationship": "CESR primitives (Prefixer, Diger, Seqner, Seal) adopted natively for delegation seal construction and verification"
       }
     ],
-    "externals": [],
+    "externals": [
+      {
+        "ref": "domain://externals/cryptographic-primitives",
+        "source": "Ed25519 (signing both delegator and delegatee events), Blake3-256/SHA-256 (delegation seal digests, delegatee AID derivation)",
+        "relationship": "Delegation verification requires cryptographic verification of both delegator and delegatee signatures and digest verification of the delegation seal"
+      }
+    ],
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
@@ -21738,7 +21735,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ],
         "invariants": [
           "Pending-approval events await delegator commitment confirmation",
@@ -23269,7 +23266,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "transport"
+          "domain://externals/transport"
         ]
       }
     ],
@@ -24468,6 +24465,334 @@ const RDOD_DATA = {
       }
     ]
   },
+  "externals/cryptographic-primitives": {
+    "template_version": "2.0",
+    "id": "externals/cryptographic-primitives",
+    "name": "Cryptographic Primitives",
+    "description": "Platform-provided cryptographic algorithms. Every KERI domain that signs, verifies, hashes, or derives keys depends on this external. Algorithm selection is determined by the CESR code — not a runtime choice. Each algorithm maps to one or more fixed-size code table entries.\n",
+    "version": "0.1.0",
+    "tier": "external",
+    "source_material": [],
+    "published_language": [
+      {
+        "term": "Signing Algorithm",
+        "description": "Asymmetric signing — Ed25519, ECDSA secp256k1, ECDSA secp256r1, Ed448"
+      },
+      {
+        "term": "Digest Algorithm",
+        "description": "Cryptographic hashing — Blake3-256, Blake2b-256, SHA2-256, SHA3-256, and 512-bit variants"
+      },
+      {
+        "term": "Key Derivation",
+        "description": "Deterministic key derivation from salt — argon2 (key stretching), HKDF"
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://cesr/primitives",
+        "relationship": "CESR primitives delegate all cryptographic operations to this external"
+      },
+      {
+        "ref": "domain://identity",
+        "relationship": "Identity domains use signing for event authorization and hashing for SAID computation"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "adapter",
+      "language_affinity": "any",
+      "notes": "Implementations: libsodium (Ed25519 signing, X25519 key exchange, Blake2b — Python/TS/JS), blake3 crate/package (Blake3 hashing), argon2 (password-based key stretching for Signify salts), ed25519-dalek/k256/p256 (Rust ECDSA curves). Implementations MUST support Ed25519 and Blake3-256 at minimum. Key material MUST be zeroed after use (ZeroizeOnDrop pattern).\n"
+    },
+    "issues": [],
+    "tags": [
+      "external",
+      "cryptography",
+      "adapter",
+      "infrastructure"
+    ],
+    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/externals/cryptographic-primitives/domain.yaml",
+    "_events": [],
+    "_rules": [],
+    "_imports": [],
+    "ubiquitous_language": [
+      {
+        "term": "Signing Algorithm",
+        "definition": "An asymmetric cryptographic algorithm that produces a fixed-size signature from a private key and message",
+        "invariants": [
+          "Algorithm selection is determined by the CESR code, not a runtime parameter",
+          "Supported: Ed25519 (64-byte sig), ECDSA secp256k1 (64-byte sig), ECDSA secp256r1 (64-byte sig), Ed448 (114-byte sig)"
+        ],
+        "examples": [
+          "Ed25519 — the default and most widely used in KERI implementations"
+        ]
+      },
+      {
+        "term": "Digest Algorithm",
+        "definition": "A cryptographic hash function that produces a fixed-size digest from arbitrary input",
+        "invariants": [
+          "Algorithm selection is determined by the CESR code",
+          "Supported: Blake3-256, Blake2b-256, SHA2-256, SHA3-256, and their 512-bit variants"
+        ],
+        "examples": [
+          "Blake3-256 — the default for SAID computation in KERI"
+        ]
+      },
+      {
+        "term": "Key Derivation",
+        "definition": "Deterministic derivation of cryptographic keys from a salt, path, or password",
+        "invariants": [
+          "argon2 is used for passcode-to-key derivation (Signify edge client)",
+          "HKDF is used for UUID and BLID derivation (privacy/blinding)"
+        ]
+      }
+    ],
+    "_ports": [
+      {
+        "id": "port://externals/cryptographic-primitives/inbound/sign-verify",
+        "type": "inbound",
+        "name": "Sign and Verify",
+        "semantics": "command",
+        "idempotent": true,
+        "contract": {
+          "input": "private_key (bytes) + message (bytes) | public_key (bytes) + signature (bytes) + message (bytes)",
+          "output": "signature (bytes) | boolean",
+          "errors": [
+            "SigningError",
+            "VerificationError"
+          ]
+        },
+        "refs": [],
+        "invariants": [
+          "sign(private_key, message) produces a deterministic signature for Ed25519",
+          "verify(public_key, signature, message) returns true iff the signature is valid",
+          "Key material MUST be zeroed after use"
+        ]
+      },
+      {
+        "id": "port://externals/cryptographic-primitives/inbound/digest",
+        "type": "inbound",
+        "name": "Digest",
+        "semantics": "query",
+        "idempotent": true,
+        "contract": {
+          "input": "algorithm (DigestAlgorithm) + data (bytes)",
+          "output": "digest (bytes)",
+          "errors": []
+        },
+        "refs": [],
+        "invariants": [
+          "Deterministic — same input always produces same digest",
+          "Algorithm determines output size (256-bit or 512-bit)"
+        ]
+      },
+      {
+        "id": "port://externals/cryptographic-primitives/inbound/key-generation",
+        "type": "inbound",
+        "name": "Key Generation and Derivation",
+        "semantics": "command",
+        "idempotent": false,
+        "contract": {
+          "input": "algorithm (string) | salt (bytes) + path (string)",
+          "output": "(public_key, private_key) bytes",
+          "errors": [
+            "KeyDerivationError"
+          ]
+        },
+        "refs": [],
+        "invariants": [
+          "generate_keypair produces a fresh random keypair",
+          "derive_key from salt + path is deterministic (same salt + path = same key)",
+          "argon2 key stretching parameters are determined by KeyTier (low/med/high)"
+        ]
+      }
+    ]
+  },
+  "externals/persistence": {
+    "template_version": "2.0",
+    "id": "externals/persistence",
+    "name": "Persistence",
+    "description": "Generic persistence adapter for key-value and append-only storage. Each domain defines its own Repository interface (KelRepository, TelRepository, etc.); this external provides the underlying storage engine. The domain's Service wraps the Repository — the Service IS the guard, the Repository IS the storage.\n",
+    "version": "0.1.0",
+    "tier": "external",
+    "source_material": [],
+    "published_language": [
+      {
+        "term": "Key-Value Store",
+        "description": "Storage engine that maps keys to values with ordered iteration"
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://identity/state",
+        "relationship": "IdentityService uses persistence for KelRepository and State Read Model"
+      },
+      {
+        "ref": "domain://credential-lifecycle/status",
+        "relationship": "StatusService uses persistence for TelRepository and Status Read Model"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "adapter",
+      "language_affinity": "any",
+      "notes": "Implementations: LMDB (keripy — memory-mapped key-value), redb (keriox — embedded Rust key-value), DynamoDB (serious-keri — serverless), SQLite/PostgreSQL (relational alternatives), in-memory (testing). Repository interfaces define the contract; the persistence adapter implements it. Implementations MUST satisfy the invariants on each Repository port (append-only, idempotent, ordered).\n"
+    },
+    "issues": [],
+    "tags": [
+      "external",
+      "persistence",
+      "adapter",
+      "infrastructure",
+      "storage"
+    ],
+    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/externals/persistence/domain.yaml",
+    "_events": [],
+    "_rules": [],
+    "_imports": [],
+    "ubiquitous_language": [
+      {
+        "term": "Key-Value Store",
+        "definition": "A storage engine that maps byte-string keys to byte-string values with support for ordered iteration and range queries",
+        "invariants": [
+          "Writes are durable — once acknowledged, data survives process restart",
+          "Ordered iteration follows lexicographic key ordering"
+        ],
+        "examples": [
+          "LMDB — memory-mapped, ACID, ordered keys",
+          "DynamoDB — serverless, partition+sort key, eventually consistent reads"
+        ]
+      }
+    ],
+    "_ports": [
+      {
+        "id": "port://externals/persistence/inbound/key-value",
+        "type": "inbound",
+        "name": "Key-Value Operations",
+        "semantics": "command",
+        "idempotent": false,
+        "description": "Core key-value operations: put, get, delete, iterate. All Repository interfaces (KelRepository, TelRepository, etc.) are built on top of these primitives. The persistence adapter implements this interface; the domain's Service wraps it with domain-specific guard logic.\n",
+        "contract": {
+          "input": "key (bytes) + value (bytes)",
+          "output": "value (bytes) or void",
+          "errors": [
+            "StorageError",
+            "KeyNotFoundError"
+          ]
+        },
+        "refs": [],
+        "invariants": [
+          "Writes are durable — acknowledged writes survive process restart",
+          "Ordered iteration follows lexicographic key ordering",
+          "Append-only semantics are enforced by the Repository, not the persistence layer"
+        ]
+      }
+    ]
+  },
+  "externals/transport": {
+    "template_version": "2.0",
+    "id": "externals/transport",
+    "name": "Network Transport",
+    "description": "Network transport adapter for delivering CESR-encoded messages between KERI participants. Provides byte-level delivery over HTTP, TCP, UDP, or WebSocket. Transport is payload-agnostic — it delivers bytes; the domain parses them. CESR framing handles message boundaries, so transport does not need to delimit.\n",
+    "version": "0.1.0",
+    "tier": "external",
+    "source_material": [],
+    "published_language": [
+      {
+        "term": "Endpoint",
+        "description": "A network address where a KERI participant can receive messages"
+      }
+    ],
+    "domain_clients": [
+      {
+        "ref": "domain://accountability/dissemination",
+        "relationship": "Dissemination uses transport to send events and receipts to witnesses"
+      },
+      {
+        "ref": "domain://cesr/composition",
+        "relationship": "CESR composition uses transport for stream delivery"
+      },
+      {
+        "ref": "domain://discovery",
+        "relationship": "Discovery uses transport for OOBI resolution"
+      }
+    ],
+    "subdomains": [],
+    "kernels": [],
+    "adjacents": [],
+    "externals": [],
+    "implementation_guidance": {
+      "suggested_type": "adapter",
+      "language_affinity": "any",
+      "notes": "Implementations: HTTP/HTTPS (most common for cloud — KERIA, witness HTTP API), TCP (bare metal CESR streams for high-throughput local), UDP (lightweight for receipt dissemination), WebSocket (bidirectional for browser extension). Implementations MUST support at least HTTP; other transports are optional.\n"
+    },
+    "issues": [],
+    "tags": [
+      "external",
+      "transport",
+      "adapter",
+      "infrastructure"
+    ],
+    "_source": "/Users/seriouscoderone/KERI/code/keri-claude/rdod/spec/domains/externals/transport/domain.yaml",
+    "_events": [],
+    "_rules": [],
+    "_imports": [],
+    "ubiquitous_language": [
+      {
+        "term": "Endpoint",
+        "definition": "A network address where a KERI participant listens for incoming messages",
+        "invariants": [
+          "Endpoint is a URL (scheme + host + port + optional path)",
+          "Transport protocol is determined by the URL scheme (http, tcp, ws)"
+        ],
+        "examples": [
+          "http://witness1.example.com:5632/ — HTTP witness endpoint",
+          "tcp://10.0.0.1:5631 — TCP direct connection"
+        ]
+      }
+    ],
+    "_ports": [
+      {
+        "id": "port://externals/transport/inbound/send",
+        "type": "inbound",
+        "name": "Send Message",
+        "semantics": "command",
+        "idempotent": false,
+        "description": "Send CESR-encoded bytes to an endpoint. Transport is payload-agnostic — it delivers bytes without interpreting them. CESR framing handles message boundaries.\n",
+        "contract": {
+          "input": "Endpoint + bytes",
+          "output": "void",
+          "errors": [
+            "ConnectionRefusedError",
+            "TimeoutError",
+            "EndpointUnreachableError"
+          ]
+        },
+        "refs": []
+      },
+      {
+        "id": "port://externals/transport/inbound/receive",
+        "type": "inbound",
+        "name": "Receive Messages",
+        "semantics": "event",
+        "idempotent": true,
+        "description": "Listen on a network address and yield incoming CESR-encoded byte streams. Returns an async stream of raw bytes — the consumer parses them.\n",
+        "contract": {
+          "input": "Listen address (string)",
+          "output": "AsyncStream of bytes",
+          "errors": [
+            "BindError"
+          ]
+        },
+        "refs": []
+      }
+    ]
+  },
   "identity/anchoring": {
     "template_version": "2.0",
     "id": "identity/anchoring",
@@ -24501,15 +24826,15 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
       {
-        "ref": "external://cryptographic-primitives",
+        "ref": "domain://externals/cryptographic-primitives",
         "source": "Blake3-256/SHA-256 (seal digest computation), Ed25519 (interaction event signing)",
         "relationship": "Seal digests are kernel types — the anchoring subdomain uses digest computation to create content commitments"
       }
     ],
-    "adjacents": [],
-    "externals": [],
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
@@ -25092,13 +25417,7 @@ const RDOD_DATA = {
         "via_port": "port://identity/anchoring/inbound/data-anchoring"
       }
     ],
-    "kernels": [
-      {
-        "ref": "external://cryptographic-primitives",
-        "source": "Ed25519 (event signing), Blake3-256/SHA-256 (SAID computation, prior event digest, seal digests, next key commitments)",
-        "relationship": "Cryptographic algorithm types appear directly in event fields and key state structures — signatures, digests, public keys, and threshold expressions are kernel types"
-      }
-    ],
+    "kernels": [],
     "adjacents": [
       {
         "ref": "domain://cesr",
@@ -25135,6 +25454,11 @@ const RDOD_DATA = {
     ],
     "externals": [
       {
+        "ref": "domain://externals/cryptographic-primitives",
+        "source": "Ed25519 (event signing), Blake3-256/SHA-256 (SAID computation, prior event digest, seal digests, next key commitments)",
+        "relationship": "Cryptographic algorithm types appear directly in event fields and key state structures — signatures, digests, public keys, and threshold expressions are kernel types"
+      },
+      {
         "name": "KelRepository",
         "abstraction": "Repository",
         "ref": "port://identity/state/outbound/kel-repository",
@@ -25144,7 +25468,7 @@ const RDOD_DATA = {
     "implementation_guidance": {
       "suggested_type": "package",
       "language_affinity": "any",
-      "notes": "This domain merges the event log and key state concepts from the original decomposition. In keripy, the Kevery class handles event processing and the Kever class tracks per-AID key state. In keriox, the EventProcessor and IdentifierState handle these roles. All implementations must enforce normative field ordering, SAID computation, and deterministic key state derivation per the specification.\nThe Service-wraps-Repository pattern: The IdentityService IS the guard — it validates events, enforces thresholds, and routes to escrow. The KelRepository IS the storage — the append-only log and escrow queues. The adopter interacts with the IdentityService (commit events, query state). The KelRepository is an internal persistence detail.\nThe same pattern applies to StatusService/TelRepository (credential-lifecycle/status), DelegationService (delegation/lifecycle), and VerificationService (credential-lifecycle/verification). Each Service owns its domain-specific validation logic; each Repository provides persistence underneath.\nStructure — Service (guard): domain logic that validates writes (signature checks, threshold satisfaction, witness receipts, delegation approval, duplicity detection); Repository (storage): append-only log (the aggregate's source of truth — writes only happen after the Service approves) + escrow queues (pending writes — events the Service said 'not yet' to, each escrow type corresponds to a specific missing prerequisite, re-enters the Service when the prerequisite arrives); raw_persistence: external://persistence adapter (LMDB, DynamoDB, SQLite, etc.). Outcomes — accept: Service approves, event committed to the log, domain event published; escrow: Service says 'not yet', event stored in escrow queue keyed by blocking condition, reprocessed when condition resolves; reject: Service says 'no', event refused, error returned to caller. Invariants: the log is NEVER written to directly (all writes go through the Service); the Service calls domain-specific checkers (it doesn't implement the checks itself); escrow is part of the repository, not a separate concern (it's the 'pending writes' queue); reprocessing re-enters the Service, not the log (escrowed events are fully re-validated); the Service is what makes this a KERI domain, not just a database (the acceptance rules ARE the protocol's value). Example: IdentityService.commit(event, signatures) -> Accept | Escrow | Reject.\nIdentifier Type Dimensions: Every KERI identifier is characterized by five orthogonal dimensions (Transferability, Delegation, Witnessing, Signing Model, Operational Constraints) expressed through field values in the inception event. Implementations SHOULD provide typed builders that make these dimensions explicit rather than exposing raw field map manipulation. Example: Identity.builder().transferable().witnessed(witnesses, toad).multiSig(threshold, keys).build()\n"
+      "notes": "This domain merges the event log and key state concepts from the original decomposition. In keripy, the Kevery class handles event processing and the Kever class tracks per-AID key state. In keriox, the EventProcessor and IdentifierState handle these roles. All implementations must enforce normative field ordering, SAID computation, and deterministic key state derivation per the specification.\nThe Service-wraps-Repository pattern: The IdentityService IS the guard — it validates events, enforces thresholds, and routes to escrow. The KelRepository IS the storage — the append-only log and escrow queues. The adopter interacts with the IdentityService (commit events, query state). The KelRepository is an internal persistence detail.\nThe same pattern applies to StatusService/TelRepository (credential-lifecycle/status), DelegationService (delegation/lifecycle), and VerificationService (credential-lifecycle/verification). Each Service owns its domain-specific validation logic; each Repository provides persistence underneath.\nStructure — Service (guard): domain logic that validates writes (signature checks, threshold satisfaction, witness receipts, delegation approval, duplicity detection); Repository (storage): append-only log (the aggregate's source of truth — writes only happen after the Service approves) + escrow queues (pending writes — events the Service said 'not yet' to, each escrow type corresponds to a specific missing prerequisite, re-enters the Service when the prerequisite arrives); raw_persistence: domain://externals/persistence adapter (LMDB, DynamoDB, SQLite, etc.). Outcomes — accept: Service approves, event committed to the log, domain event published; escrow: Service says 'not yet', event stored in escrow queue keyed by blocking condition, reprocessed when condition resolves; reject: Service says 'no', event refused, error returned to caller. Invariants: the log is NEVER written to directly (all writes go through the Service); the Service calls domain-specific checkers (it doesn't implement the checks itself); escrow is part of the repository, not a separate concern (it's the 'pending writes' queue); reprocessing re-enters the Service, not the log (escrowed events are fully re-validated); the Service is what makes this a KERI domain, not just a database (the acceptance rules ARE the protocol's value). Example: IdentityService.commit(event, signatures) -> Accept | Escrow | Reject.\nIdentifier Type Dimensions: Every KERI identifier is characterized by five orthogonal dimensions (Transferability, Delegation, Witnessing, Signing Model, Operational Constraints) expressed through field values in the inception event. Implementations SHOULD provide typed builders that make these dimensions explicit rather than exposing raw field map manipulation. Example: Identity.builder().transferable().witnessed(witnesses, toad).multiSig(threshold, keys).build()\n"
     },
     "issues": [],
     "tags": [
@@ -25584,7 +25908,7 @@ const RDOD_DATA = {
           "Three outcomes: Accept (event appended, domain event published), Escrow (event queued by blocking condition), Reject (event refused)",
           "Escrow is part of the repository — the guard's 'not yet' response stores the event for later re-evaluation",
           "Reprocessing re-enters the guard — escrowed events are fully re-validated, not assumed valid",
-          "The raw persistence layer (external://persistence) is an adapter — the guard is domain logic that wraps it",
+          "The raw persistence layer (domain://externals/persistence) is an adapter — the guard is domain logic that wraps it",
           "This pattern applies identically to the TEL Repository in credential-lifecycle"
         ],
         "examples": [
@@ -27246,15 +27570,14 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [
-      {
-        "ref": "external://cryptographic-primitives",
-        "source": "Ed25519/ECDSA signature verification (verifySigs), Blake3-256 digest comparison (pre-rotation binding)",
-        "relationship": "Signature verification and digest comparison are kernel operations invoked at multiple validation steps"
-      }
-    ],
+    "kernels": [],
     "adjacents": [],
     "externals": [
+      {
+        "ref": "domain://externals/cryptographic-primitives",
+        "source": "Ed25519/ECDSA signature verification (verifySigs), Blake3-256 digest comparison (pre-rotation binding)",
+        "relationship": "Signature verification and digest comparison are kernel operations invoked at multiple validation steps"
+      },
       {
         "name": "Key State and KEL Lookup",
         "abstraction": "Repository (read-only)",
@@ -27705,7 +28028,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ]
       }
     ],
@@ -29734,15 +30057,15 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
       {
-        "ref": "external://cryptographic-primitives",
+        "ref": "domain://externals/cryptographic-primitives",
         "source": "Ed25519/ECDSA key types for signing keys (Verfer construction), Blake3-256/SHA-256 for computing next key digests (Diger construction), prefix code classification for transferability",
         "relationship": "Public key qualification and digest computation are kernel operations — this subdomain uses them to build key configurations and verify pre-rotation bindings"
       }
     ],
-    "adjacents": [],
-    "externals": [],
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
@@ -30874,15 +31197,14 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [
-      {
-        "ref": "external://cryptographic-primitives",
-        "source": "Ed25519/ECDSA public keys (Verfer) for signing key lists, Blake3-256/SHA-256 digests (Diger) for next key commitment lists, SAID computation for event digest tracking",
-        "relationship": "Cryptographic primitives appear directly in state machine fields — the tracker stores and compares qualified public keys, digests, and SAIDs as kernel types"
-      }
-    ],
+    "kernels": [],
     "adjacents": [],
     "externals": [
+      {
+        "ref": "domain://externals/cryptographic-primitives",
+        "source": "Ed25519/ECDSA public keys (Verfer) for signing key lists, Blake3-256/SHA-256 digests (Diger) for next key commitment lists, SAID computation for event digest tracking",
+        "relationship": "Cryptographic primitives appear directly in state machine fields — the tracker stores and compares qualified public keys, digests, and SAIDs as kernel types"
+      },
       {
         "name": "State Persistence Repository",
         "abstraction": "Repository",
@@ -31191,7 +31513,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "external://persistence"
+          "domain://externals/persistence"
         ],
         "invariants": [
           "Query-only — consumers never write to the read model directly",
@@ -31216,7 +31538,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "external://persistence"
+          "domain://externals/persistence"
         ],
         "invariants": [
           "The KEL is NEVER written to directly — all writes go through the IdentityService",
@@ -31238,7 +31560,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "external://persistence"
+          "domain://externals/persistence"
         ]
       }
     ],
@@ -33889,7 +34211,7 @@ const RDOD_DATA = {
     "adjacents": [],
     "externals": [
       {
-        "ref": "external://transport",
+        "ref": "domain://externals/transport",
         "source": "Watcher network — polling witnesses, cross-checking KERL copies",
         "relationship": "Watchers require network transport to poll witnesses and other watchers for KEL copies; this is external infrastructure not owned by the monitoring domain"
       }
@@ -34145,7 +34467,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "external://transport"
+          "domain://externals/transport"
         ]
       }
     ],
@@ -34879,13 +35201,7 @@ const RDOD_DATA = {
         "relationship": "Owns watcher/juror/judge roles, ambient verifiability, and eclipse attack modeling"
       }
     ],
-    "kernels": [
-      {
-        "ref": "external://cryptographic-primitives",
-        "source": "Ed25519 (signature verification on conflicting events), Blake3-256/SHA-256 (event digest comparison)",
-        "relationship": "Duplicity detection requires verifying signatures on both conflicting events — cryptographic verification is a kernel operation"
-      }
-    ],
+    "kernels": [],
     "adjacents": [
       {
         "ref": "domain://cesr",
@@ -34893,7 +35209,13 @@ const RDOD_DATA = {
         "relationship": "CESR primitives (Verfer, Diger, SAID) adopted natively for duplicity evidence verification"
       }
     ],
-    "externals": [],
+    "externals": [
+      {
+        "ref": "domain://externals/cryptographic-primitives",
+        "source": "Ed25519 (signature verification on conflicting events), Blake3-256/SHA-256 (event digest comparison)",
+        "relationship": "Duplicity detection requires verifying signatures on both conflicting events — cryptographic verification is a kernel operation"
+      }
+    ],
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
@@ -35957,7 +36279,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ],
         "invariants": [
           "Likely-duplicitous escrow is temporary — events are promoted to confirmed evidence or pruned at timeout",
@@ -38632,13 +38954,7 @@ const RDOD_DATA = {
         "via_port": "port://local-agent/api/inbound/hab-operations"
       }
     ],
-    "kernels": [
-      {
-        "ref": "external://cryptographic-primitives",
-        "source": "Ed25519 (signing), X25519 (key agreement), Blake3-256/Blake2b-256/SHA-256 (digests), argon2 (key stretching), libsodium",
-        "relationship": "Cryptographic algorithm types used directly for local key generation, signing, hashing, and key stretching"
-      }
-    ],
+    "kernels": [],
     "adjacents": [
       {
         "ref": "domain://cesr",
@@ -38687,6 +39003,11 @@ const RDOD_DATA = {
       }
     ],
     "externals": [
+      {
+        "ref": "domain://externals/cryptographic-primitives",
+        "source": "Ed25519 (signing), X25519 (key agreement), Blake3-256/Blake2b-256/SHA-256 (digests), argon2 (key stretching), libsodium",
+        "relationship": "Cryptographic algorithm types used directly for local key generation, signing, hashing, and key stretching"
+      },
       {
         "name": "Event Log Repository",
         "abstraction": "Repository",
@@ -39072,7 +39393,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ]
       },
       {
@@ -39088,7 +39409,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ]
       },
       {
@@ -39104,7 +39425,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ]
       },
       {
@@ -39572,15 +39893,15 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
       {
-        "ref": "external://cryptographic-primitives",
+        "ref": "domain://externals/cryptographic-primitives",
         "source": "Blake3-256 for AGID digest computation, SAID computation for most compact form algorithm",
         "relationship": "Cryptographic algorithm types used for computing the AGID digest over serialized SAID lists and for the depth-first SAID computation in the most compact form algorithm"
       }
     ],
-    "adjacents": [],
-    "externals": [],
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
@@ -39800,7 +40121,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "external://cryptographic-primitives"
+          "domain://externals/cryptographic-primitives"
         ]
       }
     ],
@@ -40222,15 +40543,15 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [
+    "kernels": [],
+    "adjacents": [],
+    "externals": [
       {
-        "ref": "external://cryptographic-primitives",
+        "ref": "domain://externals/cryptographic-primitives",
         "source": "Blake3-256 (BLID digest computation), argon2/HKDF (salt-based hierarchically deterministic UUID derivation)",
         "relationship": "Cryptographic algorithm types used for BLID computation and blinding UUID derivation from shared secret salt"
       }
     ],
-    "adjacents": [],
-    "externals": [],
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
@@ -40507,7 +40828,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "external://cryptographic-primitives"
+          "domain://externals/cryptographic-primitives"
         ]
       },
       {
@@ -40522,7 +40843,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "external://cryptographic-primitives"
+          "domain://externals/cryptographic-primitives"
         ]
       }
     ],
@@ -41546,13 +41867,7 @@ const RDOD_DATA = {
         "relationship": "Aggregate computation, inclusion proofs, most compact form algorithm, Compactor engine, SAD path signatures"
       }
     ],
-    "kernels": [
-      {
-        "ref": "external://cryptographic-primitives",
-        "source": "SAID computation for blinded commitments, UUID entropy requirements (>= 128 bits cryptographic entropy)",
-        "relationship": "Cryptographic algorithm types used for computing blinded SAIDs over UUID-protected blocks and generating high-entropy UUIDs"
-      }
-    ],
+    "kernels": [],
     "adjacents": [
       {
         "ref": "domain://cesr",
@@ -41565,7 +41880,13 @@ const RDOD_DATA = {
         "pattern": "Customer-Supplier"
       }
     ],
-    "externals": [],
+    "externals": [
+      {
+        "ref": "domain://externals/cryptographic-primitives",
+        "source": "SAID computation for blinded commitments, UUID entropy requirements (>= 128 bits cryptographic entropy)",
+        "relationship": "Cryptographic algorithm types used for computing blinded SAIDs over UUID-protected blocks and generating high-entropy UUIDs"
+      }
+    ],
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
@@ -41940,7 +42261,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "external://cryptographic-primitives"
+          "domain://externals/cryptographic-primitives"
         ]
       }
     ],
@@ -43418,15 +43739,14 @@ const RDOD_DATA = {
       }
     ],
     "subdomains": [],
-    "kernels": [
-      {
-        "ref": "external://cryptographic-primitives",
-        "source": "argon2 for passcode stretching, Ed25519/ECDSA for key generation, X25519 for key-at-rest encryption (ECDH + secretbox)",
-        "relationship": "All cryptographic primitives — key derivation, signing, encryption — are kernel operations. This subdomain composes them into the Keeper abstraction and Encrypter"
-      }
-    ],
+    "kernels": [],
     "adjacents": [],
     "externals": [
+      {
+        "ref": "domain://externals/cryptographic-primitives",
+        "source": "argon2 for passcode stretching, Ed25519/ECDSA for key generation, X25519 for key-at-rest encryption (ECDH + secretbox)",
+        "relationship": "All cryptographic primitives — key derivation, signing, encryption — are kernel operations. This subdomain composes them into the Keeper abstraction and Encrypter"
+      },
       {
         "name": "Key Repository",
         "abstraction": "Repository",
@@ -43707,7 +44027,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ]
       }
     ],
@@ -45318,7 +45638,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "transport"
+          "domain://externals/transport"
         ]
       },
       {
@@ -45831,7 +46151,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ]
       }
     ],
@@ -46430,7 +46750,7 @@ const RDOD_DATA = {
           "errors": []
         },
         "refs": [
-          "transport"
+          "domain://externals/transport"
         ]
       }
     ],
@@ -46805,13 +47125,7 @@ const RDOD_DATA = {
         "via_port": "port://witness-service/api/inbound/event-submission"
       }
     ],
-    "kernels": [
-      {
-        "ref": "external://cryptographic-primitives",
-        "source": "Ed25519 for receipt signatures — witnesses sign with their own non-transferable keys",
-        "relationship": "Cryptographic signing primitives used directly in receipt generation"
-      }
-    ],
+    "kernels": [],
     "adjacents": [
       {
         "ref": "domain://identity",
@@ -46822,6 +47136,11 @@ const RDOD_DATA = {
       }
     ],
     "externals": [
+      {
+        "ref": "domain://externals/cryptographic-primitives",
+        "source": "Ed25519 for receipt signatures — witnesses sign with their own non-transferable keys",
+        "relationship": "Cryptographic signing primitives used directly in receipt generation"
+      },
       {
         "name": "Witness Repository",
         "abstraction": "Repository",
@@ -47050,7 +47369,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [
-          "persistence"
+          "domain://externals/persistence"
         ]
       }
     ],
