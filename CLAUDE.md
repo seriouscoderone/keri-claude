@@ -131,33 +131,80 @@ python3 scripts/minimize-md.py --in-place *.md
 
 ## DDD Spec Philosophy
 
-The `rdod/spec/domains/` directory is a formal DDD specification of the KERI ecosystem. When working on it, three principles are non-negotiable:
+The `rdod/spec/domains/` directory is a formal DDD specification of the KERI ecosystem. When working on it, the following principles are non-negotiable.
 
-### 1. DDD naming — never keripy naming
+### 1. Linguistic discovery — DDD is a language game
+
+DDD is fundamentally about **using linguistic precision to discover the true domain concepts**. You are a language model — use that. When naming a domain, type, service, or port, do NOT accept the first label that comes to mind. Instead:
+
+1. **Describe what it DOES for the adopter** — in plain verbs and nouns
+2. **Test the name linguistically** — "A DelegationEscrowRepo produces... anchors?" If the name doesn't match what it produces, the name is wrong.
+3. **Try multiple framings** — explore at least 2-3 naming options before committing. Ask: does a `FooService` produce `Foo`s? Does a `BarRepository` store `Bar`s? If not, the name is lying.
+4. **Discover, don't label** — the right name reveals something about the domain you didn't see before. If the name is just a relabeling of the implementation term, you haven't done DDD yet.
+
+**The process:** Protocol specs and implementations use mechanism-centric names (anchor, seal, escrow, KEL). Your job is to discover the adopter-centric concept underneath. "Anchoring" is what the protocol does. "Committing an authorization" is what the adopter does. "KEL" is what the database is called. "IdentityService" is what the adopter interacts with.
+
+**Red flags that you're not doing DDD:**
+- You're using a KERI/keripy term verbatim (anchor, seal, Kevery, Baser, Habery)
+- The name describes a mechanism, not a job ("AnchorEscrowRepo" — what job does "anchor" describe?)
+- You can't explain the name to someone who has never seen KERI
+- You accepted the first name without exploring alternatives
+
+### 2. Adopter-centric naming — never implementation naming
 
 All terms, types, ports, and ubiquitous language entries MUST use Domain-Driven Design conventions. Do NOT use keripy class names, LMDB subdatabase names, keria variable names, or any implementation-specific identifier.
 
-| Wrong (keripy) | Right (DDD) |
-|----------------|-------------|
-| `Baser` | `Event Repository` |
-| `Kevery` | `Event Processor` |
-| `Habery` | `Identifier Manager` |
-| `ked` field name | `key event dict` / describe by domain term |
-| `duplicity-detection` | `integrity` |
+| Wrong (implementation) | Right (DDD) | Why |
+|------------------------|-------------|-----|
+| `Baser` | `KelRepository` | Named for what it stores, not the class |
+| `Kevery` | `IdentityService` | Named for the adopter's concern |
+| `Habery` | `IdentifierManager` | Named for the job it does |
+| `anchor` / `seal` | `authorization proof` / `commitment` | Named for what the adopter is doing |
+| `KEL` | `KelRepository` (persistence subdomain) | KEL is the storage implementation; the service is the domain concept |
+| `ked` | describe by domain term | Field abbreviations don't leak into the spec |
+| `duplicity-detection` | `integrity` | Named for the adopter's concern |
+| `escrow` (as standalone concept) | part of a Service's guard logic | Escrow is a mechanism inside a service, not a separate domain |
 
 The spec must be readable by someone who has never seen keripy.
 
-### 2. Adopter-centric language
+### 3. Verb-driven cross-domain relationships
 
-Every domain, term, and concept is named for the **job it does for someone building with KERI** — not for the mechanism it implements. Ask: *"What does an adopter need to do here, and what would they naturally call it?"*
+When domains interact, describe the interaction with **adopter-centric verbs**, not protocol mechanism names. The right verbs reveal the nature of the relationship:
 
-- Domain names describe the adopter's concern (`identity`, `accountability`, `credential-exchange`)
-- Terms describe what adopters create, observe, and act on — not how KERI implements them internally
-- Invariants and rules are written from the adopter's perspective: what they can rely on
+| Protocol mechanism | Adopter verb | Example |
+|---|---|---|
+| Delegator anchors a seal | Delegator **approves** the delegation | `DelegationService.approve()` |
+| Issuer anchors TEL to KEL | Issuer **authorizes** the credential operation | `StatusService.authorize()` |
+| Controller creates ixn with seal | Controller **commits** to their identity history | `IdentityService.commit()` |
+| Validator checks anchor chain | Verifier **verifies** the authorization chain | `VerificationService.verify()` |
 
-### 3. Builder pattern for field maps
+These verbs should appear in port names, operation names, and domain event names. If you find yourself writing "anchor" or "seal" in a port contract, replace it with the adopter verb.
 
-KERI's wire format uses terse field maps with 1–2 character keys (`v`, `t`, `d`, `i`, `s`, `kt`, `k`, `nt`, `n`, `bt`, `b`, `c`, `a`). This is correct for the protocol. It must NOT leak into the adopter's experience.
+### 4. Services over Repositories for domain logic
+
+When a component has rich behavior (validation, coordination, invariant enforcement, multi-step workflows), it is a **Service**, not a Repository. Repositories are storage — they store and retrieve. Services are behavior — they validate, coordinate, approve, authorize, commit, verify.
+
+The pattern: **Service wraps Repository**. The Service IS the guard. The Repository IS the storage.
+
+```
+IdentityService (validates, enforces thresholds, routes to escrow)
+  └── KelRepository (append-only log + escrow queues — persistence subdomain)
+
+StatusService (validates TEL events, enforces state machine)
+  └── TelRepository (append-only log + escrow queues — persistence subdomain)
+
+DelegationService (orchestrates approval workflow)
+  └── uses IdentityService (delegator commits approval)
+
+VerificationService (verifies authorization chains)
+  └── uses StatusService + IdentityService
+```
+
+The adopter interacts with Services. Repositories are internal persistence details.
+
+### 5. Builder pattern for field maps
+
+KERI's wire format uses terse field maps with 1-2 character keys (`v`, `t`, `d`, `i`, `s`, `kt`, `k`, `nt`, `n`, `bt`, `b`, `c`, `a`). This is correct for the protocol. It must NOT leak into the adopter's experience.
 
 Every complex type (3+ fields, or fields with KERI-specific encoding rules) MUST have a typed Builder in the spec that:
 - Uses full domain-language names for all parameters
@@ -165,6 +212,20 @@ Every complex type (3+ fields, or fields with KERI-specific encoding rules) MUST
 - Reveals the domain concept, not the wire encoding
 
 Example: instead of `{"t": "icp", "i": aid, "s": "0", "kt": "1", "k": [vk], "nt": "1", "n": [nk], "bt": "3", "b": [w1,w2,w3]}`, the spec describes `IdentifierInception.builder().aid(aid).signingKey(vk).nextKey(nk).witnessPool([w1,w2,w3]).threshold(3).build()`.
+
+### 6. Oracle methodology for spec hardening
+
+When the spec has gaps or contradictions, resolve them using this priority:
+
+1. **KERI/CESR/ACDC specification** — authoritative. If the spec is clear, that's the answer.
+2. **keripy/keria implementation** — confirmatory. Agreement is valuable signal; disagreement surfaces implementation lag.
+3. **DDD design decisions** — for questions the protocol spec doesn't reach.
+
+When querying oracles (spec, keripy, keria), **reframe every question as a domain rule**, not an implementation question:
+- BAD: "What does `Tholder.satisfy()` return?"
+- GOOD: "For a weighted threshold with multiple clauses, does satisfaction require ALL clauses met (AND) or ANY clause (OR)?"
+
+The spec wins ties. But always cross-check with implementations — three-way agreement is high-confidence evidence.
 
 ## KERI Domain Context
 
