@@ -388,6 +388,61 @@ terms:
       - "An event for an AID we witness arrives from a non-controller source -> misfit escrow"
     related_terms: ["Local Source Protection", "Event Locality", "Event Source Record"]
 
+  - term: "Controller"
+    synonyms: ["AID Controller"]
+    definition: "The entity (or set of entities in multi-sig) that holds the private signing keys for an AID and is authorized to generate and sign Key Events. The Controller is the primary actor in the KERI protocol — the one who establishes, rotates, delegates, and abandons identifiers."
+    invariants:
+      - "A Controller MUST hold the current private signing keys for the AID"
+      - "In multi-sig, the Controller is the collective set of key holders"
+      - "The Controller is identified by the AID it controls, not by any external identity"
+    related_terms: ["AID", "Key State", "Signing Threshold", "Key Event"]
+
+  - term: "End-Verifiability"
+    synonyms: ["Ambient Verifiability", "End-to-End Verifiability"]
+    definition: "The property that any Verifier can independently verify the cryptographic control authority over an AID at any point in time, using only the KEL and standard cryptographic libraries, without depending on any intermediary infrastructure or trusted third party. KERI's fundamental security guarantee."
+    invariants:
+      - "Verification requires only the KEL and standard cryptographic libraries"
+      - "No trusted third party or intermediary infrastructure is needed"
+      - "Verification is possible by anyone, anywhere, at any time (ambient)"
+    related_terms: ["AID", "KEL", "Key State", "Verifier", "Controller"]
+
+  - term: "Key Event"
+    synonyms: []
+    definition: "Any event in the Key Event Log. Key Events divide into two classes: Establishment Events (Inception Event, Rotation Event, and their delegated variants) that change Key State, and Non-Establishment Events (Interaction Events) that anchor data commitments without changing Key State."
+    invariants:
+      - "Every Key Event has a unique sequence number within its KEL"
+      - "Every Key Event has a SAID computed over its content"
+      - "Establishment Events change Key State; Non-Establishment Events do not"
+      - "Must be signed by the current Controller"
+    related_terms: ["KEL", "Establishment Event", "Interaction Event", "SAID", "Controller"]
+
+  - term: "Self-Certifying Identifier"
+    synonyms: ["SCID"]
+    definition: "An identifier that is cryptographically bound to a keypair at inception, requiring no external authority to establish the binding. The identifier is derived from the public key or a digest thereof, making the binding self-evident and independently verifiable. An AID is a variant of SCID that extends self-certification with transferable control provenance via a Key Event Log."
+    invariants:
+      - "The binding between identifier and initial keypair is self-evident from the identifier's derivation"
+      - "No trusted third party is needed to establish or verify the binding"
+    related_terms: ["AID", "Inception Event", "End-Verifiability"]
+
+  - term: "Verifier"
+    synonyms: []
+    definition: "A component or role that cryptographically verifies an event's structure and signatures against the Key State at the time of issuance. Verification includes: checking the event's SAID, validating field structure, confirming prior event digest chain, and verifying signatures against the controlling Key State. A Verifier establishes control authority but does not accept events into the KEL."
+    invariants:
+      - "Must determine the controlling Key State at the time of event issuance"
+      - "For non-transferable AIDs, only the Inception Event is needed"
+      - "For transferable AIDs, the complete sequence of Establishment Events is needed"
+    related_terms: ["Validator", "Key State", "Establishment Event", "End-Verifiability"]
+
+  - term: "Validator"
+    synonyms: []
+    definition: "A component or role that determines whether a verified event should be accepted into the KEL. A Validator first acts as a Verifier (structural and signature checks), then applies additional constraints: witness receipt sufficiency (TOAD), delegation authorization, and any other policy rules. Validation is the gateway to KEL acceptance."
+    invariants:
+      - "Must first verify the event (act as Verifier)"
+      - "Must check witness receipt threshold (TOAD) for witnessed identifiers"
+      - "Must check delegation authorization for delegated identifiers"
+      - "Acceptance into KEL is the final act of successful validation"
+    related_terms: ["Verifier", "KEL", "TOAD", "Controller"]
+
   # Moved to domain://keri-messaging
 
   - term: "Event Database"

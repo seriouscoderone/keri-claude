@@ -129,23 +129,14 @@ types:
           - "A verified=true match means hash(key[key_index]) == prior_n[digest_index]"
           - "All new rotation keys must have a verified match for the rotation to be valid"
 
-  - name: "DigestAlgorithm"
-    description: "Cryptographic hash algorithm used for computing key digests in pre-rotation commitments."
-    variants:
-      - name: "default"
-        fields:
-          - name: "value"
-            type: "string"
-            required: true
-            description: "The digest algorithm identifier"
-            constraints:
-              enum: ["Blake3_256", "Blake2b_256", "Blake2s_256", "SHA3_256", "SHA2_256"]
-        invariants:
-          - "Blake3_256 (E prefix in CESR) is the default algorithm"
-          - "Same algorithm must be used consistently within a key commitment set"
+  # DigestAlgorithm removed — canonical definition is in cesr/primitives.
+  # Consumed-digest repository NOT defined here — enforcement is implicit via key state
+  # progression. Each rotation overwrites ndigers with the new commitment set.
+  # See: OQ-21 resolution in synthesis.
+  # Import via: types://cesr/primitives#DigestAlgorithm
 
   - name: "PrefixCode"
-    description: "CESR code that determines AID type based on the inception key's derivation code."
+    description: "CESR code that determines AID type based on the inception key's derivation code. Complete set of 9 prefix codes from the normative CESR code table."
     variants:
       - name: "default"
         fields:
@@ -154,10 +145,20 @@ types:
             required: true
             description: "The CESR prefix code for AID derivation"
             constraints:
-              enum: ["Ed25519", "Ed25519N", "ECDSA_256k1", "ECDSA_256k1N", "Blake3_256"]
+              enum:
+                - "Ed25519"        # D prefix — transferable Ed25519
+                - "Ed25519N"       # B prefix — non-transferable Ed25519
+                - "ECDSA_256k1"    # 1AAB prefix — transferable secp256k1
+                - "ECDSA_256k1N"   # 1AAA prefix — non-transferable secp256k1
+                - "Ed448"          # 1AAD prefix — transferable Ed448
+                - "Ed448N"         # 1AAC prefix — non-transferable Ed448
+                - "ECDSA_256r1"    # 1AAJ prefix — transferable secp256r1
+                - "ECDSA_256r1N"   # 1AAI prefix — non-transferable secp256r1
+                - "Blake3_256"     # E prefix — self-addressing
         invariants:
-          - "Codes ending in N indicate non-transferable (B prefix vs D prefix for Ed25519)"
-          - "Blake3_256 indicates a self-addressing AID derived from the event SAID"
+          - "Non-transferable codes: B (Ed25519N), 1AAA (ECDSA_256k1N), 1AAC (Ed448N), 1AAI (ECDSA_256r1N)"
+          - "Transferable codes: D (Ed25519), 1AAB (ECDSA_256k1), 1AAD (Ed448), 1AAJ (ECDSA_256r1)"
+          - "Self-addressing code: E (Blake3_256) — AID derived from the event SAID"
 
   - name: "TransferabilityKind"
     description: "Classification of whether an AID can rotate its keys."
@@ -175,18 +176,50 @@ types:
           - "NonTransferable AIDs have empty next key commitments — the public key IS the identifier"
 
   - name: "BindingVerification"
-    description: "The result of checking new rotation keys against prior next key digest commitments."
+    description: "The result of checking new rotation keys against prior next key digest commitments using dual-indexed (index, ondex) matching. Cross-position matching IS valid via the ondex mechanism."
     variants:
       - name: "default"
         fields:
           - name: "bound"
             type: "boolean"
             required: true
-            description: "True if all new keys match their pre-committed digests"
+            description: "True if enough keys match their pre-committed digests to satisfy the prior-next threshold"
+          - name: "matched_tuples"
+            type: "array[map]"
+            required: true
+            description: "List of verified (index, ondex, expected_digest, computed_digest) tuples. index = position in current signing key list, ondex = position in prior next-key digest list."
           - name: "mismatches"
             type: "array[map]"
             required: false
             description: "List of key positions where digest does not match (empty if bound=true)"
         invariants:
           - "If bound=false, rotation MUST be rejected"
-          - "Each mismatch entry contains: index, expected_digest, computed_digest"
+          - "Each matched tuple contains: index (current key position), ondex (prior next-key position), expected_digest, computed_digest"
+          - "Cross-position matching is valid: a signature with index=2 and ondex=0 means key at position 2 in current list corresponds to position 0 in prior next-key digest list"
+          - "The ondex is essential for partial and augmented rotations where key positions shift"
+
+  - name: "ForwardBlindedCommitment"
+    description: "A cryptographic commitment to a public key made by including only the key's digest in an Establishment Event, keeping the actual key hidden (blinded). The commitment binds a future Rotation Event to reveal specific keys."
+    variants:
+      - name: "default"
+        invariants:
+          - "Only the digest is exposed; the public key remains secret until rotation"
+          - "The commitment is irrevocable once the Establishment Event is accepted"
+          - "Verification occurs at rotation by matching revealed keys against committed digests"
+
+  - name: "KeyRevelation"
+    description: "The act of including a previously committed (blinded) public key in a Rotation Event, thereby revealing it and enabling verification against its pre-committed digest. Transforms a rotation key into a signing key."
+    variants:
+      - name: "default"
+        invariants:
+          - "The revealed public key MUST match its pre-committed digest from the prior Establishment Event"
+          - "Once revealed, the key transitions from rotation authority to signing authority"
+
+  - name: "ReserveKey"
+    description: "A pre-committed key that is NOT revealed in the current Rotation Event, remaining blinded for future use. Reserve keys enable Partial Rotation and provide a recovery mechanism."
+    variants:
+      - name: "default"
+        invariants:
+          - "Remains blinded — its public key is not exposed"
+          - "Can be revealed in a future Rotation Event"
+          - "Enables Reserve Rotation and recovery from key compromise"

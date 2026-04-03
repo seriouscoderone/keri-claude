@@ -133,6 +133,22 @@ terms:
       - "KEL messages (icp, rot, ixn, dip, drt) bypass KRAM — they have built-in ordering via sequence numbers"
     related_terms: ["KERI Message Types", "KRAM", "KERI Field Map"]
 
+  - term: "Disclosure Prompt"
+    synonyms: ["pro", "Prod Message"]
+    definition: "A routed message that prompts a peer to disclose sealed-confidential data. Part of the sealed-confidential message class (prod-bare) used for hidden data that is sealed to a KEL but not publicly disclosed."
+    invariants:
+      - "Used for sealed-confidential data — not public KEL data"
+      - "Paired with Sealed Disclosure (bar) for the response"
+    related_terms: ["Sealed Disclosure", "Exchange Message"]
+
+  - term: "Sealed Disclosure"
+    synonyms: ["bar", "Bare Message"]
+    definition: "A routed message that delivers sealed-confidential data directly to a peer. The data is hidden but sealed to a KEL, and disclosure is managed selectively. Part of the sealed-confidential message class."
+    invariants:
+      - "Delivers data that was previously sealed but not publicly disclosed"
+      - "The disclosed data can be verified against its KEL seal"
+    related_terms: ["Disclosure Prompt", "Exchange Message"]
+
 events: []
 
 rules: []

@@ -114,3 +114,104 @@ types:
         invariants:
           - "Same SAID matching as inception binding"
           - "Delegator cannot change — di is immutable after inception"
+
+  - name: "DelegatingEvent"
+    description: "An event in the Delegator's KEL that contains a seal (digest) of the Delegatee's delegated event, thereby approving the delegation operation."
+    variants:
+      - name: "default"
+        fields:
+          - name: "delegator_aid"
+            type: "string"
+            required: true
+            description: "AID of the delegator whose KEL contains this event"
+          - name: "event_type"
+            type: "string"
+            required: true
+            description: "The type of event used as the delegating vehicle (ixn, rot, or icp)"
+            constraints:
+              enum: ["ixn", "rot", "icp"]
+          - name: "seals"
+            type: "array[types://delegation/authorization#DelegationSeal]"
+            required: true
+            description: "Delegation seals in the anchor list approving delegated events"
+            constraints:
+              min_length: 1
+        invariants:
+          - "The seals appear in the event's anchor (a) field"
+          - "Each seal binds a specific delegated event by AID, sn, and SAID"
+          - "A single delegating event can approve multiple delegated events"
+
+  - name: "DelegatedEvent"
+    description: "An Establishment Event in the Delegatee's KEL that references the Delegator's AID, binding it to a specific delegation authority. Either a Delegated Inception or Delegated Rotation."
+    variants:
+      - name: "inception"
+        fields:
+          - name: "event"
+            type: "types://identity/establishment#KeyEvent"
+            required: true
+            description: "The delegated inception event (dip)"
+          - name: "delegator_aid"
+            type: "string"
+            required: true
+            description: "AID of the delegator (di field)"
+        invariants:
+          - "event.t must be 'dip'"
+          - "The di field explicitly names the delegator"
+          - "The AID is a self-addressing SAID of the inception event"
+      - name: "rotation"
+        fields:
+          - name: "event"
+            type: "types://identity/establishment#KeyEvent"
+            required: true
+            description: "The delegated rotation event (drt)"
+          - name: "delegator_aid"
+            type: "string"
+            required: true
+            description: "AID of the delegator (inherited from inception)"
+        invariants:
+          - "event.t must be 'drt'"
+          - "Delegator is inherited from the inception — di is immutable"
+
+  - name: "DelegatedEstablishment"
+    description: "Sub-class of Establishment Events consisting of Delegated Inception and Delegated Rotation event types."
+    variants:
+      - name: "inception"
+        fields:
+          - name: "event"
+            type: "types://identity/establishment#KeyEvent"
+            required: true
+            description: "The delegated inception event (dip)"
+        invariants:
+          - "event.t must be 'dip'"
+          - "Contains di field naming the delegator AID"
+          - "The AID MUST be a self-addressing SAID of the inception event"
+          - "Field order: v, t, d, i, s, kt, k, nt, n, bt, b, c, a, di"
+      - name: "rotation"
+        fields:
+          - name: "event"
+            type: "types://identity/establishment#KeyEvent"
+            required: true
+            description: "The delegated rotation event (drt)"
+        invariants:
+          - "event.t must be 'drt'"
+          - "Like a standard Rotation but requires delegation approval"
+          - "Delegator cannot change after inception"
+
+  - name: "CustodialRotation"
+    description: "Controlled delegation of signing authority through rotation, where a custodian manages signing keys while the Controller retains rotation authority via pre-committed next keys."
+    variants:
+      - name: "default"
+        fields:
+          - name: "custodian_aid"
+            type: "string"
+            required: true
+            description: "AID of the custodian managing the signing keys"
+          - name: "controller_aid"
+            type: "string"
+            required: true
+            description: "AID of the Controller retaining rotation authority"
+        invariants:
+          - "The custodian holds current signing keys — can sign interaction events"
+          - "The Controller holds pre-committed next keys — can force rotation at any time"
+          - "Rotation authority always supersedes signing authority"
+          - "The Controller can revoke the custodian by rotating to new keys the custodian does not hold"

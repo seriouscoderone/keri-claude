@@ -34,3 +34,21 @@ types:
           - "All signatures MUST be for the same event SAID — divergent SAIDs are rejected"
           - "satisfied = threshold.satisfy(collected_indices)"
           - "Coordination times out if not satisfied within the configured period"
+
+  - name: "WitnessRemoveList"
+    description: "List of Witness AIDs to be removed from the current Witness list during a Rotation Event. Field label: br."
+    variants:
+      - name: "default"
+        invariants:
+          - "Each AID must currently be in the Witness list"
+          - "Removals are processed before additions (ba)"
+          - "A given AID MUST NOT appear more than once"
+
+  - name: "WitnessAddList"
+    description: "List of Witness AIDs to be appended to the current Witness list during a Rotation Event. Field label: ba."
+    variants:
+      - name: "default"
+        invariants:
+          - "Additions are processed after removals (br)"
+          - "A given AID MUST NOT appear more than once"
+          - "AIDs already in the Witness list after removals are skipped"

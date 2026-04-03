@@ -112,6 +112,41 @@ terms:
       - "An ephemeral session identifier for a single interaction that does not need key rotation"
     related_terms: ["Transferable Identifier", "Next Key Digests", "Pre-rotation Commitment"]
 
+  - term: "Augmented Rotation"
+    synonyms: ["Reserve Rotation"]
+    definition: "In a partial (or augmented) rotation, the new signing key list CAN include entirely new keys with no corresponding prior next-key digest. The pre-rotation commitment constrains which SIGNATURES are required, not which keys can appear. The constraint is on signatures: enough signatures must expose prior next-key digests to satisfy the prior-next threshold. The current key list = (threshold-satisficing subset of prior-next keys) UNION (any additional new keys)."
+    invariants:
+      - "The new signing key list may include keys not in the prior next-key digest set"
+      - "The pre-rotation commitment constrains SIGNATURES, not the key list"
+      - "Enough ondex-matched signatures must satisfy the prior-next threshold (nt)"
+      - "Additional keys beyond the pre-committed set are unconstrained"
+    examples:
+      - "Prior next has 3 digests with threshold 2. Rotation uses 2 matching keys + 1 entirely new key not in prior digests. Valid: 2 matched signatures satisfy threshold."
+    related_terms: ["Partial Rotation", "Pre-rotation Commitment", "Signing Keys"]
+
+  - term: "Consumed-Digest Tracking"
+    synonyms: []
+    definition: "The enforcement of 'one-time use' for pre-rotation commitments is IMPLICIT through current key state. There is no separate consumed-digest repository or persistent tracking set. The ndigers field always reflects the next-key digests from the latest establishment event. Once a rotation consumes digests, the state advances to the new next-key set, and the old digests are no longer relevant."
+    invariants:
+      - "Enforcement is implicit via key state progression — no explicit consumed-digest database"
+      - "Each rotation's n field becomes the next ndigers to be consumed"
+      - "After rotation, the prior ndigers are overwritten with the new commitment set"
+      - "In keripy: self.ndigers is overwritten after each rotation, no separate consumed-digest tracking"
+    examples:
+      - "State at sn=0: ndigers=[D(N1), D(N2)]. Rotation at sn=1 consumes D(N1), D(N2), sets new ndigers=[D(N3), D(N4)]. The prior digests are simply gone."
+    related_terms: ["Pre-rotation Commitment", "Next Key Digests", "Key Configuration"]
+
+  - term: "Key Exposure"
+    synonyms: ["exposeds() [keripy]"]
+    definition: "In KERI, 'key exposure' means 'proving knowledge of a pre-committed key during rotation' — it is part of rotation validation (step 4 of the dual threshold check), NOT a separate security check for detecting premature key use. Protection against premature key use is structural: pre-committed keys are stored as digests, so attackers cannot use them as signing keys without performing a rotation. The exposeds() function in keripy is called during rotation validation to verify that signing keys match pre-committed digests."
+    invariants:
+      - "Key exposure is a rotation-time verification, not a separate security monitor"
+      - "Digest commitment makes premature key use structurally impossible — the actual keys are never stored, only their digests"
+      - "The validation pipeline does not check for premature key exposure — it is not needed"
+    examples:
+      - "During rotation: exposeds() verifies that new signing key[0] produces a digest matching prior n[ondex=0]"
+    related_terms: ["Pre-rotation Commitment", "Signing Keys", "Next Key Digests"]
+
 events:
   - name: "PreRotationCommitted"
     payload: "aid: AID, next_digests: [Digest], digest_algorithm: DigestAlgorithm"

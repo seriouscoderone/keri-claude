@@ -58,3 +58,86 @@ types:
         invariants:
           - "All events are from sn >= fork_sn"
           - "Branch events are retained in the DEL, not discarded"
+
+  - name: "NonEstablishmentDeadAttack"
+    description: "Compromise of stale signing keys to forge a past interaction event. Mitigated by First-Seen Rule and witness protection."
+    variants:
+      - name: "default"
+        fields:
+          - name: "compromised_keys"
+            type: "array[string]"
+            required: true
+            description: "The stale signing keys that were compromised"
+          - name: "target_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the interaction event the attacker attempts to forge"
+        invariants:
+          - "Keys are stale — no longer the current signing keys"
+          - "Mitigated by First-Seen Rule: the legitimate event was seen first by witnesses"
+          - "Mitigated by witness protection: witnesses already have receipts for the legitimate event"
+
+  - name: "EstablishmentDeadAttack"
+    description: "Compromise of stale pre-rotated keys to forge a past rotation event. Mitigated by First-Seen Rule and partial rotation (one-time key use)."
+    variants:
+      - name: "default"
+        fields:
+          - name: "compromised_keys"
+            type: "array[string]"
+            required: true
+            description: "The stale pre-rotated keys that were compromised"
+          - name: "target_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the rotation event the attacker attempts to forge"
+        invariants:
+          - "Keys are stale — pre-rotation commitments have already been consumed"
+          - "Mitigated by First-Seen Rule: the legitimate rotation was seen first"
+          - "Mitigated by partial rotation and one-time key use: consumed keys cannot be reused"
+
+  - name: "NonEstablishmentLiveAttack"
+    description: "Compromise of current signing keys to forge interaction events. Mitigated by rotation to pre-committed next keys."
+    variants:
+      - name: "default"
+        fields:
+          - name: "compromised_keys"
+            type: "array[string]"
+            required: true
+            description: "The current signing keys that were compromised"
+        invariants:
+          - "Keys are live — currently the active signing keys"
+          - "Mitigated by rotation: Controller rotates to pre-committed next keys, invalidating the compromised signing keys"
+          - "Attacker can forge interaction events until the Controller rotates"
+
+  - name: "EstablishmentLiveAttack"
+    description: "Compromise of current pre-rotated keys to forge a rotation event. Most severe — requires the attacker to beat the Controller to publication."
+    variants:
+      - name: "default"
+        fields:
+          - name: "compromised_keys"
+            type: "array[string]"
+            required: true
+            description: "The current pre-rotated keys that were compromised"
+        invariants:
+          - "Most severe attack — attacker can forge a rotation event"
+          - "Race condition: attacker must publish the forged rotation before the Controller rotates"
+          - "If the Controller rotates first, the attacker's forged rotation is rejected by First-Seen Rule"
+          - "If the attacker publishes first, the Controller must use Superseding Recovery"
+
+  - name: "DelegatedEventLiveAttack"
+    description: "Compromise of a Delegatee's pre-rotated keys. Mitigated by requiring Delegator approval — attacker must also compromise Delegator's keys."
+    variants:
+      - name: "default"
+        fields:
+          - name: "compromised_delegatee_keys"
+            type: "array[string]"
+            required: true
+            description: "The Delegatee's pre-rotated keys that were compromised"
+          - name: "delegator_aid"
+            type: "string"
+            required: true
+            description: "AID of the Delegator whose approval is required"
+        invariants:
+          - "Attacker must also compromise the Delegator's keys to forge a valid delegated rotation"
+          - "Delegator approval acts as a second factor — compromise of Delegatee keys alone is insufficient"
+          - "Joint compromise threshold is the sum of both identifiers' thresholds"

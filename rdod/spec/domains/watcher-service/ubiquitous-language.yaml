@@ -73,6 +73,30 @@ terms:
       - "Validator designates 2 watchers from different providers for redundancy"
     related_terms: ["Watcher Node", "Watcher AID"]
 
+  - term: "Juror"
+    synonyms: []
+    definition: "A Watcher that records and provides evidence of Duplicity to other Watchers. A Juror maintains copies of conflicting events as forensic evidence in a Duplicitous Event Log (DEL)."
+    invariants:
+      - "Records all verified but conflicting event versions"
+      - "Provides evidence to Juries and Judges on request"
+    related_terms: ["Jury", "Judge", "Duplicity", "DEL"]
+
+  - term: "Jury"
+    synonyms: []
+    definition: "A highly available, fault-tolerant pool of Jurors that collectively provides Duplicity evidence. A Jury ensures redundant access to forensic evidence."
+    invariants:
+      - "Composed of multiple Jurors for availability"
+      - "Provides collective Duplicity evidence"
+    related_terms: ["Juror", "Judge"]
+
+  - term: "Judge"
+    synonyms: []
+    definition: "A Watcher that evaluates Key Events based on Duplicity evidence provided by one or more Juries and makes trust recommendations. A Validator may employ Judge services to aid in trust decisions."
+    invariants:
+      - "Evaluates evidence from Juries — does not collect evidence directly"
+      - "Provides trust recommendations to Validators"
+    related_terms: ["Juror", "Jury", "Validator", "Duplicity"]
+
 events:
   - name: "KELPolled"
     payload: "aid: AID, witness_aid: AID, latest_sn: int"

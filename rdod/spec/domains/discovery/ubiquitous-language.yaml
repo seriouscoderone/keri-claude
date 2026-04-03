@@ -127,6 +127,32 @@ terms:
       - "Well-known credential: http://registry.vlei.org/oobi/SAID-of-QVI-credential"
     related_terms: ["OOBI", "SAID"]
 
+  - term: "Principal Controller"
+    synonyms: ["Principal"]
+    definition: "In the OKEA authorization model, the AID whose Controller authorizes other component AIDs (Players) to act in Roles on its behalf. The Principal Controller signs Role authorization messages that bind Players to Roles."
+    invariants:
+      - "Authorizes Players via signed Role authorization messages"
+      - "May implicitly authorize Players through KEL designations (e.g., Witness backers)"
+    related_terms: ["Player", "Role", "Endpoint Authorization", "Controller"]
+
+  - term: "Player"
+    synonyms: []
+    definition: "In the OKEA authorization model, a component AID authorized by a Principal Controller to act in a specific Role. Each Player is itself a Controller of its own AID. A Player provides services at an Endpoint for its associated Role on behalf of the Principal."
+    invariants:
+      - "Must be authorized by a Principal Controller (explicitly via signed message or implicitly via KEL designation)"
+      - "Signs its own Endpoint authorization messages for service URLs"
+      - "Is itself a Controller of its own AID"
+    related_terms: ["Principal Controller", "Role", "Endpoint Authorization"]
+
+  - term: "RUN"
+    synonyms: ["Read Update Nullify"]
+    definition: "The peer-to-peer data management paradigm replacing traditional CRUD (Create, Read, Update, Delete). In RUN: there is no Create (only Update of vacuous records from the source Peer), no Delete (only Nullify — marking invalid without erasing). Combined with BADA monotonicity, RUN ensures replay-resistant and deletion-resistant authentic data management."
+    invariants:
+      - "No Create — the source Peer Updates, the destination Peer stores"
+      - "No Delete — only Nullify (mark invalid without erasing the record)"
+      - "All updates follow BADA monotonicity rules"
+    related_terms: ["BADA", "Endpoint Authorization"]
+
   - term: "OOBI Endpoint Independence"
     definition: "The architectural property that any service with stored KEL data can serve OOBIs, independent of any specific KERI infrastructure role. An OOBI endpoint only needs read access to KEL data — it does not need signing keys, witness status, or agent registration. This enables standalone OOBI services, caching proxies, and percolated re-serving."
     invariants:

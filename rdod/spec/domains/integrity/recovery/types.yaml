@@ -25,7 +25,7 @@ types:
           - "After recovery, all events from the forked branch at sn >= fork_point are invalidated"
 
   - name: "SupersedingRule"
-    description: "The specific superseding recovery rule being applied — each rule defines when a new event can displace an existing one in the KEL. Rules A0-A2 apply to non-delegated identifiers; B1-B3 apply to delegated identifiers; C applies recursively up the delegation chain."
+    description: "The canonical superseding recovery rule enum — defines when a new event can displace an existing one in the KEL. A-rules (non-delegated), B-rules (delegated), and C/C1 (recursive delegation). This is the single source of truth; delegation/recovery imports these rules."
     variants:
       - name: "A0"
         fields: []
@@ -42,7 +42,7 @@ types:
       - name: "B1"
         fields: []
         invariants:
-          - "The superseding rotation's delegating event has a higher sn in the delegator's KEL than the superseded event's delegating event"
+          - "The superseding rotation's delegating event has a higher sn in the delegator's KEL than the superseded event's delegating event — comparison uses sn (sequence number), NOT fn (first-seen number); sn is protocol-assigned and produces universal agreement"
       - name: "B2"
         fields: []
         invariants:
@@ -50,11 +50,15 @@ types:
       - name: "B3"
         fields: []
         invariants:
-          - "Same delegating sn, but the superseding delegation's event is a rotation and the superseded's is an interaction"
+          - "The superseding rotation's delegating event is a rotation AND the superseded rotation's delegating event is an interaction, at the same sn in the delegator's KEL — this is an event-type comparison, NOT a SAID lexicographic tiebreaker"
       - name: "C"
         fields: []
         invariants:
-          - "Recursive application up the delegation chain to the root undelegated KEL — delegated superseding is resolved by applying the non-delegated rules at each level"
+          - "Recursive application up the delegation chain: (1) at current level, attempt A or B rules; (2) if neither satisfied, move up to the delegator's KEL and compare delegating events using A and B; (3) repeat until satisfied or root non-delegated KEL reached; (4) at root, only A-rules apply"
+      - name: "C1"
+        fields: []
+        invariants:
+          - "Termination rule: if recursion reaches the root non-delegated KEL without resolution, the superseding rotation is discarded — the incumbent (first-seen) wins"
 
   - name: "NotSuperseding"
     description: "Result when a superseding check determines the candidate event does NOT supersede the existing one."
@@ -93,3 +97,86 @@ types:
         invariants:
           - "All events are from sn >= fork_sn"
           - "Branch events are retained in the DEL, not discarded"
+
+  - name: "SupersedingRecovery"
+    description: "The mechanism by which a legitimate Controller replaces a previously accepted event at the same sequence number with a Rotation Event, forking the KEL. The superseded events go to a Disputed Branch; the superseding events form the new Trunk."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "AID of the identifier being recovered"
+          - name: "superseding_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number at which the superseding rotation is placed"
+          - name: "rule_applied"
+            type: "types://integrity/recovery#SupersedingRule"
+            required: true
+            description: "The superseding rule that authorized this recovery"
+        invariants:
+          - "Can only supersede the latest-seen event at a given sn"
+          - "Governed by formal Superseding Rules (A, B, C)"
+
+  - name: "Reconciliation"
+    description: "The process of determining the undisputed path (Trunk) through a KEL after Superseding Recovery has created forks. A KEL is reconcilable when every Validator can find the same Trunk."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "AID of the identifier whose KEL is being reconciled"
+          - name: "trunk_tip_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the tip of the reconciled trunk"
+          - name: "disputed_branches"
+            type: "array[types://integrity/recovery#DisputedBranch]"
+            required: true
+            description: "All disputed branches displaced during reconciliation"
+        invariants:
+          - "Reconciliation produces exactly one trunk — the undisputed path"
+          - "All events not on the trunk are in disputed branches"
+          - "If no universal trunk can be determined, the KEL is irreconcilable"
+
+  - name: "Trunk"
+    synonyms: ["Undisputed Path"]
+    description: "The authoritative branch of a KEL after Superseding Recovery. Events on the Trunk are the accepted, non-superseded events."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "AID of the identifier"
+          - name: "events"
+            type: "array[string]"
+            required: true
+            description: "SAIDs of the events on the trunk, in sequence order"
+        invariants:
+          - "There is exactly one trunk per KEL"
+          - "Superseding events create the trunk by displacing compromised events to branches"
+          - "All events not on the trunk are in disputed branches"
+
+  - name: "SQAR"
+    synonyms: ["Surprise Quantum Attack Recovery"]
+    description: "Pre-positioning quantum-resistant key commitments so that recovery from a future quantum computing attack is possible without advance warning. Uses Reserve Keys from pre-rotation commitments."
+    variants:
+      - name: "default"
+        fields:
+          - name: "reserve_key_digests"
+            type: "array[string]"
+            required: true
+            description: "Digests of quantum-resistant reserve keys committed in prior establishment events"
+            constraints:
+              min_length: 1
+          - name: "commitment_sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the establishment event where the reserve keys were committed"
+        invariants:
+          - "Reserve keys must be committed BEFORE the quantum attack — post-hoc commitment is useless"
+          - "Uses the same pre-rotation mechanism but with quantum-resistant key types"
+          - "Recovery is possible only if the attacker has not also compromised the reserve keys"

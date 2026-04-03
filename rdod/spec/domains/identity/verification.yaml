@@ -267,6 +267,16 @@ properties:
     strategy: "misfit_event_strategy()"
     notes: "Misfits require manual re-submission."
 
+  - invariant: "The four-way binding between AID, current controlling keypairs (Key State), the Controller entity, and the KEL MUST be cryptographically consistent. The AID is derived from or anchored to the initial keypair (SCID property). The Key State tracks current authoritative keypairs. The KEL provides verifiable history. The Controller holds the private keys."
+    term: "Controller"
+    technique: property-based
+    notes: "The fundamental security invariant of KERI — break any element and the system fails. Also known as the Tetrad Binding."
+
+  - invariant: "Validation rules differ by event locality. A local event comes from a protected, trustable source (e.g., the device running the validation code). A remote event comes from an unprotected, untrustable source. Controllers and Witnesses SHOULD only sign and accept local events. A general Validator MUST verify all signatures regardless of locality."
+    term: "Validator"
+    technique: rule-based
+    notes: "Local vs remote determines which validation rules apply per role (controller, witness, delegatee, delegator, general validator)."
+
 contracts:
   - port_ref: "port://identity/inbound/identity-management"
     preconditions:

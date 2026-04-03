@@ -462,15 +462,16 @@ types:
             required: true
             description: "SAID of the accepted event"
           - name: "first_seen_number"
-            type: "integer"
+            type: "integer | null"
             required: true
-            description: "First-seen ordinal assigned to this event"
+            description: "First-seen ordinal assigned to this event. Null when this is a duplicate event (same SAID) whose new signatures were merged into the existing accepted event — no new fn is assigned."
           - name: "key_state"
             type: "types://identity/state#KeyState"
             required: true
             description: "Updated key state after processing"
         invariants:
-          - "Event is logged to KEL with first_seen_number"
+          - "When first_seen_number is non-null: event is newly logged to KEL with that fn"
+          - "When first_seen_number is null: same-SAID duplicate triggered signature accumulation — new valid signatures merged, no new fn assigned"
           - "Key state reflects the new signing keys, thresholds, and witnesses"
       - name: "escrowed"
         fields:
@@ -481,9 +482,9 @@ types:
           - name: "escrow_type"
             type: "string"
             required: true
-            description: "Which escrow queue: OOE, PSE, PWE, PDE, LDE, Misfit"
+            description: "Which escrow queue: OOE, PSE, PWE, PDE, Delegable, LDE, Misfit"
             constraints:
-              enum: ["OOE", "PSE", "PWE", "PDE", "LDE", "Misfit"]
+              enum: ["OOE", "PSE", "PWE", "PDE", "Delegable", "LDE", "Misfit"]
           - name: "reason"
             type: "string"
             required: true
@@ -509,8 +510,52 @@ types:
           - "Event is dropped — not escrowed, not accepted"
           - "No state change occurs"
 
+  - name: "EventSource"
+    description: "Per-event metadata flag indicating whether the event was received from a local (trusted/protected) or remote (untrusted) channel. Persisted alongside each event as (prefix, SAID) keyed record."
+    variants:
+      - name: "default"
+        fields:
+          - name: "local"
+            type: "boolean"
+            required: true
+            description: "True if the event was received from a local protected channel, false if from a remote source"
+        invariants:
+          - "Set at the processing facility level and overridable per-event"
+          - "Local can promote remote (upgrade trust) but remote cannot demote local"
+          - "Persisted alongside each event — survives escrow round-trips"
+
+  - name: "Serder"
+    description: "Domain-specific facade extending Sadder (from cesr/composition) with KERI key event awareness. Provides typed accessors for event-specific fields (verfers, digers, tholder, ntholder) on top of the generic SAD serialization/deserialization. This is the primary event object used throughout the identity domain."
+    variants:
+      - name: "default"
+        fields:
+          - name: "ked"
+            type: "map"
+            required: true
+            description: "Key Event Dict — the raw ordered field map"
+          - name: "said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "Self-Addressing Identifier (digest) of the event body"
+          - name: "ilk"
+            type: "string"
+            required: true
+            description: "Event type/ilk (icp, rot, ixn, dip, drt)"
+          - name: "pre"
+            type: "string"
+            required: true
+            description: "AID prefix from the i field"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number parsed from the s field"
+        invariants:
+          - "Extends Sadder from cesr/composition with KERI-specific field accessors"
+          - "Computes and caches the SAID, version string, and serialization"
+          - "Provides typed access to verfers (signing keys), digers (next key digests), tholder, ntholder"
+
   - name: "EscrowDecision"
-    description: "The routing decision for an event that cannot be immediately accepted. Identifies which escrow queue the event belongs in, why it was escrowed, and what condition must resolve for reprocessing. Note: Escrow queue names (OOE, PSE, PWE, PDE, MDE, MFE, LDE) are derived from the keripy reference implementation — the KERI protocol spec defines escrow conditions functionally (insufficient signatures, missing receipts, missing delegation) but does not name specific queues."
+    description: "The routing decision for an event that cannot be immediately accepted. Identifies which escrow queue the event belongs in, why it was escrowed, and what condition must resolve for reprocessing. Note: Escrow queue names (OOE, PSE, PWE, PDE, MFE, LDE) are derived from the keripy reference implementation — the KERI protocol spec defines escrow conditions functionally (insufficient signatures, missing receipts, missing delegation) but does not name specific queues. MDE is consolidated into PDE (remote validator) and Delegable (local delegator) — the distinction is party-role-based."
     variants:
       - name: "out-of-order"
         fields:
@@ -523,7 +568,7 @@ types:
             required: true
             description: "Escrow queue identifier"
             constraints:
-              enum: ["OOE", "PSE", "PWE", "PDE", "LDE", "MDE", "MFE"]
+              enum: ["OOE", "PSE", "PWE", "PDE", "LDE", "MFE"]
           - name: "expected_sn"
             type: "integer"
             required: true
@@ -642,3 +687,27 @@ types:
         invariants:
           - "Remote source submitted an event for a locally-protected identifier"
           - "Must be re-submitted through the local protected channel"
+
+  - name: "PartialRotation"
+    description: "A Rotation that reveals only a subset of pre-committed keys, holding others as Reserve Keys for future use."
+    variants:
+      - name: "default"
+        invariants:
+          - "The revealed subset must satisfy the prior next threshold"
+          - "Unrevealed keys remain blinded as Reserve Keys"
+
+  - name: "AugmentedRotation"
+    description: "A Rotation that adds new signing keys not previously committed as pre-rotated keys, expanding the current key set beyond the pre-committed set."
+    variants:
+      - name: "default"
+        invariants:
+          - "New keys are added to the current signing key list"
+          - "Prior next threshold must still be satisfied by the pre-committed subset"
+
+  - name: "ReserveRotation"
+    description: "Recovery from total signing key compromise using previously uncommitted Reserve Keys from an earlier Establishment Event."
+    variants:
+      - name: "default"
+        invariants:
+          - "Uses Reserve Keys that were held back from prior rotations"
+          - "Enables recovery even after all current signing keys are compromised"

@@ -134,4 +134,45 @@ types:
           - "Each event is in exactly one escrow type at a time"
           - "Escrowed events are temporary — promoted to KEL or pruned at timeout"
 
+  - name: "InteractionEvent"
+    description: "A Non-Establishment Key Event that anchors data commitments (seals) to the KEL without changing Key State. Field order: v, t, d, i, s, p, a."
+    variants:
+      - name: "default"
+        fields:
+          - name: "seal_list"
+            type: "array[Seal]"
+            description: "List of cryptographic commitments anchored to the KEL at this event"
+        invariants:
+          - "Does NOT change Key State"
+          - "Carries a seal list for data commitments"
+          - "Sequence number is one greater than the prior event"
+          - "Must be signed by a Signing Threshold-satisfying subset of current signing keys"
+
+  - name: "SequenceNumber"
+    description: "A strictly monotonically increasing non-negative integer (hex-encoded) identifying an event's position in the KEL. Distinct from First-Seen Number (fn) which tracks acceptance order. Field label: s."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "integer"
+            constraints:
+              min: 0
+              max: "2^128 - 1"
+        invariants:
+          - "Inception and Delegated Inception events MUST have s=0"
+          - "Each subsequent event's sn MUST be exactly 1 greater than the prior event"
+          - "Different from First-Seen Number: sn is position, fn is acceptance order"
+
+  - name: "PriorEventDigest"
+    description: "The SAID of the immediately preceding event in the KEL, providing backward hash-chaining. Field label: p. Not present in inception events."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "SAID"
+        invariants:
+          - "Must equal the SAID (d field) of the event at sn-1"
+          - "Not present in inception events (icp, dip)"
+          - "Creates tamper-evident backward chain"
+
   # ExchangeMessage, QueryMessage, ReplyMessage moved to domain://keri-messaging

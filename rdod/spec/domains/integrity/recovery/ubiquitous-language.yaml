@@ -24,12 +24,10 @@ terms:
       - "A0: Any rotation may supersede an interaction at the same sn (if the ixn is not before another rotation)"
       - "A1: A non-delegated rotation may NOT supersede another rotation"
       - "A2: An interaction may NOT supersede any event"
-      - "B1: Delegated rotation supersedes if its delegating event has higher sn in delegator's KEL"
-      - "B1 tiebreaker: if both candidate and incumbent reference the same delegating event at the same seal index, the event with the earlier first-seen number (fn) at the delegator wins"
+      - "B1: Delegated rotation supersedes if its delegating event has higher sn in delegator's KEL — comparison uses sn (sequence number), NOT fn (first-seen number); sn is protocol-assigned and produces universal agreement"
       - "B2: Same delegating event but superseding seal appears later in the seal list"
       - "B2 tiebreaker: if both seals appear in the same delegating event, the seal with the higher index (later position) supersedes the earlier one — last-writer-wins within a single event"
-      - "B3: Same sn delegating events but superseding event's delegator event is a rotation superseding an interaction"
-      - "B3 tiebreaker: if candidate satisfies B3 recovery conditions and incumbent does not, candidate wins regardless of fn ordering"
+      - "B3: Same sn delegating events but superseding event's delegating event is a rotation AND the superseded's is an interaction — this is an event-type comparison, NOT a SAID lexicographic tiebreaker"
       - "C: Recursive application of A and B up the delegation chain to the root non-delegated KEL"
       - "C base case: the root of the delegation chain is a non-delegated AID — apply rules A0/A1/A2"
       - "C recursive case: for a delegated AID at level N, first check B1/B2/B3 at level N. If no B rule resolves the conflict, recurse to level N-1 (the delegator's KEL) and apply superseding rules there"
@@ -75,14 +73,60 @@ terms:
       - "After rot supersedes ixn at sn=5: the ixn and all events following it form the disputed branch"
     related_terms: ["Trunk", "Superseding Recovery"]
 
-  - term: "Irreconcilable KEL"
-    definition: "A KEL state where validators cannot universally agree on a single undisputed path (trunk) through the event history. This occurs when superseding rules cannot definitively resolve competing event versions — the identifier has lost integrity beyond recovery."
+  - term: "Recursive Superseding Evaluation"
+    synonyms: ["Rule C Algorithm"]
+    definition: "The algorithm for evaluating superseding in delegation chains: (1) at current level, attempt A or B rules; (2) if neither satisfied, move up to the delegator's KEL and compare delegating events using A and B; (3) repeat until satisfied or root non-delegated KEL reached; (4) at root, only A-rules apply; if unsatisfied, discard the superseding rotation (Rule C1). Termination guaranteed because delegation chains are finite and roots are non-delegated."
     invariants:
-      - "Terminal state — an irreconcilable KEL cannot be recovered"
+      - "Signature: supersedes(event1, event2, kel) -> bool with upward chain walk"
+      - "At each level, try A-rules (if non-delegated) or B-rules (if delegated)"
+      - "If no rule resolves at current level, recurse to the delegator's KEL"
+      - "Root is always non-delegated — only A-rules apply at root"
+      - "C1: if no rule at any level resolves, the superseding rotation is discarded"
+      - "Termination is guaranteed — delegation chains are finite with non-delegated roots"
+    examples:
+      - "Three-level chain: try B1-B3 at level 3, no winner -> recurse to level 2, try B1-B3, no winner -> recurse to level 1 (root), try A0-A2"
+    related_terms: ["Superseding Rules", "Delegated Superseding Rules"]
+
+  - term: "Latest-Seen"
+    synonyms: []
+    definition: "The most recent event at a given sn observed by a specific validator. This is validator-local, not globally consistent — different validators may have different latest-seen events at the same sn. Convergence is eventual, not immediate. This is by design, not a defect."
+    invariants:
+      - "Validator-local: each validator tracks its own latest-seen independently"
+      - "Different validators may disagree on latest-seen at any point in time"
+      - "Convergence is eventual — as superseding events propagate, validators converge"
+      - "Not a global property — there is no protocol-level 'latest-seen' oracle"
+    related_terms: ["Superseding Recovery", "Reconciliation"]
+
+  - term: "Irreconcilable KEL"
+    definition: "A KEL state where validators cannot universally agree on a single undisputed path (trunk) through the event history. This occurs when superseding rules cannot definitively resolve competing event versions — the identifier has lost integrity beyond recovery. Irreconcilable is truly terminal — there is NO recovery path. The only recourse is key rotation by any remaining honest party (if pre-rotation keys are intact) or abandoning the AID."
+    invariants:
+      - "Terminal state — an irreconcilable KEL cannot be recovered; no transitions out"
       - "The identifier loses value to all validators who detect the irreconcilability"
       - "Caused by successful attacks that superseding recovery cannot resolve"
       - "Different from reconcilable duplicity where superseding rules produce a clear trunk"
+      - "Only recourse: pre-rotation by an honest party (if keys intact) or AID abandonment"
     related_terms: ["Superseding Recovery", "Reconciliation", "Duplicity Evidence"]
+
+  - term: "Superseding Conflict"
+    synonyms: []
+    definition: "The condition where two competing superseding rotations BOTH satisfy superseding rules — each supersedes the other from different validators' perspectives. Requires judge adjudication. Occurs when B1-B3 produce no winner and both candidates are valid."
+    invariants:
+      - "Both competing rotations satisfy superseding rules from their respective validators' viewpoints"
+      - "Cannot be resolved algorithmically — requires judge adjudication"
+      - "Distinct from irreconcilable: irreconcilable means NO superseding is possible; conflict means BOTH candidates are valid"
+    related_terms: ["Superseding Rules", "Judge", "Irreconcilable KEL"]
+
+  - term: "Identity Recovery"
+    synonyms: ["Key Compromise Recovery"]
+    definition: "The adopter-facing concept for recovering from key compromise. Encompasses the set of mechanisms by which a legitimate Controller regains control over an AID after its signing or pre-rotated keys have been compromised. The specific mechanisms (Superseding Recovery, Reserve Rotation, SQAR, Reconciliation) are the implementation-level types under this umbrella."
+    invariants:
+      - "Recovery requires that the Controller still controls some unexposed keys (pre-rotated or reserve)"
+      - "Recovery produces a fork in the KEL — compromised events go to a Disputed Branch, recovered events form the Trunk"
+      - "Recovery is only possible for the latest compromised rotation — earlier compromises cannot be superseded"
+    examples:
+      - "A Controller whose signing keys were stolen rotates to pre-committed next keys, superseding the attacker's forged events"
+      - "Reserve Rotation using keys held back from an earlier establishment event"
+    related_terms: ["Superseding Recovery", "Reconciliation", "Trunk", "Disputed Branch", "Reserve Rotation", "SQAR", "Duplicity"]
 
 events:
   - name: "SupersedingRecoveryApplied"

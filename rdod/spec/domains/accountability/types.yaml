@@ -61,6 +61,19 @@ types:
           - "Signatures must verify against the witness's current key state"
           - "Same first-seen constraint applies"
 
+  - name: "Backer"
+    description: "The umbrella term for components that provide accountability support for a KEL. Backers express support for key events, providing additional trust beyond the Controller's own signatures. Two variants: Witness (signature-based) and Registrar Backer (ledger-based)."
+    invariants:
+      - "Backers are designated in the backer list (b field) of Establishment Events"
+      - "The backer threshold (bt/TOAD) determines how many backers must support an event"
+
+  - name: "RegistrarBacker"
+    description: "A Backer that expresses support for key events by anchoring them on an associated ledger, rather than by signing receipts like a Witness. Activated by the RB configuration trait."
+    invariants:
+      - "Uses ledger anchoring instead of signatures"
+      - "Activated by the RB config trait in establishment events"
+      - "Deactivated by the NRB config trait"
+
   - name: "ReceiptMessage"
     description: "The receipt message (rct) that conveys witness signatures as proof of first-seen observation."
     variants:
