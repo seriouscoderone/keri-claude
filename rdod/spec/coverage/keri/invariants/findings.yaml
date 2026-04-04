@@ -1,0 +1,246 @@
+# findings.yaml — KERI Spec Invariant Coverage Findings
+# Generated: 2026-04-03
+# Total: 69 absent rules consolidated into 20 findings across 6 clusters
+
+findings:
+
+  # ══════════════════════════════════════════════════════════════════
+  # CLUSTER A: Message Structure — keri-messaging (35 rules)
+  # ══════════════════════════════════════════════════════════════════
+
+  - id: KERI-INV-001
+    cluster: "Key Event Message Structure"
+    domain: keri-messaging
+    rules_covered: 12
+    spec_lines: [1944, 2029, 2037, 2093, 2195, 2281, 2362]
+    precision: pbt-ready
+    description: >
+      Field ordering for all 5 key event types + receipt: icp [v,t,d,i,s,kt,k,nt,n,bt,b,c,a],
+      rot [v,t,d,i,s,p,kt,k,nt,n,bt,br,ba,c,a], ixn [v,t,d,i,s,p,a],
+      dip (icp + di after i), drt (rot + di after i), rct [v,t,d,i,s].
+      No extra top-level fields allowed. Attachments via CESR codes only.
+
+  - id: KERI-INV-002
+    cluster: "Routed Message Structure"
+    domain: keri-messaging
+    rules_covered: 12
+    spec_lines: [2653, 2698, 2742, 2790, 2838, 2888]
+    precision: pbt-ready
+    description: >
+      Field ordering for 6 routed message types: qry [v,t,d,dt,r,rr,q],
+      rpy [v,t,d,dt,r,a], pro [v,t,d,dt,r,rr,q], bar [v,t,d,dt,r,a],
+      xip [v,t,d,u,i,ri,dt,r,q,a], exn [v,t,d,i,ri,x,p,dt,r,q,a].
+      No extra top-level fields. r field required in all routed messages.
+
+  - id: KERI-INV-003
+    cluster: "Version String"
+    domain: keri-messaging
+    rules_covered: 5
+    spec_lines: [1317, 1331, 1334, 1346]
+    precision: pbt-ready
+    description: >
+      v MUST be first field. Protocol=KERI. CESR genus version encoded.
+      v2.XX MUST support v1.x format for verification. Message type t
+      MUST be three-char string from [icp,rot,ixn,dip,drt,rct,qry,rpy,pro,bar,xip,exn].
+
+  - id: KERI-INV-004
+    cluster: "Config Trait Enforcement"
+    domain: identity
+    rules_covered: 3
+    spec_lines: [1591, 1592, 1597, 1605, 1613]
+    precision: pbt-ready
+    description: >
+      EO: validator MUST drop non-establishment events. DND: validator MUST
+      drop delegated events from this AID. RB: establishment event MUST
+      include Registrar Backer seal for each backer.
+
+  - id: KERI-INV-005
+    cluster: "Receipt SAID Inversion"
+    domain: keri-messaging
+    rules_covered: 1
+    spec_lines: [2362, 2380]
+    precision: pbt-ready
+    description: >
+      Receipt d field MUST be SAID of receipted key event, NOT SAID of receipt
+      body itself. Semantic inversion from all other message types.
+
+  - id: KERI-INV-006
+    cluster: "Exchange Transaction Semantics"
+    domain: keri-messaging
+    rules_covered: 4
+    spec_lines: [2585, 2587, 2592, 2603]
+    precision: pbt-ready
+    description: >
+      p field = SAID of prior exchange message in transaction, or empty string
+      if not in transaction. x field = d field of xip message, or empty string.
+      First message MUST be xip type.
+
+  - id: KERI-INV-007
+    cluster: "Backer Operations"
+    domain: identity/thresholds
+    rules_covered: 4
+    spec_lines: [1535, 1540, 1555, 1559, 1567, 1572]
+    precision: pbt-ready
+    description: >
+      When b==[], bt MUST be 0. Backer AIDs unique in each list. Remove-before-add:
+      br applied before ba. Registrar backer vs witness backer distinction.
+
+  - id: KERI-INV-008
+    cluster: "Sequence Number Bounds"
+    domain: identity/establishment
+    rules_covered: 2
+    spec_lines: [1469, 1471]
+    precision: z3-ready
+    description: >
+      Inception sn MUST be 0. Maximum sn = 2^128-1 (ffffffffffffffffffffffffffffffff).
+      Any sn exceeding max MUST be rejected.
+
+  - id: KERI-INV-009
+    cluster: "Seal Structure"
+    domain: keri-messaging
+    rules_covered: 3
+    spec_lines: [1760, 1786, 1896]
+    precision: pbt-ready
+    description: >
+      Source Event seal field order [s,d]. Key Event seal [i,s,d].
+      Typed seal [t,d] with CESR Y code for type. Seal encoding differs
+      by serialization kind (JSON vs CESR native).
+
+  # ══════════════════════════════════════════════════════════════════
+  # CLUSTER B: Verifier/Validator Role Separation (8 rules)
+  # ══════════════════════════════════════════════════════════════════
+
+  - id: KERI-INV-010
+    cluster: "Verifier Key State Establishment"
+    domain: accountability
+    rules_covered: 3
+    spec_lines: [4591, 4593, 4615]
+    precision: pbt-ready
+    description: >
+      Verifier MUST determine controlling key set at issuance time before
+      signature verification. MUST establish control authority at issuance.
+      Requires complete establishment event sequence 0..N.
+
+  - id: KERI-INV-011
+    cluster: "Validator Role Rules"
+    domain: accountability
+    rules_covered: 5
+    spec_lines: [4615, 4660, 4661, 4688, 4773]
+    precision: pbt-ready
+    description: >
+      Validator MUST first act as verifier. Controller MUST accept own events
+      (self-validation). Remote event = potentially malicious source.
+      Non-controller validator MUST verify controller sigs + witness sigs
+      (if witnessed) + delegator seal (if delegated).
+
+  # ══════════════════════════════════════════════════════════════════
+  # CLUSTER C: CESR Native Encoding (5 rules)
+  # ══════════════════════════════════════════════════════════════════
+
+  - id: KERI-INV-012
+    cluster: "CESR Native Message Format"
+    domain: keri-messaging
+    rules_covered: 5
+    spec_lines: [5540, 5546, 5573, 5652, 5685]
+    precision: pbt-ready
+    description: >
+      Version field encodes protocol+version+genus only (not size/kind).
+      Protocol MUST be KERI. DateTime CESR encoding (ISO-8601). Route
+      binary-to-Base64 for non-Base64 chars. Strict field order per
+      message type in CESR native format.
+
+  # ══════════════════════════════════════════════════════════════════
+  # CLUSTER D: OOBI/BADA/RUN (9 rules)
+  # ══════════════════════════════════════════════════════════════════
+
+  - id: KERI-INV-013
+    cluster: "RUN Policy"
+    domain: discovery
+    rules_covered: 3
+    spec_lines: [6777, 6779, 6807]
+    precision: pbt-ready
+    description: >
+      Each peer MUST be source of truth for own data. Each peer MUST create
+      unique identifiers. Destination peer MUST NOT delete latest records
+      (Nullify replaces Delete).
+
+  - id: KERI-INV-014
+    cluster: "OOBI Operational Rules"
+    domain: discovery
+    rules_covered: 3
+    spec_lines: [6520, 6522, 6527]
+    precision: pbt-ready
+    description: >
+      Indirect-mode controller MUST create witness hosts. WIDs MUST be
+      designated in CID KEL. WID MUST appear in KEL (not config files).
+
+  - id: KERI-INV-015
+    cluster: "JIT/NTK + Replay Detection"
+    domain: discovery
+    rules_covered: 3
+    spec_lines: [6580, 6582, 6687]
+    precision: pbt-ready
+    description: >
+      Data MUST be verified before exchange. Proofs MUST be pre-available.
+      Digest/signature copies MUST be retained for replay detection.
+
+  # ══════════════════════════════════════════════════════════════════
+  # CLUSTER E: Rotation Edge Cases (8 rules)
+  # ══════════════════════════════════════════════════════════════════
+
+  - id: KERI-INV-016
+    cluster: "SQAR/Custodial Zero-Weight Keys"
+    domain: identity/thresholds
+    rules_covered: 2
+    spec_lines: [3935, 3920]
+    precision: z3-ready
+    description: >
+      In SQAR/custodial rotation, exposed prior-next keys MUST have weight 0
+      in current signing threshold (rotation authority only, no signing).
+      Post-quantum signing keys MUST be used for resultant signing authority.
+
+  - id: KERI-INV-017
+    cluster: "Dual Threshold Joint Satisfiability"
+    domain: identity/key-commitment
+    rules_covered: 3
+    spec_lines: [3684, 3690, 3721]
+    precision: z3-ready
+    description: >
+      Current key list MUST be satisfiable w.r.t. BOTH prior-next threshold
+      AND new current threshold simultaneously. Validator MUST perform set
+      operations when lists differ. Permuted key ordering must be handled.
+
+  - id: KERI-INV-018
+    cluster: "Witness AID + Attachment Rules"
+    domain: accountability
+    rules_covered: 3
+    spec_lines: [3002, 3070, 3085]
+    precision: pbt-ready
+    description: >
+      Witnesses MUST use only non-transferable AIDs. Non-indexed signatures
+      MUST use CESR group codes. Endorsement MUST include AID + key state ref.
+
+  # ══════════════════════════════════════════════════════════════════
+  # CLUSTER F: Security / Cross-Cutting (4 rules)
+  # ══════════════════════════════════════════════════════════════════
+
+  - id: KERI-INV-019
+    cluster: "Cryptographic Strength"
+    domain: identity
+    rules_covered: 2
+    spec_lines: [4407, 1471]
+    precision: z3-ready
+    description: >
+      All KERI cryptographic operations MUST preserve 128-bit minimum.
+      Sequence number maximum = 2^128-1.
+
+  - id: KERI-INV-020
+    cluster: "Delegator Approval Rules"
+    domain: delegation
+    rules_covered: 2
+    spec_lines: [4019, 4035]
+    precision: pbt-ready
+    description: >
+      Delegator auto-approval SHOULD NOT approve witness pool change beyond
+      prior threshold. Delegatee AID derivation: SAID of full inception
+      including di field — changing di MUST change AID.
