@@ -21,7 +21,7 @@ Stress-tests RDOD `verification.yaml` entries against the normative rules in a p
 |-------|----------|-------|
 | **spec-ul-coverage** | "Can I *say* this?" | UL vocabulary against spec |
 | **spec-invariant-coverage** | "Can I *prove* this?" | Verification precision against spec |
-| **hardening** | "Can I *build* this?" | Implementation planning against spec |
+| **spec-hardening** | "Can I *build* this?" | Implementation planning against spec |
 
 Best used AFTER spec-ul-coverage — the UL must be right before you can assess whether invariants about those UL terms are precise enough.
 
