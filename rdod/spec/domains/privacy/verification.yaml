@@ -273,6 +273,34 @@ properties:
     strategy: "acdc_strategy(), st.lists of unique disclosure modes"
     notes: "Modes compose monotonically — compact -> partial -> selective -> full all valid in sequence."
 
+  # --- Disclosure Protocol Chain Propagation (Finding ACDC-INVF-011) ---
+  - invariant: "Chain-link confidentiality terms MUST propagate through disclosure chains: each subsequent Discloser MUST apply the original Disclosee's contractual terms to each subsequent Disclosee. Contingent Disclosure: when a specified contingency is met, the obligated party MUST perform the disclosure. Bulk issuance aggregate B value MUST be anchored in the Issuer's KEL via Transaction Event Seal."
+    term: "Contractually Protected Disclosure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(chain=disclosure_chain_strategy(min_length=2, max_length=5))
+        def test_chain_link_propagation(chain):
+            original_terms = chain[0].rule_section_terms
+            for i, step in enumerate(chain[1:], 1):
+                assert step.applied_terms == original_terms, (
+                    f"Step {i}: applied terms differ from original. "
+                    f"Expected {original_terms}, got {step.applied_terms}"
+                )
+                assert step.disclosee_agreed_to_terms, (
+                    f"Step {i}: Disclosee has not agreed to propagated terms"
+                )
+
+        @given(bulk_set=bulk_issuance_strategy(min_size=2))
+        def test_bulk_issuance_aggregate_sealed(bulk_set):
+            assert bulk_set.aggregate_b is not None, "Bulk set must have aggregate B"
+            assert is_sealed_in_kel(bulk_set.issuer_kel, bulk_set.aggregate_b), (
+                "Bulk issuance aggregate B must be anchored in Issuer's KEL"
+            )
+    strategy: "disclosure_chain_strategy() — generates multi-step disclosure chains with propagating terms; bulk_issuance_strategy() — generates bulk-issued sets with KEL anchoring"
+    notes: "3 behavioral rules from ACDC spec §12.3 and §A.4. Chain propagation spans multiple exchanges — requires multi-party simulation. Finding: ACDC-INVF-011."
+
 contracts:
   - port_ref: "port://privacy/inbound/privacy-management"
     preconditions:

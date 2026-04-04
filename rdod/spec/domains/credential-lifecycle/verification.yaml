@@ -154,6 +154,212 @@ properties:
     strategy: "tel_event_strategy() x kel_strategy()"
     notes: "Named verification workflow. Finding: ACDC-Z2-007."
 
+  # --- ACDC Structure (Finding ACDC-INVF-001) ---
+  - invariant: "Top-level ACDC fields MUST appear in canonical order [v, t, d, u, i, rd, s, a, A, e, r]. Fields [v, d, i, s] are REQUIRED. Version string v MUST be first. Protocol in version string MUST be 'ACDC'. The d field MUST be a valid SAID. The i field MUST be a valid AID. The dt field when present MUST be ISO-8601 with microseconds and UTC offset per RFC-3339. Field labels MUST be 1-2 characters. Serialization MUST use insertion-ordered field maps."
+    term: "ACDC Structure"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(acdc=acdc_strategy())
+        def test_acdc_structure(acdc):
+            canonical = ['v', 't', 'd', 'u', 'i', 'rd', 's', 'a', 'A', 'e', 'r']
+            present = [f for f in canonical if f in acdc]
+            actual = [f for f in acdc.keys() if f in canonical]
+            assert actual == present, f"Field ordering violation: {actual} != {present}"
+            for req in ['v', 'd', 'i', 's']:
+                assert req in acdc, f"Required field '{req}' missing"
+            assert list(acdc.keys())[0] == 'v', "v must be first field"
+            assert parse_version_string(acdc['v']).protocol == 'ACDC'
+            assert is_valid_said(acdc['d'])
+            assert is_valid_aid(acdc['i'])
+            if 'dt' in acdc:
+                assert matches_rfc3339_microsecond_utc(acdc['dt'])
+            for label in acdc.keys():
+                assert len(label) <= 2, f"Field label '{label}' exceeds 2 chars"
+    strategy: "acdc_strategy() — generates valid and adversarial ACDCs with permuted fields, missing required fields, invalid SAIDs/AIDs"
+    notes: "Consolidates 19 normative rules from ACDC spec §3-§5. Finding: ACDC-INVF-001."
+
+  # --- Schema Validation (Finding ACDC-INVF-002) ---
+  - invariant: "Schema $id MUST equal said_compute(schema) as a bare SAID. ACDC s field MUST equal schema $id. Schema MUST be a SAD (verifiable against its SAID). No dynamic $ref or $vocabulary. $schema MUST be 'https://json-schema.org/draft/2020-12/schema'. Schema MUST have 'version' field with semantic version string (major.minor.patch). Backward-incompatible schema MUST have higher major version. Schema digest MUST have >= 128 bits cryptographic strength. Subschema $id MUST include verifiable SAID."
+    term: "TypeIsSchema"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(schema=acdc_schema_strategy())
+        def test_schema_invariants(schema):
+            # Self-addressing
+            assert schema['$id'] == said_compute(schema), "$id must be SAID of schema"
+            assert is_bare_said(schema['$id']), "$id must be bare SAID (no URI scheme)"
+            # Dialect
+            assert schema.get('$schema') == 'https://json-schema.org/draft/2020-12/schema'
+            # Version
+            assert 'version' in schema, "Schema must have version field"
+            assert re.match(r'^\d+\.\d+\.\d+$', schema['version']), "version must be semver"
+            # Static (no dynamic refs)
+            assert not has_dynamic_refs(schema), "Dynamic $ref/$vocabulary prohibited"
+            # Cryptographic strength
+            assert said_strength_bits(schema['$id']) >= 128
+            # Subschema verification
+            for sub in find_subschemas(schema):
+                assert said_compute(sub) == extract_said(sub.get('$id', ''))
+    strategy: "acdc_schema_strategy() — generates valid schemas, schemas with dynamic refs, missing $id, wrong dialect"
+    notes: "Consolidates 15 normative rules from ACDC spec §7 (Schema Section). Finding: ACDC-INVF-002."
+
+  # --- Edge/EdgeGroup Discriminant and Structure (Finding ACDC-INVF-003) ---
+  - invariant: "An Edge MUST have a node n field. An EdgeGroup MUST NOT have a node n field. This is the sole discriminant. Edge field order: [d, u, n, s, o, w]. EdgeGroup field order: [d, u, o, w]. SAID d field MUST be first when present; value MUST equal said_compute(block). UUID u field MUST be second with >= 128 bits entropy. Top-level EdgeGroup (Edge Section) MUST NOT have a w field. Default EdgeGroup operator is AND when o absent. Labeled nested fields MUST follow all reserved fields and be locally unique. No nested block may include a type field."
+    term: "CredentialEdge"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(block=edge_or_group_strategy())
+        def test_edge_structure(block):
+            if is_edge(block):
+                assert 'n' in block, "Edge MUST have n field"
+                check_field_order(block, ['d', 'u', 'n', 's', 'o', 'w'])
+            else:
+                assert 'n' not in block, "EdgeGroup MUST NOT have n field"
+                check_field_order(block, ['d', 'u', 'o', 'w'])
+                if is_top_level_edge_section(block):
+                    assert 'w' not in block, "Top-level EdgeGroup MUST NOT have w"
+                if 'o' not in block:
+                    assert effective_operator(block) == 'AND'
+            if 'd' in block:
+                assert list(block.keys())[0] == 'd', "d must be first"
+                assert block['d'] == said_compute(block)
+            if 'u' in block:
+                assert len(block['u']) >= 22, "UUID must have >= 128 bits entropy"
+            for label in get_nested_labels(block):
+                assert label not in RESERVED_EDGE_LABELS
+                assert 'type' not in block[label]
+    strategy: "edge_or_group_strategy() — generates Edges, EdgeGroups, adversarial blocks with n in groups, missing n in edges"
+    notes: "Consolidates 12 structural rules from ACDC spec §9.2-§9.3. Finding: ACDC-INVF-003."
+
+  # --- Edge Operator Semantics (Finding ACDC-INVF-004) ---
+  - invariant: "I2I: issuer_aid(near_acdc) MUST equal issuee_aid(far_acdc) and far node MUST be a TargetedACDC. NI2I: no AID constraint. DI2I: issuer_aid(near_acdc) MUST be issuee_aid(far_acdc) OR a delegated AID thereof and far node MUST be TargetedACDC. Default operator for targeted far-node is I2I; for untargeted far-node is NI2I. When multiple operators conflict, latest in list takes precedence."
+    term: "CredentialEdge"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        near_issuer, far_issuee = Consts('near_issuer far_issuee', AIDSort)
+        is_targeted = Bool('is_targeted')
+        i2i, ni2i, di2i = Bools('i2i ni2i di2i')
+        s = Solver()
+        # I2I semantics
+        s.add(Implies(i2i, And(near_issuer == far_issuee, is_targeted)))
+        # DI2I semantics
+        s.add(Implies(di2i, And(
+            Or(near_issuer == far_issuee, is_delegated(near_issuer, far_issuee)),
+            is_targeted)))
+        # NI2I: no constraint on AIDs
+        # Default injection
+        s.add(Implies(And(is_targeted, Not(Or(i2i, ni2i, di2i))), i2i))
+        s.add(Implies(And(Not(is_targeted), Not(Or(i2i, ni2i, di2i))), ni2i))
+        assert s.check() == sat
+    notes: "6 z3-ready rules from ACDC spec §9.3.5 (Edge Operators). Finding: ACDC-INVF-004."
+
+  # --- Edge Validation Workflow (Finding ACDC-INVF-005) ---
+  - invariant: "Validator MUST confirm: (1) said_compute(far_node) == edge.n, (2) far_node validates against its own schema, (3) if edge.s present, far_node also validates against edge.s schema, (4) if edge.s SAID differs from far_node schema SAID, two separate schema validation runs MUST be performed."
+    term: "CredentialEdge"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(near=acdc_with_edges_strategy(), far_nodes=st.dictionaries(
+            keys=st.text(), values=acdc_strategy(), min_size=1))
+        def test_edge_validation_workflow(near, far_nodes):
+            for edge in extract_edges(near):
+                far = far_nodes.get(edge['n'])
+                if far is None:
+                    continue  # far node not available — would escrow
+                # Step 1: SAID match
+                assert said_compute(far) == edge['n'], "Far-node SAID mismatch"
+                # Step 2: self-schema validation
+                assert validates_schema(far, far['s']), "Far-node fails own schema"
+                # Step 3+4: edge schema validation
+                if 's' in edge:
+                    assert validates_schema(far, edge['s']), "Far-node fails edge schema"
+                    if edge['s'] != far['s']:
+                        # Two separate validations must occur
+                        assert validation_count(far, [far['s'], edge['s']]) == 2
+    strategy: "acdc_with_edges_strategy() x far-node pool — includes valid chains, SAID mismatches, schema conflicts"
+    notes: "4 rules from ACDC spec §9.3.4 (Node field validation). Finding: ACDC-INVF-005."
+
+  # --- Rule Structure (Finding ACDC-INVF-006) ---
+  - invariant: "A Rule MUST have a Legal l field and MUST NOT have fields beyond {d, u, l}. Rule-group field order: [d, u, l] then labeled nested fields. SAID d MUST be first when present; value = said_compute(block). Labeled nested Rules/Rule-groups MUST be locally unique, non-reserved, and MUST NOT include a type field. Each labeled Rule type MUST be defined by the subschema designated by its label."
+    term: "Rule Section"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(block=rule_or_group_strategy())
+        def test_rule_structure(block):
+            if is_rule(block):
+                assert 'l' in block, "Rule MUST have l field"
+                allowed = {'d', 'u', 'l'}
+                assert set(block.keys()) <= allowed, f"Rule has extra fields: {set(block.keys()) - allowed}"
+            else:  # rule-group
+                check_field_order(block, ['d', 'u', 'l'])
+                nested = get_nested_labels(block)
+                assert len(nested) == len(set(nested)), "Nested labels must be unique"
+                for label in nested:
+                    assert label not in {'d', 'u', 'l'}, f"Reserved label '{label}' used for nested block"
+                    assert 'type' not in block[label], "Nested block must not have type field"
+            if 'd' in block:
+                assert list(block.keys())[0] == 'd', "d must be first"
+                assert block['d'] == said_compute(block)
+    strategy: "rule_or_group_strategy() — generates Rules, Rule-groups, adversarial blocks with extra fields, missing l"
+    notes: "8 rules from ACDC spec §10 (Rule Section). Finding: ACDC-INVF-006."
+
+  # --- TEL Event Field Structure (Finding ACDC-INVF-007) ---
+  - invariant: "TEL event field ordering is normative per event type. rip: [v, t, d, u, i, n, dt] all required, t='rip'. bup: [v, t, d, rd, n, p, dt, b] all required, t='bup'. upd: [v, t, d, rd, n, p, dt, ta, ts] all required, t='upd'. Version string protocol MUST be 'ACDC' for all TEL events."
+    term: "TEL Event Type Pattern"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        EXPECTED_FIELDS = {
+            'rip': ['v', 't', 'd', 'u', 'i', 'n', 'dt'],
+            'bup': ['v', 't', 'd', 'rd', 'n', 'p', 'dt', 'b'],
+            'upd': ['v', 't', 'd', 'rd', 'n', 'p', 'dt', 'ta', 'ts'],
+        }
+        @given(event=tel_event_strategy())
+        def test_tel_event_field_structure(event):
+            ilk = event['t']
+            assert ilk in EXPECTED_FIELDS, f"Unknown TEL event type: {ilk}"
+            expected = EXPECTED_FIELDS[ilk]
+            actual = list(event.keys())
+            assert actual == expected, f"{ilk} field order: {actual} != {expected}"
+            assert parse_version_string(event['v']).protocol == 'ACDC'
+    strategy: "tel_event_strategy() — generates rip/bup/upd events with correct and permuted field orders"
+    notes: "4 rules from ACDC spec §11.4. Complements existing TEL semantic invariants. Finding: ACDC-INVF-007."
+
+  # --- CESR Native Message Format (Finding ACDC-INVF-009) ---
+  - invariant: "ACDC acm field map in CESR native format MUST use count code -G## or --G#####. acm fixed field format MUST use -F## or --F#####. Fields MUST appear in order [v, t, d, u, i, rd, s, a, A, e, r]. The a and A fields MUST NOT both be non-empty. Message type t MUST appear in all CESR native messages and in all non-acm messages regardless of serialization kind."
+    term: "ACDC Message Types"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        CANONICAL_ORDER = ['v', 't', 'd', 'u', 'i', 'rd', 's', 'a', 'A', 'e', 'r']
+        @given(msg=acdc_cesr_message_strategy())
+        def test_cesr_native_message_format(msg):
+            if msg.is_field_map:
+                assert msg.count_code.startswith('-G') or msg.count_code.startswith('--G')
+            elif msg.is_fixed_field:
+                assert msg.count_code.startswith('-F') or msg.count_code.startswith('--F')
+            present = [f for f in CANONICAL_ORDER if f in msg.fields]
+            actual = [f for f in msg.fields if f in CANONICAL_ORDER]
+            assert actual == present, f"CESR field order: {actual} != {present}"
+            assert not (msg.fields.get('a') and msg.fields.get('A')), "a and A must not both be non-empty"
+            if msg.serialization == 'CESR' or msg.message_type != 'acm':
+                assert 't' in msg.fields, "t field required"
+    strategy: "acdc_cesr_message_strategy() — generates field-map and fixed-field CESR messages"
+    notes: "4 rules from ACDC spec §16.3-§16.4. Finding: ACDC-INVF-009."
+
 contracts:
   - port_ref: "port://credential-lifecycle/inbound/state-management"
     preconditions:

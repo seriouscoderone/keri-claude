@@ -167,6 +167,60 @@ properties:
         )
     notes: "Security bound — 128-bit entropy makes brute-force infeasible"
 
+  # --- CESR Codec Constraints (Finding ACDC-INVF-008) ---
+  - invariant: "Shielded Attribute Block MUST use CESR count code BlindedStateQuadruples (-a## or --a######). Bound Shielded Attribute Block MUST use BoundStateSextuples (-b## or --b######). Placeholder td and ts fields MUST encode as CESR Empty primitive (1AAP). Placeholder bn MUST encode as CESR integer 0 (MAAA). Placeholder bd MUST encode as CESR Empty primitive (1AAP)."
+    term: "Shielded Attribute Block"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(block=shielded_block_strategy())
+        def test_cesr_codec_constraints(block):
+            if is_basic_block(block):
+                assert block.count_code.startswith('-a') or block.count_code.startswith('--a'), \
+                    f"Basic block must use -a## count code, got {block.count_code}"
+            elif is_bound_block(block):
+                assert block.count_code.startswith('-b') or block.count_code.startswith('--b'), \
+                    f"Bound block must use -b## count code, got {block.count_code}"
+            # Placeholder encoding
+            if is_placeholder(block['td']):
+                assert block['td'] == '1AAP', f"Placeholder td must be CESR Empty (1AAP), got {block['td']}"
+            if is_placeholder(block['ts']):
+                assert block['ts'] == '1AAP', f"Placeholder ts must be CESR Empty (1AAP), got {block['ts']}"
+            if is_bound_block(block):
+                if is_placeholder(block['bn']):
+                    assert block['bn'] == 'MAAA', f"Placeholder bn must be CESR int 0 (MAAA), got {block['bn']}"
+                if is_placeholder(block['bd']):
+                    assert block['bd'] == '1AAP', f"Placeholder bd must be CESR Empty (1AAP), got {block['bd']}"
+    strategy: "shielded_block_strategy() — generates basic and bound blocks with placeholders and non-placeholders"
+    notes: "6 codec rules from ACDC spec §11.4.6-§11.4.7. Finding: ACDC-INVF-008."
+
+  # --- Bound Block Key State Binding (Finding ACDC-INVF-010) ---
+  - invariant: "In a Bound Shielded Attribute Block, when not a placeholder: bn MUST equal the s field (sequence number) of the Issuee's current KEL key event at bup publication time. bd MUST equal the d field (SAID) of that same key event. This is a temporal cross-log binding — the block captures the Issuee's key state at a specific moment."
+    term: "Bound Shielded Attribute Block"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(bup_event=bup_with_bound_block_strategy(), issuee_kel=kel_strategy())
+        def test_bound_block_key_state_binding(bup_event, issuee_kel):
+            block = extract_bound_block(bup_event)
+            if not is_placeholder(block['bn']):
+                # bn must be Issuee's current KEL sn at publication time
+                current_event = issuee_kel.event_at(bup_event.publication_time)
+                assert int(block['bn']) == current_event['s'], (
+                    f"bn={block['bn']} != Issuee KEL sn={current_event['s']}"
+                )
+                assert block['bd'] == current_event['d'], (
+                    f"bd={block['bd']} != Issuee KEL event SAID={current_event['d']}"
+                )
+            else:
+                # Placeholder: bn == MAAA (int 0), bd == 1AAP (Empty)
+                assert block['bn'] == 'MAAA'
+                assert block['bd'] == '1AAP'
+    strategy: "bup_with_bound_block_strategy() x kel_strategy() — generates bup events with bound blocks paired with Issuee KEL states at various sequence numbers"
+    notes: "4 temporal binding rules from ACDC spec §11.5.1-§11.5.2. Finding: ACDC-INVF-010."
+
 contracts:
   - port_ref: "port://privacy/blinding/inbound/compute-blid"
     preconditions:
