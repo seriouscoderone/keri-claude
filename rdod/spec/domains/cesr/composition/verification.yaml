@@ -837,6 +837,11 @@ properties:
     strategy: "st.text(4) filtered to exclude '-' prefix"
     notes: "Count codes must start with '-'. Anything else is not a count code."
 
+  # --- SAD Path Signature Transposability (from CESR spec coverage CESR-Z2-001) ---
+  - invariant: "SAD Path Signatures are transposable: a signature on a nested SAD subset remains valid when the signature attachment is moved to a different level of the stream hierarchy. The path is updated to reflect the new position but the signature itself verifies against the same content bytes regardless of where the attachment appears in the stream."
+    term: "SAD Path Language"
+    technique: "property-based"
+
 # Formalized port contracts
 contracts:
   - port_ref: "port://cesr/composition/inbound/stream-composition"
@@ -1122,3 +1127,4 @@ validation_constraints:
     constraint: "Complete frame: message body + parsed attachments ready for domain dispatch"
     depends_on: ["C5_attachment_parsing"]
     on_failure: null
+

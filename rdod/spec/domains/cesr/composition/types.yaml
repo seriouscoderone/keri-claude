@@ -214,3 +214,27 @@ types:
           - "SAID verification: replace d field with placeholder, serialize, hash, compare to said"
           - "raw length must equal size"
           - "Serialization format determined by kind — must match the VersionString if present"
+
+  # --- Type added from CESR spec UL coverage analysis (CESR-Z2-001) ---
+
+  - name: "SADPathSignature"
+    description: "A transposable signature attachment on a SAD or nested subset of a SAD. Includes a SAD Path specifying the location of the signed content within the SAD hierarchy. Transposability means the signature can be moved across envelope boundaries (e.g., extracted from a nested SAD and reattached at a different stream level) without losing cryptographic integrity."
+    variants:
+      - name: "default"
+        fields:
+          - name: "path"
+            type: "string"
+            required: true
+            description: "SAD Path expression identifying the signed content within the SAD"
+          - name: "signatures"
+            type: "array[types://cesr/primitives#Matter]"
+            required: true
+            description: "One or more indexed or non-indexed signatures over the content at the given path"
+          - name: "root_said"
+            type: "string"
+            required: true
+            description: "SAID of the root SAD containing the signed content"
+        invariants:
+          - "Path must be a valid SAD Path Language expression"
+          - "Signatures verify against the serialized content at the resolved path"
+          - "Transposable: changing the root path does not invalidate signatures on nested content"
