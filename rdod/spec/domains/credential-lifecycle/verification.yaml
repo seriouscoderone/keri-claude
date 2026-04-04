@@ -58,23 +58,23 @@ properties:
       expression: "Implies(is_registry(r), r.regid == said_compute(r.rip_event))"
     notes: "REGID is cryptographically derived from inception content"
 
-  - invariant: "Cannot mix modes within a single registry — all credential events follow the registry's blindability mode"
-    term: "Blindable vs Non-blindable"
+  - invariant: "Cannot mix modes within a single registry — all credential events follow the registry's shieldability mode"
+    term: "Shieldable vs Non-Shieldable"
     technique: property-based
     formal:
       language: python
       expression: |
         lambda registry, events: (
-          mode := 'non-blindable' if is_non_blindable(registry) else 'blindable',
-          non_blindable_types := {'upd'},
-          blindable_types := {'bup'},
-          valid_types := non_blindable_types if mode == 'non-blindable' else blindable_types,
+          mode := 'non-shieldable' if is_non_shieldable(registry) else 'shieldable',
+          non_shieldable_types := {'upd'},
+          shieldable_types := {'bup'},
+          valid_types := non_shieldable_types if mode == 'non-shieldable' else shieldable_types,
           all(e.t in valid_types for e in events if e.t not in {'rip'})
         )[-1]
     strategy: "Generate registries with both modes; attempt cross-mode events; verify rejected"
     notes: "Mode set at inception, enforced on all subsequent credential events. LEGACY (v1 -- do NOT implement): NoBackers trait mapped to iss/rev (backerless), backed mapped to bis/brv, vrt for rotation"
 
-  - invariant: "Credential update events MUST use t == 'upd' (non-blindable) or t == 'bup' (blindable) with a ts field indicating the target state ('issued' or 'revoked'); the ts field distinguishes issuance from revocation within the same event type"
+  - invariant: "Credential update events MUST use t == 'upd' (non-shieldable) or t == 'bup' (shieldable) with a ts field indicating the target state ('issued' or 'revoked'); the ts field distinguishes issuance from revocation within the same event type"
     term: "Update Event"
     technique: property-based
     formal:
@@ -94,7 +94,7 @@ properties:
                 with pytest.raises(ValidationError, match='unknown event type'):
                     validate_tel_event(event)
     strategy: "tel_event_strategy() generating all TEL event types"
-    notes: "v2 TEL has three recognized ilks: rip (inception), upd (non-blindable update), bup (blindable update). The ts field carries the target state. LEGACY (v1 -- do NOT implement): iss, bis, rev, brv, vcp, vrt were separate ilks."
+    notes: "v2 TEL has three recognized ilks: rip (inception), upd (non-shieldable update), bup (shieldable update). The ts field carries the target state. LEGACY (v1 -- do NOT implement): iss, bis, rev, brv, vcp, vrt were separate ilks."
 
   - invariant: "State is determined by the latest transaction event in the TEL"
     term: "Credential State"
@@ -107,6 +107,52 @@ properties:
         )
     strategy: "Generate TEL event sequences; verify final state matches replay result"
     notes: "State is a function of the complete event log"
+
+  - invariant: "TEL event authority is determined by the Issuer's key state at the time the Transaction Event Seal was anchored in the KEL, not by the current key state"
+    term: "TemporalKeyStateBinding"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(tel_event_with_kel_seal())
+        def test_temporal_key_state_binding(tel_event, kel_seal, kel):
+            seal_event = kel.get_event(kel_seal.sn)
+            key_state_at_seal = kel.get_key_state(seal_event.sn)
+            # Authority check uses key state at seal time, not current
+            assert verify_seal_authority(tel_event, key_state_at_seal)
+            # Key rotation after seal does not invalidate
+            rotated_kel = rotate_key(kel)
+            assert verify_seal_authority(tel_event, key_state_at_seal)  # still valid
+    strategy: "tel_event_with_kel_seal() — generates TEL events paired with their KEL seals"
+    notes: "Credential proofs survive key rotation. Finding: ACDC-Z1-004."
+
+  - invariant: "TEL event validation follows a defined six-step workflow: confirm event SAID, locate seal in Issuer KEL, verify seal-event match, validate key state at seal time, check hash-chain integrity, update Credential State"
+    term: "TransactionEventValidation"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(tel_event_strategy(), kel_strategy())
+        def test_transaction_event_validation(tel_event, kel):
+            # Step 1: confirm event SAID
+            assert said_compute(tel_event) == tel_event.d
+            # Step 2: locate seal in issuer KEL
+            seal = find_seal_in_kel(kel, tel_event.d)
+            assert seal is not None, "Seal must exist in KEL"
+            # Step 3: verify seal matches event
+            assert seal.d == tel_event.d
+            # Step 4: validate key state at seal time
+            key_state = kel.get_key_state(seal.sn)
+            assert verify_authority(key_state, tel_event.i)
+            # Step 5: check hash-chain integrity
+            if tel_event.n > 0:
+                prior = get_tel_event(tel_event.registry, tel_event.n - 1)
+                assert tel_event.p == said_compute(prior)
+            # Step 6: update credential state
+            new_state = apply_state_transition(tel_event)
+            assert new_state in ('Issued', 'Revoked')
+    strategy: "tel_event_strategy() x kel_strategy()"
+    notes: "Named verification workflow. Finding: ACDC-Z2-007."
 
 contracts:
   - port_ref: "port://credential-lifecycle/inbound/state-management"

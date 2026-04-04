@@ -1,0 +1,339 @@
+# structure.yaml — ACDC Specification UL Coverage Matrix
+spec: acdc-specification
+source: scripts/markdown/acdc-specification.md
+generated: "2026-04-03"
+
+# Heading classification notes:
+# - Boilerplate excluded: Status of This Memo, Copyright, Terms of Use, Normative refs, Terms & Definitions, Bibliography
+# - Annex sections classified Z2-Z4 (informative/supplementary)
+# - Working Examples excluded (illustrative, not normative)
+
+zoom_levels:
+  Z0:
+    count: 1
+    label: "Mission"
+    headings: ["Authentic Chained Data Containers (ACDC)"]
+  Z1:
+    count: 8
+    label: "Capabilities"
+    headings:
+      - "Introduction"
+      - "Scope"
+      - "ACDC Structure"
+      - "ACDC Variants"
+      - "Top-level ACDC Sections"
+      - "Disclosure Mechanisms and Exploitation Protection"
+      - "Issuance and Presentation Exchange (IPEX)"
+      - "Transaction Event Logs (TELs) as ACDC State Registries"
+  Z2:
+    count: 22
+    label: "Workflows"
+    headings:
+      - "Ordered Nested Field Maps"
+      - "Top-Level Fields"
+      - "Other Reserved Fields"
+      - "Compact Labels"
+      - "Version String Field"
+      - "Self-addressing Identifier (SAID) Fields"
+      - "Registry SAID Field"
+      - "Universally Unique Identifier (UUID) Fields"
+      - "Autonomic IDentifier (AID) Fields"
+      - "Partially Disclosable Attribute Section Field"
+      - "Selectively Disclosable Aggregate Section Field"
+      - "Partially Disclosable Edge Section Field"
+      - "Partially Disclosable Rule Section Field"
+      - "Most compact form SAID"
+      - "Compact ACDC"
+      - "Public ACDC"
+      - "Private ACDC"
+      - "Metadata ACDC"
+      - "Schema Section"
+      - "Attribute Section"
+      - "Aggregate Section"
+      - "Edge Section"
+      - "Rule Section"
+      - "Least Disclosure"
+      - "Graduated Disclosure"
+      - "Contractually Protected Disclosure"
+      - "IPEX Protocol Messages"
+      - "Disclosure-specific (Bespoke) Issued ACDCs"
+      - "Overview (TEL)"
+      - "Validating Transaction Events"
+      - "Verifiable Container/Credential Registry"
+      - "Registry Message Types and Fields"
+      - "Exploitation Protection Mechanisms"
+      - "Three-party Exploitation Model"
+      - "TEL Registrars and TEL Observers"
+      - "Data Privacy"
+      - "Binding to Key State at Time of ACDC State Change"
+      - "Selective Disclosure (Annex)"
+      - "Bulk-issued Private ACDCs"
+      - "Extensibility"
+      - "ACDC Protocol Message Types"
+  Z3:
+    count: 30
+    label: "Rules"
+    headings:
+      - "Field Ordering"
+      - "Required Fields"
+      - "Message Type Field"
+      - "Type-is-schema"
+      - "Schema ID Field Label"
+      - "Static (Immutable) Schema"
+      - "Schema Dialect"
+      - "Schema Versioning"
+      - "Schema Availability"
+      - "Composable JSON Schema"
+      - "Reserved field labels (Attribute)"
+      - "Compact Attribute Section Schema"
+      - "Attribute Section Variants"
+      - "Targeted Attribute Section"
+      - "Untargeted Attribute Section"
+      - "Basic selective disclosure mechanism"
+      - "Selectively disclosable Aggregate of attribute blocks"
+      - "Blinded attribute array"
+      - "Computation of the AGID"
+      - "Inclusion proof via aggregated list digest (AGID)"
+      - "Block Types (Edge)"
+      - "ACDCs as secure graph fragments"
+      - "Edge-group"
+      - "Edge"
+      - "Block Types (Rule)"
+      - "Rule Discovery"
+      - "Rule-group"
+      - "Rule"
+      - "Commitments via SAID"
+      - "IPEX Validation"
+      - "Issuer Commitment Rules"
+      - "Blinded State Disclosure"
+      - "Bound Blinded Attribute Block"
+      - "Blinded State Registry Example"
+      - "Public Non-Blindable State Update Registry Example"
+      - "Tiered selective disclosure mechanisms"
+      - "Hierarchical derivation at issuance"
+      - "Basic Bulk Issuance Procedure"
+      - "Independent AID Bulk Issued ACDCs"
+      - "Independent Registry Bulk-Issued ACDCs"
+  Z4:
+    count: 25
+    label: "Mechanics"
+    headings:
+      - "Legacy Version String Field Format"
+      - "Datetime, dt Fields"
+      - "Cargo, cargo field"
+      - "SAID, d field (Edge-group)"
+      - "UUID, u field (Edge-group)"
+      - "Operator, o field (Edge-group)"
+      - "Weight, w field (Edge-group)"
+      - "Labeled nested edge and edge-group fields"
+      - "SAID, d field (Edge)"
+      - "Compact edge"
+      - "UUID, u field (Edge)"
+      - "Node, n field"
+      - "Schema, s field (Edge)"
+      - "Operator, o field (Edge)"
+      - "Weight, w field (Edge)"
+      - "Labeled property fields"
+      - "SAID, d field (Rule-group)"
+      - "UUID, u field (Rule-group)"
+      - "Labeled nested rule and rule-group fields"
+      - "SAID, d field (Rule)"
+      - "Compact Rule"
+      - "UUID, u field (Rule)"
+      - "Legal, l Field"
+      - "TEL field descriptions (all)"
+      - "Blinded Attribute Block field details"
+      - "Calculating SAID of serialized Blinded Attribute Block"
+      - "Bound Issuee Key Event Sequence Number, bn Field"
+      - "Bound Issuee Key Event SAID, bd Field"
+      - "ACDC as top-level field map in CESR native format"
+      - "ACDC as top-level set of fixed fields in CESR native format"
+      - "Section Message Types"
+      - "Section Message top-level fields"
+
+sections:
+  # Z0
+  - heading: "Authentic Chained Data Containers (ACDC)"
+    zoom: Z0
+    line: 1
+    sentence: >
+      An ACDC is a cryptographically verifiable, Schema-enforced data container bound to an
+      Issuer AID via KERI key state, where chains of ACDCs linked through the Edge Section
+      form a distributed property graph enabling granular proof-of-authorship — and, combined
+      with Graduated Disclosure and Rule Section contractual terms, extensible to
+      proof-of-authority for entitlements and permissions.
+    score: awkward
+    finding_id: ACDC-Z0-001
+
+  # Z1 — Capabilities
+  - heading: "Introduction"
+    zoom: Z1
+    line: 34
+    sentence: >
+      The ACDC specification defines a cryptographically verifiable data container (ACDC)
+      issued by an Issuer AID, supporting Graduated Disclosure — from Metadata Disclosure
+      through Compact Disclosure, Partial Disclosure, Selective Disclosure, and Full Disclosure
+      gated by Contractually Protected Disclosure — where ACDCs chain via the Edge Section
+      into an authenticated directed acyclic graph enabling both proof-of-authorship and
+      proof-of-authority for entitlements, with 128-bit security throughout.
+    score: awkward
+    finding_id: [ACDC-Z1-001, ACDC-Z1-002]
+  - heading: "Scope"
+    zoom: Z1
+    line: 155
+    sentence: >
+      The Scope section defines the boundaries of the ACDC specification: ACDC structure and
+      Credential Type Dimensions, Schema (type-is-schema principle, oneOf Composition),
+      Graduated Disclosure mechanisms (Disclosure Form Taxonomy, Contractually Protected
+      Disclosure, Selective Disclosure, Bulk-Issued Instance Disclosure), IPEX (Apply, Offer,
+      Agree, Grant, Admit, Spurn), and TELs (Registry, Registry Inception, Update Event,
+      Blindable Update, Blindable vs Non-Blindable modes).
+    score: fluent
+    finding_id: null
+  - heading: "ACDC Structure"
+    zoom: Z1
+    line: 348
+    sentence: >
+      An ACDC is an ordered nested field map with required top-level fields — version string,
+      SAID (d), Issuer AID (i), and Schema (s) — and optional fields including top-level UUID
+      (u, for Private ACDC blinding), Registry SAID (rd), Attribute Section (a), Aggregate
+      Section (A), Edge Section (e), and Rule Section (r); the top-level SAID is computed via
+      the Most Compact Form algorithm applied depth-first through the credential tree.
+    score: fluent
+    finding_id: null
+  - heading: "ACDC Variants"
+    zoom: Z1
+    line: 677
+    sentence: >
+      ACDCs come in four variants determined by the presence and value of the top-level UUID
+      field: Public ACDC (no UUID), Private ACDC (high-entropy UUID >= 128 bits — blinded
+      commitment), Metadata ACDC (empty UUID — commitment to schema and rules without content
+      correlation), and Compact ACDC (any variant in its Most Compact Form with all sections
+      replaced by their SAIDs).
+    score: fluent
+    finding_id: null
+  - heading: "Top-level ACDC Sections"
+    zoom: Z1
+    line: 910
+    sentence: >
+      An ACDC has five top-level sections: Schema (s — static, SAIDified JSON Schema 2020-12
+      with oneOf Composition variants), Attribute Section (a — direct attribute disclosure with
+      optional Issuee AID for targeted credentials), Aggregate Section (A — AGID enabling
+      Selective Disclosure via Inclusion Proof over Blinded Attribute Blocks), Edge Section (e —
+      directed edges with edge operators forming an authenticated property graph), and Rule
+      Section (r — Ricardian contract clauses providing Chain-Link Confidentiality terms).
+    score: fluent
+    finding_id: null
+  - heading: "Disclosure Mechanisms and Exploitation Protection"
+    zoom: Z1
+    line: 3582
+    sentence: >
+      Disclosure and exploitation protection bind ACDC state to Issuer key state via Transaction
+      Event Seals in the Issuer's KEL; the TEL Registrar publishes Credential State (issued/revoked)
+      observable by a TEL Observer; data privacy is enforced through Graduated Disclosure — Private
+      ACDC blinding, Contractually Protected Disclosure via Rule Section terms, Selective Disclosure
+      via AGID and Inclusion Proofs, and Blindable vs Non-Blindable Registry modes using the
+      Shared Secret Salt and Blinded Attribute Block (BLID); the three-party exploitation model
+      is addressed by Bespoke ACDC composition enabling presentation-specific contractual wrapping.
+    score: awkward
+    finding_id: [ACDC-Z1-003, ACDC-Z1-004]
+  - heading: "Issuance and Presentation Exchange (IPEX)"
+    zoom: Z1
+    line: 3977
+    sentence: >
+      IPEX is a uniform protocol modeling both credential issuance and credential presentation as
+      Graduated Disclosure from a Discloser to a Disclosee, using the IPEX Message Type Pattern
+      (Apply → Offer → Agree → Grant → Admit, with Spurn at any step) authenticated via KRAM;
+      a Grant carries Credential Artifacts (the ACDC, its Update Event or Blindable Update, and
+      the Transaction Event Seal) providing the Disclosee with Proof of Issuance and Proof of
+      Disclosure without additional round-trips; the Discloser may issue a Bespoke ACDC to add
+      presentation-specific contractual terms before granting.
+    score: fluent
+    finding_id: null
+  - heading: "Transaction Event Logs (TELs) as ACDC State Registries"
+    zoom: Z1
+    line: 4259
+    sentence: >
+      A TEL is a hash-chained sequence of transaction events tracking Credential State for ACDCs;
+      a Registry is initialized by a Registry Inception (rip) event whose SAID becomes the REGID;
+      state changes are recorded via Update Events (non-blindable, publicly observable) or
+      Blindable Updates (bup events using Blinded Attribute Blocks and BLID for private state
+      observation by entities holding the Shared Secret Salt); the Registry operates in
+      Non-Blindable or Blindable Registry Mode; TEL events are sealed in the Issuer's KEL via
+      Transaction Event Seals, making Credential State verifiable by any TEL Observer.
+    score: fluent
+    finding_id: null
+
+  # Z2 — Workflows (representative subset; full list in zoom_levels above)
+  - heading: "Schema Section"
+    zoom: Z2
+    line: 912
+    sentence: null
+    score: null
+    finding_id: null
+  - heading: "Attribute Section"
+    zoom: Z2
+    line: 1302
+    sentence: null
+    score: null
+    finding_id: null
+  - heading: "Aggregate Section"
+    zoom: Z2
+    line: 1890
+    sentence: null
+    score: null
+    finding_id: null
+  - heading: "Edge Section"
+    zoom: Z2
+    line: 2478
+    sentence: null
+    score: null
+    finding_id: null
+  - heading: "Rule Section"
+    zoom: Z2
+    line: 2997
+    sentence: null
+    score: null
+    finding_id: null
+  - heading: "Graduated Disclosure"
+    zoom: Z2
+    line: 3798
+    sentence: null
+    score: null
+    finding_id: null
+  - heading: "Contractually Protected Disclosure"
+    zoom: Z2
+    line: 3913
+    sentence: null
+    score: null
+    finding_id: null
+  - heading: "IPEX Protocol Messages"
+    zoom: Z2
+    line: 4024
+    sentence: null
+    score: null
+    finding_id: null
+  - heading: "Disclosure-specific (Bespoke) Issued ACDCs"
+    zoom: Z2
+    line: 4169
+    sentence: null
+    score: null
+    finding_id: null
+  - heading: "Overview (TEL)"
+    zoom: Z2
+    line: 4261
+    sentence: null
+    score: null
+    finding_id: null
+  - heading: "Validating Transaction Events"
+    zoom: Z2
+    line: 4312
+    sentence: null
+    score: null
+    finding_id: null
+  - heading: "Registry Message Types and Fields"
+    zoom: Z2
+    line: 4361
+    sentence: null
+    score: null
+    finding_id: null

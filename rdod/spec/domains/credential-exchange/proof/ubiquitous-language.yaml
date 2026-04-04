@@ -34,7 +34,7 @@ terms:
     definition: "The grant message embeds all artifacts needed for the recipient to verify the credential: the ACDC itself, the issuance TEL update event (upd or bup with ts='issued'), and the KEL authorization seal. This bundle enables the recipient to independently verify the credential's authenticity, chain, and revocation status."
     invariants:
       - "Grant contains the full ACDC (or selective disclosure variant)"
-      - "Grant contains the issuance TEL event (upd for non-blindable, bup for blindable registries)"
+      - "Grant contains the issuance TEL event (upd for non-shieldable, bup for shieldable registries)"
       - "Grant contains the KEL authorization seal binding the TEL event to the issuer's KEL"
       - "Recipient can independently verify the credential without additional round-trips to the issuer"
     examples:

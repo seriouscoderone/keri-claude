@@ -56,14 +56,14 @@ properties:
     notes: "CESR E-code prefix and fixed length for Blake3-256"
 
   - invariant: "UUID is the blinding factor — derived from shared secret salt and event sequence number"
-    term: "Blinded Attribute Block"
+    term: "Shielded Attribute Block"
     technique: property-based
     formal:
       language: python
       expression: |
         lambda salt, sn, block: block['u'] == derive_uuid(salt, sn)
     strategy: "Generate salt+sn pairs; verify UUID in block matches derivation"
-    notes: "UUID is deterministically derived, not random"
+    notes: "UUID is deterministically derived — shielding factor, not random"
 
   - invariant: "Shared secret salt must have >= 128 bits of cryptographic entropy"
     term: "Shared Secret Salt"
@@ -109,8 +109,8 @@ properties:
     strategy: "Generate multiple sn values from same salt; verify all UUIDs are distinct"
     notes: "Independence across sequence numbers"
 
-  - invariant: "New blinding factor per update — prevents correlation between updates and state changes"
-    term: "Blindable Update"
+  - invariant: "New shielding factor per update — prevents correlation between updates and state changes"
+    term: "Shieldable Update"
     technique: property-based
     formal:
       language: python
@@ -120,7 +120,7 @@ properties:
           len(set(blids)) == len(blids)  # all unique
         )
     strategy: "Generate sequences of bup events; verify all BLIDs are distinct"
-    notes: "No BLID reuse across updates"
+    notes: "No BLID reuse across updates — fresh shielding per event"
 
   - invariant: "Each bup uses a fresh UUID derived from the next sequence number — the BLID changes even when state is unchanged"
     term: "Decorrelation"

@@ -107,18 +107,18 @@ properties:
         )
     notes: "Terminal state — no further transitions possible"
 
-  - invariant: "Registry blindability mode must match the event type: non-blindable -> upd, blindable -> bup"
+  - invariant: "Registry shieldability mode must match the event type: non-shieldable -> upd, shieldable -> bup"
     term: "State Transition Rules"
     technique: property-based
     formal:
       language: python
       expression: |
         lambda registry, event: (
-          (is_non_blindable(registry) and event.t == 'upd')
-          or (is_blindable(registry) and event.t == 'bup')
+          (is_non_shieldable(registry) and event.t == 'upd')
+          or (is_shieldable(registry) and event.t == 'bup')
         )
     strategy: "Generate registries with both modes and all event types; verify mode matching"
-    notes: "Mode mismatch is rejected — non-blindable registries use upd, blindable registries use bup. LEGACY (v1 -- do NOT implement): NoBackers trait mapped to iss/rev, backed mapped to bis/brv"
+    notes: "Mode mismatch is rejected — non-shieldable registries use upd, shieldable registries use bup. LEGACY (v1 -- do NOT implement): NoBackers trait mapped to iss/rev, backed mapped to bis/brv"
 
   - invariant: "Replaying the same TEL events in order always produces the same state (deterministic)"
     term: "State Reconstruction"
@@ -224,12 +224,12 @@ state_machines:
     transitions:
       - from: "NotIssued"
         to: "Issued"
-        trigger: "Update event (upd with ts='issued' for non-blindable, bup with ts='issued' for blindable) accepted to TEL"
-        guard: "Registry exists AND issuer key state valid AND KEL anchor present AND event sn == current_sn + 1 AND p field matches prior event SAID AND registry blindability mode matches event type (upd/bup)"
+        trigger: "Update event (upd with ts='issued' for non-shieldable, bup with ts='issued' for shieldable) accepted to TEL"
+        guard: "Registry exists AND issuer key state valid AND KEL anchor present AND event sn == current_sn + 1 AND p field matches prior event SAID AND registry shieldability mode matches event type (upd/bup)"
       - from: "Issued"
         to: "Revoked"
-        trigger: "Update event (upd with ts='revoked' for non-blindable, bup with ts='revoked' for blindable) accepted to TEL"
-        guard: "Credential in Issued state AND issuer key state valid AND KEL anchor present AND event sn == current_sn + 1 AND p field matches prior event SAID AND registry blindability mode matches event type (upd/bup)"
+        trigger: "Update event (upd with ts='revoked' for non-shieldable, bup with ts='revoked' for shieldable) accepted to TEL"
+        guard: "Credential in Issued state AND issuer key state valid AND KEL anchor present AND event sn == current_sn + 1 AND p field matches prior event SAID AND registry shieldability mode matches event type (upd/bup)"
       # Explicit rejection transitions — what happens on invalid attempts
       - from: "NotIssued"
         to: "REJECTED"

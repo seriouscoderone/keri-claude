@@ -163,6 +163,17 @@ terms:
       - "Blind OOBI requires a configured default AID"
     related_terms: ["Percolated Discovery", "OOBI"]
 
+  - term: "PercolatedDiscovery"
+    synonyms: ["Content Percolation"]
+    definition: "The mechanism by which compact ACDC sections (Schema, Rules) are retrieved by interested parties via OOBI-bootstrapped service endpoints, enabling content propagation without requiring the Issuer to directly serve all parties."
+    invariants:
+      - "Content propagates via OOBIs — each party discovers endpoints independently"
+      - "Schema and Rule sections compact to their SAIDs — the SAID is the lookup key"
+      - "No centralized distribution point required — content percolates through the trust graph"
+    examples:
+      - "A verifier resolving a compact Rule Section SAID via an OOBI to retrieve the full Ricardian contract"
+    related_terms: ["OOBI", "Schema", "Rule Section", "Compact Disclosure"]
+
 events:
   - name: "OOBIResolved"
     payload: "aid: AID, endpoint: URL, role: Role, kel_verified: bool"

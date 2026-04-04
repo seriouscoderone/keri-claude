@@ -1,0 +1,267 @@
+# application-plan.yaml — Accepted ACDC UL Coverage Findings
+# Generated: 2026-04-03
+# Status: ALL ACCEPTED
+# Revisions applied:
+#   - BespokeACDC → PresentationACDC (rename + enrich)
+#   - Blinded/Blindable → Shielded/Shieldable (cross-domain rename)
+#   - BLID abbreviation preserved (spec-normative), definition updated to adopter language
+#   - privacy/blinding/ directory path preserved, display name → "Status Shielding"
+
+# Application order follows domain dependency:
+#   1. cesr (primitives referenced by all others)
+#   2. credential-lifecycle (core ACDC terms)
+#   3. privacy + subdomains (disclosure, shielding, aggregation)
+#   4. discovery (single finding, no dependencies)
+
+batches:
+  - batch: 1
+    domain: cesr
+    description: "Cross-cutting primitives and verification rules"
+    actions:
+      - finding: ACDC-Z1-002
+        action: add_verification_rule
+        file: verification.yaml
+        term: SecurityLevel
+        definition: >
+          The minimum cryptographic strength (approximately 128 bits) required
+          for all ACDC cryptographic operations including digests, UUIDs, salts,
+          and signatures.
+
+      - finding: ACDC-Z4-001
+        action: add_type
+        file: types.yaml
+        term: FixedFieldBlock
+        definition: >
+          A CESR data structure whose fields follow a fixed positional order with
+          virtual (mnemonic-only, never serialized) labels, in contrast to labeled
+          SAD field maps. Used for Shielded Attribute Blocks and Bound Shielded
+          Attribute Blocks.
+
+  - batch: 2
+    domain: credential-lifecycle
+    description: "Core ACDC UL terms, types, and verification rules"
+    actions:
+      - finding: ACDC-Z0-001
+        action: add_ul_term
+        file: ubiquitous-language.yaml
+        term: CredentialGraph
+        definition: >
+          The directed acyclic graph (DAG) formed by ACDCs linked through their
+          Edge Sections, enabling proof-of-authorship chains and delegated
+          proof-of-authority. Each ACDC is a universally unique node identified
+          by its SAID; each CredentialEdge is a directed link identified by its
+          own SAID.
+
+      - finding: ACDC-Z2-001
+        action: add_ul_term
+        file: ubiquitous-language.yaml
+        term: TypeIsSchema
+        definition: >
+          The design principle that an ACDC's Schema SAID serves as its sole type
+          identifier — there is no separate type field because the Schema itself
+          defines the credential's type, structure, and validation rules.
+
+      - finding: ACDC-Z2-002
+        action: add_ul_terms
+        file: ubiquitous-language.yaml
+        terms:
+          - term: TargetedACDC
+            definition: >
+              An ACDC whose Attribute Section includes an Issuee AID (i field),
+              binding the credential to a designated recipient and enabling
+              verifiable entitlement, delegation, and Contractually Protected
+              Disclosure.
+          - term: UntargetedACDC
+            definition: >
+              An ACDC without an Issuee AID in the Attribute Section — a bearer
+              credential addressed 'to whom it may concern', suitable for
+              provenance chains and data-supply applications.
+          - term: CargoField
+            definition: >
+              The optional `cargo` field in the Attribute Section enabling an ACDC
+              to carry opaque foreign data formats as a verifiable container.
+
+      - finding: ACDC-Z2-003
+        action: add_types
+        file: types.yaml
+        terms:
+          - term: CredentialEdge
+            definition: >
+              A directed link block within the Edge Section referencing a far-node
+              ACDC by SAID (n field), with optional Schema constraint (s field)
+              and Operator (o field). Distinguished from EdgeGroup by the presence
+              of a node field.
+          - term: EdgeGroup
+            definition: >
+              An aggregation block within the Edge Section composing multiple
+              CredentialEdges or nested EdgeGroups via an m-ary Operator (AND, OR,
+              NAND, NOR, AVG, WAVG). Distinguished from CredentialEdge by the
+              absence of a node field.
+
+      - finding: ACDC-Z2-011
+        action: add_type
+        file: types.yaml
+        term: SectionMessage
+        definition: >
+          An independently transmittable CESR message carrying a single ACDC
+          section (sch, att, agg, edg, rul), enabling section-level caching and
+          reuse across ACDC instances sharing the same section content.
+
+      - finding: ACDC-Z2-007
+        action: add_verification_rule
+        file: verification.yaml
+        term: TransactionEventValidation
+        definition: >
+          The verification workflow for TEL events: confirm event SAID, locate
+          Transaction Event Seal in Issuer's KEL, verify seal matches event,
+          validate key state at seal time, check hash-chain integrity, update
+          Credential State.
+
+      - finding: ACDC-Z1-004
+        action: add_verification_rule
+        file: verification.yaml
+        term: TemporalKeyStateBinding
+        definition: >
+          The invariant that each TEL event's authority is determined by the
+          Issuer's key state at the time the Transaction Event Seal was anchored
+          in the KEL, not by the current key state — ensuring credential proofs
+          survive key rotation.
+
+  - batch: 3
+    domain: credential-lifecycle
+    description: "Cross-domain rename: Blinded → Shielded"
+    actions:
+      - finding: RENAME-001
+        action: rename
+        scope: all_files
+        renames:
+          - old: "Blinded Attribute Block"
+            new: "Shielded Attribute Block"
+          - old: "Blindable Update"
+            new: "Shieldable Update"
+          - old: "Blindable vs Non-Blindable"
+            new: "Shieldable vs Non-Shieldable"
+          - old: "Blinded attribute array"
+            new: "Shielded attribute array"
+          - old: "Non-Blindable"
+            new: "Non-Shieldable"
+          - old: "Blindable"
+            new: "Shieldable"
+          - old: "Blinded"
+            new: "Shielded"
+        note: >
+          BLID abbreviation PRESERVED — spec-normative. Definition updated to
+          say "shielded identifier" in adopter language while keeping the
+          abbreviation frozen.
+
+  - batch: 4
+    domain: privacy
+    description: "Privacy UL terms and types"
+    actions:
+      - finding: ACDC-Z1-003
+        action: add_ul_term
+        file: ubiquitous-language.yaml
+        term: ThreePartyExploitationModel
+        definition: >
+          The adversary model defining three exploitation roles: 1st party (data
+          subject / Discloser), 2nd party (intended recipient / Disclosee), 3rd
+          party (unintended observer). All ACDC disclosure mechanisms are designed
+          to prevent exploitation by 2nd and 3rd parties.
+
+      - finding: ACDC-Z2-009
+        action: add_ul_term
+        file: ubiquitous-language.yaml
+        term: DataPrivacyPrinciple
+        definition: >
+          The framing of ACDC privacy as protection from unpermissioned
+          exploitation of 1st-party data — distinct from information security
+          (confidentiality) and data security (access control). Privacy is about
+          controlling the relationship context in which data is used.
+
+      - finding: ACDC-Z2-006
+        action: rename_and_enrich_ul_term
+        file: ubiquitous-language.yaml
+        old_term: "Bespoke ACDC"
+        new_term: "PresentationACDC"
+        enrichment: >
+          Add workflow: the Discloser acts as Issuer of a PresentationACDC to
+          a specific Disclosee as Issuee, chaining via Edge Section to prior
+          credentials, with recipient-specific rules and attributes.
+
+      - finding: ACDC-Z2-010
+        action: add_type
+        file: types.yaml
+        term: BulkIssuanceAggregate
+        definition: >
+          The aggregate cryptographic commitment (`B` value) anchored by the
+          Issuer covering all instances in a bulk-issued set. Analogous to AGID
+          for selective disclosure but serving anti-correlation across presentation
+          contexts.
+
+  - batch: 5
+    domain: privacy/blinding
+    description: "Shielding subdomain: rename display name, add type, enrich BLID"
+    actions:
+      - finding: RENAME-002
+        action: update_display_name
+        file: domain.yaml
+        old_name: "Status Blinding"
+        new_name: "Status Shielding"
+        note: "Directory path privacy/blinding/ preserved for stability"
+
+      - finding: ACDC-Z3-002
+        action: add_type
+        file: types.yaml
+        term: HierarchicalDerivation
+        definition: >
+          A deterministic key/UUID derivation mechanism using hierarchical paths
+          indexed by bulk copy index and block position, enabling the Issuee to
+          regenerate any bulk-issued ACDC instance from a Shared Secret Salt and
+          index without storing all copies.
+
+      - finding: ACDC-Z4-002
+        action: enrich_ul_term
+        file: ubiquitous-language.yaml
+        term: BLID
+        enrichment: >
+          Add: "BLID is computed as a FixedFieldBlock SAID — the same
+          dummy-replacement protocol as standard SAID computation, applied to
+          positional (virtual-labeled) fields rather than labeled SAD field maps."
+
+  - batch: 6
+    domain: privacy/aggregation
+    description: "Broaden MostCompactForm, enrich AGID"
+    actions:
+      - finding: ACDC-Z2-005
+        action: enrich_ul_term
+        file: ubiquitous-language.yaml
+        term: MostCompactForm
+        enrichment: >
+          Broaden scope: the depth-first SAID computation algorithm that
+          SAIDifies leaf blocks first and compacts each enclosing block,
+          producing one canonical SAID for any ACDC or section regardless of
+          oneOf variants. Not limited to AGID — applies to all ACDC sections.
+
+      - finding: ACDC-Z3-001
+        action: enrich_ul_term
+        file: ubiquitous-language.yaml
+        term: AGID
+        enrichment: >
+          Add computation algorithm: serialize ordered list of N+1 values (dummy
+          placeholder at index 0 + N Shielded Attribute Block SAIDs), compute
+          digest, replace placeholder with digest. Serialization format matches
+          enclosing ACDC's version string.
+
+  - batch: 7
+    domain: discovery
+    description: "Percolated Discovery term"
+    actions:
+      - finding: ACDC-Z2-004
+        action: add_ul_term
+        file: ubiquitous-language.yaml
+        term: PercolatedDiscovery
+        definition: >
+          The mechanism by which compact ACDC sections (Schema, Rules) are
+          retrieved by interested parties via OOBI-bootstrapped service endpoints,
+          enabling content propagation without requiring the Issuer to directly
+          serve all parties.

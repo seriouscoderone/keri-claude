@@ -11,12 +11,12 @@ description: >
   through revocation. Transaction Event Logs (TELs) provide hash-chained event
   structures authorized by the issuer's identity history that track dynamic ACDC
   state without requiring direct signatures on TEL events. TELs support both
-  public (unblinded) and private (blinded) state registries.
+  public (unshielded) and private (shielded) state registries.
 
   Boundary guide for consumers — three sibling domains cover credentials:
   credential-lifecycle owns the state machine (issue, revoke, verify status).
   credential-exchange owns sharing credentials with others (IPEX negotiation).
-  privacy owns controlling what gets revealed (graduated disclosure, blinding).
+  privacy owns controlling what gets revealed (graduated disclosure, shielding).
   If you need to create/revoke/check a credential, you're here. If you need
   to send it to someone, go to credential-exchange. If you need to control
   what's visible, go to privacy.
@@ -101,7 +101,7 @@ implementation_guidance:
     The TEL is implemented alongside the KEL in KERI infrastructure. Registry events
     use ACDC protocol version strings and message types (rip, bup, upd). The key
     insight is that TEL events derive their non-repudiability from the issuer's
-    identity history authorization, not from direct signatures. Blinded registries
+    identity history authorization, not from direct signatures. Shielded registries
     require a shared secret salt between issuer and discloser for hierarchically
     deterministic UUID derivation.
 

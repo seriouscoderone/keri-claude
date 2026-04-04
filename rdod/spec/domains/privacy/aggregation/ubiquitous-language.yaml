@@ -4,14 +4,15 @@ domain_ref: "privacy/aggregation"
 terms:
   - term: "AGID"
     synonyms: ["Aggregate ID"]
-    definition: "A cryptographic digest of the serialized list of blinded attribute block SAIDs, serving as the compact value of the selectively disclosable aggregate section (A field)."
+    definition: "A cryptographic digest of the serialized list of shielded attribute block SAIDs, serving as the compact value of the selectively disclosable aggregate section (A field)."
     invariants:
       - "AGID = SAID(serialize([AGID_placeholder, block_SAID_1, block_SAID_2, ..., block_SAID_N]))"
       - "Serialization uses the same format as the enclosing ACDC (JSON, CBOR, or MGPK) — determined by the ACDC's version string v field"
       - "The zeroth element is the AGID itself (computed via dummy character replacement, same as any SAID)"
       - "Block SAIDs are in the order they appear in the schema's anyOf composition — NOT sorted"
-      - "Makes a blinded commitment to all SAIDs in the list"
+      - "Makes a shielded commitment to all SAIDs in the list"
       - "Collision-resistant against birthday attacks on concatenated elements"
+      - "Computation: serialize ordered list of N+1 values (dummy placeholder at index 0 + N Shielded Attribute Block SAIDs), compute digest, replace placeholder with digest. Serialization format matches the enclosing ACDC's version string."
     examples:
       - "AGID as compact A field value: \"A\": \"EN5d44fTNM0M4kmMMVrsH0HwMLRLyb6SoJEV0ogkLdXx\""
       - "AGID computation: dummied list serialized, digested, dummy replaced with digest"
@@ -19,13 +20,13 @@ terms:
 
   - term: "Inclusion Proof"
     synonyms: []
-    definition: "Proof that a specific blinded attribute block is a member of the aggregated set, verified by checking that the block's SAID appears in the SAID list whose digest matches the AGID."
+    definition: "Proof that a specific shielded attribute block is a member of the aggregated set, verified by checking that the block's SAID appears in the SAID list whose digest matches the AGID."
     invariants:
       - "Requires: disclosed block, full SAID list, compact ACDC with AGID, issuer's KEL seal"
       - "Verification: compute block SAID, confirm in list, compute AGID from list, match A field"
     examples:
       - "Proving a score block is part of a selectively disclosable credential without revealing other blocks"
-    related_terms: ["AGID", "Selective Disclosure", "Blinded Attribute Block"]
+    related_terms: ["AGID", "Selective Disclosure", "Shielded Attribute Block"]
 
   - term: "oneOf Composition"
     synonyms: []
@@ -40,7 +41,7 @@ terms:
 
   - term: "Most Compact Form"
     synonyms: []
-    definition: "The canonical representation of an ACDC or block used for computing its unique SAID — computed by a depth-first algorithm that SAIDifies leaf blocks, compacts them, then SAIDifies enclosing blocks upward to the root."
+    definition: "The canonical representation of an ACDC or block used for computing its unique SAID — computed by a depth-first algorithm that SAIDifies leaf blocks, compacts them, then SAIDifies enclosing blocks upward to the root. The Most Compact Form algorithm is general — it applies to all ACDC sections and the top-level ACDC itself, not only to AGID computation. Any ACDC or section has exactly one Most Compact Form whose SAID is the canonical identifier."
     invariants:
       - "There is one and only one most compact form SAID for any ACDC"
       - "Leaf blocks are SAIDified first on their fully expanded form"
@@ -79,7 +80,7 @@ terms:
 events:
   - name: "AGIDComputed"
     payload: "said_list: [SAID], agid: AGID, serialization_kind: SerializationKind"
-    triggers: "A new AGID is computed from a list of blinded attribute block SAIDs during credential issuance or verification"
+    triggers: "A new AGID is computed from a list of shielded attribute block SAIDs during credential issuance or verification"
 
   - name: "InclusionProofVerified"
     payload: "block_said: SAID, agid: AGID, result: ValidOrInvalid"

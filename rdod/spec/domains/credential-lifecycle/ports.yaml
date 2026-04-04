@@ -18,13 +18,13 @@ ports:
         - "errors://credential-lifecycle#CredentialSAIDError"
     refs: ["domain://credential-lifecycle"]
 
-  - id: "port://credential-lifecycle/inbound/blinded-state"
+  - id: "port://credential-lifecycle/inbound/shielded-state"
     type: inbound
-    name: "Blinded State Management"
+    name: "Shielded State Management"
     semantics: command
     idempotent: false
     contract:
-      input: "types://credential-lifecycle/registry#BlindableUpdateEvent"
+      input: "types://credential-lifecycle/registry#ShieldableUpdateEvent"
       output: "types://credential-lifecycle#CredentialState"
       errors: []
     refs: ["domain://credential-lifecycle"]

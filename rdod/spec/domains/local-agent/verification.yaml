@@ -217,7 +217,7 @@ properties:
             elif event_type == 'upd':
                 event = regery.issue(hab=hab, said=make_said())  # upd with ts='issued'
             elif event_type == 'bup':
-                event = regery.issue(hab=hab, said=make_said(), blindable=True)  # bup with ts='issued'
+                event = regery.issue(hab=hab, said=make_said(), shieldable=True)  # bup with ts='issued'
             # Event stored in local database
             stored = habery.db.getTelEvent(event.said)
             assert stored is not None

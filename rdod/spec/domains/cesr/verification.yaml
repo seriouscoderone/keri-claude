@@ -550,6 +550,23 @@ properties:
     strategy: "version_string_v2()"
     notes: "Validates the structured format of v2.XX version strings."
 
+  # --- SecurityLevel ---
+  - invariant: "All ACDC cryptographic operations MUST have approximately 128 bits of cryptographic strength"
+    term: "SecurityLevel"
+    technique: "property-based"
+    formal:
+      language: "python"
+      expression: |
+        @given(cesr_primitive())
+        def test_security_level(primitive):
+            sizage = lookup_sizage(primitive.code)
+            # Raw size in bytes * 8 = bits of entropy
+            # Must be >= 128 bits (16 bytes) for security-critical operations
+            if is_security_critical(primitive.code):
+                assert sizage.raw_size * 8 >= 128
+    strategy: "cesr_primitive() filtered to security-critical codes (digests, UUIDs, salts)"
+    notes: "Cross-cutting 128-bit minimum from ACDC spec. Applies to digests, UUIDs, salts, and signing keys. Finding: ACDC-Z1-002."
+
 # Formalized port contracts
 contracts:
   - port_ref: "port://cesr/inbound/encoding"

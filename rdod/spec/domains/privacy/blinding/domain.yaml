@@ -1,14 +1,14 @@
 # domain.yaml
 template_version: "2.0"
 id: "privacy/blinding"
-name: "Status Blinding"
+name: "Status Shielding"
 description: >
-  Hidden credential status — privacy-preserving blinded state management so
+  Hidden credential status — privacy-preserving shielded state management so
   observers cannot determine credential state changes. Hides credential state
-  behind blinded attribute blocks using shared secret salts and hierarchical key
+  behind shielded attribute blocks using shared secret salts and hierarchical key
   derivation. Observers cannot determine which update events correspond to actual
   state changes versus periodic decorrelation updates. Only entities holding the
-  shared secret salt can derive the blinding UUID for each event and discover the
+  shared secret salt can derive the shielding UUID for each event and discover the
   current credential state by trying the finite set of possible state values
   against the BLID.
 version: "0.1.0"
@@ -16,17 +16,17 @@ tier: "domain"
 
 source_material:
   - type: document
-    reference: "acdc-specification.md -- Blinded State Management, Blindable Update Events, Blinded Attribute Blocks sections"
+    reference: "acdc-specification.md -- Shielded State Management, Shieldable Update Events, Shielded Attribute Blocks sections"
   - type: document
     reference: "acdc-specification.md -- Shared Secret Salt and Hierarchically Deterministic UUID Derivation section"
   - type: implementation
-    reference: "keripy -- src/keri/vdr/viring.py (Reger: blinding-related subdatabases), src/keri/vdr/eventing.py (bup event processing, blind state computation)"
+    reference: "keripy -- src/keri/vdr/viring.py (Reger: shielding-related subdatabases), src/keri/vdr/eventing.py (bup event processing, shielded state computation)"
   - type: implementation
-    reference: "keriox/teliox -- src/event/verifiable_event.rs (blinded event handling), src/state.rs (blinded state transitions)"
+    reference: "keriox/teliox -- src/event/verifiable_event.rs (shielded event handling), src/state.rs (shielded state transitions)"
 
 domain_clients:
   - ref: "domain://privacy"
-    relationship: "Parent privacy domain delegates blinded state operations -- BLID computation, state discovery, and bound block construction"
+    relationship: "Parent privacy domain delegates shielded state operations -- BLID computation, state discovery, and bound block construction"
     via_port: "port://privacy/blinding/inbound/compute-blid"
   - ref: "domain://credential-lifecycle/status"
     relationship: "Status domain calls compute-blid during bup event validation"
@@ -38,26 +38,26 @@ kernels: []
 
 adjacents:
   - ref: "domain://cesr/composition"
-    relationship: "References blinded state group codes (-a for BlindedStateQuadruples, -b for BoundStateSextuples) — these are CESR-level definitions, not owned by the blinding domain"
+    relationship: "References shielded state group codes (-a for ShieldedStateQuadruples, -b for BoundStateSextuples) — these are CESR-level definitions, not owned by the shielding domain"
 
 externals:
   - ref: "domain://externals/cryptographic-primitives"
     source: "Blake3-256 (BLID digest computation), argon2 (passphrase stretching to master secret), HKDF (per-event UUID derivation from master secret)"
-    relationship: "Cryptographic algorithm types used for BLID computation and blinding UUID derivation — argon2 for slow passphrase-to-salt stretching, HKDF for fast per-event UUID derivation"
+    relationship: "Cryptographic algorithm types used for BLID computation and shielding UUID derivation — argon2 for slow passphrase-to-salt stretching, HKDF for fast per-event UUID derivation"
 
 implementation_guidance:
   suggested_type: "module"
   language_affinity: "any"
   notes: >
-    Blinding is a pure computation subdomain with no persistence of its own. The blinded
+    Shielding is a pure computation subdomain with no persistence of its own. The shielded
     attribute block is never serialized as a standalone message -- it is a virtual construct
     whose field values are concatenated and digested to produce the BLID. The bup event
     carries only the BLID in its b field. State discovery is a brute-force search over the
     finite state set (e.g., issued/revoked) combined with the derived UUID and candidate
-    ACDC SAIDs. Periodic blind updates with unchanged state are the mechanism for
+    ACDC SAIDs. Periodic shield updates with unchanged state are the mechanism for
     decorrelation -- the observer cannot distinguish a state-changing update from a
     decorrelation-only update.
 
 issues: []
 
-tags: ["blinding", "privacy", "blid", "shared-secret", "decorrelation", "uuid-derivation"]
+tags: ["shielding", "privacy", "blid", "shared-secret", "decorrelation", "uuid-derivation"]

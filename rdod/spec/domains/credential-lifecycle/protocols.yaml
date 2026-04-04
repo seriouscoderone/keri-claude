@@ -45,11 +45,11 @@ protocols:
         input:
           description: "Credential SAID, registry SAID, datetime"
           types:
-            - ref: "types://credential-lifecycle/registry#NonBlindableUpdateEvent"
+            - ref: "types://credential-lifecycle/registry#NonShieldableUpdateEvent"
               fields: ["ta", "rd", "ts", "dt"]
         output:
           description: "TEL update event (upd or bup) with ts='issued'"
-          type: "types://credential-lifecycle/registry#NonBlindableUpdateEvent"
+          type: "types://credential-lifecycle/registry#NonShieldableUpdateEvent"
         depends_on: [2]
       - seq: 4
         domain: "domain://identity/anchoring"
@@ -125,11 +125,11 @@ protocols:
         input:
           description: "Credential SAID, registry SAID, prior TEL event SAID, datetime"
           types:
-            - ref: "types://credential-lifecycle/registry#NonBlindableUpdateEvent"
+            - ref: "types://credential-lifecycle/registry#NonShieldableUpdateEvent"
               fields: ["ta", "rd", "p", "ts", "dt"]
         output:
           description: "TEL update event (upd or bup) with ts='revoked'"
-          type: "types://credential-lifecycle/registry#NonBlindableUpdateEvent"
+          type: "types://credential-lifecycle/registry#NonShieldableUpdateEvent"
         depends_on: [1]
       - seq: 3
         domain: "domain://identity/anchoring"

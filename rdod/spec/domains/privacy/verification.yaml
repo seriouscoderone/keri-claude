@@ -51,8 +51,8 @@ properties:
         assert s.check() == unsat
     notes: "SMT proof that no ACDC can be classified as two privacy levels simultaneously."
 
-  # Blinding Security invariants
-  - invariant: "If an ACDC is classified as Private, the u field MUST contain a value with >= 128 bits of cryptographic entropy. In Base64url encoding, this requires >= 22 characters (ceil(128/6) = 22). If len(u) < 22 Base64url characters, the ACDC MUST be rejected as insufficiently blinded — rainbow-table attacks become feasible below this threshold."
+  # Shielding Security invariants
+  - invariant: "If an ACDC is classified as Private, the u field MUST contain a value with >= 128 bits of cryptographic entropy. In Base64url encoding, this requires >= 22 characters (ceil(128/6) = 22). If len(u) < 22 Base64url characters, the ACDC MUST be rejected as insufficiently shielded — rainbow-table attacks become feasible below this threshold."
     term: "Private ACDC"
     technique: property-based
     formal:
@@ -68,26 +68,26 @@ properties:
                 f"need >= 22 chars (128 bits) to resist rainbow-table attacks"
             )
     strategy: "private_acdc_strategy() — generates Private ACDCs with varying u field lengths"
-    notes: "128-bit entropy floor. Below this, an attacker can enumerate possible UUID values and compute SAIDs to correlate presentations."
+    notes: "128-bit entropy floor. Below this, an attacker can enumerate possible UUID values and compute SAIDs to correlate presentations — shielding is ineffective."
 
-  - invariant: "For blinded attribute blocks within an ACDC, the block MUST contain both d (SAID) and u (UUID) fields. The u field MUST be non-empty with >= 128 bits of cryptographic entropy (>= 22 Base64url chars). If either field is absent or u is empty, the block MUST be rejected as unblinded."
-    term: "Blinded Attribute Block"
+  - invariant: "For shielded attribute blocks within an ACDC, the block MUST contain both d (SAID) and u (UUID) fields. The u field MUST be non-empty with >= 128 bits of cryptographic entropy (>= 22 Base64url chars). If either field is absent or u is empty, the block MUST be rejected as unshielded."
+    term: "Shielded Attribute Block"
     technique: property-based
     formal:
       language: python
       expression: |
         @given(block=attribute_block_strategy())
-        def test_blinded_block_requirements(block):
-            if is_blinded_block(block):
-                assert 'd' in block, "Blinded block MUST have d (SAID) field"
-                assert 'u' in block, "Blinded block MUST have u (UUID) field"
-                assert len(block['u']) > 0, "Blinded block u field MUST be non-empty"
+        def test_shielded_block_requirements(block):
+            if is_shielded_block(block):
+                assert 'd' in block, "Shielded block MUST have d (SAID) field"
+                assert 'u' in block, "Shielded block MUST have u (UUID) field"
+                assert len(block['u']) > 0, "Shielded block u field MUST be non-empty"
                 assert len(block['u']) >= 22, (
-                    f"Blinded block UUID has {len(block['u'])} chars, "
+                    f"Shielded block UUID has {len(block['u'])} chars, "
                     f"need >= 22 for 128-bit entropy"
                 )
     strategy: "attribute_block_strategy() — with and without d/u fields"
-    notes: "Same 128-bit minimum applies to block-level blinding as to top-level."
+    notes: "Same 128-bit minimum applies to block-level shielding as to top-level."
 
   # Graduated Disclosure Monotonicity invariants
   - invariant: "Once a block is disclosed at disclosure level L, it MUST NOT be reverted to a level less than L in any subsequent presentation within the same exchange. Disclosure levels are ordered: compact < partial < selective < full. If block B was disclosed at level 'partial', a subsequent presentation of B at level 'compact' within the same exchange MUST be rejected."
@@ -236,7 +236,7 @@ properties:
     notes: "Both SAID and UUID must differ across instances to prevent any form of cross-presentation linkage."
 
   # Public ACDC invariant
-  - invariant: "If u field is absent from the ACDC, the ACDC is Public. A Public ACDC MUST NOT have a u field at the top level. The SAID of a Public ACDC is computed over the full content without any blinding factor."
+  - invariant: "If u field is absent from the ACDC, the ACDC is Public. A Public ACDC MUST NOT have a u field at the top level. The SAID of a Public ACDC is computed over the full content without any shielding factor."
     term: "Public ACDC"
     technique: property-based
     formal:
@@ -249,7 +249,7 @@ properties:
             # SAID computed over unblinded content
             assert acdc['d'] == compute_said(acdc)
     strategy: "public_acdc_strategy() — generates ACDCs without u field"
-    notes: "Public ACDCs have no blinding — content is fully correlatable by design."
+    notes: "Public ACDCs have no shielding — content is fully correlatable by design."
 
   # Disclosure Mode Composition
   - invariant: "All graduated disclosure mechanisms (compact, partial, selective, full) MUST compose without conflict. Applying mode M1 followed by mode M2 where M2 > M1 in the disclosure ordering MUST produce a valid disclosed variant."

@@ -3,8 +3,8 @@ domain_ref: "privacy/blinding"
 
 terms:
   - term: "BLID"
-    synonyms: ["Blinding SAID"]
-    definition: "A cryptographic digest of the concatenated CESR serialization of a blinded attribute block's field values, serving as the value of the b field in a blindable update (bup) event."
+    synonyms: ["Shielding Identifier"]
+    definition: "A cryptographic digest of the concatenated CESR serialization of a shielded attribute block's field values, serving as the value of the b field in a shieldable update (bup) event. BLID is computed as a FixedFieldBlock SAID — the same dummy-replacement protocol as standard SAID computation, applied to positional (virtual-labeled) fields rather than labeled SAD field maps."
     invariants:
       - "Computed on the text domain (qb64) CESR serialization of concatenated field values"
       - "Uses dummy character (#) replacement for self-referential computation (like SAID protocol)"
@@ -13,38 +13,38 @@ terms:
     examples:
       - "BLID: ECVr7QWEp_aqVQuz4yprRFXVxJ-9uWLx_d6oDinlHU6J"
       - "Placeholder BLID computed with empty td and ts fields (CESR Empty: 1AAP)"
-    related_terms: ["Blinded Attribute Block", "Blindable Update", "Shared Secret Salt"]
+    related_terms: ["Shielded Attribute Block", "Shieldable Update", "Shared Secret Salt"]
 
-  # Inherits: "Blinded Attribute Block" from domain://privacy
-  - term: "Blinded Attribute Block"
+  # Inherits: "Shielded Attribute Block" from domain://privacy
+  - term: "Shielded Attribute Block"
     synonyms: []
-    specializes: "Blinded Attribute Block"
-    definition: "In the context of the blinding subdomain, a blinded attribute block is the fixed-field CESR concatenation (BLID, UUID, ACDC SAID, transaction state) whose digest serves as the b field in a blindable update event. Specializes the parent definition with the CESR serialization structure, virtual field labels, and the shared-secret-derived UUID blinding mechanism."
+    specializes: "Shielded Attribute Block"
+    definition: "In the context of the shielding subdomain, a shielded attribute block is the fixed-field CESR concatenation (BLID, UUID, ACDC SAID, transaction state) whose digest serves as the b field in a shieldable update event. Specializes the parent definition with the CESR serialization structure, virtual field labels, and the shared-secret-derived UUID shielding mechanism."
     invariants:
       - "Virtual field labels (never serialized): [d, u, td, ts]"
-      - "UUID is the blinding factor -- derived from shared secret salt and event sequence number"
+      - "UUID is the shielding factor -- derived from shared secret salt and event sequence number"
       - "Only entities with the shared secret salt can derive the UUID and discover the state"
       - "Not part of the bup message itself -- provided as a CESR attachment when disclosing"
-      - "CESR group code: BlindedStateQuadruples (-a##)"
+      - "CESR group code: ShieldedStateQuadruples (-a##)"
     examples:
       - "Placeholder block with empty td and ts fields (CESR Empty: 1AAP)"
       - "Issued block with real ACDC SAID in td and '0Missued' in ts"
-    related_terms: ["BLID", "Bound Blinded Attribute Block", "Shared Secret Salt", "UUID Derivation"]
+    related_terms: ["BLID", "Bound Shielded Attribute Block", "Shared Secret Salt", "UUID Derivation"]
 
-  - term: "Bound Blinded Attribute Block"
+  - term: "Bound Shielded Attribute Block"
     synonyms: []
-    definition: "A variant of the blinded attribute block that adds bound issuee key event sequence number (bn) and SAID (bd) fields, binding the ACDC state to the issuee's key state at the time of publication."
+    definition: "A variant of the shielded attribute block that adds bound issuee key event sequence number (bn) and SAID (bd) fields, binding the ACDC state to the issuee's key state at the time of publication."
     invariants:
       - "Virtual field labels: [d, u, td, ts, bn, bd]"
       - "Binds ACDC state to issuee's key state -- supports delegation chain verification"
       - "CESR group code: BoundStateSextuples (-b##)"
     examples:
       - "Issued block with issuee key event at sequence number 1: bn=MAAB, bd=EJOnAKX..."
-    related_terms: ["Blinded Attribute Block", "BLID"]
+    related_terms: ["Shielded Attribute Block", "BLID"]
 
   - term: "Shared Secret Salt"
-    synonyms: ["Blind Salt"]
-    definition: "A secret shared between issuer and designated discloser, used with a hierarchically deterministic derivation algorithm and the TEL event sequence number to derive the UUID blinding factor for each blindable update."
+    synonyms: ["Shield Salt"]
+    definition: "A secret shared between issuer and designated discloser, used with a hierarchically deterministic derivation algorithm and the TEL event sequence number to derive the UUID shielding factor for each shieldable update."
     invariants:
       - "Must have >= 128 bits of cryptographic entropy"
       - "Derivation path is the sequence number of the transaction event"
@@ -53,21 +53,21 @@ terms:
     examples:
       - "Discloser derives UUID from salt + sequence number, tries finite state combinations to discover current state"
       - "Issuer generates 128-bit salt at registry creation, shares it out-of-band with the designated discloser"
-    related_terms: ["UUID Derivation", "Blinded Attribute Block", "BLID", "Blindable Update"]
+    related_terms: ["UUID Derivation", "Shielded Attribute Block", "BLID", "Shieldable Update"]
 
-  - term: "Blindable Update"
+  - term: "Shieldable Update"
     synonyms: ["bup event"]
-    definition: "A registry update event that uses a blinded attribute block to hide the actual ACDC state, enabling private (blinded) state registries."
+    definition: "A registry update event that uses a shielded attribute block to hide the actual ACDC state, enabling private (shielded) state registries."
     invariants:
       - "Message type t field must be 'bup'"
       - "Field order: [v, t, d, rd, n, p, dt, b] -- all required"
-      - "The b field value is the BLID (blinding SAID) of the blinded attribute block"
+      - "The b field value is the BLID (shielding SAID) of the shielded attribute block"
       - "State can only be discovered by entities holding the shared secret salt"
-      - "New blinding factor per update -- prevents correlation between updates and state changes"
+      - "New shielding factor per update -- prevents correlation between updates and state changes"
     examples:
-      - "Blinded issuance event where only the issuer and designated discloser can determine the ACDC state"
-      - "Periodic blind updates that decorrelate the time of actual state change"
-    related_terms: ["BLID", "Blinded Attribute Block", "Decorrelation", "Shared Secret Salt"]
+      - "Shielded issuance event where only the issuer and designated discloser can determine the ACDC state"
+      - "Periodic shield updates that decorrelate the time of actual state change"
+    related_terms: ["BLID", "Shielded Attribute Block", "Decorrelation", "Shared Secret Salt"]
 
   - term: "UUID Derivation"
     synonyms: ["Hierarchically Deterministic UUID Derivation"]
@@ -82,7 +82,7 @@ terms:
       - "uuid_0 = derive(salt, sn=0) for the first bup event"
       - "uuid_5 = derive(salt, sn=5) for the sixth bup event -- independent of uuid_0 through uuid_4"
       - "Both issuer and discloser independently compute uuid_5 from the same salt"
-    related_terms: ["Shared Secret Salt", "Blinded Attribute Block", "BLID", "State Discovery"]
+    related_terms: ["Shared Secret Salt", "Shielded Attribute Block", "BLID", "State Discovery"]
 
   - term: "Decorrelation"
     synonyms: []
@@ -95,7 +95,7 @@ terms:
     examples:
       - "Issuer publishes bup events every hour for a credential. Revocation occurs at T=5 but the observer sees bup events at T=1,2,3,4,5,6,7 with no distinguishing characteristic at T=5"
       - "Without decorrelation: observer sees bup only at issuance and revocation -- timing reveals state change"
-    related_terms: ["Blindable Update", "BLID", "UUID Derivation", "State Discovery"]
+    related_terms: ["Shieldable Update", "BLID", "UUID Derivation", "State Discovery"]
 
   - term: "State Discovery"
     synonyms: []
@@ -111,7 +111,7 @@ terms:
     examples:
       - "Discloser computes uuid = derive(salt, sn=5), then tries BLID(uuid, acdc_said, 'issued') and BLID(uuid, acdc_said, 'revoked') -- one matches the b field"
       - "For a registry tracking one credential with two states: at most 2 BLID computations per discovery"
-    related_terms: ["Shared Secret Salt", "UUID Derivation", "BLID", "Blinded Attribute Block", "Decorrelation"]
+    related_terms: ["Shared Secret Salt", "UUID Derivation", "BLID", "Shielded Attribute Block", "Decorrelation"]
 
 events:
   - name: "BlindUpdatePublished"
@@ -128,9 +128,9 @@ events:
 
 rules:
   - "Every bup event must use a UUID derived from the shared secret salt and the event's sequence number -- never reuse a UUID"
-  - "BLID computation uses Blake3-256 digest on the qb64 concatenation of blinded attribute block fields"
+  - "BLID computation uses Blake3-256 digest on the qb64 concatenation of shielded attribute block fields"
   - "Decorrelation updates must be indistinguishable from state-changing updates to any observer without the salt"
   - "The shared secret salt must have >= 128 bits of cryptographic entropy"
   - "UUID length must be 2x the salt length to preserve cryptographic entropy through the derivation"
   - "State discovery requires trying all states in the finite state set -- the cost is bounded by the set cardinality"
-  - "Bound blinded attribute blocks extend the basic block with issuee key state binding (bn, bd fields)"
+  - "Bound shielded attribute blocks extend the basic block with issuee key state binding (bn, bd fields)"

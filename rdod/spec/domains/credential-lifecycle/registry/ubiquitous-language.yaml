@@ -6,18 +6,18 @@ terms:
   - term: "Registry Inception"
     synonyms: ["rip event", "vcp event LEGACY (v1 -- do NOT implement)"]
     specializes: "Registry Inception"
-    definition: "In the context of the registry subdomain, registry inception is the initialization event that establishes the registry's REGID, binds it to the issuer AID, and sets immutable configuration (blindable or non-blindable mode). In TEL v2 this is the rip event; registry configuration is immutable after inception -- there is no rotation equivalent. LEGACY (v1 -- do NOT implement): the vcp event served this role, with mutable backer lists rotated via vrt."
+    definition: "In the context of the registry subdomain, registry inception is the initialization event that establishes the registry's REGID, binds it to the issuer AID, and sets immutable configuration (shieldable or non-shieldable mode). In TEL v2 this is the rip event; registry configuration is immutable after inception -- there is no rotation equivalent. LEGACY (v1 -- do NOT implement): the vcp event served this role, with mutable backer lists rotated via vrt."
     invariants:
       - "Message type t field must be 'rip'. LEGACY (v1): was 'vcp'"
       - "Field order: [v, t, d, u, i, n, dt] -- all required"
       - "Sequence number n must be 0"
       - "SAID of this event becomes the REGID referenced by the rd field in ACDCs"
       - "Must be authorized via a seal in the issuer's KEL"
-      - "Registry mode (blindable or non-blindable) set at inception is immutable -- no rotation in v2"
+      - "Registry mode (shieldable or non-shieldable) set at inception is immutable -- no rotation in v2"
     examples:
-      - "Registry inception with issuer AID, non-blindable mode, and UUID for unique identification"
-      - "Blindable registry inception with designated backer witnesses"
-    related_terms: ["REGID", "Blindable vs Non-Blindable"]
+      - "Registry inception with issuer AID, non-shieldable mode, and UUID for unique identification"
+      - "Shieldable registry inception with designated backer witnesses"
+    related_terms: ["REGID", "Shieldable vs Non-Shieldable"]
 
   - term: "Registry Rotation"
     synonyms: ["vrt event LEGACY (v1 -- do NOT implement)"]
@@ -35,46 +35,46 @@ terms:
   # Inherits: "REGID" from domain://credential-lifecycle (identical definition — parent owns this term)
 
   - term: "Registry Mode"
-    synonyms: ["Blindable/Non-Blindable", "Backer Configuration"]
-    definition: "The configuration of a registry's mode, set at inception (rip). Determines whether credential events use non-blindable (upd) or blindable (bup) event types. In v2, this replaces the v1 'NoBackers trait' / 'backed vs backerless' terminology. LEGACY (v1 -- do NOT implement): 'NoBackers' trait determined iss/rev vs bis/brv; backer list was mutable via vrt."
+    synonyms: ["Shieldable/Non-Shieldable", "Backer Configuration"]
+    definition: "The configuration of a registry's mode, set at inception (rip). Determines whether credential events use non-shieldable (upd) or shieldable (bup) event types. In v2, this replaces the v1 'NoBackers trait' / 'backed vs backerless' terminology. LEGACY (v1 -- do NOT implement): 'NoBackers' trait determined iss/rev vs bis/brv; backer list was mutable via vrt."
     invariants:
-      - "Non-blindable mode: credential events use upd"
-      - "Blindable mode: credential events use bup"
+      - "Non-shieldable mode: credential events use upd"
+      - "Shieldable mode: credential events use bup"
       - "Registry mode is immutable after inception (rip)"
       - "In v2: no registry rotation -- configuration cannot be changed after rip"
       - "LEGACY (v1 -- do NOT implement): 'NoBackers' trait -> iss/rev; backed -> bis/brv; backer list mutable via vrt"
     examples:
-      - "Non-blindable registry: simple mode with upd events"
-      - "Blindable registry: designated backer witnesses, uses bup events"
-    related_terms: ["Registry Inception", "Blindable vs Non-Blindable"]
+      - "Non-shieldable registry: simple mode with upd events"
+      - "Shieldable registry: designated backer witnesses, uses bup events"
+    related_terms: ["Registry Inception", "Shieldable vs Non-Shieldable"]
 
-  - term: "Blindable Registry"
-    definition: "A registry operating in blindable mode. All credential update events use the bup ilk and carry blinded attribute blocks with fresh BLIDs. Observers cannot distinguish state-changing updates from no-op decorrelation updates, protecting the credential holder's privacy."
+  - term: "Shieldable Registry"
+    definition: "A registry operating in shieldable mode. All credential update events use the bup ilk and carry shielded attribute blocks with fresh BLIDs. Observers cannot distinguish state-changing updates from no-op decorrelation updates, protecting the credential holder's privacy."
     invariants:
-      - "All credential events use bup (blindable update) — upd events are rejected"
+      - "All credential events use bup (shieldable update) — upd events are rejected"
       - "Each bup carries a fresh BLID derived from a shared secret salt + sequence number"
       - "Decorrelation updates (no state change) are indistinguishable from real state changes"
-      - "Registry creator chooses blindable mode at inception (rip) — immutable thereafter"
+      - "Registry creator chooses shieldable mode at inception (rip) — immutable thereafter"
     examples:
-      - "Blindable registry: issuer creates bup(ts='issued') with blinded attribute block — observer sees only a BLID"
+      - "Shieldable registry: issuer creates bup(ts='issued') with shielded attribute block — observer sees only a BLID"
       - "Decorrelation: issuer creates bup with unchanged state — observer cannot tell it's a no-op"
-    related_terms: ["Registry Mode", "Blinded Attribute Block", "Registry Inception"]
+    related_terms: ["Registry Mode", "Shielded Attribute Block", "Registry Inception"]
 
-  - term: "Non-Blindable Registry"
-    definition: "A registry operating in non-blindable mode. All credential update events use the upd ilk with publicly observable transaction state (ta and ts fields). Simpler than blindable mode — no blinding infrastructure needed."
+  - term: "Non-Shieldable Registry"
+    definition: "A registry operating in non-shieldable mode. All credential update events use the upd ilk with publicly observable transaction state (ta and ts fields). Simpler than shieldable mode — no shielding infrastructure needed."
     invariants:
-      - "All credential events use upd (non-blindable update) — bup events are rejected"
+      - "All credential events use upd (non-shieldable update) — bup events are rejected"
       - "Transaction ACDC SAID (ta) and transaction state (ts) are publicly visible"
       - "No decorrelation capability — state changes are observable"
-      - "Registry creator chooses non-blindable mode at inception (rip) — immutable thereafter"
+      - "Registry creator chooses non-shieldable mode at inception (rip) — immutable thereafter"
     examples:
-      - "Non-blindable registry: issuer creates upd(ts='issued') — credential SAID and state are public"
+      - "Non-shieldable registry: issuer creates upd(ts='issued') — credential SAID and state are public"
       - "Revocation: issuer creates upd(ts='revoked') — observers can see the credential was revoked"
     related_terms: ["Registry Mode", "Registry Inception"]
 
 events:
   - name: "RegistryIncepted"
-    payload: "regid: REGID, issuer_aid: AID, mode: blindable|non-blindable"
+    payload: "regid: REGID, issuer_aid: AID, mode: shieldable|non-shieldable"
     triggers: "Issuer creates a new registry via a rip (registry inception) event"
 
   - name: "RegistryRotated"
@@ -83,7 +83,7 @@ events:
 
 rules:
   - "Registry inception (rip) must have sequence number 0"
-  - "Registry mode (blindable or non-blindable) is set at inception and cannot be changed -- configuration is immutable in v2"
+  - "Registry mode (shieldable or non-shieldable) is set at inception and cannot be changed -- configuration is immutable in v2"
   - "LEGACY (v1 -- do NOT implement): registry rotation (vrt) was valid for registries with backers -- no v2 equivalent"
   - "Every registry management event must be authorized via the issuer's KEL"
   - "REGID is the SAID of the inception event -- it uniquely identifies the registry"

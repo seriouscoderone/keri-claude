@@ -1,9 +1,9 @@
 # errors.yaml
 domain_ref: "privacy/blinding"
 
-# Error catalog for the Blinding (Private State Registry) domain.
-# Covers BLID computation, blinded attribute blocks, shared secret
-# salt derivation, blindable updates, UUID derivation, and state discovery.
+# Error catalog for the Shielding (Private State Registry) domain.
+# Covers BLID computation, shielded attribute blocks, shared secret
+# salt derivation, shieldable updates, UUID derivation, and state discovery.
 #
 # Severity levels:
 #   transient  — condition may self-resolve (escrow and retry)
@@ -11,29 +11,29 @@ domain_ref: "privacy/blinding"
 #   fatal      — unrecoverable; event is permanently rejected
 
 errors:
-  - name: "BlindingKeyMismatchError"
-    description: "Shared secret salt does not produce the expected blinded identifiers"
-    cause: "The shared secret between issuer and discloser does not derive the correct UUIDs for the blinded TEL entries"
+  - name: "ShieldingKeyMismatchError"
+    description: "Shared secret salt does not produce the expected shielded identifiers"
+    cause: "The shared secret between issuer and discloser does not derive the correct UUIDs for the shielded TEL entries"
     recovery: "abort"
     severity: "fatal"
     context:
       - field: "registry_said"
         type: "string"
-        description: "The blinded registry"
+        description: "The shielded registry"
       - field: "expected_uuid"
         type: "string"
         description: "The expected derived UUID"
     related_port: "port://privacy/blinding/inbound/discover-state"
 
-  - name: "UnblindingError"
-    description: "Cannot unblind a credential status entry"
-    cause: "The blinded TEL entry cannot be correlated to a credential — either the shared secret is wrong or the credential was never issued under this blinded registry"
+  - name: "UnshieldingError"
+    description: "Cannot unshield a credential status entry"
+    cause: "The shielded TEL entry cannot be correlated to a credential — either the shared secret is wrong or the credential was never issued under this shielded registry"
     recovery: "abort"
     severity: "fatal"
     context:
-      - field: "blinded_id"
+      - field: "shielded_id"
         type: "string"
-        description: "The blinded identifier that failed unblinding"
+        description: "The shielded identifier that failed unshielding"
     related_port: "port://privacy/blinding/inbound/construct-bound-block"
 
   - name: "InsufficientSaltEntropyError"
@@ -82,14 +82,14 @@ errors:
     related_port: "port://privacy/blinding/inbound/uuid-derivation"
 
   - name: "BLIDComputationError"
-    description: "BLID computation failed due to invalid or missing blinded attribute block fields"
-    cause: "The blinded attribute block is missing required fields (d, u, td, ts) or the qb64 concatenation and Blake3-256 digest failed"
+    description: "BLID computation failed due to invalid or missing shielded attribute block fields"
+    cause: "The shielded attribute block is missing required fields (d, u, td, ts) or the qb64 concatenation and Blake3-256 digest failed"
     recovery: "abort"
     severity: "fatal"
     context:
       - field: "missing_fields"
         type: "array[string]"
-        description: "The fields that are missing from the blinded attribute block"
+        description: "The fields that are missing from the shielded attribute block"
       - field: "block_type"
         type: "string"
         description: "Whether this is a basic (4-field) or bound (6-field) block"
@@ -113,7 +113,7 @@ errors:
     related_port: "port://privacy/blinding/inbound/discover-state"
 
   - name: "BLIDFieldOrderError"
-    description: "Blinded attribute block fields are concatenated in the wrong order"
+    description: "Shielded attribute block fields are concatenated in the wrong order"
     cause: "The field concatenation order does not match the normative ordering — [d, u, td, ts] for basic blocks or [d, u, td, ts, bn, bd] for bound blocks"
     recovery: "abort"
     severity: "fatal"

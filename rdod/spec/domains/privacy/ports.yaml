@@ -25,12 +25,12 @@ ports:
 
   - id: "port://privacy/outbound/blinding"
     type: outbound
-    name: "Blinded State Operations"
+    name: "Shielded State Operations"
     semantics: command
     idempotent: false
     contract:
-      input: "types://privacy/blinding#BlindedAttributeBlock"
-      output: "types://privacy/blinding#BlindedAttributeBlock"
+      input: "types://privacy/blinding#ShieldedAttributeBlock"
+      output: "types://privacy/blinding#ShieldedAttributeBlock"
       errors: []
     refs: ["domain://privacy/blinding"]
 
@@ -48,11 +48,11 @@ ports:
   # Outbound -- kernel dependency for cryptographic operations
   - id: "port://privacy/outbound/digest"
     type: outbound
-    name: "Cryptographic Digest for Blinded Commitments"
+    name: "Cryptographic Digest for Shielded Commitments"
     semantics: query
     idempotent: true
     contract:
-      input: "Blinded block bytes with UUID"
+      input: "Shielded block bytes with UUID"
       output: "types://cesr/primitives#SAID"
       errors: []
     refs: ["domain://externals/cryptographic-primitives"]

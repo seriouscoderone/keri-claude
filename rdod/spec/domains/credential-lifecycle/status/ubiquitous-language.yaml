@@ -32,27 +32,27 @@ terms:
       - "State snapshots are persisted for fast lookup but can be recomputed from the TEL"
       - "State transitions are one-directional only: NotIssued -> Issued -> Revoked, no backtracking"
     examples:
-      - "Snapshot with et='upd', ts='issued', s='0', credential SAID, registry SAID -- credential just issued (non-blindable registry)"
+      - "Snapshot with et='upd', ts='issued', s='0', credential SAID, registry SAID -- credential just issued (non-shieldable registry)"
       - "Snapshot with et='upd', ts='revoked', s='1', credential SAID -- credential revoked after issuance"
-      - "Snapshot with et='bup', ts='issued', s='0' -- credential issued in a blindable registry"
+      - "Snapshot with et='bup', ts='issued', s='0' -- credential issued in a shieldable registry"
       - "Issued state carrying event digest ELvaU6Z... for chain verification"
       - "Revoked -- terminal state after upd(ts='revoked') event processing"
     related_terms: ["Credential State", "Registry State Snapshot", "TEL Event Verifier", "State Reconstruction"]
 
   - term: "Registry State Snapshot"
     synonyms: []
-    definition: "A materialized snapshot of a registry's management state. Tracks the registry's management TEL: registry SAID (REGID), current sequence number, latest management event digest, issuer AID, and registry mode (blindable or non-blindable). In TEL v2, registry configuration is immutable after inception (rip) -- there is no registry rotation event. LEGACY (v1 -- do NOT implement): updated by VCP (inception) and VRT (rotation) management events with mutable backer lists."
+    definition: "A materialized snapshot of a registry's management state. Tracks the registry's management TEL: registry SAID (REGID), current sequence number, latest management event digest, issuer AID, and registry mode (shieldable or non-shieldable). In TEL v2, registry configuration is immutable after inception (rip) -- there is no registry rotation event. LEGACY (v1 -- do NOT implement): updated by VCP (inception) and VRT (rotation) management events with mutable backer lists."
     invariants:
       - "Tracks the registry's management TEL state: REGID, sequence number, latest event digest"
-      - "Includes issuer AID and registry mode (blindable or non-blindable)"
+      - "Includes issuer AID and registry mode (shieldable or non-shieldable)"
       - "Registry configuration is immutable after inception (rip) in v2 -- no rotation equivalent"
       - "Updated only by the rip (registry inception) event -- credential events (upd/bup) do not affect registry state"
       - "Fields: version, REGID, sequence number, digest, issuer AID, datetime, event type, config traits"
       - "LEGACY (v1 -- do NOT implement): backer threshold (toad) and backer list (b) fields existed for VCP/VRT rotation"
     examples:
-      - "Registry state snapshot after rip inception: sn=0, non-blindable mode, issuer AID set"
-      - "Non-blindable registry: credential events use upd (not bup)"
-      - "Blindable registry: credential events use bup"
+      - "Registry state snapshot after rip inception: sn=0, non-shieldable mode, issuer AID set"
+      - "Non-shieldable registry: credential events use upd (not bup)"
+      - "Shieldable registry: credential events use bup"
       - "LEGACY (v1): registry state after vrt rotation with updated backer list -- not valid in v2"
     related_terms: ["Credential State Snapshot", "TEL Event Verifier", "State Transition Rules"]
 
@@ -62,7 +62,7 @@ terms:
     invariants:
       - "One TEL Event Verifier instance per registry, keyed by REGID"
       - "Maintains the current management sequence number and latest management event digest"
-      - "Tracks issuer AID and registry mode (blindable or non-blindable)"
+      - "Tracks issuer AID and registry mode (shieldable or non-shieldable)"
       - "Exposes per-credential state keyed by credential SAID"
       - "Provides a full Registry State Snapshot on request"
       - "Enforces NotIssued -> Issued(digest) -> Revoked transition only"
@@ -70,7 +70,7 @@ terms:
       - "Registry inception (rip) establishes registry-level state; credential events (upd/bup) update per-credential state"
       - "LEGACY (v1 -- do NOT implement): management events VCP/VRT updated registry state; credential events iss/bis/rev/brv updated per-credential state"
     examples:
-      - "TEL Event Verifier initialized from a rip event: sn=0, non-blindable mode, no credentials yet"
+      - "TEL Event Verifier initialized from a rip event: sn=0, non-shieldable mode, no credentials yet"
       - "Querying credential state for 'ELvaU6Z...' returning snapshot with et='upd', ts='issued'"
       - "Management state set at rip: sn=0, issuer bound, configuration immutable"
       - "LEGACY (v1): TEL Event Verifier advancing management sn after vrt event -- not valid in v2"
@@ -78,7 +78,7 @@ terms:
 
   - term: "State Transition Rules"
     synonyms: []
-    definition: "The set of conditions governing when each TEL state transition is valid. Enforces sequence number ordering, digest chaining, mode matching (blindable vs non-blindable), and one-directional credential lifecycle progression."
+    definition: "The set of conditions governing when each TEL state transition is valid. Enforces sequence number ordering, digest chaining, mode matching (shieldable vs non-shieldable), and one-directional credential lifecycle progression."
     invariants:
       - "Sequence number must be exactly current_sn + 1 for the next event (monotonically increasing, no gaps)"
       - "The p (prior event SAID) field must match the digest of the immediately preceding event in the TEL"
@@ -86,18 +86,18 @@ terms:
       - "An upd(ts='issued') or bup(ts='issued') event is only valid when credential state is NotIssued"
       - "An upd(ts='revoked') or bup(ts='revoked') event is only valid when credential state is Issued"
       - "No event is valid when credential state is Revoked (terminal state)"
-      - "Blindable events (bup) require backer signatures meeting the threshold"
-      - "Non-blindable events (upd) must not include backer signature attachments"
-      - "Registry mode must match the event type: non-blindable -> upd, blindable -> bup"
+      - "Shieldable events (bup) require backer signatures meeting the threshold"
+      - "Non-shieldable events (upd) must not include backer signature attachments"
+      - "Registry mode must match the event type: non-shieldable -> upd, shieldable -> bup"
       - "Registry configuration is immutable after inception (rip) in v2 -- no management rotation events"
       - "LEGACY (v1 -- do NOT implement): iss/rev for backerless, bis/brv for backed, VRT for registry rotation"
     examples:
-      - "upd event with ts='issued' at sn=1 with p=SAID_of_event_at_sn_0: valid if credential is NotIssued and registry is non-blindable"
+      - "upd event with ts='issued' at sn=1 with p=SAID_of_event_at_sn_0: valid if credential is NotIssued and registry is non-shieldable"
       - "upd event with ts='revoked' for Issued credential: valid -- transitions to Revoked"
       - "upd event with ts='issued' for already-Issued credential: rejected -- invalid state transition"
-      - "bup event on a non-blindable registry: rejected -- mode mismatch"
+      - "bup event on a non-shieldable registry: rejected -- mode mismatch"
       - "Event with sn=3 when current sn=1: rejected or escrowed as out-of-order (sn=2 missing)"
-    related_terms: ["Credential State", "TEL Event Verifier", "Blindable vs Non-Blindable"]
+    related_terms: ["Credential State", "TEL Event Verifier", "Shieldable vs Non-Shieldable"]
 
   - term: "State Reconstruction"
     synonyms: ["TEL Replay"]
@@ -168,7 +168,7 @@ rules:
   - "State transitions are strictly one-directional: NotIssued -> Issued -> Revoked -- no reversal"
   - "Sequence numbers must be monotonically increasing with no gaps"
   - "Prior event digest (p field) must match the SAID of the preceding event -- hash-chain integrity"
-  - "Registry mode (blindable vs non-blindable) constrains which credential event types are valid: non-blindable -> upd, blindable -> bup"
+  - "Registry mode (shieldable vs non-shieldable) constrains which credential event types are valid: non-shieldable -> upd, shieldable -> bup"
   - "Registry inception (rip) establishes registry state; credential events (upd/bup) affect only credential state"
   - "Cached state snapshots must always be reproducible by TEL replay -- replay is ground truth"
   - "Revoked is a terminal state -- no further state changes are possible for that credential"

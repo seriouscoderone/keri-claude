@@ -9,11 +9,11 @@ ports:
     semantics: query
     idempotent: true
     description: >
-      Pure computation — derives the BLID from a blinded attribute block's field
+      Pure computation — derives the BLID from a shielded attribute block's field
       values. No state, no side effects. Also consumed by credential-lifecycle/status
       for bup event validation.
     contract:
-      input: "types://privacy/blinding#BlindedAttributeBlock"
+      input: "types://privacy/blinding#ShieldedAttributeBlock"
       output: "types://cesr/primitives#SAID"
       errors:
         - "errors://privacy/blinding#BLIDComputationError"
@@ -22,24 +22,24 @@ ports:
 
   - id: "port://privacy/blinding/inbound/blinded-state"
     type: inbound
-    name: "Blinded State"
+    name: "Shielded State"
     semantics: command
     idempotent: true
     description: >
-      Derives the blinded state for a credential registry event — given a shared
-      secret salt, sequence number, and registry SAID, computes the blinded attribute
+      Derives the shielded state for a credential registry event — given a shared
+      secret salt, sequence number, and registry SAID, computes the shielded attribute
       block and returns it with a derived BLID. Delegates from
-      credential-lifecycle's blinded-state port; also invoked as a protocol step
-      when a registry is blindable.
+      credential-lifecycle's shielded-state port; also invoked as a protocol step
+      when a registry is shieldable.
     contract:
       input: "Shared secret salt, sequence number, registry SAID"
-      output: "types://privacy/blinding#BlindedAttributeBlock"
+      output: "types://privacy/blinding#ShieldedAttributeBlock"
       errors: []
     refs: ["domain://credential-lifecycle", "domain://privacy"]
 
   - id: "port://privacy/blinding/inbound/discover-state"
     type: inbound
-    name: "Discover Blinded State"
+    name: "Discover Shielded State"
     semantics: query
     idempotent: true
     description: >
@@ -51,22 +51,22 @@ ports:
       output: "Discovered state (credential SAID + state value) or not found"
       errors:
         - "errors://privacy/blinding#StateDiscoveryError"
-        - "errors://privacy/blinding#BlindingKeyMismatchError"
+        - "errors://privacy/blinding#ShieldingKeyMismatchError"
     refs: ["domain://privacy"]
 
   - id: "port://privacy/blinding/inbound/construct-bound-block"
     type: inbound
-    name: "Construct Bound Blinded Attribute Block"
+    name: "Construct Bound Shielded Attribute Block"
     semantics: command
     idempotent: false
     description: >
-      Builder — constructs a BoundBlindedAttributeBlock by combining a blinded
+      Builder — constructs a BoundShieldedAttributeBlock by combining a shielded
       attribute block with binding context (transaction SAID, state, key event sn/SAID).
     contract:
-      input: "types://privacy/blinding#BlindedAttributeBlock"
-      output: "types://privacy/blinding#BoundBlindedAttributeBlock"
+      input: "types://privacy/blinding#ShieldedAttributeBlock"
+      output: "types://privacy/blinding#BoundShieldedAttributeBlock"
       errors:
-        - "errors://privacy/blinding#UnblindingError"
+        - "errors://privacy/blinding#UnshieldingError"
     refs: ["domain://privacy"]
 
   - id: "port://privacy/blinding/inbound/uuid-derivation"

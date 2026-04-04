@@ -23,7 +23,7 @@ types:
           - name: "u"
             type: "string"
             required: false
-            description: "UUID — blinding nonce for privacy (absent for public registries)"
+            description: "UUID — shielding nonce for privacy (absent for public registries)"
           - name: "i"
             type: "string"
             required: true
@@ -44,8 +44,8 @@ types:
           - "Must be authorized in the issuer's KEL via a seal"
           - "n is the sequence number field (not s as in legacy vcp events)"
 
-  - name: "BlindableUpdateEvent"
-    description: "A blindable update event (bup) for registries that support blinding. Carries a blinded attribute block with BLID for decorrelation. Used for both issuance and revocation — the transaction state (ts) field determines the state transition."
+  - name: "ShieldableUpdateEvent"
+    description: "A shieldable update event (bup) for registries that support shielding. Carries a shielded attribute block with BLID for decorrelation. Used for both issuance and revocation — the transaction state (ts) field determines the state transition."
     variants:
       - name: "default"
         fields:
@@ -58,7 +58,7 @@ types:
             required: true
             constraints:
               enum: ["bup"]
-            description: "Message type — blindable update"
+            description: "Message type — shieldable update"
           - name: "d"
             type: "string"
             required: true
@@ -95,10 +95,10 @@ types:
           - "An observer cannot distinguish state-changing updates from no-op decorrelation updates"
           - "ts determines the credential state transition — not the event type"
           - "Must be authorized in the issuer's KEL via a seal"
-          - "Builder: UpdateEvent.builder().blindable().registry(regid).credential(said).state('issued').build()"
+          - "Builder: UpdateEvent.builder().shieldable().registry(regid).credential(said).state('issued').build()"
 
-  - name: "NonBlindableUpdateEvent"
-    description: "A non-blindable update event (upd) for registries without blinding. Used for both issuance and revocation — the transaction state (ts) field determines the state transition."
+  - name: "NonShieldableUpdateEvent"
+    description: "A non-shieldable update event (upd) for registries without shielding. Used for both issuance and revocation — the transaction state (ts) field determines the state transition."
     variants:
       - name: "default"
         fields:
@@ -111,7 +111,7 @@ types:
             required: true
             constraints:
               enum: ["upd"]
-            description: "Message type — non-blindable update"
+            description: "Message type — non-shieldable update"
           - name: "d"
             type: "string"
             required: true
@@ -144,10 +144,10 @@ types:
               enum: ["issued", "revoked"]
         invariants:
           - "Field order: [v, t, d, rd, n, p, dt, ta, ts]"
-          - "No blinding — credential state transitions are publicly observable"
+          - "No shielding — credential state transitions are publicly observable"
           - "ts determines the credential state transition — not the event type"
           - "Must be authorized in the issuer's KEL via a seal"
-          - "Builder: UpdateEvent.builder().nonBlindable().registry(regid).credential(said).state('revoked').build()"
+          - "Builder: UpdateEvent.builder().nonShieldable().registry(regid).credential(said).state('revoked').build()"
 
   - name: "RegistryRotationEvent"
     description: "LEGACY v1 registry rotation (vrt) event type marker, retained for migration compatibility."
@@ -175,9 +175,9 @@ types:
           - name: "mode"
             type: "string"
             required: true
-            description: "Whether the registry supports blinding"
+            description: "Whether the registry supports shielding"
             constraints:
-              enum: ["blindable", "non-blindable"]
+              enum: ["shieldable", "non-shieldable"]
         invariants:
           - "Produces a RegistryInceptionEvent (rip) authorized in the issuer's KEL"
 
@@ -197,16 +197,16 @@ types:
           - name: "mode"
             type: "string"
             required: true
-            description: "Whether the registry supports blinding"
+            description: "Whether the registry supports shielding"
             constraints:
-              enum: ["blindable", "non-blindable"]
+              enum: ["shieldable", "non-shieldable"]
           - name: "created_at"
             type: "string"
             required: true
             description: "ISO 8601 datetime when the registry was created"
         invariants:
           - "Immutable after creation — registry mode cannot change"
-          - "mode determines whether credentials use bup (blindable) or upd (non-blindable) events"
+          - "mode determines whether credentials use bup (shieldable) or upd (non-shieldable) events"
 
   - name: "RegistryStateSnapshot"
     description: "The current state of a credential registry — derived from processing rip and update events."
@@ -225,9 +225,9 @@ types:
             type: "integer"
             required: true
             description: "Registry sequence number"
-          - name: "blindable"
+          - name: "shieldable"
             type: "boolean"
             required: true
-            description: "Whether this registry supports blinding (bup events) or not (upd events)"
+            description: "Whether this registry supports shielding (bup events) or not (upd events)"
         invariants:
           - "Derived from processing rip event and subsequent updates"

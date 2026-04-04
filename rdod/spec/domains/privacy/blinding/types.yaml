@@ -1,8 +1,8 @@
 domain_ref: "privacy/blinding"
 
 types:
-  - name: "BlindedAttributeBlock"
-    description: "A credential attribute block with UUID blinding — the u field provides entropy that prevents rainbow table discovery of the block's content from its SAID."
+  - name: "ShieldedAttributeBlock"
+    description: "A credential attribute block with UUID shielding — the u field provides entropy that prevents rainbow table discovery of the block's content from its SAID."
     variants:
       - name: "default"
         fields:
@@ -13,29 +13,29 @@ types:
           - name: "u"
             type: "string"
             required: true
-            description: "UUID blinding factor — high entropy (>= 128 bits)"
+            description: "UUID shielding factor — high entropy (>= 128 bits)"
           - name: "attributes"
             type: "map"
             required: true
             description: "The actual attribute data (hidden behind the SAID+UUID)"
         invariants:
           - "u field MUST have >= 128 bits of entropy"
-          - "SAID(block) is a blinded commitment — cannot discover content without u"
-          - "Public blocks (no u) cannot be blinded"
+          - "SAID(block) is a shielded commitment — cannot discover content without u"
+          - "Public blocks (no u) cannot be shielded"
 
-  - name: "BoundBlindedAttributeBlock"
-    description: "A blinded attribute block bound to a specific transaction and key state — ties the blinding to a verifiable authorization point."
+  - name: "BoundShieldedAttributeBlock"
+    description: "A shielded attribute block bound to a specific transaction and key state — ties the shielding to a verifiable authorization point."
     variants:
       - name: "default"
         fields:
           - name: "blid"
             type: "string"
             required: true
-            description: "Blinded SAID of the attribute block"
+            description: "Shielded SAID of the attribute block"
           - name: "uuid"
             type: "string"
             required: true
-            description: "UUID blinding factor (>= 128 bits entropy)"
+            description: "UUID shielding factor (>= 128 bits entropy)"
           - name: "transaction_said"
             type: "string"
             required: true
@@ -56,3 +56,25 @@ types:
           - "blid is derived from the block content + uuid"
           - "Binding is verifiable: transaction_said must be authorized in the KEL at (bound_sn, bound_said)"
           - "uuid must have >= 128 bits of entropy to prevent rainbow table attacks"
+
+  - name: "HierarchicalDerivation"
+    description: "A deterministic key/UUID derivation mechanism using hierarchical paths indexed by bulk copy index and block position, enabling the Issuee to regenerate any bulk-issued ACDC instance from a Shared Secret Salt and index without storing all copies."
+    variants:
+      - name: "default"
+        fields:
+          - name: "salt"
+            type: "string"
+            required: true
+            description: "Shared Secret Salt — established between Issuer and Issuee"
+          - name: "path"
+            type: "list"
+            required: true
+            description: "Derivation path segments — [copy_index, block_position, ...]"
+          - name: "derived_uuid"
+            type: "string"
+            required: true
+            description: "The UUID produced by this derivation — used as blinding factor"
+        invariants:
+          - "Deterministic — same salt + path always produces same UUID"
+          - "Path segments include bulk copy index k and block position within the ACDC"
+          - "Issuee can regenerate any instance on demand from salt and index"

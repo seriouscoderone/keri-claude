@@ -29,10 +29,10 @@ terms:
 
   - term: "Private ACDC"
     synonyms: ["Confidential ACDC"]
-    definition: "An ACDC with a sufficiently high-entropy top-level UUID u field, making the top-level SAID a blinded commitment that cannot be correlated to ACDC content without disclosure."
+    definition: "An ACDC with a sufficiently high-entropy top-level UUID u field, making the top-level SAID a shielded commitment that cannot be correlated to ACDC content without disclosure."
     invariants:
       - "Top-level UUID u field present with >= 128 bits cryptographic entropy"
-      - "Top-level SAID provides a secure blinded commitment"
+      - "Top-level SAID provides a secure shielded commitment"
       - "Content not discoverable from SAID + schema alone"
     examples:
       - "A credential where the SAID can be committed to (signed) without revealing any content"
@@ -52,14 +52,14 @@ terms:
     synonyms: ["Bulk Issuance"]
     definition: "Issuance of multiple instances of a given ACDC, each a copy with a unique instance identifier, so that disclosure of one instance is not correlatable to another."
     invariants:
-      - "Each instance has a unique blinded SAID"
-      - "Issuer signs or seals the blinded SAID of each instance"
+      - "Each instance has a unique shielded SAID"
+      - "Issuer signs or seals the shielded SAID of each instance"
       - "Instances are not correlatable to each other via their identifiers"
     examples:
       - "Bulk-issued private ACDCs for repeated presentations to different verifiers"
     related_terms: ["Private ACDC", "Selective Disclosure", "AGID"]
 
-  - term: "Blinded Attribute Block"
+  - term: "Shielded Attribute Block"
     synonyms: []
     definition: "An individual attribute block within the aggregate section that includes a SAID (d) and UUID (u) field, making its content discoverable only upon explicit disclosure of the block details including its UUID."
     invariants:
@@ -70,7 +70,7 @@ terms:
     examples:
       - "Score block: {\"d\": \"EC-vU...\", \"u\": \"0ABhY2...\", \"score\": 96}"
       - "Compacted to its SAID: \"EC-vU19URXX8ztfWdp_j2HHr1lJsqtGa1YHtZrg6-GMR\""
-    related_terms: ["Selective Disclosure", "AGID", "UUID"]
+    related_terms: ["Selective Disclosure", "AGID", "UUID", "Shielded Attribute Block"]
 
   - term: "Disclosure Form Taxonomy"
     synonyms: ["Graduated Disclosure Forms"]
@@ -92,12 +92,12 @@ terms:
     related_terms: ["Disclosure Form Taxonomy", "Partial Disclosure"]
 
   - term: "Partial Disclosure"
-    definition: "A block's SAID plus its UUID and schema are disclosed, but the remaining field values remain blinded. The receiver knows the block exists and what schema it follows, but cannot discover the attribute values without the full expansion. Requires the block to be Private (has u field with entropy)."
+    definition: "A block's SAID plus its UUID and schema are disclosed, but the remaining field values remain shielded. The receiver knows the block exists and what schema it follows, but cannot discover the attribute values without the full expansion. Requires the block to be Private (has u field with entropy)."
     invariants:
       - "Disclosed: d (SAID), u (UUID), s (schema SAID)"
-      - "Blinded: all other fields remain undisclosed"
+      - "Shielded: all other fields remain undisclosed"
       - "Requires Private block — Public blocks skip directly from Compact to Full"
-      - "UUID prevents rainbow table discovery of blinded content"
+      - "UUID prevents rainbow table discovery of shielded content"
     related_terms: ["Disclosure Form Taxonomy", "Compact Disclosure", "Full Disclosure"]
 
   - term: "Full Disclosure"
@@ -112,7 +112,7 @@ terms:
     definition: "Individual attributes within the aggregate section (A field) can be disclosed independently without revealing other attributes. Uses AGID (Aggregate Identifier) as a cryptographic commitment to the full set, with inclusion proofs for individual attributes. The receiver verifies each disclosed attribute is a member of the committed set."
     invariants:
       - "Requires A field (aggregate section), NOT a field (attribute section)"
-      - "Each attribute block has its own SAID and UUID for independent blinding"
+      - "Each attribute block has its own SAID and UUID for independent shielding"
       - "Inclusion proof: compute block SAID, confirm in SAID list, verify AGID"
       - "Disclosing one attribute reveals nothing about other attributes"
     related_terms: ["Disclosure Form Taxonomy", "AGID"]
@@ -129,7 +129,7 @@ terms:
   - term: "Bulk-Issued Disclosure"
     definition: "A privacy pattern where the issuer creates multiple copies of the same credential, each with a unique SAID and UUID. The holder uses different copies for different verifiers, preventing cross-presentation correlation. Each copy is independently verifiable but unlinkable to other copies of the same credential."
     invariants:
-      - "Each copy has unique d (SAID) and u (UUID) values"
+      - "Each copy has unique d (SAID) and u (UUID) values — shielded per-copy"
       - "Issuer commits to a bulk-issued aggregate value binding all copies"
       - "Copies are unlinkable — verifiers cannot determine they came from the same issuance"
       - "Enables one-time-use or verifier-specific presentation strategies"
@@ -146,9 +146,9 @@ terms:
       - "Rules section (r field) specifies the contractual terms"
     related_terms: ["Disclosure Form Taxonomy", "Metadata Disclosure", "Credential Governance Model"]
 
-  - term: "Bespoke ACDC"
-    synonyms: ["Disclosure-Specific ACDC"]
-    definition: "A composition pattern where a discloser issues their own ACDC that references another credential via edges, augmenting it with disclosure-specific terms (e.g., naming the specific verifier, adding presentation context, or attaching contractual language). This enables custom presentations without modifying the original credential."
+  - term: "PresentationACDC"
+    synonyms: ["Bespoke ACDC", "Disclosure-Specific ACDC"]
+    definition: "A credential issued by a Discloser to a specific Disclosee as the named Issuee, chaining via Edge Section to one or more prior ACDCs and adding presentation-specific terms (naming the verifier, adding context, attaching contractual language). The Discloser acts as Issuer of this credential — a presentation act, not a standard issuance — enabling custom presentations without modifying the original credential."
     invariants:
       - "The bespoke ACDC chains to the original credential via the e (edges) field"
       - "Issued by the discloser (holder), not the original issuer"
@@ -157,6 +157,30 @@ terms:
     examples:
       - "Presenting a university degree to an employer: holder issues a bespoke ACDC referencing the degree credential, adding employer-specific contractual terms"
     related_terms: ["Credential Chaining Model", "Contractually Protected Disclosure"]
+
+  - term: "ThreePartyExploitationModel"
+    synonyms: ["Exploitation Model", "Three-Party Model"]
+    definition: "The adversary model defining three exploitation roles: 1st party (data subject / Discloser), 2nd party (intended recipient / Disclosee), 3rd party (unintended observer). All ACDC disclosure mechanisms are designed to prevent exploitation by 2nd and 3rd parties."
+    invariants:
+      - "1st party is the data subject — the Discloser who controls their own credential data"
+      - "2nd party is the intended recipient — the Disclosee who receives disclosed data"
+      - "3rd party is any unintended observer — can exploit via correlation, interception, or inference"
+      - "Graduated Disclosure mechanisms protect against both 2nd-party misuse and 3rd-party observation"
+    examples:
+      - "2nd-party exploitation: a verifier using disclosed PII beyond the intended scope"
+      - "3rd-party exploitation: an observer correlating presentations across verifiers via shared ACDC SAID"
+    related_terms: ["Graduated Disclosure", "Contractually Protected Disclosure", "DataPrivacyPrinciple"]
+
+  - term: "DataPrivacyPrinciple"
+    synonyms: ["Privacy Principle"]
+    definition: "The framing of ACDC privacy as protection from unpermissioned exploitation of 1st-party data — distinct from information security (confidentiality) and data security (access control). Privacy is about controlling the relationship context in which data is used."
+    invariants:
+      - "Privacy is not confidentiality — data may be disclosed but only in permitted contexts"
+      - "Privacy is not access control — the data subject controls disclosure, not a gatekeeper"
+      - "The principle of least disclosure governs all graduated disclosure steps"
+    examples:
+      - "A credential holder choosing to disclose only their age range, not birthdate, to a verifier"
+    related_terms: ["ThreePartyExploitationModel", "Graduated Disclosure", "Contractually Protected Disclosure"]
 
 events:
   - name: "GraduatedDisclosurePerformed"
@@ -173,8 +197,8 @@ events:
 
 rules:
   - "The principle of least disclosure must be followed — disclose only the minimum information needed"
-  - "Graduated disclosure orchestrates disclosure, blinding, and aggregation subdomains in sequence"
+  - "Graduated disclosure orchestrates disclosure, shielding, and aggregation subdomains in sequence"
   - "Top-level UUID u field determines privacy level: absent = public, non-empty high-entropy = private, present but empty = metadata"
   - "Private ACDC UUIDs must have >= 128 bits of cryptographic entropy to resist rainbow table attacks"
   - "A metadata ACDC must not provide any correlation point to the actual private ACDC"
-  - "Bulk-issued instances must have unique blinded SAIDs — no two instances may share an identifier"
+  - "Bulk-issued instances must have unique shielded SAIDs — no two instances may share an identifier"

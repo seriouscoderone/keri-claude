@@ -3,12 +3,12 @@ template_version: "2.0"
 id: "privacy"
 name: "Credential Privacy"
 description: >
-  Control what you reveal — graduated disclosure from compact to full, blinded
+  Control what you reveal — graduated disclosure from compact to full, shielded
   credential status, and selective disclosure mechanics. Orchestrates progressive,
   incremental revelation of credential data following the principle of least
   disclosure. Defines three ACDC privacy levels (public, private, metadata) based
   on the top-level UUID field, supports bulk issuance for anti-correlation, and
-  coordinates blinding, disclosure modes, and aggregation subdomains.
+  coordinates shielding, disclosure modes, and aggregation subdomains.
 version: "0.1.0"
 tier: "domain"
 
@@ -34,7 +34,7 @@ subdomains:
     relationship: "Defines the disclosure type taxonomy — compact, partial, nested partial, full, selective, chain-link confidential"
     via_port: "port://privacy/disclosure/inbound/mode-definitions"
   - ref: "domain://privacy/blinding"
-    relationship: "Privacy-preserving blinded state management — BLID computation, UUID derivation from shared secret salt, state discovery"
+    relationship: "Privacy-preserving shielded state management — BLID computation, UUID derivation from shared secret salt, state discovery"
   - ref: "domain://privacy/aggregation"
     relationship: "Aggregate computation, inclusion proofs, most compact form algorithm, Compactor engine, SAD path signatures"
 
@@ -43,22 +43,22 @@ kernels: []
 adjacents:
   - ref: "domain://cesr"
     pattern: "conformist"
-    relationship: "CESR primitives (Saider, Diger, SAID) adopted natively for AGID computation, blinding, and disclosure verification"
+    relationship: "CESR primitives (Saider, Diger, SAID) adopted natively for AGID computation, shielding, and disclosure verification"
   - ref: "domain://credential-exchange"
     relationship: "Customer-Supplier — chain-link confidentiality gating requires knowledge of whether the IPEX agree step has completed before full disclosure is permitted"
     pattern: "Customer-Supplier"
 
 externals:
   - ref: "domain://externals/cryptographic-primitives"
-    source: "SAID computation for blinded commitments, UUID entropy requirements (>= 128 bits cryptographic entropy)"
-    relationship: "Cryptographic algorithm types used for computing blinded SAIDs over UUID-protected blocks and generating high-entropy UUIDs"
+    source: "SAID computation for shielded commitments, UUID entropy requirements (>= 128 bits cryptographic entropy)"
+    relationship: "Cryptographic algorithm types used for computing shielded SAIDs over UUID-protected blocks and generating high-entropy UUIDs"
 
 implementation_guidance:
   suggested_type: "module"
   language_affinity: "any"
   notes: >
     This is an orchestrating domain. Disclosure mode definitions live in disclosure/,
-    blinded state management in blinding/, and aggregate computation, compaction, and
+    shielded state management in blinding/, and aggregate computation, compaction, and
     path signatures in aggregation/. The parent coordinates graduated disclosure flows
     that compose all three subdomains. Privacy levels are determined by the top-level
     UUID u field. Bulk issuance generates multiple instances with unique SAIDs for
@@ -66,4 +66,4 @@ implementation_guidance:
 
 issues: []
 
-tags: ["disclosure", "graduated", "orchestration", "privacy", "blinding", "bulk-issuance"]
+tags: ["disclosure", "graduated", "orchestration", "privacy", "shielding", "bulk-issuance"]

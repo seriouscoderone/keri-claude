@@ -3,7 +3,7 @@ domain_ref: "privacy"
 errors:
   - name: "InvalidDisclosureFormError"
     description: "Attempted to disclose a block in an invalid form for its privacy model"
-    cause: "Public blocks cannot have Partial form (no u field for blinding). Selective disclosure requires A field, not a field."
+    cause: "Public blocks cannot have Partial form (no u field for shielding). Selective disclosure requires A field, not a field."
     recovery: "abort"
     severity: "fatal"
     context:
@@ -31,7 +31,7 @@ errors:
         description: "The lower level that was attempted"
 
   - name: "InsufficientEntropyError"
-    description: "UUID blinding factor does not have sufficient entropy for privacy"
+    description: "UUID shielding factor does not have sufficient entropy for privacy"
     cause: "Private ACDC or block has u field with fewer than 128 bits of entropy — vulnerable to rainbow table attack"
     recovery: "abort"
     severity: "fatal"

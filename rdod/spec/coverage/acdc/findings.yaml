@@ -1,0 +1,322 @@
+# findings.yaml — ACDC Specification UL Coverage Findings
+# Generated: 2026-04-03
+# Spec: acdc-specification.md
+# Total findings: 20
+# Priority: discovery > gap > awkward > collapse > fluent
+
+findings:
+  # === Z0 ===
+  - id: ACDC-Z0-001
+    zoom: Z0
+    heading: "Authentic Chained Data Containers (ACDC)"
+    score: awkward
+    description: >
+      No UL term for the graph-level concept: ACDCs as fragments of a globally
+      distributed property graph, or the chain-of-authority that emerges from
+      linked ACDCs. "Edge Section" names the structural field but the adopter
+      concept — an authenticated authorization graph — has no first-class term.
+    proposed_term: "CredentialGraph"
+    proposed_definition: >
+      The directed acyclic graph (DAG) formed by ACDCs linked through their Edge
+      Sections, enabling proof-of-authorship chains and delegated proof-of-authority.
+    route: ul_term
+    route_domain: credential-lifecycle
+    route_reason: "Adopter-facing concept: WHAT chained ACDCs form, not HOW edges work"
+
+  # === Z1 ===
+  - id: ACDC-Z1-001
+    zoom: Z1
+    heading: "Introduction"
+    score: awkward
+    description: >
+      Same root gap as ACDC-Z0-001 — the graph-level authorization chain concept.
+    proposed_term: null
+    collapse_from: ["ACDC-Z0-001"]
+    route: ul_term
+    route_domain: credential-lifecycle
+    route_reason: "Collapses into ACDC-Z0-001"
+
+  - id: ACDC-Z1-002
+    zoom: Z1
+    heading: "Introduction"
+    score: awkward
+    description: >
+      128-bit security level is a cross-cutting invariant (UUIDs, salts, bulk
+      issuance) but unnamed in the UL. Appears in privacy, credential-lifecycle,
+      and cesr contexts.
+    proposed_term: "SecurityLevel"
+    proposed_definition: >
+      The minimum cryptographic strength (approximately 128 bits) required for all
+      ACDC cryptographic operations including digests, UUIDs, salts, and signatures.
+    route: verification
+    route_domain: cesr
+    route_reason: "Cross-cutting cryptographic constraint — belongs where primitives are defined"
+
+  - id: ACDC-Z1-003
+    zoom: Z1
+    heading: "Disclosure Mechanisms and Exploitation Protection"
+    score: awkward
+    description: >
+      No UL term for the Three-Party Exploitation Model — the adversary model
+      (issuer exploiting issuee, issuee exploiting verifier, verifier exploiting
+      issuee) that motivates the entire disclosure design.
+    proposed_term: "ThreePartyExploitationModel"
+    proposed_definition: >
+      The adversary model defining three exploitation roles: 1st party (data subject/
+      Discloser), 2nd party (intended recipient/Disclosee), 3rd party (unintended
+      observer). All ACDC disclosure mechanisms are designed to prevent exploitation
+      by 2nd and 3rd parties.
+    route: ul_term
+    route_domain: privacy
+    route_reason: "Adopter-facing threat model motivating all privacy mechanisms"
+
+  - id: ACDC-Z1-004
+    zoom: Z1
+    heading: "Disclosure Mechanisms and Exploitation Protection"
+    score: awkward
+    description: >
+      No UL term for the temporal binding invariant: TEL state changes are bound
+      to key state at the time of the change, not current key state.
+    proposed_term: "TemporalKeyStateBinding"
+    proposed_definition: >
+      The invariant that each TEL event's authority is determined by the Issuer's
+      key state at the time the Transaction Event Seal was anchored in the KEL,
+      not by the current key state — ensuring credential proofs survive key rotation.
+    route: verification
+    route_domain: credential-lifecycle
+    route_reason: "Verification invariant on TEL event authority"
+
+  # === Z2 ===
+  - id: ACDC-Z2-001
+    zoom: Z2
+    heading: "Schema Section"
+    score: awkward
+    description: >
+      No UL term for the "type-is-schema" design principle — Schema SAID as
+      the type identifier.
+    proposed_term: "TypeIsSchema"
+    proposed_definition: >
+      The design principle that an ACDC's Schema SAID serves as its sole type
+      identifier — there is no separate type field because the Schema itself
+      defines the credential's type, structure, and validation rules.
+    route: ul_term
+    route_domain: credential-lifecycle
+    route_reason: "Adopter concept: WHAT makes a credential's type, not HOW schemas work"
+
+  - id: ACDC-Z2-002
+    zoom: Z2
+    heading: "Attribute Section"
+    score: awkward
+    description: >
+      No UL term for Targeted vs Untargeted ACDC distinction, or the Cargo field
+      pattern for opaque foreign data.
+    proposed_terms:
+      - term: "TargetedACDC"
+        definition: "An ACDC whose Attribute Section includes an Issuee AID (i field), binding the credential to a designated recipient."
+      - term: "UntargetedACDC"
+        definition: "An ACDC without an Issuee AID in the Attribute Section — a bearer credential addressed 'to whom it may concern'."
+      - term: "CargoField"
+        definition: "The optional `cargo` field in the Attribute Section enabling an ACDC to carry opaque foreign data formats as a verifiable container."
+    route: ul_term
+    route_domain: credential-lifecycle
+    route_reason: "Adopter-facing credential classification — Targeted/Untargeted are Credential Type Dimension values"
+
+  - id: ACDC-Z2-003
+    zoom: Z2
+    heading: "Edge Section"
+    score: awkward
+    description: >
+      No UL term for Edge or Edge-group as first-class structural block types
+      distinct from the Edge Section container.
+    proposed_terms:
+      - term: "CredentialEdge"
+        definition: "A directed link block within the Edge Section referencing a far-node ACDC by SAID, with optional Schema constraint and Operator."
+      - term: "EdgeGroup"
+        definition: "An aggregation block within the Edge Section composing multiple Edges or nested EdgeGroups via an m-ary Operator (AND, OR, etc.)."
+    route: types
+    route_domain: credential-lifecycle
+    route_reason: "Structural block types — HOW edges are composed, not WHAT the adopter does"
+
+  - id: ACDC-Z2-004
+    zoom: Z2
+    heading: "Rule Section"
+    score: awkward
+    description: >
+      No UL term for Percolated Discovery — the OOBI-based propagation of
+      contract/schema text from Issuer through Issuee to Disclosee.
+    proposed_term: "PercolatedDiscovery"
+    proposed_definition: >
+      The mechanism by which compact ACDC sections (Schema, Rules) are retrieved
+      by interested parties via OOBI-bootstrapped service endpoints, enabling
+      content propagation without requiring the Issuer to directly serve all parties.
+    route: ul_term
+    route_domain: discovery
+    route_reason: "Discovery-domain concept — how compact content is resolved to full form"
+
+  - id: ACDC-Z2-005
+    zoom: Z2
+    heading: "Most compact form SAID"
+    score: awkward
+    description: >
+      Most Compact Form exists in privacy/aggregation UL but is scoped to AGID.
+      The general depth-first SAID computation algorithm needs its own broader term.
+    proposed_term: null
+    proposed_action: "Broaden existing MostCompactForm term in privacy/aggregation to cover the general algorithm, not just AGID computation"
+    route: ul_term
+    route_domain: privacy/aggregation
+    route_reason: "Existing term needs scope expansion, not a new term"
+
+  - id: ACDC-Z2-006
+    zoom: Z2
+    heading: "Disclosure-specific (Bespoke) Issued ACDCs"
+    score: awkward
+    description: >
+      No UL term for the workflow of a Discloser acting as Issuer of a bespoke
+      credential to a specific Disclosee.
+    proposed_term: null
+    proposed_action: "Add workflow description to existing BespokeACDC term — the issuance act is inseparable from the concept"
+    route: ul_term
+    route_domain: privacy
+    route_reason: "Bespoke ACDC already exists; enrich its definition with the workflow"
+
+  - id: ACDC-Z2-007
+    zoom: Z2
+    heading: "Validating Transaction Events"
+    score: awkward
+    description: >
+      The six-step TEL validation algorithm has no named UL workflow term.
+    proposed_term: "TransactionEventValidation"
+    proposed_definition: >
+      The verification workflow for TEL events: confirm event SAID, locate
+      Transaction Event Seal in Issuer's KEL, verify seal matches event,
+      validate key state at seal time, check hash-chain integrity, update
+      Credential State.
+    route: verification
+    route_domain: credential-lifecycle
+    route_reason: "Verification workflow — belongs in credential-lifecycle verification rules"
+
+  - id: ACDC-Z2-008
+    zoom: Z2
+    heading: "Three-party Exploitation Model"
+    score: awkward
+    description: >
+      No UL terms for the exploitation model roles (1st/2nd/3rd party) or the
+      Exploitation Observer role distinct from infrastructure TEL Observer.
+    proposed_term: null
+    collapse_from: ["ACDC-Z1-003"]
+    route: ul_term
+    route_domain: privacy
+    route_reason: "Collapses into ACDC-Z1-003"
+
+  - id: ACDC-Z2-009
+    zoom: Z2
+    heading: "Data Privacy"
+    score: awkward
+    description: >
+      No UL term for the contextual-integrity framing of privacy (privacy as
+      protection from unpermissioned exploitation, not as secrecy).
+    proposed_term: "DataPrivacyPrinciple"
+    proposed_definition: >
+      The framing of ACDC privacy as protection from unpermissioned exploitation
+      of 1st-party data — distinct from information security (confidentiality)
+      and data security (access control). Privacy is about controlling the
+      relationship context in which data is used.
+    route: ul_term
+    route_domain: privacy
+    route_reason: "Foundational privacy concept motivating the domain"
+
+  - id: ACDC-Z2-010
+    zoom: Z2
+    heading: "Bulk-issued Private ACDCs"
+    score: awkward
+    description: >
+      No UL term for the BulkIssuanceAggregate (`B` value) or the bulk
+      issuance template mechanism.
+    proposed_term: "BulkIssuanceAggregate"
+    proposed_definition: >
+      The aggregate cryptographic commitment (`B` value) anchored by the Issuer
+      covering all instances in a bulk-issued set. Analogous to AGID for
+      selective disclosure but serving anti-correlation across presentation
+      contexts rather than attribute-level selectivity.
+    route: types
+    route_domain: privacy
+    route_reason: "Implementation type — HOW bulk issuance commits, not WHAT the adopter does"
+
+  - id: ACDC-Z2-011
+    zoom: Z2
+    heading: "ACDC Protocol Message Types"
+    score: awkward
+    description: >
+      No UL term for Section Messages (sch, att, agg, edg, rul) as a concept
+      distinct from full ACDC messages, or the caching/reuse pattern.
+    proposed_term: "SectionMessage"
+    proposed_definition: >
+      An independently transmittable CESR message carrying a single ACDC section
+      (Schema, Attribute, Aggregate, Edge, or Rule), enabling section-level
+      caching and reuse across ACDC instances sharing the same section content.
+    route: types
+    route_domain: credential-lifecycle
+    route_reason: "Message type — HOW sections are transmitted, not WHAT the adopter does"
+
+  # === Z3 ===
+  - id: ACDC-Z3-001
+    zoom: Z3
+    heading: "Computation of the AGID"
+    score: awkward
+    description: >
+      The AGID computation algorithm lacks a named UL term analogous to SAID
+      computation protocol.
+    proposed_term: null
+    proposed_action: "Add computation algorithm description to existing AGID term definition"
+    route: ul_term
+    route_domain: privacy/aggregation
+    route_reason: "Enrich existing term rather than create new one"
+
+  - id: ACDC-Z3-002
+    zoom: Z3
+    heading: "Basic Bulk Issuance Procedure"
+    score: awkward
+    description: >
+      No UL term for hierarchical deterministic derivation paths used in bulk
+      issuance UUID generation.
+    proposed_term: "HierarchicalDerivation"
+    proposed_definition: >
+      A deterministic key/UUID derivation mechanism using hierarchical paths
+      indexed by bulk copy index and block position, enabling the Issuee to
+      regenerate any bulk-issued ACDC instance from a Shared Secret Salt and
+      index without storing all copies.
+    route: types
+    route_domain: privacy/blinding
+    route_reason: "Derivation mechanism type — lives alongside SharedSecretSalt"
+
+  # === Z4 ===
+  - id: ACDC-Z4-001
+    zoom: Z4
+    heading: "Blinded Attribute Block field details"
+    score: awkward
+    description: >
+      No UL term for virtual-labeled (non-serialized label) fixed-field blocks —
+      a structural distinction from normal SAD field maps.
+    proposed_term: "FixedFieldBlock"
+    proposed_definition: >
+      A CESR data structure whose fields follow a fixed positional order with
+      virtual (mnemonic-only, never serialized) labels, in contrast to labeled
+      SAD field maps. Used for Blinded Attribute Blocks and Bound Blinded
+      Attribute Blocks.
+    route: types
+    route_domain: cesr
+    route_reason: "CESR structural type — the encoding pattern, not the credential concept"
+
+  - id: ACDC-Z4-002
+    zoom: Z4
+    heading: "Calculating SAID of serialized Blinded Attribute Block"
+    score: awkward
+    description: >
+      The BLID computation is a specialization of SAID computation for fixed-field
+      blocks. The UL has SAID and BLID but no term linking them as variants of
+      the same self-addressing protocol.
+    proposed_term: null
+    proposed_action: "Enrich existing BLID term to explicitly note it as a fixed-field SAID computation variant"
+    route: ul_term
+    route_domain: privacy/blinding
+    route_reason: "Enrich existing term definition"

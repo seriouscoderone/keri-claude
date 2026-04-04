@@ -37,14 +37,14 @@ terms:
       - "Every TEL event has a t field (ilk), d field (SAID), and rd field (registry SAID)"
       - "Every TEL event must be sealed (anchored) in the issuer's KEL — the seal provides non-repudiable commitment"
       - "Events are hash-chained via prior event SAID (p field) — except registry inception which has no predecessor"
-      - "Blindable registries use bup events with blinded attribute blocks for decorrelation"
-      - "Non-blindable registries use upd events with publicly observable state transitions"
+      - "Shieldable registries use bup events with shielded attribute blocks for decorrelation"
+      - "Non-shieldable registries use upd events with publicly observable state transitions"
       - "Each event type produces exactly one state transition: rip creates registry, upd/bup changes credential state"
     examples:
       - "Registry Inception (rip): ilk=rip, fields=[v,t,d,u,i,n,dt], transition=creates registry, mode=N/A, anchor=required"
       - "Update (upd): ilk=upd, fields=[v,t,d,rd,n,p,dt,ta,ts], transition=changes credential state, mode=backerless, anchor=required"
-      - "Blindable Update (bup): ilk=bup, fields=[v,t,d,rd,n,p,dt,b], transition=changes blinded state, mode=backerless, anchor=required"
-    related_terms: ["Registry Inception", "Update Event", "Blindable Update", "Backed vs Backerless", "Transaction Event Seal"]
+      - "Shieldable Update (bup): ilk=bup, fields=[v,t,d,rd,n,p,dt,b], transition=changes shielded state, mode=backerless, anchor=required"
+    related_terms: ["Registry Inception", "Update Event", "Shieldable Update", "Backed vs Backerless", "Transaction Event Seal"]
 
   - term: "Registry Inception"
     synonyms: ["rip event"]
@@ -59,21 +59,21 @@ terms:
       - "Registry inception with issuer AID and UUID for unique identification"
     related_terms: ["Registry", "REGID", "TEL"]
 
-  # Blindable Update — delegated to domain://privacy/blinding
+  # Shieldable Update — delegated to domain://privacy/blinding
 
   - term: "Update Event"
     synonyms: ["upd event"]
-    definition: "A non-blindable registry update event that publicly records the ACDC state, including the transaction ACDC SAID and transaction state."
+    definition: "A non-shieldable registry update event that publicly records the ACDC state, including the transaction ACDC SAID and transaction state."
     invariants:
       - "Message type t field must be 'upd'"
       - "Field order: [v, t, d, rd, n, p, dt, ta, ts] — all required"
       - "The ta field is the ACDC's top-level SAID"
       - "The ts field is the state string (e.g., 'issued' or 'revoked')"
-      - "State is always publicly visible — cannot be used in blinded mode"
+      - "State is always publicly visible — cannot be used in shielded mode"
     examples:
       - "Issuance: ts field set to 'issued' with ta pointing to the ACDC SAID"
       - "Revocation: ts field set to 'revoked', chain-linked to the prior update event"
-    related_terms: ["Blindable Update", "Credential State", "Transaction State"]
+    related_terms: ["Shieldable Update", "Credential State", "Transaction State"]
 
   - term: "Credential State"
     synonyms: ["Transaction State"]
@@ -86,7 +86,7 @@ terms:
     examples:
       - "ACDC state transitions: inception -> issued -> revoked"
       - "State encoded in ts field as CESR string: '0Missued' or 'Yrevoked'"
-    related_terms: ["TEL", "Registry", "Update Event", "Blindable Update"]
+    related_terms: ["TEL", "Registry", "Update Event", "Shieldable Update"]
 
   - term: "Transaction Event Seal"
     synonyms: ["Seal", "TEL Seal"]
@@ -100,7 +100,7 @@ terms:
       - "Seal: {\"s\": \"3\", \"d\": \"ELvaU6Z-i0d8JJR2nmwyYAZAoTNZH3UfSVPzhzS6b5CM\"}"
     related_terms: ["KEL", "Anchor", "Key State"]
 
-  # BLID, Blinded Attribute Block, Bound Blinded Attribute Block, Shared Secret Salt — delegated to domain://privacy/blinding
+  # BLID, Shielded Attribute Block, Bound Shielded Attribute Block, Shared Secret Salt — delegated to domain://privacy/blinding
 
   - term: "TEL Registrar"
     synonyms: ["Registrar"]
@@ -150,19 +150,19 @@ terms:
       - "TEL Event Processor reprocessing escrowed events after a rip event arrives"
     related_terms: ["TEL Event Verifier", "TEL Escrows", "Registry Collection", "TEL Database"]
 
-  - term: "Blindable vs Non-Blindable"
+  - term: "Shieldable vs Non-Shieldable"
     synonyms: ["Registry Privacy Mode"]
-    definition: "Two modes for TEL registries determined at inception. A Blindable registry uses bup events with blinded attribute blocks — each update carries a fresh BLID for decorrelation, making state changes unobservable. A Non-Blindable registry uses upd events with publicly observable state transitions. Both use the ts field to express issuance or revocation."
+    definition: "Two modes for TEL registries determined at inception. A Shieldable registry uses bup events with shielded attribute blocks — each update carries a fresh BLID for decorrelation, making state changes unobservable. A Non-Shieldable registry uses upd events with publicly observable state transitions. Both use the ts field to express issuance or revocation."
     invariants:
-      - "Blindable registries use bup events — each carries a blinded attribute block with fresh UUID"
-      - "Non-blindable registries use upd events — state transitions are publicly observable"
+      - "Shieldable registries use bup events — each carries a shielded attribute block with fresh UUID"
+      - "Non-shieldable registries use upd events — state transitions are publicly observable"
       - "Mode is determined at registry inception (rip) and cannot be changed"
       - "Cannot mix modes within a single registry — all credential events follow the registry's mode"
       - "The ts field (not the event type) determines whether the update is issuance or revocation"
     examples:
-      - "A non-blindable registry using upd events with ts='issued' and ts='revoked'"
-      - "A blindable registry using bup events where observers cannot distinguish state changes from decorrelation updates"
-    related_terms: ["Registry", "Registry Inception", "TEL Event Verifier", "Blinded Attribute Block"]
+      - "A non-shieldable registry using upd events with ts='issued' and ts='revoked'"
+      - "A shieldable registry using bup events where observers cannot distinguish state changes from decorrelation updates"
+    related_terms: ["Registry", "Registry Inception", "TEL Event Verifier", "Shielded Attribute Block"]
 
   - term: "REGID"
     synonyms: ["Registry Identifier"]
@@ -176,24 +176,24 @@ terms:
     related_terms: ["Registry Inception", "Registry SAID", "rd field"]
 
   - term: "TEL Event Type Dimensions"
-    definition: "Transaction Event Log events are characterized by two orthogonal dimensions: Registry Privacy Mode (Blindable vs Non-Blindable) and Transaction State (the ts field value). These dimensions determine which event type is used and what the update means."
+    definition: "Transaction Event Log events are characterized by two orthogonal dimensions: Registry Privacy Mode (Shieldable vs Non-Shieldable) and Transaction State (the ts field value). These dimensions determine which event type is used and what the update means."
     invariants:
-      - "Non-blindable registries use upd events — state transitions publicly observable"
-      - "Blindable registries use bup events — state transitions decorrelated via blinding"
+      - "Non-shieldable registries use upd events — state transitions publicly observable"
+      - "Shieldable registries use bup events — state transitions decorrelated via shielding"
       - "Registry mode is set at inception (rip) and enforced on all subsequent events"
       - "The ts field carries the target state: 'issued' or 'revoked'"
-      - "Only three normative event types: rip (inception), bup (blindable update), upd (non-blindable update)"
+      - "Only three normative event types: rip (inception), bup (shieldable update), upd (non-shieldable update)"
       - "LEGACY (v1 — do NOT implement): vcp, vrt, iss, rev, bis, brv are superseded by the v2 model"
-    related_terms: ["Credential Status", "Credential Registry", "Blindable vs Non-Blindable"]
+    related_terms: ["Credential Status", "Credential Registry", "Shieldable vs Non-Shieldable"]
 
   - term: "Registry Mode"
-    synonyms: ["Blindable vs Non-Blindable Registry"]
-    definition: "Determines whether credential state updates carry blinding for privacy decorrelation. A Non-Blindable registry uses upd events with publicly observable state. A Blindable registry uses bup events where each update carries a fresh BLID, making it impossible for observers to distinguish state-changing updates from no-op decorrelation updates."
+    synonyms: ["Shieldable vs Non-Shieldable Registry"]
+    definition: "Determines whether credential state updates carry shielding for privacy decorrelation. A Non-Shieldable registry uses upd events with publicly observable state. A Shieldable registry uses bup events where each update carries a fresh BLID, making it impossible for observers to distinguish state-changing updates from no-op decorrelation updates."
     invariants:
-      - "Non-blindable: upd events with ta (transaction ACDC SAID) and ts (transaction state) publicly visible"
-      - "Blindable: bup events with blinded attribute blocks — decorrelation protects observer linkability"
+      - "Non-shieldable: upd events with ta (transaction ACDC SAID) and ts (transaction state) publicly visible"
+      - "Shieldable: bup events with shielded attribute blocks — decorrelation protects observer linkability"
       - "Mode is immutable after registry inception (rip)"
-    related_terms: ["TEL Event Type Dimensions", "Blindable vs Non-Blindable"]
+    related_terms: ["TEL Event Type Dimensions", "Shieldable vs Non-Shieldable"]
 
   - term: "TEL Storage Schema"
     synonyms: []
@@ -276,7 +276,7 @@ terms:
       - "Must not have both an a field and an A field simultaneously"
     examples:
       - "A public targeted ACDC with attribute section containing issuee AID and credential data"
-      - "A private ACDC with top-level UUID providing blinding entropy for partial disclosure"
+      - "A private ACDC with top-level UUID providing shielding entropy for partial disclosure"
     related_terms: ["SAID", "Issuer", "Issuee", "Schema", "Edge Section", "Rule Section"]
 
   - term: "Issuer"
@@ -360,7 +360,7 @@ terms:
       - "Construction MUST set all required fields: v (version), d (SAID), i (issuer), s (schema)"
       - "Construction MUST enforce mutual exclusivity of a and A fields"
       - "Computes SAIDs depth-first for each section (attributes, edges, rules) before the top-level SAID"
-      - "When private flag is set, generates UUID nonce fields for blinding"
+      - "When private flag is set, generates UUID nonce fields for shielding"
       - "SAID computation happens at build time — d field is a placeholder until finalized"
       - "Field ordering follows canonical spec order: [v, t, d, u, i, rd, s, a|A, e, r]"
     examples:
@@ -400,6 +400,63 @@ terms:
       - "If no 't' field is present, 'acm' is inferred as the default type"
     related_terms: ["ACDC", "Credential Serializer", "Schema", "CESR"]
 
+  - term: "CredentialGraph"
+    synonyms: ["Authorization Graph", "Credential DAG"]
+    definition: "The directed acyclic graph (DAG) formed by ACDCs linked through their Edge Sections, enabling proof-of-authorship chains and delegated proof-of-authority. Each ACDC is a universally unique node identified by its SAID; each CredentialEdge is a directed link identified by its own SAID."
+    invariants:
+      - "Acyclic — edges reference existing ACDCs by SAID, preventing circular dependencies"
+      - "Universally verifiable — every node and edge is cryptographically addressable via SAID"
+      - "Composable — graph fragments from different trust domains can be assembled and verified independently"
+    examples:
+      - "A delegation chain: Root AID issues QVI credential -> QVI issues LE credential -> LE issues employee credential"
+      - "A data provenance chain: Research report ACDC edges to accreditation ACDC and transcript ACDC"
+    related_terms: ["ACDC", "CredentialEdge", "EdgeGroup", "Edge Section"]
+
+  - term: "TypeIsSchema"
+    synonyms: ["Type-is-Schema Principle", "Schema-as-Type"]
+    definition: "The design principle that an ACDC's Schema SAID serves as its sole type identifier — there is no separate type field because the Schema itself defines the credential's type, structure, and all validation rules including graduated disclosure variants."
+    invariants:
+      - "The Schema SAID ($id) is the authoritative type identifier"
+      - "Any change to the Schema produces a new SAID and therefore a new type"
+      - "No separate type field exists or is needed — the Schema IS the type"
+      - "Enables permissionless extensibility — new types via new Schemas, no central registry"
+    examples:
+      - "Two ACDCs with the same s field value are the same type; different s values are different types"
+    related_terms: ["Schema", "ACDC", "Credential Type Dimensions"]
+
+  - term: "TargetedACDC"
+    synonyms: ["Targeted Credential"]
+    definition: "An ACDC whose Attribute Section includes an Issuee AID (i field), binding the credential to a designated recipient and enabling verifiable entitlement, delegation, and Contractually Protected Disclosure."
+    invariants:
+      - "Attribute Section must contain a top-level i field with a valid AID"
+      - "The Issuee has provable authority to present the ACDC as Discloser"
+      - "Enables I2I (Issuer-to-Issuee) edge operator validation in the CredentialGraph"
+    examples:
+      - "An employee authorization credential targeting the employee's AID"
+    related_terms: ["UntargetedACDC", "Issuee", "Credential Type Dimensions"]
+
+  - term: "UntargetedACDC"
+    synonyms: ["Bearer Credential", "Untargeted Credential"]
+    definition: "An ACDC without an Issuee AID in the Attribute Section — a bearer credential addressed 'to whom it may concern', suitable for provenance chains and data-supply applications but without verifiable delegation-of-authority."
+    invariants:
+      - "Attribute Section must NOT contain a top-level i field"
+      - "Any party in possession can present the ACDC — no designated recipient"
+      - "Edge operators default to NI2I (Not-Issuer-to-Issuee) for untargeted far-node ACDCs"
+    examples:
+      - "A public attestation of data provenance without a designated holder"
+    related_terms: ["TargetedACDC", "Credential Type Dimensions"]
+
+  - term: "CargoField"
+    synonyms: ["Cargo"]
+    definition: "The optional `cargo` field in the Attribute Section enabling an ACDC to carry opaque foreign data formats as a verifiable container, extending ACDC beyond structured credential data."
+    invariants:
+      - "Field label is `cargo` in the Attribute Section"
+      - "Content format is opaque to the ACDC protocol — interpreted per Schema"
+      - "Enables ACDC as a verifiable container for arbitrary data"
+    examples:
+      - "A credential carrying a PDF document as cargo"
+    related_terms: ["ACDC", "Schema"]
+
 events:
   - name: "RegistryCreated"
     payload: "regid: REGID, issuer_aid: AID, dt: DateTime"
@@ -409,9 +466,9 @@ events:
     payload: "regid: REGID, acdc_said: SAID, new_state: CredentialState, event_sn: int"
     triggers: "Issuer publishes an update event (upd or bup) changing the ACDC's state in the registry"
 
-  - name: "BlindUpdated"
+  - name: "ShieldUpdated"
     payload: "regid: REGID, event_sn: int, new_blid: BLID"
-    triggers: "Issuer publishes a new blindable update event with a fresh blinding factor, decorrelating state observation"
+    triggers: "Issuer publishes a new shieldable update event with a fresh shielding factor, decorrelating state observation"
 
 rules:
   - "Every TEL event must be sealed (anchored) in the controlling KEL — the seal provides non-repudiable commitment"
@@ -419,5 +476,5 @@ rules:
   - "Update events must include the registry SAID rd field for verifiable association"
   - "Events are hash-chained via the prior event SAID p field — backward chaining"
   - "State verifiability persists despite key rotation — bound to key state at time of seal"
-  - "Blinded registries must use a fresh UUID per update event to prevent state-to-event correlation"
+  - "Shielded registries must use a fresh UUID per update event to prevent state-to-event correlation"
   - "TEL observers must cache state to avoid forced validator-to-issuer correlation (no phone-home validation)"

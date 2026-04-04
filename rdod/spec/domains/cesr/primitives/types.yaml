@@ -417,7 +417,7 @@ types:
             description: "HTTP(S) or TCP URL of the endpoint"
 
   - name: "UUID"
-    description: "A high-entropy universally unique identifier used for blinding. Minimum 128 bits of cryptographic entropy when used for privacy."
+    description: "A high-entropy universally unique identifier used for shielding. Minimum 128 bits of cryptographic entropy when used for privacy."
     variants:
       - name: "default"
         fields:
@@ -426,7 +426,7 @@ types:
             required: true
             description: "CESR-qualified UUID string"
         invariants:
-          - "For privacy blinding: must have >= 128 bits of entropy"
+          - "For privacy shielding: must have >= 128 bits of entropy"
           - "For metadata credentials: value is empty string (present but no entropy)"
 
   - name: "DigestAlgorithm"

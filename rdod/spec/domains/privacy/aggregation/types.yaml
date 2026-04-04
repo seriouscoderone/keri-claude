@@ -2,14 +2,14 @@ domain_ref: "privacy/aggregation"
 
 types:
   - name: "AggregationInput"
-    description: "Input for aggregation operations — either a list of blinded attribute blocks for AGID computation or a list of SAIDs for aggregate verification."
+    description: "Input for aggregation operations — either a list of shielded attribute blocks for AGID computation or a list of SAIDs for aggregate verification."
     variants:
-      - name: "blinded_blocks"
+      - name: "shielded_blocks"
         fields:
           - name: "block_saids"
             type: "array[types://cesr/primitives#SAID]"
             required: true
-            description: "List of blinded attribute block SAIDs — all block SAIDs needed for AGID computation. At Layer 0, accepts opaque SAIDs; no dependency on blinding subdomain."
+            description: "List of shielded attribute block SAIDs — all block SAIDs needed for AGID computation. At Layer 0, accepts opaque SAIDs; no dependency on shielding subdomain."
           - name: "serialization_kind"
             type: "string"
             required: true

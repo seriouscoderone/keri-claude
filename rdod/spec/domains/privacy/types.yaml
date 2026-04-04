@@ -23,14 +23,14 @@ types:
           - name: "u"
             type: "string"
             required: true
-            description: "UUID blinding factor"
+            description: "UUID shielding factor"
           - name: "s"
             type: "string"
             required: false
             description: "Schema SAID (if applicable at this level)"
         invariants:
           - "Only d, u, and optionally s are revealed"
-          - "All other fields remain blinded"
+          - "All other fields remain shielded"
           - "Requires Private block (u field must have entropy)"
           - "Public blocks skip from compact directly to full — no partial form"
       - name: "selective"
@@ -96,18 +96,18 @@ types:
           - "Used for chain-link confidentiality pre-negotiation — offer before agreement"
       - name: "bulk-issued"
         fields:
-          - name: "blinded_said"
+          - name: "shielded_said"
             type: "string"
             required: true
-            description: "Blinded SAID of this instance — unique per copy"
+            description: "Shielded SAID of this instance — unique per copy"
           - name: "bulk_commitment"
             type: "string"
             required: true
             description: "Aggregate commitment binding all copies in the bulk issuance set"
         invariants:
           - "Each copy has a unique SAID and UUID — unlinkable across presentations"
-          - "Issuer signs blinded SAIDs, not the SADs themselves"
-          - "Proof of inclusion: discloser unblinds their SAID, verifier checks against bulk commitment"
+          - "Issuer signs shielded SAIDs, not the SADs themselves"
+          - "Proof of inclusion: discloser unshields their SAID, verifier checks against bulk commitment"
           - "Distinct from Bulk-Issued pattern: this is the DISCLOSURE form, not the issuance pattern"
 
   - name: "ChainLinkConfidentialityGate"
@@ -162,7 +162,7 @@ types:
           - name: "instance_said"
             type: "string"
             required: true
-            description: "Unique SAID of this instance (blinded with its own UUID)"
+            description: "Unique SAID of this instance (shielded with its own UUID)"
           - name: "set_commitment"
             type: "string"
             required: true
@@ -229,7 +229,7 @@ types:
           - name: "instance"
             type: "types://privacy#BulkInstance"
             required: true
-            description: "A bulk-issued credential instance with unique blinded SAID"
+            description: "A bulk-issued credential instance with unique shielded SAID"
         invariants:
           - "Produced only for bulk-issued disclosure form"
 
@@ -251,3 +251,21 @@ types:
         invariants:
           - "u field present but empty string — signals metadata variant"
           - "Structural fields visible but not correlated to actual credential"
+
+  - name: "BulkIssuanceAggregate"
+    description: "The aggregate cryptographic commitment (B value) anchored by the Issuer covering all instances in a bulk-issued set. Analogous to AGID for selective disclosure but serving anti-correlation across presentation contexts."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "The B value — aggregate digest commitment"
+          - name: "instance_count"
+            type: "integer"
+            required: true
+            description: "Number of instances in the bulk-issued set"
+        invariants:
+          - "Anchored by the Issuer via Transaction Event Seal in the KEL"
+          - "Each instance has a unique SAID and UUID — no two share an identifier"
+          - "Instances are unlinkable — verifiers cannot determine common origin"

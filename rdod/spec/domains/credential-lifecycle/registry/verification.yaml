@@ -44,7 +44,7 @@ properties:
     strategy: "st.lists of valid v2 traits"
     notes: "Config traits are set once at inception and never change. In v2 registry config is immutable — no rotation event exists. LEGACY (v1 -- do NOT implement): NoBackers was a config trait; vrt rotation events could change backer sets."
 
-  - invariant: "LEGACY (v1 -- do NOT implement): VRT registry rotation events do not exist in v2. Registry configuration is immutable after rip inception. The v1 concept of NoBackers trait and backer rotation via vrt is superseded by the blindable/non-blindable registry model where configuration is permanently fixed at inception."
+  - invariant: "LEGACY (v1 -- do NOT implement): VRT registry rotation events do not exist in v2. Registry configuration is immutable after rip inception. The v1 concept of NoBackers trait and backer rotation via vrt is superseded by the shieldable/non-shieldable registry model where configuration is permanently fixed at inception."
     term: "Registry Rotation"
     technique: property-based
     formal:
@@ -57,7 +57,7 @@ properties:
             with pytest.raises(ValidationError, match='unknown event type'):
                 apply_event(registry, vrt)
     strategy: "Attempt vrt event on any registry"
-    notes: "v2 has no registry rotation. Registry config (blindable/non-blindable) is immutable after rip inception. LEGACY (v1 -- do NOT implement): vrt events rotated backer sets; NoBackers registries rejected vrt."
+    notes: "v2 has no registry rotation. Registry config (shieldable/non-shieldable) is immutable after rip inception. LEGACY (v1 -- do NOT implement): vrt events rotated backer sets; NoBackers registries rejected vrt."
 
   - invariant: "Every registry management event (rip) MUST be authorized via a seal in the issuer's KEL; an event without a corresponding KEL seal MUST be rejected"
     term: "Registry Inception"

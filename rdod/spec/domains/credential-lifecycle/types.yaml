@@ -89,7 +89,7 @@ types:
           - name: "u"
             type: "string"
             required: true
-            description: "UUID — high-entropy blinding factor for privacy"
+            description: "UUID — high-entropy shielding factor for privacy"
             constraints:
               min_length: 22
           - name: "i"
@@ -103,10 +103,10 @@ types:
           - name: "a"
             type: "map"
             required: true
-            description: "Attribute section — must include u (blinding), i (issuee), d (SAID)"
+            description: "Attribute section — must include u (shielding), i (issuee), d (SAID)"
         invariants:
           - "Top-level u field present with >= 128 bits of entropy — content is private"
-          - "Attribute section a must contain u field (blinding factor) and i field (issuee AID)"
+          - "Attribute section a must contain u field (shielding factor) and i field (issuee AID)"
           - "Attribute section a.i is the issuee — credential is targeted to this AID"
 
       - name: "private-targeted-selective"
@@ -122,7 +122,7 @@ types:
           - name: "u"
             type: "string"
             required: true
-            description: "UUID — blinding factor"
+            description: "UUID — shielding factor"
           - name: "i"
             type: "string"
             required: true
@@ -260,7 +260,7 @@ types:
           - "State transitions: NotIssued → Issued → Revoked (no reverse)"
 
   - name: "UpdateEvent"
-    description: "Wrapper for credential state-change events (upd or bup), unifying both update variants for callers that don't need to distinguish blindable from non-blindable."
+    description: "Wrapper for credential state-change events (upd or bup), unifying both update variants for callers that don't need to distinguish shieldable from non-shieldable."
     variants:
       - name: "default"
         fields:
@@ -285,7 +285,7 @@ types:
             constraints:
               enum: ["issued", "revoked"]
         invariants:
-          - "Wraps either a BlindableUpdateEvent or NonBlindableUpdateEvent"
+          - "Wraps either a ShieldableUpdateEvent or NonShieldableUpdateEvent"
           - "event_type determines which underlying TEL event was produced"
 
   - name: "SealRequest"
@@ -347,3 +347,87 @@ types:
         invariants:
           - "Escrow is transient — events are promoted or pruned"
           - "Each event is in exactly one escrow type at a time"
+
+  - name: "CredentialEdge"
+    description: "A directed link block within the Edge Section referencing a far-node ACDC by SAID (n field), with optional Schema constraint (s field) and Operator (o field). Distinguished from EdgeGroup by the presence of a node field."
+    variants:
+      - name: "default"
+        fields:
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID of this edge block — universally unique edge identifier"
+          - name: "u"
+            type: "string"
+            required: false
+            description: "UUID — shielding factor for private edges"
+          - name: "n"
+            type: "string"
+            required: true
+            description: "Node — SAID of the far-node ACDC this edge points to"
+          - name: "s"
+            type: "string"
+            required: false
+            description: "Schema — SAID of additional Schema constraint on the far node"
+          - name: "o"
+            type: "string"
+            required: false
+            description: "Operator — unary operator (I2I, NI2I, DI2I, NOT)"
+          - name: "w"
+            type: "string"
+            required: false
+            description: "Weight — numeric weight for weighted aggregation operators"
+        invariants:
+          - "MUST have n field — distinguishes CredentialEdge from EdgeGroup"
+          - "Default operator is I2I when far node is targeted, NI2I when untargeted"
+          - "Schema s field enables forward-compatible edge constraints"
+
+  - name: "EdgeGroup"
+    description: "An aggregation block within the Edge Section composing multiple CredentialEdges or nested EdgeGroups via an m-ary Operator (AND, OR, NAND, NOR, AVG, WAVG). Distinguished from CredentialEdge by the absence of a node field."
+    variants:
+      - name: "default"
+        fields:
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID of this edge-group block"
+          - name: "u"
+            type: "string"
+            required: false
+            description: "UUID — shielding factor for private edge-groups"
+          - name: "o"
+            type: "string"
+            required: false
+            description: "Operator — m-ary operator (AND, OR, NAND, NOR, AVG, WAVG). Default: AND"
+          - name: "w"
+            type: "string"
+            required: false
+            description: "Weight — for weighted operators. MUST NOT appear on top-level Edge Section"
+        invariants:
+          - "MUST NOT have n field — distinguishes EdgeGroup from CredentialEdge"
+          - "Default m-ary operator is AND when o field absent"
+          - "Nested blocks are labeled per Schema — type-is-schema determines block types"
+
+  - name: "SectionMessage"
+    description: "An independently transmittable CESR message carrying a single ACDC section, enabling section-level caching and reuse across ACDC instances sharing the same section content."
+    variants:
+      - name: "default"
+        fields:
+          - name: "message_type"
+            type: "string"
+            required: true
+            description: "Section message type identifier"
+            constraints:
+              enum: ["sch", "att", "agg", "edg", "rul"]
+          - name: "section_said"
+            type: "string"
+            required: true
+            description: "SAID of the section content — must match corresponding compact ACDC field"
+          - name: "section_content"
+            type: "map"
+            required: true
+            description: "Full expanded section content"
+        invariants:
+          - "Section SAID must match the corresponding field value in the associated compact ACDC"
+          - "All designated fields are required — no optional fields (empty values via CESR empty primitives)"
+          - "Enables caching — same section content across multiple ACDCs transmits once"

@@ -46,3 +46,22 @@ types:
           - "CBOR: RFC 8949 binary encoding"
           - "MGPK: MessagePack binary encoding"
           - "CESR: native CESR event encoding (no external serialization)"
+
+  - name: "FixedFieldBlock"
+    description: "A CESR data structure whose fields follow a fixed positional order with virtual (mnemonic-only, never serialized) labels, in contrast to labeled SAD field maps. Used for Shielded Attribute Blocks and Bound Shielded Attribute Blocks."
+    variants:
+      - name: "default"
+        fields:
+          - name: "fields"
+            type: "list"
+            required: true
+            description: "Ordered list of CESR primitives in fixed positional order"
+          - name: "virtual_labels"
+            type: "list"
+            required: true
+            description: "Mnemonic-only labels for each position — never serialized on the wire"
+        invariants:
+          - "Fields are concatenated in fixed positional order — no field labels in the wire format"
+          - "Virtual labels are mnemonic only — used for documentation and developer convenience"
+          - "SAID computation uses dummy character replacement on the designated self-addressing field position"
+          - "Transmitted as CESR attachment groups (e.g., ShieldedStateQuadruples count code)"

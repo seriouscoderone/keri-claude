@@ -14,7 +14,7 @@ protocols:
       - domain: "domain://privacy/disclosure"
         role: "Mode classification and form selection"
       - domain: "domain://privacy/blinding"
-        role: "UUID derivation and blinded state operations"
+        role: "UUID derivation and shielded state operations"
       - domain: "domain://privacy/aggregation"
         role: "AGID computation and inclusion proofs"
       - domain: "domain://credential-exchange/negotiation"
@@ -98,15 +98,15 @@ protocols:
             notes: "Only for selective disclosure. The disclosee verifies the disclosed attribute is in the AGID without seeing other attributes."
 
           - seq: "6b"
-            condition: "registry is blindable"
+            condition: "registry is shieldable"
             domain: "domain://privacy/blinding"
-            action: "derive_blinded_state"
+            action: "derive_shielded_state"
             port: "port://privacy/blinding/inbound/blinded-state"
             input:
               description: "Shared secret salt, sequence number, registry SAID"
             output:
-              description: "Blinded attribute block with fresh BLID for decorrelation"
-            notes: "Only for blindable registries. Each disclosure uses a fresh BLID derived from the shared salt + sn."
+              description: "Shielded attribute block with fresh BLID for decorrelation"
+            notes: "Only for shieldable registries. Each disclosure uses a fresh BLID derived from the shared salt + sn."
 
       - seq: 7
         domain: "domain://credential-exchange/negotiation"
@@ -147,7 +147,7 @@ protocols:
       - "Disclosure is monotonically increasing — revealed information cannot be retracted"
       - "Chain-link confidentiality gates (steps 4-5) are optional but non-bypassable when rules specify them"
       - "The Most Compact Form SAID is the anchor for all verification — any disclosed variant traces back to it"
-      - "Selective disclosure and blinding are independent — both, either, or neither may be used"
+      - "Selective disclosure and shielding are independent — both, either, or neither may be used"
 
   - name: "BulkIssuance"
     description: "The issuance-side protocol for creating a set of unlinkable credential copies that the holder can present to different verifiers without cross-correlation."
@@ -156,7 +156,7 @@ protocols:
       - domain: "external://issuer"
         role: "Credential issuer requesting bulk issuance"
       - domain: "domain://privacy/blinding"
-        role: "UUID generation per copy"
+        role: "UUID generation per copy (shielding factor)"
       - domain: "domain://privacy/aggregation"
         role: "Bulk commitment computation"
       - domain: "domain://credential-lifecycle"
@@ -185,7 +185,7 @@ protocols:
         input:
           description: "List of N ACDC SAIDs"
         output:
-          description: "Bulk commitment B = H(C(blinded_SAID_k for all k))"
+          description: "Bulk commitment B = H(C(shielded_SAID_k for all k))"
         depends_on: [2]
 
       - seq: 4

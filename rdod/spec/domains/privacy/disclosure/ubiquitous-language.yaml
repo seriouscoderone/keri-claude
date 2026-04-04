@@ -18,18 +18,18 @@ terms:
 
   # Inherits: "Partial Disclosure" from domain://privacy
   - term: "Partial Disclosure"
-    synonyms: ["Blinded Disclosure"]
+    synonyms: ["Shielded Disclosure"]
     specializes: "Partial Disclosure"
-    definition: "In the context of the disclosure subdomain, partial disclosure reveals a block's SAID and schema while the UUID salty nonce prevents content discovery. Specializes the parent definition with the UUID-based blinding mechanism that protects against rainbow table attacks on schema-constrained values."
+    definition: "In the context of the disclosure subdomain, partial disclosure reveals a block's SAID and schema while the UUID salty nonce prevents content discovery. Specializes the parent definition with the UUID-based shielding mechanism that protects against rainbow table attacks on schema-constrained values."
     invariants:
       - "Requires both d (SAID) and u (UUID) fields in the block"
       - "Knowledge of schema + SAID is insufficient to discover content when UUID is present"
-      - "Content remains blinded until the UUID is disclosed"
+      - "Content remains shielded until the UUID is disclosed"
       - "The schema includes a oneOf composition for compact and expanded variants"
     examples:
       - "A private-attribute ACDC in compact form: attribute block hidden behind its SAID, protected by UUID"
       - "Metadata ACDC disclosing schema and rules but not attribute values"
-    related_terms: ["UUID", "Blinding", "Compact Disclosure", "Private ACDC"]
+    related_terms: ["UUID", "Shielding", "Compact Disclosure", "Private ACDC"]
 
   - term: "Nested Partial Disclosure"
     synonyms: []
@@ -67,13 +67,13 @@ terms:
     invariants:
       - "Uses the A field (aggregate section), not the a field (attribute section)"
       - "Each selectively disclosable block has its own d (SAID) and u (UUID) fields"
-      - "Field labels within blinded blocks are also blinded — preventing label-based inference"
+      - "Field labels within shielded blocks are also shielded — preventing label-based inference"
       - "anyOf composition at set level, oneOf per element for compact/expanded"
       - "Order of anyOf subschema elements is not correlated to actual array order"
     examples:
       - "Disclosing issuee block and score block from an aggregate without revealing the name block"
       - "Compact aggregate: \"A\": \"EN5d44fTNM0M4kmMMVrsH0HwMLRLyb6SoJEV0ogkLdXx\""
-    related_terms: ["Aggregate Section", "AGID", "Blinded Attribute Block", "anyOf Composition"]
+    related_terms: ["Aggregate Section", "AGID", "Shielded Attribute Block", "anyOf Composition"]
 
   - term: "Chain-Link Confidentiality"
     synonyms: ["Contractually Protected Disclosure"]
@@ -102,11 +102,11 @@ terms:
     related_terms: ["Compact Disclosure", "Proof of Issuance", "SAID"]
 
   - term: "Bulk-Issued Instance Disclosure"
-    definition: "A privacy pattern where each credential in a bulk issuance set is disclosed independently using its unique blinded SAID. The issuer signs blinded SAIDs (not the SADs themselves) enabling proof of set membership without cross-credential correlation. The discloser unblinds their specific credential's SAID to prove inclusion."
+    definition: "A privacy pattern where each credential in a bulk issuance set is disclosed independently using its unique shielded SAID. The issuer signs shielded SAIDs (not the SADs themselves) enabling proof of set membership without cross-credential correlation. The discloser unshields their specific credential's SAID to prove inclusion."
     invariants:
-      - "Issuer signs blinded SAIDs — minimizes computation for large issuance sets"
+      - "Issuer signs shielded SAIDs — minimizes computation for large issuance sets"
       - "Each instance has a unique SAID and UUID — unlinkable across presentations"
-      - "Proof of inclusion: discloser unblinds their SAID, verifier checks against bulk commitment"
+      - "Proof of inclusion: discloser unshields their SAID, verifier checks against bulk commitment"
       - "Distinct from Bulk-Issued pattern: this is specifically about the DISCLOSURE mechanics, not the issuance mechanics"
     related_terms: ["Bulk-Issued Disclosure", "Credential Privacy Model", "SAID"]
 
