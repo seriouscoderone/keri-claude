@@ -1,0 +1,229 @@
+# findings.yaml — CESR Spec Invariant Coverage Findings
+# Generated: 2026-04-03
+# 16 findings: 6 absent (new entries), 10 partial (enrichments)
+
+findings:
+  # ══════════════════════════════════════════════════════════════════
+  # ABSENT — new verification entries needed
+  # ══════════════════════════════════════════════════════════════════
+
+  - id: CESR-INV-001
+    spec_line: 1242
+    rule: "Non-native CESR serializations MUST be completely enclosed in a CESR group"
+    domain: cesr/composition
+    match: absent
+    precision: pbt-ready
+    proposed:
+      term: "Stream"
+      technique: property-based
+      invariant: >
+        Non-native serializations (JSON, CBOR, MGPK) embedded in a CESR stream
+        MUST be enclosed within a CESR group framing code. The body bytes MUST
+        be preceded by a count code and followed by optional CESR attachments.
+        Bare non-native content without a framing group MUST be rejected.
+      formal: |
+        @given(nonnative=nonnative_body_strategy())
+        def test_nonnative_must_be_enclosed(nonnative):
+            # Bare body without framing: must fail
+            with pytest.raises(ParseError):
+                parse_stream(nonnative.raw_bytes)
+            # Enclosed body: must succeed
+            enclosed = frame_nonnative(nonnative)
+            frames = parse_stream(enclosed)
+            assert len(frames) == 1
+            assert frames[0].body == nonnative.raw_bytes
+
+  - id: CESR-INV-002
+    spec_line: 1852
+    rule: "Special count codes MUST NOT provide a count of Quadlets/triplets but MUST carry alternative semantics"
+    domain: cesr/composition
+    match: absent
+    precision: pbt-ready
+    proposed:
+      term: "Count Code"
+      technique: property-based
+      invariant: >
+        Special count codes (genus/version codes, protocol table selectors)
+        MUST NOT be interpreted as quadlet counts. Parsing a special code
+        MUST NOT attempt quadlet arithmetic on its size field. The size
+        field carries protocol/version table selector semantics instead.
+      formal: |
+        @given(code=special_count_code_strategy())
+        def test_special_code_not_quadlet(code):
+            parsed = parse_count_code(code.qb64)
+            assert parsed.is_special, "Must classify as special"
+            assert parsed.count_quadlets is None, "Special codes have no quadlet count"
+            assert parsed.selector is not None, "Special codes carry a selector"
+
+  - id: CESR-INV-003
+    spec_line: 1870
+    rule: "Genus/version code MUST provide protocol table version; format MUST encode genus + major + minor"
+    domain: cesr/composition
+    match: absent
+    precision: pbt-ready
+    proposed:
+      term: "Count Code"
+      technique: property-based
+      invariant: >
+        A genus/version count code MUST be 8 characters (large format). It
+        MUST encode (protocol_genus, major_version, minor_version). Round-trip:
+        parse_genus_code(build_genus_code(g, M, m)) == (g, M, m).
+      formal: |
+        @given(genus=genus_strategy(), major=st.integers(0, 63), minor=st.integers(0, 63))
+        def test_genus_version_roundtrip(genus, major, minor):
+            code = build_genus_code(genus, major, minor)
+            assert len(code) == 8
+            assert code[:2] == '--'
+            g, M, m = parse_genus_code(code)
+            assert g == genus and M == major and m == minor
+
+  - id: CESR-INV-004
+    spec_line: 2682
+    rule: "Compliant v2.XX implementations MUST support old v1.XX Version String format"
+    domain: cesr/composition
+    match: absent
+    precision: pbt-ready
+    proposed:
+      term: "Version String"
+      technique: property-based
+      invariant: >
+        A v2.XX parser MUST accept v1.XX version strings (17 chars, underscore-
+        terminated). Both v1 and v2 format messages MUST be parseable in the
+        same stream.
+      formal: |
+        @given(v1_msg=v1_message_strategy(), v2_msg=v2_message_strategy())
+        def test_v1_backward_compat(v1_msg, v2_msg):
+            # v2 parser handles v1
+            parsed_v1 = parse_message(v1_msg)
+            assert parsed_v1.version.major == 1
+            assert len(parsed_v1.version_string) == 17
+            # v2 parser handles v2
+            parsed_v2 = parse_message(v2_msg)
+            assert parsed_v2.version.major == 2
+            assert len(parsed_v2.version_string) == 19
+            # Mixed stream
+            mixed = v1_msg + v2_msg
+            frames = parse_stream(mixed)
+            assert len(frames) == 2
+
+  - id: CESR-INV-005
+    spec_line: 3294
+    rule: "SAD Path components MUST be an integer when the current context is an array"
+    domain: cesr/composition
+    match: absent
+    precision: pbt-ready
+    proposed:
+      term: "SAD Path Language"
+      technique: property-based
+      invariant: >
+        In a SAD Path expression, when a path component indexes into an
+        array context, the component MUST be an integer. String components
+        in array context MUST be rejected.
+      formal: |
+        @given(sad=sad_with_arrays_strategy(), path=sad_path_strategy())
+        def test_sad_path_array_integer(sad, path):
+            for component, context in zip_path_contexts(sad, path):
+                if context == 'array':
+                    assert isinstance(component, int), \
+                        f"Array context requires integer index, got {type(component)}"
+
+  - id: CESR-INV-006
+    spec_line: 2838
+    rule: "SAID verification protocol MUST be implemented: replace-serialize-digest-compare"
+    domain: cesr/primitives
+    match: partial
+    precision: pbt-ready
+    proposed:
+      term: "Saidify"
+      technique: property-based
+      invariant: >
+        verify_said(sad) MUST implement: (1) extract d field, (2) replace d
+        with dummy of same length, (3) serialize, (4) digest, (5) compare
+        digest to extracted d. MUST return True for valid SADs, False for
+        tampered.
+      formal: |
+        @given(sad=sad_strategy())
+        def test_said_verify_protocol(sad):
+            # Valid SAD verifies
+            assert verify_said(sad) is True
+            # Tampered SAD fails
+            tampered = tamper_field(sad, 'a')
+            assert verify_said(tampered) is False
+            # Tampered SAID fails
+            bad_said = sad.copy()
+            bad_said['d'] = 'E' + 'A' * 43
+            assert verify_said(bad_said) is False
+
+  # ══════════════════════════════════════════════════════════════════
+  # PARTIAL — enrichments to existing entries
+  # ══════════════════════════════════════════════════════════════════
+
+  - id: CESR-INV-007
+    spec_line: 809
+    rule: "Type portion MUST begin the Framing Code"
+    domain: cesr
+    match: partial
+    enrichment: "Add assertion to Code stability test: the code prefix occupies positions [0, hs) and hs is always the first N characters"
+
+  - id: CESR-INV-008
+    spec_line: 1158
+    rule: "Prepended type code MUST be independently integer multiple of 4 Base64 chars"
+    domain: cesr
+    match: partial
+    enrichment: "Add boundary test for codes where hs+ss is not mod-4 but the overall primitive is — verify code portion alignment independently"
+
+  - id: CESR-INV-009
+    spec_line: 1211
+    rule: "Empty value: pad size MUST be 0"
+    domain: cesr
+    match: partial
+    enrichment: "Add explicit N=0 boundary case to mid-padding test: when raw is empty, assert ps == 0"
+
+  - id: CESR-INV-010
+    spec_line: 1275
+    rule: "Parser MUST support three interleaved non-native format types"
+    domain: cesr/composition
+    match: partial
+    enrichment: "Add PBT generating streams with all three non-native types (JSON+CBOR+MGPK) interleaved with CESR native"
+
+  - id: CESR-INV-011
+    spec_line: 1294
+    rule: "JSON, CBOR, MGPK byte ranges MUST be mutually distinct"
+    domain: cesr/composition
+    match: partial
+    enrichment: "Add Z3 proof that tritets 3/4/5/6 partition the byte range with no overlap"
+
+  - id: CESR-INV-012
+    spec_line: 1394
+    rule: "Stream MUST resume with cold-start frame byte after non-native payload"
+    domain: cesr/composition
+    match: partial
+    enrichment: "Sharpen Frame invariant to cover resume-after-nonnative boundary: next byte after payload MUST pass cold-start classification"
+
+  - id: CESR-INV-013
+    spec_line: 1513
+    rule: "First character of any Primitive MUST be selector or letter"
+    domain: cesr
+    match: partial
+    enrichment: "Add exhaustive partition test: qb64[0] MUST be in {A-Za-z0-9-_}; rejection test for chars outside"
+
+  - id: CESR-INV-014
+    spec_line: 1858
+    rule: "Universal count codes MUST have identical semantics across all genera"
+    domain: cesr/composition
+    match: partial
+    enrichment: "Extend Universal Count Code check to assert parse results are identical across two different genus instances"
+
+  - id: CESR-INV-015
+    spec_line: 2253
+    rule: "KERI/ACDC genus MUST have specific mandatory codes (master + count code tables)"
+    domain: cesr/primitives + cesr/composition
+    match: partial
+    enrichment: "Add enumeration test iterating the full mandatory code list from spec §8 and §9; assert each is present in active genus code table"
+
+  - id: CESR-INV-016
+    spec_line: 2551
+    rule: "v field MUST be first in CBOR and MGPK field maps (not just JSON)"
+    domain: cesr/composition
+    match: partial
+    enrichment: "Extend version-string-first-field test to cover CBOR and MGPK serializations alongside JSON"
