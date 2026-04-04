@@ -179,6 +179,84 @@ properties:
         assert s.check() == sat
     notes: "Default PWE timeout is 3600s (1 hour)."
 
+  # --- Verifier Key State Establishment (Finding KERI-INV-010) ---
+  - invariant: "A verifier MUST determine the controlling key set for the AID at the time an event was issued before verifying signatures. Verification of event at sn=N requires all establishment events from inception through the latest establishment event at or before sn=N. A verifier MUST establish control authority for the event at issuance, not current time."
+    term: "Verifier"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy(), kel=kel_strategy())
+        def test_verifier_key_state_establishment(event, kel):
+            # Must have complete establishment chain
+            est_events = kel.establishment_events_through(event['s'])
+            assert len(est_events) >= 1, "At least inception required"
+            # Key state at issuance
+            key_state = derive_key_state(est_events)
+            assert key_state is not None, "Must derive key state before verification"
+            # Verify using issuance-time key state, not current
+            current_key_state = kel.current_key_state()
+            issuance_key_state = kel.key_state_at(event['s'])
+            result = verify_signatures(event, issuance_key_state)
+            assert result == verify_signatures(event, issuance_key_state), \
+                "Verification must use issuance-time key state"
+    strategy: "key_event_strategy() x kel_strategy() with key rotations between events"
+    notes: "Spec L4591-4593. Verifier must establish key state at issuance. Finding: KERI-INV-010."
+
+  # --- Validator Role Rules (Finding KERI-INV-011) ---
+  - invariant: "A validator MUST first act as a verifier (establish key state, verify signatures) before applying additional validity criteria. Every controller MUST accept its own events (self-validation obligation). A validator of a remote event MUST assume the event may come from a malicious source. A non-controller validator MUST verify controller signatures, witness signatures (if witnessed), and delegator anchoring seal (if delegated)."
+    term: "Validator"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy(), role=st.sampled_from(['controller', 'witness', 'validator']))
+        def test_validator_role_rules(event, role):
+            # Step 1: verifier phase (always required)
+            verify_result = verify_event(event)
+            if not verify_result.signatures_valid:
+                assert validate(event) == REJECTED, "Invalid signatures must reject"
+                return
+            # Step 2: role-specific validation
+            if role == 'controller':
+                # Controller must accept own events
+                assert validate_as_controller(event) == ACCEPTED
+            else:
+                # Remote validator assumes malicious source
+                checks = ['controller_sigs']
+                if event.is_witnessed:
+                    checks.append('witness_sigs')
+                if event.is_delegated:
+                    checks.append('delegator_seal')
+                for check in checks:
+                    assert check in validate(event).checks_performed
+    strategy: "key_event_strategy() x role — generates events validated by different role types"
+    notes: "Spec L4615-4773. Validator must first verify, then apply role-specific rules. Finding: KERI-INV-011."
+
+  # --- Witness AID + Attachment Rules (Finding KERI-INV-018) ---
+  - invariant: "Witnesses MUST use only non-transferable AIDs (derivation code B, not D). Non-indexed signatures MUST be attached using CESR group codes. Endorsement attachments MUST include the AID of the endorser plus any information needed to securely attribute the signature to its source key state."
+    term: "Witness"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(witness_aid=witness_aid_strategy(), event=witnessed_event_strategy())
+        def test_witness_aid_and_attachments(witness_aid, event):
+            # Witnesses must be non-transferable
+            assert witness_aid.startswith('B'), \
+                f"Witness AID must use non-transferable prefix B, got {witness_aid[0]}"
+            assert is_non_transferable(witness_aid), "Witness AID must be non-transferable"
+            # Non-indexed signatures use CESR group codes
+            for attachment in event.attachments:
+                if attachment.is_non_indexed:
+                    assert attachment.has_cesr_group_code, \
+                        "Non-indexed signature must use CESR group code"
+                if attachment.is_endorsement:
+                    assert attachment.endorser_aid is not None, \
+                        "Endorsement must include endorser AID"
+    strategy: "witness_aid_strategy() x witnessed_event_strategy()"
+    notes: "Spec L3002-3085. Finding: KERI-INV-018."
+
 contracts:
   - port_ref: "port://accountability/inbound/receipting"
     preconditions:

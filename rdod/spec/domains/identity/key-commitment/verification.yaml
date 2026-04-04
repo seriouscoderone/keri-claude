@@ -302,6 +302,32 @@ properties:
     strategy: "non_transferable_kel_strategy()"
     notes: "Rotation is structurally impossible with empty n field."
 
+  # --- Dual Threshold Joint Satisfiability (Finding KERI-INV-017) ---
+  - invariant: "A rotation event's current key list MUST be satisfiable with respect to BOTH the prior-next threshold AND the new current threshold simultaneously. The validator MUST perform set operations when the two key lists differ (the order of public keys in the current list may differ from the prior-next list). The threshold weight list order MUST match the key list order."
+    term: "Pre-Rotation Commitment"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(rotation=rotation_with_partial_keys_strategy())
+        def test_dual_threshold_joint_satisfiability(rotation):
+            current_keys = rotation['k']
+            prior_next_digests = rotation.prior_establishment['n']
+            current_threshold = parse_threshold(rotation['kt'])
+            prior_next_threshold = parse_threshold(rotation.prior_establishment['nt'])
+            # Exposed keys must satisfy prior-next threshold
+            exposed = [k for k in current_keys if digest(k) in prior_next_digests]
+            assert satisfies_threshold(exposed, prior_next_threshold), \
+                "Exposed keys must satisfy prior-next threshold"
+            # All current keys must satisfy current threshold
+            sigs = generate_signatures(current_keys)
+            assert satisfies_threshold(sigs, current_threshold), \
+                "Current keys must satisfy current threshold"
+            # Joint: both must be satisfiable simultaneously
+            assert satisfies_both(exposed, sigs, prior_next_threshold, current_threshold)
+    strategy: "rotation_with_partial_keys_strategy() — generates rotations with varying key overlap"
+    notes: "Spec L3684-3735. Joint dual-satisfiability. Finding: KERI-INV-017."
+
 contracts:
   - port_ref: "port://identity/key-commitment/inbound/key-commitment"
     preconditions:

@@ -567,6 +567,52 @@ properties:
     strategy: "Fixed timeout of 3600 seconds"
     notes: "Timeout is at exactly 3600s. At 3600s the entry is expired."
 
+  # --- Backer Operation Rules (Finding KERI-INV-007) ---
+  - invariant: "When backer list b is empty, backer threshold bt MUST be 0. Backer AIDs MUST NOT appear more than once in any single list (b, br, ba). Backer removals (br) MUST be applied before backer additions (ba). A given AID MUST NOT appear in both br and ba lists of the same event."
+    term: "Backer Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=rotation_event_strategy())
+        def test_backer_operations(event):
+            b = event.get('b', [])
+            bt = int(event.get('bt', '0'), 16)
+            br = event.get('br', [])
+            ba = event.get('ba', [])
+            if len(b) == 0:
+                assert bt == 0, "Empty backer list requires bt=0"
+            assert len(set(b)) == len(b), "Backers must be unique in b"
+            assert len(set(br)) == len(br), "Backers must be unique in br"
+            assert len(set(ba)) == len(ba), "Backers must be unique in ba"
+            assert not set(br) & set(ba), "No AID in both br and ba"
+            # Verify remove-before-add ordering
+            new_b = [aid for aid in b if aid not in br] + ba
+            assert len(set(new_b)) == len(new_b), "Result must be unique after remove+add"
+    strategy: "rotation_event_strategy() — with varied b, br, ba lists"
+    notes: "Spec L1535-1572. Finding: KERI-INV-007."
+
+  # --- SQAR/Custodial Zero-Weight Keys (Finding KERI-INV-016) ---
+  - invariant: "In SQAR or custodial rotation, exposed prior-next keys appearing in the new current signing list MUST have weight 0 in the current signing threshold. They hold rotation authority but no signing authority. Post-quantum signing keys MUST be used for the resultant signing authority."
+    term: "Weighted Threshold"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        # Model: keys in current list that came from prior-next must have weight 0
+        n_keys = Int('n_keys')
+        ForAll([i], Implies(
+            And(0 <= i, i < n_keys, is_prior_next_key(i)),
+            weight(i) == 0
+        ))
+        # Signing authority must come only from non-prior-next keys
+        signing_weight = Sum([If(Not(is_prior_next_key(i)), weight(i), 0)
+                            for i in range(MAX_KEYS)])
+        s = Solver()
+        s.add(signing_weight >= current_threshold)
+        assert s.check() == sat
+    notes: "Spec L3920-3935. Zero-weight rotation keys in SQAR. Finding: KERI-INV-016."
+
 contracts:
   - port_ref: "port://identity/thresholds/inbound/threshold-satisfaction"
     preconditions:

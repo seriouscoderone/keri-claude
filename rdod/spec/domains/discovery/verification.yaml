@@ -286,6 +286,66 @@ properties:
     technique: "property-based"
     notes: "Two distinct mechanisms with different trust levels. Anchored provides authentication + auditability. Signed provides authentication only."
 
+  # --- RUN Policy (Finding KERI-INV-013) ---
+  - invariant: "RUN (Read, Update, Nullify) policy: each peer MUST be the source of truth for its own data. Each peer MUST create unique identifiers (SAIDs) for its own data. A destination peer MUST NOT ever delete a record storing the latest version of data — Nullify replaces Delete by writing an empty/null value, preserving the record's existence and preventing replay attacks."
+    term: "BADA"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(record=endpoint_record_strategy(), update=nullify_update_strategy())
+        def test_run_no_delete_policy(record, update):
+            store = RecordStore()
+            store.put(record)
+            # Nullify writes empty value, does not delete
+            store.nullify(record.said)
+            assert store.exists(record.said), "Record must still exist after nullify"
+            assert store.get(record.said).value is None, "Nullified record has null value"
+            # Delete must be rejected
+            with pytest.raises(PolicyViolation):
+                store.delete(record.said)
+    strategy: "endpoint_record_strategy() x nullify_update_strategy()"
+    notes: "Spec L6777-6807. RUN replaces CRUD — no delete allowed. Finding: KERI-INV-013."
+
+  # --- OOBI Operational Rules (Finding KERI-INV-014) ---
+  - invariant: "In indirect mode, a controller MUST create witness hosts with endpoints. Witness AIDs (WIDs) MUST be eventually designated in the controller's KEL. The WID MUST appear in the KEL (not only in config files) — the KEL is the authoritative record."
+    term: "OOBI"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(controller=indirect_mode_controller_strategy())
+        def test_oobi_operational_rules(controller):
+            # Must have at least one witness endpoint
+            assert len(controller.witness_endpoints) >= 1, \
+                "Indirect-mode controller must have witness endpoints"
+            # Each WID must appear in KEL
+            for wid in controller.witness_aids:
+                assert wid in controller.kel.designated_witnesses, \
+                    f"WID {wid} must appear in KEL, not just config"
+    strategy: "indirect_mode_controller_strategy()"
+    notes: "Spec L6520-6527. WIDs must be KEL-designated. Finding: KERI-INV-014."
+
+  # --- JIT/NTK Pre-Verification + Replay Detection (Finding KERI-INV-015) ---
+  - invariant: "JIT/NTK discovery: each Exchanger MUST have already verified the data before exchanging it. All proofs MUST have already been available to the Exchanger. Digest or signature copies of prior records MUST be retained for replay detection — only copies of the digest or signature MUST be kept."
+    term: "BADA"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(exchange=jit_exchange_strategy())
+        def test_jit_pre_verification(exchange):
+            # Exchanger must have pre-verified
+            assert exchange.data_verified, "Data must be verified before exchange"
+            assert exchange.proofs_available, "Proofs must be pre-available"
+            # Replay detection: prior digests retained
+            store = exchange.record_store
+            for prior in exchange.prior_records:
+                assert store.has_digest(prior.said) or store.has_signature(prior.said), \
+                    f"Digest or signature of prior record {prior.said} must be retained"
+    strategy: "jit_exchange_strategy() — generates exchanges with pre-verified and unverified data"
+    notes: "Spec L6580-6687. Finding: KERI-INV-015."
+
 # Formalized port contracts
 contracts:
   - port_ref: "port://discovery/inbound/discovery"

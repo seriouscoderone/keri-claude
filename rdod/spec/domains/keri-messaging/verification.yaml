@@ -135,6 +135,168 @@ properties:
             assert skrap_verify(signed_response, agent_key_state), "Client must verify agent signature"
     strategy: "Generate request/response pairs, verify bidirectional signing"
 
+  # --- Key Event Message Field Ordering (Finding KERI-INV-001) ---
+  - invariant: "Key event message bodies MUST have fields in exact canonical order per type. icp: [v,t,d,i,s,kt,k,nt,n,bt,b,c,a]. rot: [v,t,d,i,s,p,kt,k,nt,n,bt,br,ba,c,a]. ixn: [v,t,d,i,s,p,a]. dip: [v,t,d,i,s,kt,k,nt,n,bt,b,c,a,di]. drt: [v,t,d,i,s,p,kt,k,nt,n,bt,br,ba,c,a,di]. rct: [v,t,d,i,s]. No extra top-level fields allowed. Attachments via CESR codes only."
+    term: "Key Event Message"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        KEY_EVENT_FIELDS = {
+            'icp': ['v','t','d','i','s','kt','k','nt','n','bt','b','c','a'],
+            'rot': ['v','t','d','i','s','p','kt','k','nt','n','bt','br','ba','c','a'],
+            'ixn': ['v','t','d','i','s','p','a'],
+            'dip': ['v','t','d','i','s','kt','k','nt','n','bt','b','c','a','di'],
+            'drt': ['v','t','d','i','s','p','kt','k','nt','n','bt','br','ba','c','a','di'],
+            'rct': ['v','t','d','i','s'],
+        }
+        @given(event=key_event_strategy())
+        def test_key_event_field_order(event):
+            ilk = event['t']
+            assert ilk in KEY_EVENT_FIELDS, f"Unknown key event type: {ilk}"
+            expected = KEY_EVENT_FIELDS[ilk]
+            actual = list(event.keys())
+            assert actual == expected, f"{ilk}: {actual} != {expected}"
+    strategy: "key_event_strategy() — generates all 6 key event types with correct and adversarial field orders"
+    notes: "Spec L1944-2366. Covers icp, rot, ixn, dip, drt, rct field ordering and no-extra-fields constraint. Finding: KERI-INV-001."
+
+  # --- Routed Message Field Ordering (Finding KERI-INV-002) ---
+  - invariant: "Routed message bodies MUST have fields in exact canonical order per type. qry: [v,t,d,dt,r,rr,q]. rpy: [v,t,d,dt,r,a]. pro: [v,t,d,dt,r,rr,q]. bar: [v,t,d,dt,r,a]. xip: [v,t,d,u,i,ri,dt,r,q,a]. exn: [v,t,d,i,ri,x,p,dt,r,q,a]. No extra top-level fields. Route r field REQUIRED in all routed messages."
+    term: "Routed Message"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        ROUTED_MSG_FIELDS = {
+            'qry': ['v','t','d','dt','r','rr','q'],
+            'rpy': ['v','t','d','dt','r','a'],
+            'pro': ['v','t','d','dt','r','rr','q'],
+            'bar': ['v','t','d','dt','r','a'],
+            'xip': ['v','t','d','u','i','ri','dt','r','q','a'],
+            'exn': ['v','t','d','i','ri','x','p','dt','r','q','a'],
+        }
+        @given(msg=routed_message_strategy())
+        def test_routed_message_field_order(msg):
+            ilk = msg['t']
+            assert ilk in ROUTED_MSG_FIELDS, f"Unknown routed message type: {ilk}"
+            expected = ROUTED_MSG_FIELDS[ilk]
+            actual = list(msg.keys())
+            assert actual == expected, f"{ilk}: {actual} != {expected}"
+            assert 'r' in msg, "Route field r MUST be present in all routed messages"
+    strategy: "routed_message_strategy() — generates all 6 routed message types"
+    notes: "Spec L2653-2900. Finding: KERI-INV-002."
+
+  # --- Version String Rules (Finding KERI-INV-003) ---
+  - invariant: "Version string v MUST be the first field in any KERI message. Protocol field MUST be 'KERI'. v2.XX implementations MUST support v1.x format. Message type t MUST be a three-character string from the set [icp,rot,ixn,dip,drt,rct,qry,rpy,pro,bar,xip,exn]."
+    term: "Version String"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        VALID_ILKS = {'icp','rot','ixn','dip','drt','rct','qry','rpy','pro','bar','xip','exn'}
+        @given(msg=keri_message_strategy())
+        def test_version_string_rules(msg):
+            assert list(msg.keys())[0] == 'v', "v must be first field"
+            vs = parse_version_string(msg['v'])
+            assert vs.protocol == 'KERI', f"Protocol must be KERI, got {vs.protocol}"
+            assert msg['t'] in VALID_ILKS, f"Unknown ilk: {msg['t']}"
+            assert len(msg['t']) == 3, f"Ilk must be 3 chars, got {len(msg['t'])}"
+
+        @given(v1_msg=v1_keri_message_strategy())
+        def test_v1_backward_compat(v1_msg):
+            parsed = parse_message(v1_msg)
+            assert parsed.version.major == 1
+            assert len(parsed.version_string) == 17
+    strategy: "keri_message_strategy() + v1_keri_message_strategy()"
+    notes: "Spec L1317-1356. Finding: KERI-INV-003."
+
+  # --- Receipt SAID Inversion (Finding KERI-INV-005) ---
+  - invariant: "In a receipt (rct), the d field MUST be the SAID of the receipted key event, NOT the SAID of the receipt message body itself. This is a semantic inversion from all other KERI message types where d = SAID of the enclosing message."
+    term: "Receipt Message"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(key_event=key_event_strategy(), receipt=receipt_strategy())
+        def test_receipt_said_inversion(key_event, receipt):
+            assert receipt['d'] == said_compute(key_event), \
+                "Receipt d must be SAID of receipted key event"
+            assert receipt['d'] != said_compute(receipt), \
+                "Receipt d must NOT be SAID of receipt body itself"
+    strategy: "key_event_strategy() x receipt_strategy()"
+    notes: "Spec L2362-2380. Semantic inversion unique to rct. Finding: KERI-INV-005."
+
+  # --- Exchange Transaction Semantics (Finding KERI-INV-006) ---
+  - invariant: "Exchange p field MUST be SAID of immediately preceding exchange message in a transaction, or empty string if not in a transaction. Exchange x field MUST be the d field of the first xip message, or empty string if not in a transaction. First message in any exchange transaction MUST be type xip."
+    term: "Exchange Message"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(transaction=exchange_transaction_strategy())
+        def test_exchange_transaction_semantics(transaction):
+            assert transaction[0]['t'] == 'xip', "First message must be xip"
+            xip_said = transaction[0]['d']
+            for i, msg in enumerate(transaction):
+                if i == 0:
+                    assert msg.get('p', '') == '', "xip p must be empty"
+                else:
+                    assert msg['p'] == transaction[i-1]['d'], \
+                        f"Message {i} p must be SAID of message {i-1}"
+                    assert msg['x'] == xip_said, \
+                        f"Message {i} x must be SAID of xip"
+
+        @given(standalone=standalone_exchange_strategy())
+        def test_standalone_exchange_empty_fields(standalone):
+            assert standalone.get('x', '') == '', "Standalone x must be empty"
+            assert standalone.get('p', '') == '', "Standalone p must be empty"
+    strategy: "exchange_transaction_strategy() + standalone_exchange_strategy()"
+    notes: "Spec L2583-2604. Finding: KERI-INV-006."
+
+  # --- Seal Field Ordering (Finding KERI-INV-009) ---
+  - invariant: "Seal field ordering is normative per seal type. Source Event seal: [s,d]. Key Event seal: [i,s,d]. Typed seal: [t,d] where t uses CESR Y code. Registrar Backer seal must appear in same establishment event that designates the backer. Seal encoding differs by serialization kind (JSON vs CESR native)."
+    term: "Seal"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        SEAL_FIELDS = {
+            'SealDigest': ['d'],
+            'SealRoot': ['rd'],
+            'SealTrans': ['s', 'd'],
+            'SealEvent': ['i', 's', 'd'],
+            'SealLast': ['i'],
+            'SealTyped': ['t', 'd'],
+        }
+        @given(seal=seal_strategy())
+        def test_seal_field_ordering(seal):
+            seal_type = classify_seal(seal)
+            expected = SEAL_FIELDS[seal_type]
+            actual = list(seal.keys())
+            assert actual == expected, f"{seal_type}: {actual} != {expected}"
+    strategy: "seal_strategy() — generates all 6 seal types with correct and permuted field orders"
+    notes: "Spec L1720-1896. Finding: KERI-INV-009."
+
+  # --- CESR Native KERI Message Format (Finding KERI-INV-012) ---
+  - invariant: "In CESR native format, the version field encodes protocol + protocol version + genus version ONLY (not size or serialization kind). Protocol MUST be 'KERI' (4 chars). DateTime MUST be ISO-8601 with microseconds and UTC offset. Route fields containing non-Base64 characters besides slash MUST be converted to Base64. Field ordering is strict per message type."
+    term: "CESR Native Message"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(msg=cesr_native_keri_message_strategy())
+        def test_cesr_native_format(msg):
+            vs = parse_cesr_version_field(msg['v'])
+            assert vs.protocol == 'KERI'
+            assert vs.size is None, "CESR native version has no size field"
+            assert vs.kind is None, "CESR native version has no serialization kind"
+            if 'dt' in msg:
+                assert matches_rfc3339_microsecond_utc(msg['dt'])
+            if 'r' in msg and has_non_base64_chars(msg['r']):
+                assert is_base64_encoded(msg['r']), "Route must be Base64-encoded"
+    strategy: "cesr_native_keri_message_strategy() — generates KERI messages in CESR native format"
+    notes: "Spec L5540-5960. Finding: KERI-INV-012."
+
 contracts: []
 
 state_machines: []

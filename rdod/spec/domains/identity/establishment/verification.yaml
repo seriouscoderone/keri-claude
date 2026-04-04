@@ -509,6 +509,28 @@ properties:
     strategy: "aid_strategy(), st.integers(0..1000), said_strategy()"
     notes: "Event seal has three fields: i, s, d."
 
+  # --- Sequence Number Maximum (Finding KERI-INV-008) ---
+  - invariant: "Inception event sequence number MUST be 0. Maximum sequence number MUST be 2^128-1 (hex ffffffffffffffffffffffffffffffff). Any event with sn exceeding this maximum MUST be rejected. Sequence numbers are hex-encoded strings with no leading zeros."
+    term: "Sequence Number"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        sn = Int('sn')
+        max_sn = 2**128 - 1
+        s = Solver()
+        # Inception must be 0
+        s.add(Implies(is_inception(event), sn == 0))
+        # All events: 0 <= sn <= max
+        s.add(sn >= 0, sn <= max_sn)
+        assert s.check() == sat
+        # Prove: sn > max is rejected
+        s2 = Solver()
+        s2.add(sn > max_sn, sn >= 0)
+        s2.add(is_accepted(event))
+        assert s2.check() == unsat
+    notes: "Spec L1469-1475. Finding: KERI-INV-008."
+
 contracts:
   - port_ref: "port://identity/establishment/inbound/validate-event"
     preconditions:

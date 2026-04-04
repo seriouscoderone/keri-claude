@@ -301,6 +301,28 @@ properties:
     strategy: "establishment_event_strategy() — with and without DID in c"
     notes: "DID trait is a boolean flag in the config array."
 
+  # --- Delegator Approval Rules (Finding KERI-INV-020) ---
+  - invariant: "A delegator SHOULD NOT auto-approve a delegable rotation that changes the witness pool beyond the prior threshold. The AID for a delegated identifier MUST be a fully qualified SAID of its inception event content including the di (delegator AID) field — changing the di field MUST change the delegated AID, cryptographically binding the delegate to a specific delegator."
+    term: "Delegated Inception"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(dip=delegated_inception_strategy())
+        def test_delegatee_aid_bound_to_delegator(dip):
+            # AID = SAID of inception including di
+            assert dip['i'] == said_compute(dip), \
+                "Delegated AID must be SAID of full inception content"
+            # Changing di must change AID
+            modified = deep_copy(dip)
+            modified['di'] = generate_different_aid(dip['di'])
+            modified['d'] = said_compute(modified)
+            modified['i'] = said_compute(modified)
+            assert modified['i'] != dip['i'], \
+                "Different delegator must produce different delegated AID"
+    strategy: "delegated_inception_strategy() — with varied delegator AIDs"
+    notes: "Spec L4019-4038. Delegated AID cryptographically bound to delegator. Finding: KERI-INV-020."
+
 contracts:
   - port_ref: "port://delegation/inbound/delegation-lifecycle"
     preconditions:

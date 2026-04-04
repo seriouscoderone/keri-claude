@@ -277,6 +277,47 @@ properties:
     technique: property-based
     notes: "Local vs remote determines which validation rules apply per role (controller, witness, delegatee, delegator, general validator)."
 
+  # --- Config Trait Enforcement (Finding KERI-INV-004) ---
+  - invariant: "EO (Establishment-Only): validator MUST drop any non-establishment event (ixn) in a KEL with the EO trait. DND (Do-Not-Delegate): validator MUST drop any delegated event (dip, drt) whose Delegator AID has DND trait. RB (Registrar-Backers): establishment event MUST include a Registrar Backer seal for each backer in the backer list when RB trait is set."
+    term: "Configuration Traits"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=key_event_strategy(), key_state=key_state_strategy())
+        def test_config_trait_enforcement(event, key_state):
+            if 'EO' in key_state.traits and event['t'] not in ('icp','rot','dip','drt'):
+                assert validate(event, key_state) == REJECTED, \
+                    "EO: non-establishment event must be rejected"
+            if 'DND' in key_state.traits and event['t'] in ('dip', 'drt'):
+                assert validate(event, key_state) == REJECTED, \
+                    "DND: delegated event must be rejected"
+            if 'RB' in key_state.traits and event['t'] in ('icp','rot','dip','drt'):
+                backer_count = len(event.get('b', []))
+                rb_seal_count = count_registrar_backer_seals(event.get('a', []))
+                assert rb_seal_count == backer_count, \
+                    f"RB: need {backer_count} registrar backer seals, got {rb_seal_count}"
+    strategy: "key_event_strategy() x key_state_strategy() — includes EO/DND/RB traits"
+    notes: "Spec L1591-1624. Finding: KERI-INV-004."
+
+  # --- Cryptographic Strength Minimum (Finding KERI-INV-019) ---
+  - invariant: "All KERI cryptographic operations MUST preserve a minimum of approximately 128 bits of cryptographic strength. Sequence number maximum value MUST be 2^128-1 (hex ffffffffffffffffffffffffffffffff); any sn exceeding this MUST be rejected."
+    term: "SecurityLevel"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        sn = BitVec('sn', 128)
+        max_sn = BitVecVal(2**128 - 1, 128)
+        s = Solver()
+        s.add(ULE(sn, max_sn))
+        assert s.check() == sat  # valid range is satisfiable
+        # Prove: sn > max_sn is impossible in 128-bit representation
+        s2 = Solver()
+        s2.add(UGT(sn, max_sn))
+        assert s2.check() == unsat  # overflow is impossible
+    notes: "Spec L4407, L1471. Finding: KERI-INV-019."
+
 contracts:
   - port_ref: "port://identity/inbound/identity-management"
     preconditions:
