@@ -76,6 +76,24 @@ properties:
     strategy: "cesr_mixed_domain_stream()"
     notes: "Parser can seamlessly switch between T and B domain elements mid-stream."
 
+  # --- Three-Format Interleaved Parsing (Enrichment CESR-INV-010) ---
+  - invariant: "Parser MUST accept streams interleaving all three non-native format types (JSON tritet=3, CBOR tritet=5, MGPK tritet=4/6) with CESR native frames (tritet=0,1,2,7) in a single stream; parse_stream(interleaved) MUST return correct frame counts per type with no parse error."
+    term: "Stream"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(frames=st.lists(st.sampled_from(['json', 'cbor', 'mgpk', 'cesr_t', 'cesr_b']),
+               min_size=2, max_size=10))
+        def test_three_format_interleaved(frames):
+            stream = build_interleaved_stream(frames)
+            parsed = parse_stream(stream)
+            assert len(parsed) == len(frames)
+            for expected_type, parsed_frame in zip(frames, parsed):
+                assert parsed_frame.frame_type == expected_type
+    strategy: "st.lists of frame types — interleaves all five frame categories"
+    notes: "Spec L1275. Enrichment of Stream domain-switching invariant. Finding: CESR-INV-010."
+
   # --- Count Code ---
   - invariant: "Small count codes: MUST be exactly 4 characters — '-' + type letter + 2 Base64 size chars; maximum count value is 4095 (64^2 - 1); count > 4095 MUST use large count code"
     term: "Count Code"
@@ -333,6 +351,26 @@ properties:
     strategy: "st.lists(cesr_frame())"
     notes: "Consecutive frames can be parsed independently without shared state."
 
+  # --- Resume After Non-Native (Enrichment CESR-INV-012) ---
+  - invariant: "After parsing a complete non-native payload (body + optional CESR attachments), the next byte in the stream MUST be valid as a cold-start byte: tritet(byte) MUST be in [0,7] and cold-start dispatch MUST succeed. Any byte that fails cold-start classification at a frame boundary MUST raise ColdStartError."
+    term: "Frame"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(payload=nonnative_with_attachments_strategy(),
+               next_frame=cesr_frame_strategy())
+        def test_resume_after_nonnative(payload, next_frame):
+            stream = payload.serialize() + next_frame.serialize()
+            frames = parse_stream(stream)
+            assert len(frames) == 2
+            assert frames[0].frame_type in ('json', 'cbor', 'mgpk')
+            # The resume byte must pass cold-start
+            resume_byte = next_frame.serialize()[0]
+            assert 0 <= (resume_byte >> 5) <= 7
+    strategy: "nonnative_with_attachments_strategy() x cesr_frame_strategy()"
+    notes: "Spec L1394. Cold-start re-entry after non-native payload. Finding: CESR-INV-012."
+
   # --- Attachment ---
   - invariant: "Attachments MUST follow the message body in stream order; attachment.offset MUST be >= body_offset + body_size"
     term: "Attachment"
@@ -383,6 +421,24 @@ properties:
                 f"Version string length must be 17 or 19, got {len(body['v'])}"
     strategy: "cesr_nonnative_message()"
     notes: "Non-native serializations must have 'v' as their first field."
+
+  # --- v-Field-First for CBOR/MGPK (Enrichment CESR-INV-016) ---
+  - invariant: "The Version String v field MUST be the first field in CBOR and MGPK serialized field maps, not only JSON. The field ordering constraint applies to all non-native serialization kinds."
+    term: "Message"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kind=st.sampled_from(['json', 'cbor', 'mgpk']),
+               body=nonnative_body_strategy())
+        def test_v_first_all_kinds(kind, body):
+            serialized = serialize_body(body, kind=kind)
+            parsed = parse_nonnative(serialized, kind=kind)
+            first_key = next(iter(parsed.keys()))
+            assert first_key == 'v', \
+                f"{kind}: first field is '{first_key}', expected 'v'"
+    strategy: "st.sampled_from(['json', 'cbor', 'mgpk']) x nonnative_body_strategy()"
+    notes: "Spec L2551. Extends v-first to CBOR and MGPK. Finding: CESR-INV-016."
 
   # --- Cold Start ---
   - invariant: "Cold start parsing: tritet = byte >> 5 (high 3 bits); the 8 tritet values MUST form a bijection onto 8 frame types — no two tritets map to the same type, and every tritet maps to exactly one type"
@@ -499,6 +555,33 @@ properties:
         assert m.eval(Extract(7, 5, byte_val)).as_long() == 0b111
         s.pop()
     notes: "Verifies tritet assignments for non-native and B-domain frame types."
+
+  # --- Non-Native Tritet Mutual Exclusion (Enrichment CESR-INV-011) ---
+  - invariant: "The tritet values for JSON (3), MGPK1 (4), CBOR (5), and MGPK2 (6) MUST be mutually disjoint: no single byte can produce tritet values for more than one non-native format family. Z3 proves the partition is exclusive."
+    term: "Cold Start"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        byte_val = BitVec('byte_val', 8)
+        tritet = Extract(7, 5, byte_val)
+        s = Solver()
+        # Each tritet maps to exactly one format
+        json_range = tritet == 3
+        mgpk1_range = tritet == 4
+        cbor_range = tritet == 5
+        mgpk2_range = tritet == 6
+        # Prove no overlap: no byte produces two tritet values simultaneously
+        s.add(Or(
+            And(json_range, mgpk1_range),
+            And(json_range, cbor_range),
+            And(json_range, mgpk2_range),
+            And(mgpk1_range, cbor_range),
+            And(mgpk1_range, mgpk2_range),
+            And(cbor_range, mgpk2_range)
+        ))
+        assert s.check() == unsat  # no byte can be in two format ranges
+    notes: "Spec L1294. Z3 proves non-native format byte ranges are mutually exclusive. Finding: CESR-INV-011."
 
   # --- ColdCode ---
   - invariant: "ColdCode computation: cold_code = byte >> 5; result MUST be in range [0, 7] for any byte value [0, 255]"
@@ -679,6 +762,44 @@ properties:
     strategy: "exhaustive — all genera x all universal codes"
     notes: "Universal codes provide cross-protocol interoperability."
 
+  # --- Universal Code Cross-Genus Semantics (Enrichment CESR-INV-014) ---
+  - invariant: "For every universal code C in [-A..-J] and any two valid genera G1, G2: parsing the same code bytes MUST yield identical count values. Universal codes MUST NOT have genus-dependent semantic interpretation."
+    term: "Count Code"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(code=universal_count_code_strategy(),
+               g1=genus_strategy(), g2=genus_strategy())
+        def test_universal_cross_genus_invariance(code, g1, g2):
+            parsed_g1 = parse_count_code(code.qb64, genus=g1)
+            parsed_g2 = parse_count_code(code.qb64, genus=g2)
+            assert parsed_g1.count == parsed_g2.count, \
+                f"Universal code {code.qb64} has different counts in {g1} vs {g2}"
+            assert parsed_g1.code == parsed_g2.code
+    strategy: "universal_count_code_strategy() x genus_strategy() x genus_strategy()"
+    notes: "Spec L1858. Universal codes must have identical semantics across genera. Finding: CESR-INV-014."
+
+  # --- KERI/ACDC Count Code Required Set (Enrichment CESR-INV-015) ---
+  - invariant: "A compliant KERI/ACDC genus MUST include all count codes specified in the spec's §9 table: universal codes [-A..-J] plus genus-specific codes [-K, -L, -M, -N, -O, -P, -Q, -R, -S, -T, -U, -V, -W, -X, -Y, -Z]. Each MUST be present in the active genus count code table."
+    term: "Count Code"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        REQUIRED_COUNT_CODES = [
+            '-A', '-B', '-C', '-D', '-E', '-F', '-G', '-H', '-I', '-J',  # universal
+            '-K', '-L', '-M', '-N', '-O', '-P', '-Q', '-R', '-S', '-T',  # genus-specific
+            '-U', '-V', '-W', '-X', '-Y', '-Z',
+        ]
+        def test_keri_acdc_count_codes_present():
+            genus = get_keri_acdc_genus()
+            for code_prefix in REQUIRED_COUNT_CODES:
+                assert code_prefix in genus.count_code_table, \
+                    f"Required count code {code_prefix} missing from KERI/ACDC genus"
+    strategy: "Enumerate required codes against active genus table"
+    notes: "Spec L2475. All KERI/ACDC genus-specific count codes must be present. Finding: CESR-INV-015."
+
   # --- Concrete Group Types ---
   - invariant: "ControllerIdxSigs group: counter code MUST end with 'A'; contents MUST be a Vec<Siger> where each item is an indexed signature"
     term: "Concrete Group Types"
@@ -841,6 +962,115 @@ properties:
   - invariant: "SAD Path Signatures are transposable: a signature on a nested SAD subset remains valid when the signature attachment is moved to a different level of the stream hierarchy. The path is updated to reflect the new position but the signature itself verifies against the same content bytes regardless of where the attachment appears in the stream."
     term: "SAD Path Language"
     technique: "property-based"
+    formal:
+      language: python
+      expression: |
+        @given(sad=nested_sad_strategy(), path=sad_path_strategy())
+        def test_sad_path_transposability(sad, path):
+            sig = sign_sad_path(sad, path)
+            # Move attachment to top level with adjusted path
+            top_path, body_bytes = resolve_path(sad, path)
+            sig_top = transpose_attachment(sig, top_path)
+            # Signature still verifies against the same content bytes
+            assert verify_sad_path_sig(sad, sig_top, top_path) == True
+            assert body_bytes == extract_body(sad, path)
+    strategy: "nested_sad_strategy() x sad_path_strategy()"
+    notes: "Spec L3250. SAD Path signatures are transposable across stream hierarchy levels."
+
+  # --- Non-Native Enclosure (Finding CESR-INV-001) ---
+  - invariant: "Non-native serializations (JSON, CBOR, MGPK) embedded in a CESR stream MUST be completely enclosed within a CESR group framing code. Bare non-native content without a framing group MUST be rejected as a parse error."
+    term: "Stream"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(nonnative=nonnative_body_strategy())
+        def test_nonnative_must_be_enclosed(nonnative):
+            # Bare body without framing: must fail
+            with pytest.raises(ParseError):
+                parse_stream(nonnative.raw_bytes)
+            # Enclosed body: must succeed
+            enclosed = frame_nonnative(nonnative)
+            frames = parse_stream(enclosed)
+            assert len(frames) == 1
+            assert frames[0].body == nonnative.raw_bytes
+    strategy: "nonnative_body_strategy() — generates JSON, CBOR, MGPK payloads without CESR framing"
+    notes: "Spec L1242. Non-native content must be enclosed in a CESR group. Finding: CESR-INV-001."
+
+  # --- Special Count Codes (Finding CESR-INV-002) ---
+  - invariant: "Special count codes (genus/version codes, protocol table selectors) MUST NOT be interpreted as quadlet counts. Parsing a special code MUST NOT attempt quadlet arithmetic on its size field. The size field carries protocol/version table selector semantics instead."
+    term: "Count Code"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(code=special_count_code_strategy())
+        def test_special_code_not_quadlet(code):
+            parsed = parse_count_code(code.qb64)
+            assert parsed.is_special, "Must classify as special"
+            assert parsed.count_quadlets is None, "Special codes have no quadlet count"
+            assert parsed.selector is not None, "Special codes carry a selector value"
+    strategy: "special_count_code_strategy() — generates genus/version codes and protocol table selectors"
+    notes: "Spec L1852. Special codes carry version/genus semantics, not byte counts. Finding: CESR-INV-002."
+
+  # --- Genus/Version Code Structure (Finding CESR-INV-003) ---
+  - invariant: "A genus/version count code MUST be 8 characters (large format starting with '--'). It MUST encode (protocol_genus, major_version, minor_version) in a deterministic format. Round-trip: parse_genus_code(build_genus_code(g, M, m)) == (g, M, m). Major version MUST increment on breaking changes; minor version MUST increment on compatible changes."
+    term: "Count Code"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(genus=genus_strategy(), major=st.integers(0, 63), minor=st.integers(0, 63))
+        def test_genus_version_roundtrip(genus, major, minor):
+            code = build_genus_code(genus, major, minor)
+            assert len(code) == 8, f"Genus code must be 8 chars, got {len(code)}"
+            assert code[:2] == '--', "Genus code must start with '--'"
+            g, M, m = parse_genus_code(code)
+            assert g == genus and M == major and m == minor
+    strategy: "genus_strategy() x st.integers(0, 63) x st.integers(0, 63)"
+    notes: "Spec L1870-1905. Genus/version codes identify protocol table sets. Finding: CESR-INV-003."
+
+  # --- v1.XX Backward Compatibility (Finding CESR-INV-004) ---
+  - invariant: "Compliant Version 2.XX implementations MUST support the old Version 1.XX Version String format. A v2 parser MUST accept v1 version strings (17 chars, underscore-terminated) and v2 strings (19 chars, dot-terminated). Both formats MUST be parseable in the same stream."
+    term: "Version String"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(v1_msg=v1_message_strategy(), v2_msg=v2_message_strategy())
+        def test_v1_backward_compat(v1_msg, v2_msg):
+            # v2 parser handles v1
+            parsed_v1 = parse_message(v1_msg)
+            assert parsed_v1.version.major == 1
+            assert len(parsed_v1.version_string) == 17
+            # v2 parser handles v2
+            parsed_v2 = parse_message(v2_msg)
+            assert parsed_v2.version.major == 2
+            assert len(parsed_v2.version_string) == 19
+            # Mixed stream
+            mixed = v1_msg + v2_msg
+            frames = parse_stream(mixed)
+            assert len(frames) == 2
+    strategy: "v1_message_strategy() x v2_message_strategy() — generates complete messages in both version formats"
+    notes: "Spec L2682. v2 must be backward-compatible with v1. Finding: CESR-INV-004."
+
+  # --- SAD Path Array Integer Constraint (Finding CESR-INV-005) ---
+  - invariant: "In a SAD Path expression, when a path component indexes into an array context, the component MUST be a non-negative integer. String components in array context MUST be rejected as a PathError."
+    term: "SAD Path Language"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(sad=sad_with_arrays_strategy(), path=sad_path_strategy())
+        def test_sad_path_array_integer(sad, path):
+            for component, context in zip_path_contexts(sad, path):
+                if context == 'array':
+                    assert isinstance(component, int), \
+                        f"Array context requires integer index, got {type(component)}"
+                    assert component >= 0, \
+                        f"Array index must be non-negative, got {component}"
+    strategy: "sad_with_arrays_strategy() x sad_path_strategy() — generates SADs with nested arrays and valid/invalid path expressions"
+    notes: "Spec L3294. SAD Path array indexing must use integers. Finding: CESR-INV-005."
 
 # Formalized port contracts
 contracts:

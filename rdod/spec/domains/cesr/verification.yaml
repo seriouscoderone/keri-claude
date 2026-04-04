@@ -567,6 +567,72 @@ properties:
     strategy: "cesr_primitive() filtered to security-critical codes (digests, UUIDs, salts)"
     notes: "Cross-cutting 128-bit minimum from ACDC spec. Applies to digests, UUIDs, salts, and signing keys. Finding: ACDC-Z1-002."
 
+  # --- Code Prefix Position (Enrichment CESR-INV-007) ---
+  - invariant: "The type code portion MUST begin at position 0 of the qb64 string and occupy positions [0, hs). The type prefix is always the leading characters — no preamble or separator precedes it."
+    term: "Code"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(cesr_primitive())
+        def test_code_prefix_position(primitive):
+            sizage = lookup_sizage(primitive.code)
+            # Code occupies [0, hs)
+            assert primitive.qb64[:sizage.hs] == primitive.code[:sizage.hs], \
+                f"Code prefix mismatch: qb64 starts with '{primitive.qb64[:sizage.hs]}', expected '{primitive.code[:sizage.hs]}'"
+            # No preamble — first character is first code character
+            assert primitive.qb64[0] == primitive.code[0]
+    strategy: "cesr_primitive() — all primitive types"
+    notes: "Spec L809-810. Type portion must begin the framing code. Finding: CESR-INV-007."
+
+  # --- Empty Value Pad Size (Enrichment CESR-INV-009) ---
+  - invariant: "When a CESR primitive has an empty raw value (len(raw) == 0), the pad size MUST be 0. This is a boundary case of the pad formula: ps = (3 - 0 % 3) % 3 = 0."
+    term: "Mid-padding"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        N = Int('N')
+        ps = Int('ps')
+        s = Solver()
+        s.add(N == 0)
+        s.add(ps == (3 - N % 3) % 3)
+        s.add(ps != 0)
+        assert s.check() == unsat  # empty raw always has ps=0
+    notes: "Spec L1211-1216. Explicit boundary test for N=0 case. Finding: CESR-INV-009."
+
+  # --- First Character Exhaustive Partition (Enrichment CESR-INV-013) ---
+  - invariant: "The first character of any valid CESR primitive qb64 string MUST be in the set {A-Z, a-z, 0-9, -, _} — the 64 URL-safe Base64 characters. Any qb64 whose first character is outside this set MUST be rejected. This partitions all 64 valid first characters into: letters [A-Za-z] for 1-char code table, digits [0-9] for extended tables, '-' for count codes, '_' for op codes."
+    term: "Selector"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        import re
+        VALID_FIRST = re.compile(r'^[A-Za-z0-9\-_]')
+
+        @given(cesr_primitive())
+        def test_first_char_partition(primitive):
+            assert VALID_FIRST.match(primitive.qb64), \
+                f"First char '{primitive.qb64[0]}' not in valid set"
+            first = primitive.qb64[0]
+            if first == '-':
+                assert is_count_code(primitive)
+            elif first == '_':
+                assert is_op_code(primitive)
+            elif first.isdigit():
+                assert is_extended_code(primitive)
+            else:
+                assert first.isalpha()
+
+        @given(bad_char=st.characters(blacklist_categories=['L', 'N'], blacklist_characters='-_'))
+        def test_invalid_first_char_rejected(bad_char):
+            if bad_char not in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_':
+                with pytest.raises((ValueError, ParseError)):
+                    parse_primitive(bad_char + 'AAA')
+    strategy: "cesr_primitive() for valid; adversarial characters for invalid"
+    notes: "Spec L1513. Exhaustive first-character partition. Finding: CESR-INV-013."
+
 # Formalized port contracts
 contracts:
   - port_ref: "port://cesr/inbound/encoding"

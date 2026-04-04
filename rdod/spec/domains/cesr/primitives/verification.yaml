@@ -855,6 +855,50 @@ properties:
     strategy: "single test — create Signer, drop, inspect memory"
     notes: "Zeroize verification is language-specific. Rust uses unsafe memory inspection."
 
+  # --- SAID Verification Protocol (Finding CESR-INV-006) ---
+  - invariant: "verify_said(sad) MUST implement the 4-step protocol: (1) extract d field value, (2) replace d with dummy string of same qb64 length, (3) serialize the modified structure, (4) compute digest and compare to extracted d. MUST return True for valid SADs, False for any field tampering or SAID corruption."
+    term: "Saidify"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(sad=sad_strategy())
+        def test_said_verify_protocol(sad):
+            # Valid SAD verifies
+            assert verify_said(sad) is True
+            # Tampered attribute field: SAID no longer matches
+            tampered = deep_copy(sad)
+            tampered['a'] = tampered.get('a', {})
+            tampered['a']['tampered'] = 'injected'
+            assert verify_said(tampered) is False
+            # Corrupted SAID: does not match content
+            bad_said = deep_copy(sad)
+            bad_said['d'] = 'E' + 'A' * 43  # valid format, wrong digest
+            assert verify_said(bad_said) is False
+    strategy: "sad_strategy() — generates valid SADs; tamper strategies for negative cases"
+    notes: "Spec L2838. Tests the verify path (not just generate). Finding: CESR-INV-006."
+
+  # --- KERI/ACDC Master Code Required Set (Enrichment CESR-INV-015) ---
+  - invariant: "A compliant KERI/ACDC genus MUST include all master code entries specified in the spec's §8 table. The required 1-char codes include at minimum: A (RandomSeed128), B (Ed25519NT), D (Ed25519), E (Blake3-256), F (Blake2b-256), H (SHA3-256), I (SHA2-256), M (Short2ByteSeqNum). Required 2-char codes include: 0B (Ed25519Sig), 0C (ECDSA256k1Sig). Required 4-char codes include: 1AAB (ECDSA256k1NT), 1AAE (Ed448). Each MUST be present in the active genus master code table."
+    term: "MtrDex"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        REQUIRED_MASTER_CODES = [
+            'A', 'B', 'D', 'E', 'F', 'H', 'I', 'M',  # 1-char
+            '0B', '0C',  # 2-char
+            '1AAB', '1AAE', '1AAJ',  # 4-char
+        ]
+        def test_keri_acdc_master_codes_present():
+            for code in REQUIRED_MASTER_CODES:
+                assert code in MtrDex.__dict__.values(), \
+                    f"Required master code '{code}' missing from MtrDex"
+                sizage = lookup_sizage(code)
+                assert sizage is not None, f"Code '{code}' has no Sizage entry"
+    strategy: "Enumerate required codes against MtrDex + Sizage table"
+    notes: "Spec L2253-2282. All required primitive codes must be present. Finding: CESR-INV-015."
+
 # Formalized port contracts
 contracts:
   - port_ref: "port://cesr/primitives/inbound/qualification"
