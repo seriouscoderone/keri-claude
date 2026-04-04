@@ -1,0 +1,333 @@
+# findings.yaml — ACDC Spec Invariant Coverage Findings
+# Generated: 2026-04-03
+# Consolidated from 3 parallel analysis passes (structure+schema, edges+rules, TEL+IPEX+disclosure)
+# 8 gap clusters, ordered by priority
+
+findings:
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CLUSTER 1: ACDC Structural Invariants — credential-lifecycle
+  # ══════════════════════════════════════════════════════════════════════════
+  - id: ACDC-INVF-001
+    cluster: "ACDC Structure"
+    domain: credential-lifecycle
+    verification_file: verification.yaml
+    rules_covered: 19
+    representative_spec_lines: [382, 412, 417, 458, 469, 489, 516, 605, 624]
+    precision: pbt-ready
+    proposed_invariant:
+      term: "ACDC Structure"
+      technique: property-based
+      invariant: >
+        Top-level fields MUST appear in order [v, t, d, u, i, rd, s, a, A, e, r].
+        Fields [v, d, i, s] are REQUIRED. Version string v MUST be first.
+        Protocol field in version string MUST be 'ACDC'. Field labels MUST be
+        1-2 characters. Insertion-ordered serialization is canonical. The d field
+        MUST be a valid SAID. The i field MUST be a valid AID. The dt field,
+        when present, MUST be ISO-8601 with microseconds and UTC offset.
+      formal: |
+        @given(acdc=acdc_strategy())
+        def test_acdc_structure(acdc):
+            fields = list(acdc.keys())
+            canonical = ['v', 't', 'd', 'u', 'i', 'rd', 's', 'a', 'A', 'e', 'r']
+            present = [f for f in canonical if f in fields]
+            assert fields[:len(present)] == present, "Field ordering violation"
+            for req in ['v', 'd', 'i', 's']:
+                assert req in acdc, f"Required field {req} missing"
+            assert fields[0] == 'v', "v must be first field"
+            assert parse_version_string(acdc['v']).protocol == 'ACDC'
+            assert is_valid_said(acdc['d'])
+            assert is_valid_aid(acdc['i'])
+            if 'dt' in acdc:
+                assert matches_rfc3339_microsecond_utc(acdc['dt'])
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CLUSTER 2: Schema Invariants — credential-lifecycle
+  # ══════════════════════════════════════════════════════════════════════════
+  - id: ACDC-INVF-002
+    cluster: "Schema Validation"
+    domain: credential-lifecycle
+    verification_file: verification.yaml
+    rules_covered: 15
+    representative_spec_lines: [946, 952, 957, 972, 992, 1032, 1072, 1104, 1117, 1122, 1150, 1168]
+    precision: z3-ready
+    proposed_invariant:
+      term: "TypeIsSchema"
+      technique: smt
+      invariant: >
+        Schema $id MUST equal said_compute(schema) (bare SAID, no URI scheme).
+        ACDC s field MUST equal schema $id. Schema MUST be a SAD. No dynamic
+        $ref or $vocabulary. $schema MUST be 'https://json-schema.org/draft/2020-12/schema'.
+        Schema MUST have a 'version' field with semantic version string.
+        Backward-incompatible schema MUST have higher major version.
+        Schema digest MUST have >= 128 bits cryptographic strength.
+      formal: |
+        # Z3: schema self-addressing
+        s = Solver()
+        schema_id, schema_said = Strings('schema_id schema_said')
+        s.add(schema_id == schema_said)  # $id == SAID
+        s.add(is_bare_said(schema_id))
+        assert s.check() == sat
+
+        # PBT: schema validation
+        @given(schema=acdc_schema_strategy())
+        def test_schema_invariants(schema):
+            assert schema['$id'] == said_compute(schema), "$id must be SAID"
+            assert is_bare_said(schema['$id']), "$id must be bare SAID"
+            assert schema.get('$schema') == 'https://json-schema.org/draft/2020-12/schema'
+            assert 'version' in schema
+            assert matches_semver(schema['version'])
+            assert not has_dynamic_refs(schema), "No dynamic $ref allowed"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CLUSTER 3: Edge Section Structural Rules — credential-lifecycle
+  # ══════════════════════════════════════════════════════════════════════════
+  - id: ACDC-INVF-003
+    cluster: "Edge Structure"
+    domain: credential-lifecycle
+    verification_file: verification.yaml
+    rules_covered: 12
+    representative_spec_lines: [2507, 2591, 2595, 2619, 2637, 2680, 2685, 2708, 2712, 2719, 2766]
+    precision: z3-ready
+    proposed_invariant:
+      term: "CredentialEdge / EdgeGroup"
+      technique: smt
+      invariant: >
+        Edge MUST have n field; EdgeGroup MUST NOT have n field. Edge field
+        order: [d,u,n,s,o,w]. EdgeGroup field order: [d,u,o,w]. SAID d field
+        MUST be first when present; value MUST equal said_compute(block). UUID
+        u field MUST be second with >= 128 bits entropy. Top-level EdgeGroup
+        MUST NOT have w field. Default EdgeGroup operator is AND. Labeled
+        nested fields MUST follow all reserved fields and be locally unique.
+        No nested block may have a type field.
+      formal: |
+        # Z3: Edge/EdgeGroup discriminant
+        n_present = Bool('n_present')
+        is_edge, is_edge_group = Bools('is_edge is_edge_group')
+        s = Solver()
+        s.add(is_edge == n_present)
+        s.add(is_edge_group == Not(n_present))
+        s.add(Not(And(is_edge, is_edge_group)))  # mutually exclusive
+        assert s.check() == sat
+
+  - id: ACDC-INVF-004
+    cluster: "Edge Operator Semantics"
+    domain: credential-lifecycle
+    verification_file: verification.yaml
+    rules_covered: 6
+    representative_spec_lines: [2889, 2891, 2898, 2902, 2911, 2920]
+    precision: z3-ready
+    proposed_invariant:
+      term: "CredentialEdge"
+      technique: smt
+      invariant: >
+        I2I: issuer_aid(near_acdc) MUST equal issuee_aid(far_acdc); far node
+        MUST be TargetedACDC. NI2I: no AID constraint between near issuer and
+        far issuee. DI2I: issuer_aid(near_acdc) MUST be issuee_aid(far_acdc)
+        OR a delegated AID thereof; far node MUST be TargetedACDC. Default
+        operator for targeted far-node is I2I; for untargeted is NI2I.
+      formal: |
+        # Z3: I2I operator
+        near_issuer, far_issuee = Consts('near_issuer far_issuee', AIDSort)
+        is_targeted = Bool('is_targeted')
+        s = Solver()
+        s.add(Implies(And(i2i_active, is_targeted),
+              near_issuer == far_issuee))
+        s.add(Implies(i2i_active, is_targeted))  # far must be targeted
+        assert s.check() == sat
+
+  - id: ACDC-INVF-005
+    cluster: "Edge Validation Workflow"
+    domain: credential-lifecycle
+    verification_file: verification.yaml
+    rules_covered: 4
+    representative_spec_lines: [2831, 2833, 2835, 2850]
+    precision: pbt-ready
+    proposed_invariant:
+      term: "CredentialEdge"
+      technique: property-based
+      invariant: >
+        Validator MUST confirm: (1) said_compute(far_node) == edge.n,
+        (2) far_node validates against its own schema, (3) if edge.s present,
+        far_node also validates against edge.s schema, (4) if edge.s SAID
+        differs from far_node schema SAID, two validation runs MUST execute.
+      formal: |
+        @given(near=acdc_with_edges(), far=acdc_strategy())
+        def test_edge_validation(near, far):
+            for edge in near.edges:
+                assert said_compute(far) == edge['n'], "Far-node SAID mismatch"
+                assert validates_schema(far, far['s']), "Far-node self-schema fail"
+                if 's' in edge:
+                    assert validates_schema(far, edge['s']), "Edge schema fail"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CLUSTER 4: Rule Section Structural Rules — credential-lifecycle
+  # ══════════════════════════════════════════════════════════════════════════
+  - id: ACDC-INVF-006
+    cluster: "Rule Structure"
+    domain: credential-lifecycle
+    verification_file: verification.yaml
+    rules_covered: 8
+    representative_spec_lines: [3082, 3094, 3114, 3117, 3124, 3138, 3155, 3157]
+    precision: z3-ready
+    proposed_invariant:
+      term: "Rule Section"
+      technique: smt
+      invariant: >
+        Rule MUST have l field; MUST NOT have fields beyond {d, u, l}. Rule-group
+        field order: [d,u,l] then labeled nested fields. SAID d MUST be first
+        when present; value = said_compute(block). Labeled nested Rules/Rule-groups
+        MUST be locally unique, non-reserved, no type field.
+      formal: |
+        # Z3: Rule field set restriction
+        rule_fields = Set('rule_fields', StringSort())
+        allowed = SetUnion(SetAdd(SetAdd(EmptySet(StringSort()), StringVal('d')),
+                  StringVal('u')), SetAdd(EmptySet(StringSort()), StringVal('l')))
+        s = Solver()
+        s.add(IsSubset(rule_fields, allowed))
+        s.add(IsMember(StringVal('l'), rule_fields))  # l required
+        assert s.check() == sat
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CLUSTER 5: TEL Event Field Structure — credential-lifecycle
+  # ══════════════════════════════════════════════════════════════════════════
+  - id: ACDC-INVF-007
+    cluster: "TEL Event Structure"
+    domain: credential-lifecycle
+    verification_file: verification.yaml
+    rules_covered: 4
+    representative_spec_lines: [4406, 4414, 4420, 4430]
+    precision: pbt-ready
+    proposed_invariant:
+      term: "TEL Event Type Pattern"
+      technique: property-based
+      invariant: >
+        rip field order: [v, t, d, u, i, n, dt], all required, t='rip'.
+        bup field order: [v, t, d, rd, n, p, dt, b], all required, t='bup'.
+        upd field order: [v, t, d, rd, n, p, dt, ta, ts], all required, t='upd'.
+        Version string protocol MUST be 'ACDC' for all TEL events.
+      formal: |
+        @given(tel_event=tel_event_strategy())
+        def test_tel_event_structure(event):
+            expected_order = {
+                'rip': ['v', 't', 'd', 'u', 'i', 'n', 'dt'],
+                'bup': ['v', 't', 'd', 'rd', 'n', 'p', 'dt', 'b'],
+                'upd': ['v', 't', 'd', 'rd', 'n', 'p', 'dt', 'ta', 'ts'],
+            }
+            fields = list(event.keys())
+            assert fields == expected_order[event['t']]
+            assert parse_version_string(event['v']).protocol == 'ACDC'
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CLUSTER 6: CESR Codec Constraints — privacy/blinding + credential-lifecycle
+  # ══════════════════════════════════════════════════════════════════════════
+  - id: ACDC-INVF-008
+    cluster: "CESR Codec"
+    domain: privacy/blinding
+    verification_file: verification.yaml
+    rules_covered: 6
+    representative_spec_lines: [4576, 5294, 4662, 4673, 5319, 5347]
+    precision: pbt-ready
+    proposed_invariant:
+      term: "Shielded Attribute Block"
+      technique: property-based
+      invariant: >
+        Shielded Attribute Block MUST use count code BlindedStateQuadruples (-a##).
+        Bound Shielded Attribute Block MUST use BoundStateSextuples (-b##).
+        Placeholder td/ts fields MUST encode as CESR Empty (1AAP).
+        Placeholder bn MUST encode as CESR integer 0 (MAAA).
+        Placeholder bd MUST encode as CESR Empty (1AAP).
+      formal: |
+        @given(block=shielded_block_strategy())
+        def test_cesr_encoding(block):
+            if is_placeholder(block['td']):
+                assert block['td'] == '1AAP'
+            if is_placeholder(block['ts']):
+                assert block['ts'] == '1AAP'
+            if is_bound(block):
+                if is_placeholder(block['bn']):
+                    assert block['bn'] == 'MAAA'
+                if is_placeholder(block['bd']):
+                    assert block['bd'] == '1AAP'
+
+  - id: ACDC-INVF-009
+    cluster: "CESR Native Message Format"
+    domain: credential-lifecycle
+    verification_file: verification.yaml
+    rules_covered: 4
+    representative_spec_lines: [6724, 6726, 6744, 6745]
+    precision: pbt-ready
+    proposed_invariant:
+      term: "ACDC Message Types"
+      technique: property-based
+      invariant: >
+        acm field map: count code -G## or --G#####; fields in order
+        [v, t, d, u, i, rd, s, a, A, e, r]. acm fixed field: count code -F##
+        or --F#####; values in same order. a and A MUST NOT both be non-empty.
+        Message type t MUST appear in all CESR native messages.
+      formal: |
+        @given(msg=acdc_cesr_message_strategy())
+        def test_cesr_native_format(msg):
+            if msg.is_field_map:
+                assert msg.count_code in ['-G', '--G']
+            else:
+                assert msg.count_code in ['-F', '--F']
+            canonical = ['v','t','d','u','i','rd','s','a','A','e','r']
+            assert msg.field_order == [f for f in canonical if f in msg.fields]
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CLUSTER 7: Bound Block Key State Binding — privacy/blinding
+  # ══════════════════════════════════════════════════════════════════════════
+  - id: ACDC-INVF-010
+    cluster: "Bound Block Validation"
+    domain: privacy/blinding
+    verification_file: verification.yaml
+    rules_covered: 4
+    representative_spec_lines: [5308, 5309, 5339, 5346]
+    precision: pbt-ready
+    proposed_invariant:
+      term: "Bound Shielded Attribute Block"
+      technique: property-based
+      invariant: >
+        bn MUST equal the s field (sequence number) of the Issuee's current KEL
+        key event at bup publication time. bd MUST equal the d field (SAID) of
+        that same key event. Both are temporal cross-log bindings.
+      formal: |
+        @given(bup_event=bup_strategy(), issuee_kel=kel_strategy())
+        def test_bound_block_key_state(bup_event, issuee_kel):
+            block = bup_event.bound_block
+            if not is_placeholder(block['bn']):
+                current_key_event = issuee_kel.current_event()
+                assert block['bn'] == current_key_event['s']
+                assert block['bd'] == current_key_event['d']
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CLUSTER 8: Disclosure Protocol Rules — privacy
+  # ══════════════════════════════════════════════════════════════════════════
+  - id: ACDC-INVF-011
+    cluster: "Disclosure Protocol"
+    domain: privacy
+    verification_file: verification.yaml
+    rules_covered: 3
+    representative_spec_lines: [3946, 3958, 6140]
+    precision: vague
+    proposed_invariant:
+      term: "Contractually Protected Disclosure"
+      technique: property-based
+      invariant: >
+        Chain-link terms MUST propagate: each subsequent Discloser MUST apply
+        original terms to each subsequent Disclosee. Contingent Disclosure:
+        when contingency is met, obligated party MUST disclose. Bulk issuance
+        aggregate B MUST be anchored in Issuer's KEL.
+      formal: |
+        # These are behavioral/temporal — full PBT requires multi-party exchange simulation
+        @given(chain=disclosure_chain_strategy())
+        def test_chain_propagation(chain):
+            original_terms = chain[0].terms
+            for step in chain[1:]:
+                assert step.applied_terms == original_terms
+      notes: >
+        The chain-propagation and contingent disclosure rules are the hardest
+        to formalize because they span multiple independent exchanges. The
+        existing chain-link gating invariant covers the single-exchange case
+        but not cross-exchange propagation.
