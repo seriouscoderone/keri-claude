@@ -65,3 +65,40 @@ implementation_guidance:
 issues: []
 
 tags: ["witness", "service", "receipting", "first-seen", "infrastructure"]
+
+# --- Application-Layer Open Items (deferred to design0-ecosystem) ---
+# These items are intentionally deferred. This domain's spec is thin by design —
+# full specification will be produced by the design0-ecosystem skill when
+# ecosystem-level service design is performed.
+#
+# [L67-O16] EventSubmissionResult.receipted only models UnindexedSignature —
+#           witness receipts use non-transferable identifier signatures, but
+#           the type hardcodes UnindexedSignature; TransferableReceiptCouples
+#           (for delegated witnesses) are not modelled
+# [L67-O17] KERLResponse references undefined ReceiptedEvent — the KERL query
+#           response type contains an array of ReceiptedEvent which is not
+#           defined in this domain or any referenced kernel
+# [L67-O18] No OOBI verification properties — the witness exposes an OOBI
+#           endpoint for discovery, but the domain has no invariant or port
+#           contract covering OOBI construction or validation
+# [L67-O19] Duplicate witness query ports — the api subdomain declares two ports
+#           that both model KERL queries from watchers; one should be removed or
+#           the distinction (e.g., full KERL vs. latest receipt) made explicit
+# [L67-O20] No witness-to-witness dissemination port — the KERI spec requires
+#           witnesses to disseminate receipts to each other, but there is no
+#           outbound port modelling this peer-to-peer dissemination
+# [L67-O21] No KERL persistence port — the witness stores KERLs but there is no
+#           outbound port modelling the append-only KERL write contract; the
+#           witness-repository external is referenced but not typed
+# [L811-O4] FirstSeenRecord stores SAID not raw bytes — the first-seen log
+#           records the SAID of each event, but the KERI spec requires the raw
+#           event bytes to be recoverable; storing only the SAID is insufficient
+#           if the witness is the only custodian of that event
+# [L811-O5] Receipt prefix check fragile (hardcodes 'B') — the receipt
+#           generation logic checks whether the witness prefix starts with 'B'
+#           to determine the key type; this is brittle and should use a CESR
+#           code table lookup
+# [L811-O6] No witness pool coordination model — the domain describes a single
+#           witness node; how witness pool members are discovered by controllers
+#           (via OOBI), how threshold receipting works across the pool, and
+#           how the controller waits for m-of-n receipts are all unspecified

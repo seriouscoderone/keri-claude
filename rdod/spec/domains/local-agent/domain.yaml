@@ -92,3 +92,22 @@ implementation_guidance:
 issues: []
 
 tags: ["fat-wallet", "local-agent", "hab", "habery", "kli", "standalone", "application"]
+
+# --- Application-Layer Open Items (deferred to design0-ecosystem) ---
+# These items are intentionally deferred. This domain's spec is thin by design —
+# full specification will be produced by the design0-ecosystem skill when
+# ecosystem-level service design is performed.
+#
+# [L811-O24] Contact.endpoints references undefined LocationScheme — the Contact
+#            type's endpoints field is typed as array[LocationScheme] but
+#            LocationScheme is not defined in this domain or any referenced
+#            kernel; needs a definition or a reference to the discovery domain
+# [L811-O25] controller-operations port input inverted (Habitat as input) —
+#            the controller-operations inbound port accepts a Habitat as its
+#            input type, but Habitat is the domain's primary aggregate; the
+#            port should accept an identifier AID and derive the Habitat
+#            internally, or the Habitat lookup should be an internal step
+# [L811-O26] witness-comms error uses wrong domain namespace — the error type
+#            on the witness-comms outbound port is prefixed with
+#            cloud-agent-service rather than local-agent, leaking a
+#            different domain's namespace into this domain's port contract

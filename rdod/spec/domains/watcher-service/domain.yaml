@@ -68,3 +68,68 @@ implementation_guidance:
 issues: []
 
 tags: ["watcher", "service", "integrity", "detection", "infrastructure"]
+
+# --- Application-Layer Open Items (deferred to design0-ecosystem) ---
+# These items are intentionally deferred. This domain's spec is thin by design —
+# full specification will be produced by the design0-ecosystem skill when
+# ecosystem-level service design is performed.
+#
+# [L4-O15] DuplicityEvidence type undefined — the type referenced in duplicity
+#          detection results has no field-level definition in this domain or its
+#          subdomains
+# [L4-O16] DuplicityStatus.evidence typed as array[SAID] needs sn — the evidence
+#          array carries only SAIDs; the sequence number of the conflicting event
+#          is needed to locate the fork point
+# [L4-O17] No watch list configuration port — there is no inbound port for
+#          registering or deregistering AIDs to watch; watch list management is
+#          entirely unspecified
+# [L4-O18] Duplicate witness query ports — the api subdomain declares two ports
+#          that both model outbound witness polling; one should be removed or
+#          the distinction made explicit
+# [L4-O19] No signed response port — the kel-query inbound port returns raw KEL
+#          data but does not model how the watcher signs its query response to
+#          prove provenance
+# [L4-O20] WatcherConfiguration needs Builder — WatcherConfiguration has 5+
+#          fields including encoded timing parameters; requires a typed Builder
+#          per the spec convention
+# [L4-O21] KERLResponse cross-domain dependency — the KERLResponse type is
+#          defined in witness-service but referenced here without an ACL; should
+#          be defined locally or sourced via a shared kernel
+# [L4-O22] No poll-then-cross-check lifecycle test — the core watcher behavior
+#          (poll multiple witnesses, compare, detect fork) has no invariant or
+#          acceptance criterion capturing the full lifecycle
+# [L4-O23] ReceiptedEvent type undefined — referenced in the KEL cache but never
+#          defined; unclear whether it is a KERI receipt wrapper or a raw event
+#          plus attached receipt
+# [L4-O24] "Stateless" claim contradicted by DEL persistence — the implementation
+#          notes describe the watcher as stateless, but DEL (duplicity evidence
+#          log) persistence is required by the KERI spec; the claim should be
+#          removed or qualified
+# [L67-O16] WatchedAIDRecord type missing — the watch list store references a
+#           record type for each watched AID (including polling interval and last
+#           seen sequence number) that is not defined
+# [L67-O17] No cross-watcher coordination model — each watcher is independent
+#           by design, but there is no invariant stating that validators must
+#           query a sufficient diversity of watchers; this belongs in the
+#           ecosystem-level spec
+# [L67-O18] Poll interval semantics unspecified — WatcherConfiguration.poll_interval
+#           has no minimum, maximum, or default; edge cases (zero, negative) are
+#           unhandled
+# [L67-O19] No OOBI-based watcher discovery port — validators discover watchers
+#           via OOBI but there is no inbound port modelling OOBI resolution for
+#           watcher registration
+# [L67-O20] Duplicity evidence retention policy unspecified — how long evidence
+#           records are retained and whether they can be pruned is not defined
+# [L67-O21] No watcher health/liveness port — there is no port modelling health
+#           checks or liveness probes, which are needed for validator-side
+#           watcher pool management
+# [L811-O17] Cross-check algorithm not formalized — the algorithm for comparing
+#            KEL copies from multiple witnesses (what constitutes a fork, how
+#            many witnesses must agree) is described in prose but not as a
+#            formal invariant
+# [L811-O18] No threshold-of-agreement invariant — the minimum number of
+#            consistent witness copies required before the watcher considers
+#            a KEL clean is not specified
+# [L811-O19] Watcher-to-validator evidence delivery unmodelled — how the watcher
+#            delivers duplicity evidence to a querying validator (push vs pull,
+#            signed vs unsigned) is not captured in any port

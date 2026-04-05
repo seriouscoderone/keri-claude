@@ -93,3 +93,29 @@ implementation_guidance:
 issues: []
 
 tags: ["cloud-agent", "keria", "service", "multi-tenant", "signify"]
+
+# --- Application-Layer Open Items (deferred to design0-ecosystem) ---
+# These items are intentionally deferred. This domain's spec is thin by design —
+# full specification will be produced by the design0-ecosystem skill when
+# ecosystem-level service design is performed.
+#
+# [H-O11] message-router port untyped input/output — inbound and outbound types
+#         on the message-router port are not yet specified
+# [H-O12] DeckName 'witners' typo — processing subdomain has a misspelled deck
+#         name that should read 'witnesses'
+# [H-O13] AgentConfig name collision with signify-client/resources — the type
+#         name AgentConfig conflicts with a type of the same name in the
+#         signify-client resources subdomain; needs disambiguation
+# [L811-O20] Timedout state contradicts done XOR invariant — the operation FSM
+#            includes a Timedout terminal state that is not accounted for in the
+#            done-XOR constraint on OperationStatus
+# [L811-O21] process-work port conflates enqueue and get-operation — the
+#            process-work inbound port bundles two distinct responsibilities
+#            (enqueueing work and retrieving operation results) that should be
+#            separate ports
+# [L811-O22] No explicit agent-isolation invariant — the multi-tenant isolation
+#            guarantee (one agent per controller, no cross-agent state leakage)
+#            is described in prose but not captured as a formal invariant
+# [L811-O23] AdminAPI KRAM authentication contract unspecified — the KRAM
+#            authentication scheme on the admin-api inbound port lacks a typed
+#            contract (header names, signature algorithm, nonce handling)

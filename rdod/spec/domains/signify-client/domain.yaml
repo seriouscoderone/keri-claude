@@ -74,3 +74,28 @@ implementation_guidance:
 issues: []
 
 tags: ["thin-wallet", "edge-signing", "signify", "private-keys", "controller", "application"]
+
+# --- Application-Layer Open Items (deferred to design0-ecosystem) ---
+# These items are intentionally deferred. This domain's spec is thin by design —
+# full specification will be produced by the design0-ecosystem skill when
+# ecosystem-level service design is performed.
+#
+# [H-O18] GroupKeeper nesting unconstrained — the GroupKeeper type allows
+#         arbitrary recursive nesting of group members with no depth limit or
+#         acyclicity invariant
+# [L811-O27] Operation vs OperationStatus field name discrepancy — the Operation
+#            type uses a 'status' field but OperationStatus is referenced
+#            elsewhere as a standalone type; the relationship is ambiguous
+# [L811-O28] key-repository port conflates store/load — the key-repository
+#            outbound port bundles key storage and key retrieval in a single port
+#            contract; should be split into separate store and load ports
+# [L811-O29] cloud-agent-comms port only correct for boot — the cloud-agent-comms
+#            outbound port models the boot handshake but does not cover the full
+#            admin API interaction lifecycle (create identifier, rotate, etc.)
+# [L811-O30] SessionState.passcode_timeout optional but FSM requires it — the
+#            passcode_timeout field is marked optional on SessionState, but the
+#            session FSM transitions to Locked unconditionally after timeout,
+#            implying it must always be present once a session is active
+# [L811-O31] No signed-request construction contract — the outbound
+#            cloud-agent-comms port does not specify how KRAM-signed HTTP headers
+#            are constructed (algorithm, header names, nonce source)
