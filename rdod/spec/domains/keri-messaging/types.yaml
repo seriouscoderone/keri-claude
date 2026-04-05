@@ -3,14 +3,14 @@ domain_ref: "keri-messaging"
 
 types:
   - name: "ExchangeMessage"
-    description: "Generic routed message envelope for peer-to-peer communication. Used by IPEX (credential exchange), multisig coordination, endpoint authorization, and any future peer protocol. The route field determines which domain handles the message."
+    description: "Generic routed message envelope for peer-to-peer communication. Used by IPEX (credential exchange), multisig coordination, endpoint authorization, and any future peer protocol. The route field determines which domain handles the message. v1 and v2 have different field sets — v2 replaces rp/e with ri/x and changes a from array to map."
     variants:
-      - name: "default"
+      - name: "v1"
         fields:
           - name: "v"
             type: "string"
             required: true
-            description: "Version string"
+            description: "Version string (v1: KERI10...)"
           - name: "t"
             type: "string"
             required: true
@@ -24,15 +24,69 @@ types:
           - name: "i"
             type: "string"
             required: true
-            description: "Sender AID — the controller initiating this exchange"
+            description: "Sender AID"
           - name: "rp"
             type: "string"
             required: true
-            description: "Replay protection — nonce or reference for anti-replay (v1) or x field (v2)"
+            description: "Replay protection nonce"
           - name: "p"
             type: "string"
             required: true
-            description: "Prior message SAID — links messages in a conversation thread. Empty for first message."
+            description: "Prior message SAID — empty for first message"
+          - name: "dt"
+            type: "string"
+            required: true
+            description: "Datetime — ISO 8601"
+          - name: "r"
+            type: "string"
+            required: true
+            description: "Route — determines which domain handles this message"
+          - name: "q"
+            type: "map"
+            required: true
+            description: "Query/modifier data"
+          - name: "a"
+            type: "array"
+            required: true
+            description: "Payload — domain-specific data (v1: array)"
+          - name: "e"
+            type: "map"
+            required: true
+            description: "Embedded messages — nested SADs (v1 only)"
+        invariants:
+          - "LEGACY — v1 field order. v2 is the normative format."
+      - name: "v2"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string (v2: KERI20...)"
+          - name: "t"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["exn"]
+            description: "Message type — exchange"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID"
+          - name: "i"
+            type: "string"
+            required: true
+            description: "Sender AID"
+          - name: "ri"
+            type: "string"
+            required: false
+            description: "Registry identifier — SAID of the credential registry (v2, replaces rp)"
+          - name: "x"
+            type: "string"
+            required: true
+            description: "Exchange transaction identifier — self-referencing SAID for xip, prior xip SAID for subsequent exn in same transaction"
+          - name: "p"
+            type: "string"
+            required: true
+            description: "Prior message SAID — empty for first message in thread"
           - name: "dt"
             type: "string"
             required: true
@@ -40,7 +94,7 @@ types:
           - name: "r"
             type: "string"
             required: true
-            description: "Route — determines which domain protocol handles this message"
+            description: "Route — determines which domain handles this message"
           - name: "q"
             type: "map"
             required: true
@@ -48,15 +102,13 @@ types:
           - name: "a"
             type: "map"
             required: true
-            description: "Payload — the domain-specific data for this exchange"
-          - name: "e"
-            type: "map"
-            required: true
-            description: "Embedded messages — nested SADs (credentials, events, etc.)"
+            description: "Payload — domain-specific data (v2: map, not array)"
         invariants:
           - "Route (r) determines the handling domain — implementations dispatch by route prefix"
           - "Known route prefixes: /ipex/* (credential exchange), /multisig/* (group coordination), /end/role (discovery), /watcher/* (integrity)"
-          - "Prior (p) field links to the previous message's SAID in a conversation — empty string for first message"
+          - "Prior (p) field links to the previous message's SAID — empty string for first message"
+          - "x field enables exchange transaction chaining — xip messages self-reference, subsequent exn reference the xip"
+          - "v2 is the normative format per keripy serdering.py:467 (Vrsn_2_0 exn FieldDom)"
           - "Subject to KRAM replay protection — dt must be monotonically increasing per sender"
           - "Must be signed by sender's current keys — provides non-repudiable attribution"
         examples:

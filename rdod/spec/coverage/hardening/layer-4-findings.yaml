@@ -1,0 +1,137 @@
+---
+layer: 4
+domains_analyzed: 3
+date: "2026-04-04"
+method: "spec-hardening — force implementation planning → oracle resolution → fix"
+
+summary:
+  total_findings: 30+
+  contradictions_fixed: 1
+  remaining_open: 29+
+
+resolved:
+  - id: "L4-C1"
+    category: contradiction
+    domain: "keri-messaging"
+    file: "types.yaml"
+    finding: "ExchangeMessage used v1 fields (rp, e, a=array) but verification.yaml KERI-INV-002 specifies v2 canonical order (ri, x, a=map)"
+    resolution: "Split into v1 and v2 variants. v1 marked LEGACY. v2 is normative per keripy serdering.py:467 (Vrsn_2_0 exn FieldDom: v,t,d,i,ri,x,p,dt,r,q,a)."
+    oracle: "keripy serdering.py:405 (v1: rp,p,dt,r,q,a,e) vs :467 (v2: ri,x,p,dt,r,q,a)"
+
+oracle_resolutions:
+  - question: "ExchangeMessage v1 vs v2 field order"
+    answer: "v1: [v,t,d,i,rp,p,dt,r,q,a,e]. v2: [v,t,d,i,ri,x,p,dt,r,q,a]. rp→ri/x substitution, e removed, a changes from array to map."
+    source: "keripy serdering.py:405-407 (v1), :467-469 (v2)"
+
+open:
+  # delegation parent
+  - id: "L4-O1"
+    domain: "delegation"
+    finding: "delegation-lifecycle port only covers inception — no DelegatedRotationConfig or rotation path"
+
+  - id: "L4-O2"
+    domain: "delegation"
+    finding: "delegation-verification returns boolean — loses 4 structured error types"
+
+  - id: "L4-O3"
+    domain: "delegation"
+    finding: "delegation-query returns array[string] — should be typed DelegationChainRef"
+
+  - id: "L4-O4"
+    domain: "delegation"
+    finding: "No verification for multi-level PDE cascade or batch seal processing"
+
+  - id: "L4-O5"
+    domain: "delegation"
+    finding: "DelegationBinding rotation variant has no explicit seal matching invariant"
+
+  # keri-messaging
+  - id: "L4-O6"
+    domain: "keri-messaging"
+    finding: "No XIPMessage type despite xip being defined in verification (KERI-INV-006)"
+
+  - id: "L4-O7"
+    domain: "keri-messaging"
+    finding: "No ReceiptMessage type — receipt SAID inversion (d = receipted event SAID) has no type home"
+
+  - id: "L4-O8"
+    domain: "keri-messaging"
+    finding: "No KRAMCacheEntry type — cache dual-key structure (sender+SAID vs sender-only) undocumented"
+
+  - id: "L4-O9"
+    domain: "keri-messaging"
+    finding: "message-construction port input is bare MessageType enum — insufficient for construction"
+
+  - id: "L4-O10"
+    domain: "keri-messaging"
+    finding: "No KRAM validation port despite K1-K5 constraints defined"
+
+  - id: "L4-O11"
+    domain: "keri-messaging"
+    finding: "No route dispatch port — Exchanger routing has no contract"
+
+  - id: "L4-O12"
+    domain: "keri-messaging"
+    finding: "QueryMessage.r enum 'logs' vs example 'log' — singular/plural inconsistency"
+
+  - id: "L4-O13"
+    domain: "keri-messaging"
+    finding: "KRAM multi-sig key state change invalidation (K5) has no verification test"
+
+  - id: "L4-O14"
+    domain: "keri-messaging"
+    finding: "BADA logic referenced but not in this domain's verification — cross-ref to discovery missing"
+
+  # watcher-service/api
+  - id: "L4-O15"
+    domain: "watcher-service"
+    finding: "DuplicityEvidence referenced but not defined — missing type definition"
+
+  - id: "L4-O16"
+    domain: "watcher-service/api"
+    finding: "DuplicityStatus.evidence typed as array[SAID] but needs sn field for shared-sn invariant"
+
+  - id: "L4-O17"
+    domain: "watcher-service/api"
+    finding: "No inbound port for runtime watch list configuration"
+
+  - id: "L4-O18"
+    domain: "watcher-service"
+    finding: "Duplicate witness query ports in parent and api subdomain"
+
+  - id: "L4-O19"
+    domain: "watcher-service/api"
+    finding: "oobi-resolution output untyped (string instead of type reference)"
+
+  - id: "L4-O20"
+    domain: "watcher-service/api"
+    finding: "No signed response port despite UL requiring watcher signature on all responses"
+
+  - id: "L4-O21"
+    domain: "watcher-service/api"
+    finding: "WatcherConfiguration (4 fields) needs Builder"
+
+  - id: "L4-O22"
+    domain: "watcher-service/api"
+    finding: "KERLResponse type referenced from witness-service/api — cross-domain dependency unverified"
+
+  - id: "L4-O23"
+    domain: "watcher-service/api"
+    finding: "No poll-then-cross-check lifecycle test"
+
+  - id: "L4-O24"
+    domain: "watcher-service/api"
+    finding: "No test for partial witness response handling"
+
+  # cross-domain
+  - id: "L4-O25"
+    domain: "cross-domain"
+    finding: "KEL messages (dip/drt) bypass KRAM but exn coordination for delegation goes through KRAM — boundary not stated"
+
+  - id: "L4-O26"
+    domain: "cross-domain"
+    finding: "Watcher response signing — KRAM or ad-hoc? Not specified"
+
+  - id: "L4-O27"
+    domain: "cross-domain"
+    finding: "DuplicityEvidence may need to reference integrity/evidence domain type"
