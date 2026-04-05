@@ -43,11 +43,12 @@ types:
             type: "string"
             required: true
             constraints:
-              enum: ["witness", "controller", "agent", "watcher", "registrar", "judge", "juror", "forwarder"]
+              enum: ["witness", "controller", "agent", "watcher", "registrar", "gateway", "judge", "juror", "peer", "mailbox", "indexer"]
         invariants:
-          - "These are the normative roles from the KERI specification"
-          - "The role set is extensible — implementations MAY accept additional role strings"
+          - "These 11 roles match keripy's Rolage definition — the authoritative implementation set"
+          - "The role set is extensible — the KERI spec says roles 'include but are not limited to' this set"
           - "'mediator' is NOT yet normative — pending KSWG standardization; implementations SHOULD NOT rely on it"
+          - "'forwarder' is not in keripy's Rolage — removed in favor of 'gateway' and 'mailbox' which cover its functions"
 
   - name: "AgentConfig"
     description: "Connection configuration for a Signify client to reach its cloud agent."

@@ -32,7 +32,7 @@ properties:
           # This is the behavioral contract — not just a type check
           final_status = poll_until_done(op_name, timeout=reasonable_duration)
           assert final_status.done == true
-          assert final_status.response is not null OR final_status.error is not null
+          assert final_status.result is not null OR final_status.error is not null
     strategy: "All mutating resource operations exercised through the poll-to-completion lifecycle"
     notes: "Behavioral contract — operation handles are not just data structures, they are pollable references that resolve to completion"
 
@@ -48,10 +48,10 @@ properties:
           # The status must be in one of two states: done or not done
           if status.done:
             # Terminal state must carry either a response or an error, never both
-            assert (status.response is not null) XOR (status.error is not null)
+            assert (status.result is not null) XOR (status.error is not null)
           else:
             # In-progress state carries no final result
-            assert status.response is null
+            assert status.result is null
             assert status.error is null
           # Polling the same operation again must return a consistent result
           status2 = client.operations().get(op_name)
@@ -258,7 +258,7 @@ contracts:
           expression: |
             status.name == name
             AND (status.done == true OR status.done == false)
-            AND (status.done implies status.response is not null OR status.error is not null)
+            AND (status.done implies status.result is not null OR status.error is not null)
         description: "poll_operation returns a consistent status for the named operation"
 
 # No state machine — resource operations are stateless request/response

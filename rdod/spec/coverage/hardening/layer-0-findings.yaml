@@ -1,0 +1,235 @@
+---
+layer: 0
+domains_analyzed: 15
+date: "2026-04-04"
+method: "spec-hardening — force implementation planning → oracle resolution → fix"
+oracle_sources:
+  - "KERI/CESR/ACDC specifications (via keri:spec, keri:cesr, keri:acdc skills)"
+  - "keripy reference implementation (source code inspection)"
+  - "KeriChat knowledge base (cross-spec synthesis)"
+
+summary:
+  total_findings: 31
+  contradictions_fixed: 7
+  missing_types_added: 3
+  types_corrected: 2
+  remaining_open: 19
+
+# ──────────────────────────────────────
+# RESOLVED — changes applied to spec
+# ──────────────────────────────────────
+
+resolved:
+  - id: "H-C1"
+    category: contradiction
+    domain: "signify-client/resources"
+    file: "types.yaml"
+    finding: "EndpointRole enum had 8 values; verification.yaml tested against 11 from keripy Rolage"
+    resolution: "Expanded to 11 roles (witness, controller, agent, watcher, registrar, gateway, judge, juror, peer, mailbox, indexer). Marked extensible. Removed 'forwarder' (not in keripy)."
+    oracle_agreement: "spec=ambiguous (open enum), keripy=11 roles, KeriChat=confirmed"
+
+  - id: "H-C2"
+    category: contradiction
+    domain: "signify-client/resources"
+    file: "verification.yaml"
+    finding: "Verification tests used 'response' field name; type definition uses 'result'"
+    resolution: "Changed all verification references from 'response' to 'result' to match OperationStatus type"
+    oracle_agreement: "internal consistency fix"
+
+  - id: "H-C3"
+    category: contradiction
+    domain: "delegation/lifecycle"
+    file: "verification.yaml"
+    finding: "C2_delegator_identified on_failure said 'escrow to PDE' but state machine and deterministic routing both say 'rejected' for step 2 failure"
+    resolution: "Changed C2 on_failure to 'reject — InvalidDelegatorReferenceError'. C2 is structural (di field), not temporal."
+    oracle_agreement: "spec=reject for invalid di, keripy=confirmed, state machine=confirmed"
+
+  - id: "H-C4"
+    category: contradiction
+    domain: "delegation/lifecycle"
+    file: "verification.yaml"
+    finding: "State machine missing seal-located → rejected transition when step 4 fails"
+    resolution: "Added transition: seal-located → rejected on 'seal.d != event.said — DelegationSealMismatchError'"
+    oracle_agreement: "spec=clear (seal digest must match), keripy=confirmed"
+
+  - id: "H-C5"
+    category: contradiction
+    domain: "accountability/dissemination"
+    file: "types.yaml"
+    finding: "DisseminationStrategy included 'Direct' but Direct mode is the absence of witnesses, not a strategy. Postcondition witnesses_contacted>=1 contradicts Direct."
+    resolution: "Replaced enum with ['RoundRobin', 'Broadcast']. Direct mode is bt=0,b=[] — bypasses dissemination entirely."
+    oracle_agreement: "spec=dissemination only for indirect mode, keripy=broadcast pattern"
+
+  - id: "H-C6"
+    category: contradiction
+    domain: "accountability/dissemination"
+    file: "ports.yaml"
+    finding: "Transport outbound port accepted Receipt as input — backward (receipts come FROM witnesses)"
+    resolution: "Changed input type to 'bytes' (serialized CESR message). Transport sends events TO witnesses."
+    oracle_agreement: "spec=CESR self-framing bytes, keripy=sends serialized events"
+
+  - id: "H-T1"
+    category: missing_type
+    domain: "cesr/primitives"
+    file: "types.yaml"
+    finding: "No type for CESR Indexed Code Table primitives (keripy: Indexer) — referenced in UL and verification"
+    resolution: "Added IndexedSignaturePrimitive — spec says 'Indexed codes' (not 'Indexer'). Parallel to master code table, with code, raw, index, ondex fields."
+    oracle_agreement: "spec=parallel hierarchy ('Indexed codes'), keripy=separate class (indexing.py:153)"
+
+  - id: "H-T2"
+    category: missing_type
+    domain: "cesr/primitives"
+    file: "types.yaml"
+    finding: "No type for CESR SAD Path Language (keripy: Pather) — referenced in privacy/aggregation"
+    resolution: "Added SADPath — spec says 'SAD Path Signatures' / 'SAD Path Language' (not 'Pather'). Variable-size codes 4A##/5A##/6A##."
+    oracle_agreement: "spec=normatively defined as 'SAD Path Signatures' (cesr-specification.md:3148), keripy=Matter subclass (coring.py:2939)"
+
+  - id: "H-T3"
+    category: missing_type
+    domain: "cesr/primitives"
+    file: "types.yaml"
+    finding: "No type for private key holder (keripy: Signer) — used in verification tests but absent from types.yaml"
+    resolution: "Added SigningKey — spec says 'signing key' (not 'Signer'). Application-level type, NOT in CESR code tables. Fields: code, raw, verification_key, transferable."
+    oracle_agreement: "spec=no code table entry, uses 'signing key' in prose, keripy=Matter subclass (signing.py:33)"
+
+  - id: "H-T4"
+    category: type_correction
+    domain: "cesr/primitives"
+    file: "types.yaml"
+    finding: "Digest type was functionally identical to Diger — keripy has no Digest class"
+    resolution: "Removed Digest type. Added note that Diger handles both construction paths (compute-from-bytes and wrap-existing)."
+    oracle_agreement: "spec=silent, keripy=only Diger exists"
+
+  - id: "H-T5"
+    category: type_correction
+    domain: "cesr/primitives"
+    file: "types.yaml"
+    finding: "EventSeal naming doesn't match keripy convention (SealEvent)"
+    resolution: "Renamed to SealEvent. Updated cross-domain reference in credential-lifecycle/verification/types.yaml."
+    oracle_agreement: "keripy=SealEvent namedtuple (structing.py:24)"
+
+# ──────────────────────────────────────
+# CONFIRMED — no change needed
+# ──────────────────────────────────────
+
+confirmed:
+  - id: "H-V1"
+    finding: "SigningThreshold combination satisfaction is AND across clauses"
+    oracle_agreement: "spec=explicit AND, keripy=_satisfy_weighted confirms, all three agree"
+
+  - id: "H-V2"
+    finding: "Witnesses MUST be non-transferable — Receipt type correctly models Cigar"
+    oracle_agreement: "spec=explicit, keripy=supports both forms but witnesses must be non-transferable"
+
+  - id: "H-V3"
+    finding: "TOAD=0 with non-empty witness list is invalid"
+    oracle_agreement: "spec=implicit, keripy=raises ValueError explicitly"
+
+  - id: "H-V4"
+    finding: "Batch delegation supported — anchor 'a' field is an array of seals"
+    oracle_agreement: "spec=explicit, keripy=confirmed, KeriChat=confirmed with examples"
+
+# ──────────────────────────────────────
+# OPEN — deferred to future layers or requires deeper investigation
+# ──────────────────────────────────────
+
+open:
+  - id: "H-O1"
+    domain: "cesr/primitives"
+    finding: "Seqner vs Number confusion — UL claims 4 code variants but Seqner uses only 0A"
+    recommended: "Fix UL: Seqner = fixed 0A (128-bit), Number = auto-sized M/0H/N/R/S/T/U"
+
+  - id: "H-O2"
+    domain: "cesr/primitives"
+    finding: "Variable-size primitive verification tests branch on fs=VARIABLE but never test it"
+    recommended: "Add test cases for 4A##/4B## variable-size codes"
+
+  - id: "H-O3"
+    domain: "cesr/primitives"
+    finding: "Reserved lowercase codes (b-z) — errors.yaml has no distinct error type"
+    recommended: "Decision: InvalidPrimitiveCodeError.cause covers this, or add ReservedCodeError"
+
+  - id: "H-O4"
+    domain: "externals/cryptographic-primitives"
+    finding: "DigestAlgorithm circular dependency — defined in cesr/primitives but used in externals port"
+    recommended: "Move to externals or use plain string enum in external port contract"
+
+  - id: "H-O5"
+    domain: "externals/cryptographic-primitives"
+    finding: "sign and verify combined in one port with conflicting idempotency"
+    recommended: "Split into sign (non-idempotent) and verify (idempotent) ports"
+
+  - id: "H-O6"
+    domain: "externals/persistence"
+    finding: "No errors.yaml — StorageError and KeyNotFoundError referenced but undefined"
+    recommended: "Add errors.yaml to externals/persistence"
+
+  - id: "H-O7"
+    domain: "externals/transport"
+    finding: "AsyncStream not a defined type"
+    recommended: "Define as platform-specific note (AsyncIterable in TS, Stream in Rust, async generator in Python)"
+
+  - id: "H-O8"
+    domain: "delegation/lifecycle"
+    finding: "No inbound port for delegation escrow sweep trigger"
+    recommended: "Model as periodic escrow sweep (polling on HIO cycle), not push notification"
+
+  - id: "H-O9"
+    domain: "delegation/lifecycle"
+    finding: "'pruned' state after escrow timeout is implicit, not modeled in FSM"
+    recommended: "Add pruned as terminal state with timeout transitions from escrowed-pde and escrowed-delegable"
+
+  - id: "H-O10"
+    domain: "delegation/authorization"
+    finding: "seal-construction port accepts single seal but spec supports batch"
+    recommended: "Change port input to array[DelegationSeal]"
+
+  - id: "H-O11"
+    domain: "cloud-agent-service/api"
+    finding: "message-router port has untyped input/output and empty error set"
+    recommended: "Define typed input (CESR message bytes) and error set (routing errors)"
+
+  - id: "H-O12"
+    domain: "cloud-agent-service/processing"
+    finding: "DeckName enum has 'witners' — likely typo for 'witnesses'"
+    recommended: "Verify against keria source before fixing"
+
+  - id: "H-O13"
+    domain: "cloud-agent-service/provisioning"
+    finding: "AgentConfig name collision with signify-client/resources"
+    recommended: "Rename provisioning type to ProvisioningConfig or ServerAgentConfig"
+
+  - id: "H-O14"
+    domain: "privacy/aggregation"
+    finding: "path-signatures port underspecified — needs SAD body + signing key, not just path"
+    recommended: "Extend port contract to include signing context"
+
+  - id: "H-O15"
+    domain: "privacy/disclosure"
+    finding: "DisclosureMode FSM omits Metadata state and has no Selective variant"
+    recommended: "Selective is correctly modeled as a property; add note that Metadata is a pre-FSM state"
+
+  - id: "H-O16"
+    domain: "accountability/consensus"
+    finding: "quorum-evaluation port accepts AID but needs witness count N for BFT calculation"
+    recommended: "Port does internal lookup via undeclared outbound to identity/state — add outbound port"
+
+  - id: "H-O17"
+    domain: "accountability/consensus"
+    finding: "Superseding rules A0-C not formally defined in this domain"
+    recommended: "Add superseding rules A0, A1, A2, B1, B2, B3, Rule C to verification.yaml"
+
+  - id: "H-O18"
+    domain: "signify-client/key-management"
+    finding: "GroupKeeper nesting undefined — can member_keeper be another GroupKeeper?"
+    recommended: "Constrain to single-sig members only; nested hierarchy via delegation"
+
+  - id: "H-O19"
+    domain: "all externals"
+    finding: "No adapter acceptance test framework — all 3 external domains lack verification.yaml"
+    recommended: "Add verification.yaml with adapter conformance tests (round-trip, determinism, durability)"
+
+  - id: "H-O20"
+    domain: "cesr/primitives"
+    finding: "Existing types Verfer, Diger, Siger, Cigar, Matter are keripy class names — none appear in the CESR, KERI, or ACDC specifications as normative terms. The specs use 'verification key', 'digest', 'indexed signature', 'signature', and 'primitive' respectively."
+    recommended: "Future naming pass: rename to spec-aligned DDD names (e.g., VerificationKey, DigestPrimitive, IndexedSignature, UnindexedSignature, Primitive). Cross-domain type references (types://cesr/primitives#Verfer etc.) must be updated throughout."

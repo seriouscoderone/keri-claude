@@ -285,6 +285,10 @@ state_machines:
         to: "approved"
         trigger: "Step 4 passes — seal digest matches delegated event SAID"
         guard: "seal.d == event.said"
+      - from: "seal-located"
+        to: "rejected"
+        trigger: "Step 4 fails — seal digest does not match delegated event SAID"
+        guard: "seal.d != event.said — DelegationSealMismatchError"
       - from: "escrowed-pde"
         to: "seal-located"
         trigger: "DelegatedEventPromoted — delegator's KEL advances and now contains matching seal"
@@ -309,9 +313,9 @@ validation_constraints:
     on_failure: "reject — InvalidSignatureError"
 
   - id: "C2_delegator_identified"
-    constraint: "di field must reference a known delegator AID with established key state"
+    constraint: "di field must be present (dip) or inherited (drt) and reference a valid CESR-qualified AID"
     depends_on: ["C1_delegate_sigs_valid"]
-    on_failure: "escrow to PDE — delegator's KEL not yet available"
+    on_failure: "reject — InvalidDelegatorReferenceError (missing/invalid di is structural, not temporal)"
 
   - id: "C3_delegator_seal_exists"
     constraint: "Delegator's KEL must contain an event with a seal whose digest matches the delegated event's SAID"

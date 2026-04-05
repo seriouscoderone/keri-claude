@@ -31,11 +31,11 @@ types:
             type: "string"
             required: true
             constraints:
-              enum: ["RoundRobin", "Gossip", "Direct"]
+              enum: ["RoundRobin", "Broadcast"]
         invariants:
-          - "RoundRobin: send to each witness in sequence"
-          - "Gossip: witnesses forward to each other"
-          - "Direct: send to all witnesses simultaneously"
+          - "RoundRobin: send to each witness in sequence, collecting and redistributing receipts (KERI spec's 2N exchange model)"
+          - "Broadcast: send to all witnesses simultaneously (keripy's actual implementation pattern)"
+          - "Direct mode (bt=0, b=[]) has no witnesses and bypasses dissemination entirely — it is NOT a strategy, it is the absence of one"
 
   - name: "WitnessConfig"
     description: "Witness set and tally for an identifier's accountability configuration."

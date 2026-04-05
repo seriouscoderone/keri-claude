@@ -288,20 +288,12 @@ types:
         invariants:
           - "qb64 is the CESR encoding of code + raw digest bytes"
 
-  - name: "Digest"
-    description: "A raw digest value — the output of a hash function. Alias for Diger in many contexts."
-    variants:
-      - name: "default"
-        fields:
-          - name: "qb64"
-            type: "string"
-            required: true
-            description: "CESR-qualified digest"
-        invariants:
-          - "Functionally equivalent to Diger — used when the context is 'a hash value' rather than 'a CESR primitive'"
+  # Note: Digest was removed — keripy defines only Diger (no separate Digest class).
+  # Diger handles both construction paths: compute-from-bytes (ser= parameter) and
+  # wrap-existing (qb64= parameter). Use Diger for all digest references.
 
-  - name: "EventSeal"
-    description: "A seal that references a specific key event by AID prefix (i), sequence number (s), and event SAID (d). Used to cross-reference events across KELs — for example, a delegation seal references the delegated event."
+  - name: "SealEvent"
+    description: "A seal that references a specific key event by AID prefix (i), sequence number (s), and event SAID (d). Used to cross-reference events across KELs — for example, a delegation seal references the delegated event. The CESR spec calls this a 'seal source triple' (-T count code)."
     variants:
       - name: "default"
         fields:
@@ -319,10 +311,8 @@ types:
             description: "CESR qb64 encoded SAID of the referenced event"
         invariants:
           - "Equivalent to Seal.event variant — provided as a standalone type for cross-domain references"
-          - "CESR count code: EventSeal"
-
-  # Note: EventSeal was previously consolidated into Seal.event variant (OQ-8)
-  # Restored as standalone type to satisfy cross-domain type references
+          - "CESR count code: SealSourceTriples (-T/--T)"
+          - "For delegation: d == SAID of the delegatee's establishment event (dip.d or drt.d)"
 
   - name: "IndexedSizage"
     description: "Sizage entry for indexed CESR codes that carry dual indices (main and other)."
@@ -456,6 +446,98 @@ types:
         invariants:
           - "Minimum 128 bits of entropy"
           - "Used as seed for hierarchical deterministic key derivation"
+
+  - name: "IndexedSignaturePrimitive"
+    description: >
+      Base type for CESR primitives from the Indexed Code Table — signatures that carry
+      positional key-list indices in the code's soft portion. Parallel to the master code
+      table primitive (NOT a subclass). The CESR spec defines "Indexed codes" as a separate
+      code table family with its own encoding rules. keripy: Indexer class (indexing.py).
+    variants:
+      - name: "default"
+        fields:
+          - name: "code"
+            type: "string"
+            required: true
+            description: "CESR indexed code — identifies algorithm and index encoding scheme"
+          - name: "raw"
+            type: "bytes"
+            required: true
+            description: "Raw signature material"
+          - name: "index"
+            type: "integer"
+            required: true
+            description: "Main index — position in the current signing key list"
+            constraints:
+              min: 0
+          - name: "ondex"
+            type: "integer"
+            required: false
+            description: "Other index — position in the prior-next (rotation) key list. None for current-only codes."
+          - name: "qb64"
+            type: "string"
+            required: false
+            description: "Text domain representation — code prefix encodes both algorithm and index(es)"
+        invariants:
+          - "Parallel hierarchy to master code table primitives — independent parse logic"
+          - "code + raw + index + ondex ↔ qb64 ↔ qb2 — all representations are equivalent"
+          - "Index is encoded in the soft portion of the code (not in the raw material)"
+          - "Code selection rule: current-only (B#/D#) → ondex=None; both-same (A#/C#) → ondex=index; dual (2A##) → ondex explicit"
+          - "Small codes (A#/B#) encode index 0-63 in 1 soft char; big codes (2A##/2B##) encode index 0-4095 in 2+ soft chars"
+
+  - name: "SADPath"
+    description: >
+      CESR-encoded field path for locating specific content within a Self-Addressing Data
+      structure. The CESR spec defines "SAD Path Signatures" and the "SAD Path Language"
+      for binding signatures to specific fields in ACDC selective disclosure. Uses variable-size
+      codes (4A##/5A##/6A##). keripy: Pather class (coring.py).
+    variants:
+      - name: "default"
+        fields:
+          - name: "path"
+            type: "string"
+            required: true
+            description: "The field path as a /-separated string (e.g., '/a/0/name')"
+          - name: "qb64"
+            type: "string"
+            required: false
+            description: "CESR-qualified base64 representation using variable-size 4A##/5A##/6A## codes"
+        invariants:
+          - "Path parts use '-' as separator in base64 encoding, '/' when decoded"
+          - "Variable-size codes: 4A## (0 lead bytes), 5A## (1 lead byte), 6A## (2 lead bytes)"
+          - "Master code table primitive — inherits code + raw ↔ qb64 ↔ qb2 equivalence"
+          - "Used by ACDC compaction to bind SAD Path Signatures to specific field locations"
+
+  - name: "SigningKey"
+    description: >
+      Application-level signing primitive — holds a private key seed and produces signatures.
+      NOT in the CESR code tables or wire format. The spec says "signing key" (never "Signer").
+      Encapsulates key material and exposes a sign operation that produces indexed or
+      unindexed signatures. keripy: Signer class (signing.py).
+    variants:
+      - name: "default"
+        fields:
+          - name: "code"
+            type: "string"
+            required: true
+            description: "CESR code of the underlying seed (A=Ed25519 seed, 1AAF=secp256k1, 1AAG=secp256r1, 1AAD=Ed448)"
+          - name: "raw"
+            type: "bytes"
+            required: true
+            description: "Raw private key seed"
+          - name: "verification_key"
+            type: "types://cesr/primitives#Verfer"
+            required: true
+            description: "Derived public verification key — always available after construction"
+          - name: "transferable"
+            type: "boolean"
+            required: true
+            description: "Whether this key is for a transferable identifier (affects verification key code selection)"
+        invariants:
+          - "sign(data) produces an unindexed signature; sign(data, index=N) produces an indexed signature"
+          - "verification_key is deterministically derived from raw seed + code"
+          - "Private key material MUST be zeroed after use — implementations MUST support secure erasure"
+          - "NOT a wire-format type — only its products (indexed/unindexed signatures) appear on the wire"
 
   - name: "Verfer"
     description: "A public key verification primitive — holds a qualified public key that can verify signatures. The CESR agent-noun for a verifier key. Wraps a raw public key with its derivation code (algorithm identifier)."
