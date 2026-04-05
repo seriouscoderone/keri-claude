@@ -42,12 +42,12 @@ types:
   - name: "CESRGroup"
     description: >
       A count-code-prefixed group of CESR primitives. Groups are self-framing and composable —
-      they can nest. KERI/ACDC 2.00 genus-specific group codes: -K ControllerIdxSigs Vec<Siger>,
-      -L WitnessIdxSigs Vec<Siger>, -M NonTransReceiptCouples Vec<(Prefixer, Cigar)>,
-      -N TransReceiptQuadruples Vec<(Prefixer, Seqner, Saider, Siger)>,
+      they can nest. KERI/ACDC 2.00 genus-specific group codes: -K ControllerIdxSigs Vec<IndexedSignature>,
+      -L WitnessIdxSigs Vec<IndexedSignature>, -M NonTransReceiptCouples Vec<(Prefixer, UnindexedSignature)>,
+      -N TransReceiptQuadruples Vec<(Prefixer, Seqner, Saider, IndexedSignature)>,
       -O FirstSeenReplayCouples Vec<(Seqner, Dater)>, -P PathedMaterial Vec<(Pather, CesrGroup)>,
-      -Q DigestSealSingles Vec<Saider>, -R MerkleRootSealSingles Vec<Diger>,
-      -S SealSourceCouples Vec<(Seqner, Saider)>, -T SealSourceTriples Vec<(Seqner, Saider, Diger)>,
+      -Q DigestSealSingles Vec<Saider>, -R MerkleRootSealSingles Vec<Digest>,
+      -S SealSourceCouples Vec<(Seqner, Saider)>, -T SealSourceTriples Vec<(Seqner, Saider, Digest)>,
       -U SealSourceLastSingles Vec<Prefixer>, -V BackerRegistrarSealCouples Vec<(Prefixer, Saider)>,
       -W TypedDigestSealCouples Vec<(Bexter, Saider)>,
       -X TransIdxSigGroups Vec<(Prefixer, Seqner, Saider, ControllerIdxSigs)>,
@@ -63,7 +63,7 @@ types:
             required: true
             description: "Group header — type and size"
           - name: "primitives"
-            type: "array[Matter]"
+            type: "array[Primitive]"
             required: true
             description: "Ordered sequence of CESR primitives"
         invariants:
@@ -227,7 +227,7 @@ types:
             required: true
             description: "SAD Path expression identifying the signed content within the SAD"
           - name: "signatures"
-            type: "array[types://cesr/primitives#Matter]"
+            type: "array[types://cesr/primitives#Primitive]"
             required: true
             description: "One or more indexed or non-indexed signatures over the content at the given path"
           - name: "root_said"

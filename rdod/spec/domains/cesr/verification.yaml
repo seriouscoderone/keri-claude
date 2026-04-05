@@ -633,6 +633,48 @@ properties:
     strategy: "cesr_primitive() for valid; adversarial characters for invalid"
     notes: "Spec L1513. Exhaustive first-character partition. Finding: CESR-INV-013."
 
+  # --- Selector-to-Table Dispatch Totality (Finding CESR-INV-017) ---
+  - invariant: "The selector-to-table dispatch MUST be a total function over all 64 Base64 characters. Every character maps to exactly one table: letters [A-Za-z] → 1-char fixed table, '0' → 2-char fixed table, '1' → 4-char fixed (ls=0), '2' → 4-char fixed (ls=1), '3' → 4-char fixed (ls=2), '4' → small variable (ls=0), '5' → small variable (ls=1), '6' → small variable (ls=2), '7' → large variable (ls=0), '8' → large variable (ls=1), '9' → large variable (ls=2), '-' → count code table, '_' → op code table. No character may be unassigned. No character may map to more than one table."
+    term: "Selector"
+    technique: smt
+    formal:
+      language: z3
+      expression: |
+        from z3 import *
+        c = Int('c')  # character index in Base64 alphabet [0..63]
+        table = Function('table', IntSort(), IntSort())
+        s = Solver()
+
+        # Define table assignment per character index
+        # A-Z = indices 0-25, a-z = 26-51, 0-9 = 52-61, - = 62, _ = 63
+        for i in range(0, 26):    # A-Z
+            s.add(table(i) == 0)      # 1-char fixed
+        for i in range(26, 52):   # a-z
+            s.add(table(i) == 0)      # 1-char fixed
+        s.add(table(52) == 1)     # '0' -> 2-char fixed
+        s.add(table(53) == 2)     # '1' -> 4-char fixed ls=0
+        s.add(table(54) == 3)     # '2' -> 4-char fixed ls=1
+        s.add(table(55) == 4)     # '3' -> 4-char fixed ls=2
+        s.add(table(56) == 5)     # '4' -> small var ls=0
+        s.add(table(57) == 6)     # '5' -> small var ls=1
+        s.add(table(58) == 7)     # '6' -> small var ls=2
+        s.add(table(59) == 8)     # '7' -> large var ls=0
+        s.add(table(60) == 9)     # '8' -> large var ls=1
+        s.add(table(61) == 10)    # '9' -> large var ls=2
+        s.add(table(62) == 11)    # '-' -> count codes
+        s.add(table(63) == 12)    # '_' -> op codes
+
+        # Prove exhaustive: no index in [0..63] is unassigned
+        s.push()
+        s.add(And(c >= 0, c <= 63))
+        s.add(Or(table(c) < 0, table(c) > 12))
+        assert s.check() == unsat  # every char maps to a valid table
+        s.pop()
+
+        # Prove 13 distinct tables used (by construction — each table ID 0-12 assigned)
+    strategy: "Z3 — model 64 Base64 chars as integers, prove total function into 13 tables"
+    notes: "Spec L1489-1523. Extends CESR-INV-013 (membership test) to prove the full dispatch is a total function. Finding: CESR-INV-017."
+
 # Formalized port contracts
 contracts:
   - port_ref: "port://cesr/inbound/encoding"

@@ -12,8 +12,8 @@ types:
             constraints:
               enum: ["NonTransferable", "Transferable", "WitnessIndexed"]
         invariants:
-          - "NonTransferable: unindexed signature (Cigar) from a non-transferable witness"
-          - "Transferable: indexed signature group (Siger) with event seal from a transferable witness"
+          - "NonTransferable: unindexed signature (UnindexedSignature) from a non-transferable witness"
+          - "Transferable: indexed signature group (IndexedSignature) with event seal from a transferable witness"
           - "WitnessIndexed: indexed by witness position in the witness list"
 
   - name: "SigningKeys"
@@ -22,9 +22,9 @@ types:
       - name: "default"
         fields:
           - name: "keys"
-            type: "array[types://cesr/primitives#Matter]"
+            type: "array[types://cesr/primitives#Primitive]"
             required: true
-            description: "Public keys (Verfers) for receipt verification"
+            description: "Public keys (VerificationKey) for receipt verification"
           - name: "threshold"
             type: "types://cesr/primitives#SigningThreshold"
             required: true

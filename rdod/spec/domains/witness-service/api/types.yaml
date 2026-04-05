@@ -37,7 +37,7 @@ types:
       - name: "receipted"
         fields:
           - name: "receipt"
-            type: "types://cesr/primitives#Cigar"
+            type: "types://cesr/primitives#UnindexedSignature"
             required: true
             description: "Witness's non-transferable signature over the event SAID"
           - name: "event_said"
@@ -86,4 +86,4 @@ types:
             description: "Ordered sequence of key events with witness receipts"
         invariants:
           - "Events are in strictly ascending sequence number order"
-          - "Each event includes the witness's receipt (Cigar)"
+          - "Each event includes the witness's receipt (UnindexedSignature)"

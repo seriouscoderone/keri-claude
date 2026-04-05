@@ -800,6 +800,37 @@ properties:
     strategy: "Enumerate required codes against active genus table"
     notes: "Spec L2475. All KERI/ACDC genus-specific count codes must be present. Finding: CESR-INV-015."
 
+  # --- Small/Large Count Code Pairing (Finding CESR-INV-020) ---
+  - invariant: "For every small count code -X## (4-char, max 4095 quadlets) in the KERI/ACDC genus, a corresponding large count code --X##### (8-char, max 1,073,741,823 quadlets) MUST exist with the same type character X and identical group semantics. The large variant is the overflow form for groups exceeding 4095 quadlets. A type that only has a small code silently truncates at 4095 quadlets with no path to larger groups."
+    term: "Count Code"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        KERI_COUNT_TYPES = list('ABCDEFGHIJKLMNOPQRSTUVWXYZabc')
+
+        def test_small_large_count_code_pairing():
+            for type_char in KERI_COUNT_TYPES:
+                small = '-' + type_char
+                large = '--' + type_char
+                assert small in COUNT_TABLE, \
+                    f"Small count code {small} missing"
+                assert large in COUNT_TABLE, \
+                    f"Large count code {large} missing — no overflow for {small}"
+
+        def test_small_large_semantic_match():
+            """Small and large variants MUST describe the same group type."""
+            for type_char in KERI_COUNT_TYPES:
+                small_desc = COUNT_TABLE['-' + type_char].description
+                large_desc = COUNT_TABLE['--' + type_char].description
+                # Both must reference the same group concept
+                small_base = small_desc.split('up to')[0].strip()
+                large_base = large_desc.split('up to')[0].strip()
+                assert small_base == large_base, \
+                    f"Semantic mismatch for '{type_char}': small='{small_base}', large='{large_base}'"
+    strategy: "Enumerate KERI/ACDC count type characters, check small/large pairing"
+    notes: "Spec L1822-1843. Small = 2 Base64 size chars (max 4095), large = 5 (max 1,073,741,823). Finding: CESR-INV-020."
+
   # --- Concrete Group Types ---
   - invariant: "ControllerIdxSigs group: counter code MUST end with 'A'; contents MUST be a Vec<Siger> where each item is an indexed signature"
     term: "Concrete Group Types"

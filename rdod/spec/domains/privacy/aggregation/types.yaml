@@ -52,7 +52,7 @@ types:
           - "'-e-edge1-d' — the SAID of a specific edge"
 
   - name: "SadPathSig"
-    description: "A SAD path signature — a signature over a specific path within a SAD structure, enabling selective signing of credential subsections. Discriminated union: IndexedSadPathSig uses quinkey-indexed Siger primitives (.spsgs group), CoupledSadPathSig uses Verfer-Cigar couples (.spcgs group)."
+    description: "A SAD path signature — a signature over a specific path within a SAD structure, enabling selective signing of credential subsections. Discriminated union: IndexedSadPathSig uses quinkey-indexed IndexedSignature primitives (.spsgs group), CoupledSadPathSig uses VerificationKey-UnindexedSignature couples (.spcgs group)."
     variants:
       - name: "indexed"
         fields:
@@ -61,9 +61,9 @@ types:
             required: true
             description: "SAD path expression identifying the signed location (e.g., '-a-i')"
           - name: "signatures"
-            type: "array[types://cesr/primitives#Siger]"
+            type: "array[types://cesr/primitives#IndexedSignature]"
             required: true
-            description: "Indexed signatures (Siger primitives) with quinkey indexing"
+            description: "Indexed signatures (IndexedSignature primitives) with quinkey indexing"
           - name: "signer_aid"
             type: "string"
             required: true
@@ -79,13 +79,13 @@ types:
             required: true
             description: "SAD path expression identifying the signed location (e.g., '-a-i')"
           - name: "verfer"
-            type: "types://cesr/primitives#Verfer"
+            type: "types://cesr/primitives#VerificationKey"
             required: true
             description: "Public key of the signer"
           - name: "signature"
-            type: "types://cesr/primitives#Cigar"
+            type: "types://cesr/primitives#UnindexedSignature"
             required: true
-            description: "Non-indexed signature (Cigar primitive)"
+            description: "Non-indexed signature (UnindexedSignature primitive)"
         invariants:
           - "Uses .spcgs CESR group code for coupled SAD path signatures"
-          - "Verification uses non-indexed signature verification (Verfer-Cigar couple)"
+          - "Verification uses non-indexed signature verification (VerificationKey-UnindexedSignature couple)"

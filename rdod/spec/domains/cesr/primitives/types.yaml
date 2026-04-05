@@ -1,7 +1,7 @@
 domain_ref: "cesr/primitives"
 
 types:
-  - name: "Matter"
+  - name: "Primitive"
     description: >
       Base type for all CESR-qualified cryptographic primitives. Encapsulates a (code, raw) pair
       with domain transforms to/from qb64 (Text) and qb2 (Binary). Code assignments: all 26
@@ -230,7 +230,7 @@ types:
           - "Microsecond precision (6 decimal places) — supports up to 1M messages/second for KRAM"
           - "Used in KRAM timeliness checking — must be monotonically increasing per sender"
 
-  - name: "Siger"
+  - name: "IndexedSignature"
     description: "Indexed signature — a controller or witness signature with an index indicating which key in the key list produced it."
     variants:
       - name: "default"
@@ -256,7 +256,7 @@ types:
           - "When using a BothSigCodex code (A#, C#), ondex implicitly equals index — the key appears at the same position in both the current and prior-next lists"
           - "When using a dual-indexed code (0A##, 2A####), ondex is explicit and may differ from index — the key appears at different positions in the two lists"
 
-  - name: "Cigar"
+  - name: "UnindexedSignature"
     description: "Unindexed signature — typically from a non-transferable witness whose public key IS their identifier."
     variants:
       - name: "default"
@@ -266,13 +266,13 @@ types:
             required: true
             description: "CESR-qualified unindexed signature"
           - name: "verfer"
-            type: "types://cesr/primitives#Matter"
+            type: "types://cesr/primitives#Primitive"
             required: true
             description: "The public key (Verfer) that produced this signature"
         invariants:
           - "verfer.verify(raw_data, cigar.raw) must return True"
 
-  - name: "Diger"
+  - name: "Digest"
     description: "Digest primitive — a cryptographic hash with its algorithm code."
     variants:
       - name: "default"
@@ -384,13 +384,13 @@ types:
       - name: "indexed"
         fields:
           - name: "siger"
-            type: "types://cesr/primitives#Siger"
+            type: "types://cesr/primitives#IndexedSignature"
             required: true
             description: "Indexed controller or witness signature"
       - name: "unindexed"
         fields:
           - name: "cigar"
-            type: "types://cesr/primitives#Cigar"
+            type: "types://cesr/primitives#UnindexedSignature"
             required: true
             description: "Unindexed non-transferable signature"
         invariants:
@@ -526,7 +526,7 @@ types:
             required: true
             description: "Raw private key seed"
           - name: "verification_key"
-            type: "types://cesr/primitives#Verfer"
+            type: "types://cesr/primitives#VerificationKey"
             required: true
             description: "Derived public verification key — always available after construction"
           - name: "transferable"
@@ -539,7 +539,7 @@ types:
           - "Private key material MUST be zeroed after use — implementations MUST support secure erasure"
           - "NOT a wire-format type — only its products (indexed/unindexed signatures) appear on the wire"
 
-  - name: "Verfer"
+  - name: "VerificationKey"
     description: "A public key verification primitive — holds a qualified public key that can verify signatures. The CESR agent-noun for a verifier key. Wraps a raw public key with its derivation code (algorithm identifier)."
     variants:
       - name: "default"
