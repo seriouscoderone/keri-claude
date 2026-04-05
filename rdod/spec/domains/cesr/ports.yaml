@@ -33,16 +33,3 @@ ports:
   # Subdomain inbound ports are defined in their respective ports.yaml files:
   #   - primitives: port://cesr/primitives/inbound/qualification
   #   - composition: port://cesr/composition/inbound/stream-composition
-
-  - id: "port://cesr/composition/inbound/stream-composition"
-    type: inbound
-    name: "Stream Composition"
-    semantics: query
-    idempotent: true
-    contract:
-      input: "types://cesr/composition#CESRGroup"
-      output: "types://cesr/composition#FrameType"
-      errors:
-        - "errors://cesr/composition#ColdStartError"
-        - "errors://cesr/composition#TruncatedStreamError"
-    refs: ["domain://cesr"]

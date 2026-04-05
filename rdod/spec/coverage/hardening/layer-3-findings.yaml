@@ -1,0 +1,60 @@
+---
+layer: 3
+domains_analyzed: 1
+date: "2026-04-04"
+method: "spec-hardening — force implementation planning → fix"
+note: "Single domain layer — cesr parent aggregate"
+
+summary:
+  total_findings: 11
+  contradictions_fixed: 1
+  remaining_open: 10
+
+resolved:
+  - id: "L3-C1"
+    category: structural
+    domain: "cesr"
+    file: "ports.yaml"
+    finding: "Subdomain port (cesr/composition/inbound/stream-composition) duplicated in parent ports.yaml despite comment saying subdomains own their ports"
+    resolution: "Removed duplicate port definition from parent — subdomain owns it"
+
+open:
+  - id: "L3-O1"
+    domain: "cesr"
+    finding: "CodeEntry type missing ms/os fields for indexed primitive codes — code-lookup returns incomplete geometry for Siger-type codes"
+
+  - id: "L3-O2"
+    domain: "cesr"
+    finding: "VersionString type absent despite being a published language term — no formal type for version string construction"
+
+  - id: "L3-O3"
+    domain: "cesr"
+    finding: "port://cesr/inbound/encoding outputs types://cesr/primitives#Matter — keripy class name (H-O20)"
+
+  - id: "L3-O4"
+    domain: "cesr"
+    finding: "SerializationKind.CESR silently means 'no version string' — hidden port contract branch"
+
+  - id: "L3-O5"
+    domain: "cesr"
+    finding: "No genus negotiation port — genus/version code parsing has no port contract"
+
+  - id: "L3-O6"
+    domain: "cesr"
+    finding: "protocols.yaml absent — cold-start detection, mixed-mode parsing, CESR native field maps have no formal protocol home"
+
+  - id: "L3-O7"
+    domain: "cesr"
+    finding: "No parent-level stream-to-primitive round-trip consistency invariant spanning both subdomains"
+
+  - id: "L3-O8"
+    domain: "cesr"
+    finding: "No genus propagation invariant — parsed stream genus must match active genus context"
+
+  - id: "L3-O9"
+    domain: "cesr"
+    finding: "No versify→sizeify→saidify ordering invariant — calling out of order produces wrong SAID"
+
+  - id: "L3-O10"
+    domain: "cesr"
+    finding: "FixedFieldBlock SAID dummy character ('#') not specified — crosses into ACDC territory"
