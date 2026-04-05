@@ -205,11 +205,11 @@ properties:
             seal_backer = BackerSeal(bi=aid.prefix, d=digest(data))
             # All three seal types work in interaction events
             ixn = create_interaction(aid.prefix, aid.expected_sn,
-                                     seals=[seal_digest, seal_event, seal_location])
+                                     seals=[seal_digest, seal_event, seal_backer])
             assert len(ixn.ked['a']) == 3
             # All three seal types work in establishment events
             rot = create_rotation(aid.prefix, aid.expected_sn,
-                                   seals=[seal_digest, seal_event, seal_location])
+                                   seals=[seal_digest, seal_event, seal_backer])
             assert len(rot.ked['a']) == 3
             # Seal verification is identical in both contexts
             for ixn_seal, rot_seal in zip(ixn.ked['a'], rot.ked['a']):

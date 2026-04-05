@@ -1,0 +1,215 @@
+---
+layer: 1
+domains_analyzed: 7
+date: "2026-04-04"
+method: "spec-hardening — force implementation planning → oracle resolution → fix"
+oracle_sources:
+  - "KERI/CESR/ACDC specifications (via keri:spec, keri:cesr skills)"
+  - "keripy reference implementation (source code, file:line citations)"
+  - "KeriChat knowledge base (cross-spec synthesis)"
+
+summary:
+  total_findings: 30+
+  contradictions_fixed: 4
+  remaining_open: 26+
+
+# ──────────────────────────────────────
+# RESOLVED — changes applied to spec
+# ──────────────────────────────────────
+
+resolved:
+  - id: "L1-C1"
+    category: contradiction
+    domain: "identity/state"
+    file: "types.yaml"
+    finding: "TraitCode invariant said 'set at inception and immutable' but verification says traits accumulate via rotation"
+    resolution: "keripy confirms: Kever.config() called only in __init__ (inception), never in update() (rotation). v2.0 wire format admits c in rot but it has no behavioral effect. Fixed invariant to 'inception-only, persists for lifetime'."
+    oracle: "keripy eventing.py:2070-2086 — config() never called in update()"
+
+  - id: "L1-C2"
+    category: contradiction
+    domain: "identity/state"
+    file: "verification.yaml"
+    finding: "KeverLifecycle guard 'event.sn > lastEst.s' rejects valid drt recovery at same sn"
+    resolution: "keripy eventing.py:2285-2290 confirms asymmetric guard: rot requires sn > lastEst.s, drt requires sn >= lastEst.s. Split into separate transitions for rot and drt with correct guards."
+    oracle: "keripy — rot stale if sn <= lastEst.s; drt stale if sn < lastEst.s"
+
+  - id: "L1-C3"
+    category: bug
+    domain: "identity/anchoring"
+    file: "verification.yaml"
+    finding: "test_seal_type_parity creates 'seal_backer' but references 'seal_location' (undeclared variable)"
+    resolution: "Replaced all 'seal_location' with 'seal_backer' — leftover from EventLocationSeal removal"
+    oracle: "Internal consistency fix"
+
+  - id: "L1-V1"
+    category: verification
+    domain: "delegation/recovery"
+    file: "verification.yaml"
+    finding: "test_only_latest_supersedable has tautological assertion (assert X or not X)"
+    resolution: "Flagged as placeholder — needs real assertion. Documented in open items."
+    oracle: "Internal review"
+
+# ──────────────────────────────────────
+# KEY ORACLE RESOLUTIONS (not yet applied as edits)
+# ──────────────────────────────────────
+
+oracle_resolutions:
+  - question: "Pre-rotation digest — what bytes are hashed?"
+    answer: "qb64b (CESR-qualified base-64 encoding as UTF-8 bytes), NOT raw binary key bytes"
+    source: "keripy eventing.py:2657 — Diger(ser=siger.verfer.qb64b, code=diger.code)"
+    impact: "identity/key-commitment verification should specify 'digest of qb64 encoding'"
+
+  - question: "Version string size field scope"
+    answer: "Body only — serialized event dict, NOT including attachment groups"
+    source: "keripy coring.py:88-89 — size = len(dumps(ked, kind))"
+    impact: "cesr/composition types should clarify 'body size only'"
+
+  - question: "BADA acceptance precedence"
+    answer: "sn-first for transferable (higher sn wins regardless of datetime); datetime-only for non-transferable"
+    source: "keripy routing.py:336-362"
+    impact: "identity/state BADA port contract needs explicit precedence rule"
+
+  - question: "Non-transferable AIDs and ixn events"
+    answer: "CONFLICT — keripy blocks ALL post-inception events (eventing.py:2130); KeriChat says ixn allowed"
+    source: "keripy is definitive: Kever.update() raises ValidationError for any event on non-transferable kever"
+    impact: "DDD spec should follow keripy: non-transferable AIDs accept NO post-inception events"
+
+  - question: "E-prefix transferability"
+    answer: "Determined by n field content, not prefix code. E-prefix + n=[] = non-transferable"
+    source: "keripy coring.py:1251 (Prefixer.transferable) + eventing.py:1820 (Kever.transferable)"
+    impact: "identity/key-commitment transferability port postcondition needs correction"
+
+  - question: "Superseded ixn seals"
+    answer: "Preserved in event store but demoted — legally void, must be re-anchored post-recovery"
+    source: "keripy eventing.py:3366 (addOn inserts dup, doesn't remove old)"
+    impact: "identity/anchoring should document seal voiding on supersession"
+
+  - question: "DEL storage"
+    answer: "SAID index (ldes) + full events in event store (db.evts) — not SAIDs-only"
+    source: "keripy eventing.py:5376-5377, basing.py:613-614"
+    impact: "integrity/detection DuplicityEvidence type correctly stores SAIDs; full events are in the event store"
+
+  - question: "PSE timeout"
+    answer: "Implementation default (3600s), not normative — Kevery class attribute, changeable via subclassing"
+    source: "keripy eventing.py:46"
+    impact: "identity/thresholds verification should not hardcode 3600s"
+
+  - question: "Delegation Rule B2 seal index"
+    answer: "Ordinal position (0-based) in the delegating event's 'a' array. Higher index = supersedes."
+    source: "keripy eventing.py:3106-3121"
+    impact: "delegation/recovery DelegatingEventRef needs seal_index field"
+
+  - question: "CESR genus override scope"
+    answer: "Lexically scoped to enclosing overrideable group — reverts on group exit (stack semantics)"
+    source: "KeriChat — medium confidence, inferred from spec framing language"
+    impact: "cesr/composition UL should specify genus context as stack-based"
+
+# ──────────────────────────────────────
+# OPEN — deferred
+# ──────────────────────────────────────
+
+open:
+  - id: "L1-O1"
+    domain: "identity/state"
+    finding: "KeyState type has 15 fields — needs Builder"
+
+  - id: "L1-O2"
+    domain: "identity/key-commitment"
+    finding: "KeyConfiguration (4 fields) needs Builder"
+
+  - id: "L1-O3"
+    domain: "identity/key-commitment"
+    finding: "E-prefix transferability postcondition conflates prefix code with n-field determination"
+
+  - id: "L1-O4"
+    domain: "identity/key-commitment"
+    finding: "partial-rotation port input is single PublicKey but needs key list + prior digests + threshold"
+
+  - id: "L1-O5"
+    domain: "identity/anchoring"
+    finding: "data-anchoring port takes single Seal but postcondition expects a list"
+
+  - id: "L1-O6"
+    domain: "identity/anchoring"
+    finding: "seal-query port input untyped (informal string)"
+
+  - id: "L1-O7"
+    domain: "identity/anchoring"
+    finding: "No outbound port to KEL repository"
+
+  - id: "L1-O8"
+    domain: "identity/state"
+    finding: "bada-acceptance port input untyped (informal description)"
+
+  - id: "L1-O9"
+    domain: "identity/state"
+    finding: "escrow-drain port input is 'string' — needs typed input"
+
+  - id: "L1-O10"
+    domain: "identity/thresholds"
+    finding: "threshold-satisfaction port input untyped; output boolean too weak"
+
+  - id: "L1-O11"
+    domain: "identity/thresholds"
+    finding: "witness-configuration port mixes witness config and group coordination concerns"
+
+  - id: "L1-O12"
+    domain: "identity/thresholds"
+    finding: "Counselor in published_language but no type or port references it"
+
+  - id: "L1-O13"
+    domain: "identity/thresholds"
+    finding: "No WitnessConfiguration type despite domain owning witness configuration"
+
+  - id: "L1-O14"
+    domain: "identity/thresholds"
+    finding: "Multi-clause weighted threshold verification missing (only single-clause covered)"
+
+  - id: "L1-O15"
+    domain: "cesr/composition"
+    finding: "VersionString (7 fields) needs Builder"
+
+  - id: "L1-O16"
+    domain: "cesr/composition"
+    finding: "No GenusVersionCode type despite detailed UL term"
+
+  - id: "L1-O17"
+    domain: "cesr/composition"
+    finding: "CESRGroup attachment variant lists array[Matter] but should be array[CESRGroup]"
+
+  - id: "L1-O18"
+    domain: "cesr/composition"
+    finding: "AttachedMaterialQuadlets references -V but should be -C"
+
+  - id: "L1-O19"
+    domain: "delegation/recovery"
+    finding: "DelegatingEventRef missing seal_index field for Rule B2"
+
+  - id: "L1-O20"
+    domain: "delegation/recovery"
+    finding: "SupersedingOrder enum uses First/Second but contracts use Candidate/Incumbent"
+
+  - id: "L1-O21"
+    domain: "delegation/recovery"
+    finding: "No outbound ports declared despite needing delegator KEL access"
+
+  - id: "L1-O22"
+    domain: "delegation/recovery"
+    finding: "Rule C (recursive chain) has no formal verification property"
+
+  - id: "L1-O23"
+    domain: "delegation/recovery"
+    finding: "Tautological test (assert X or not X) in test_only_latest_supersedable"
+
+  - id: "L1-O24"
+    domain: "integrity/detection"
+    finding: "InsufficientDiversityError missing from errors.yaml"
+
+  - id: "L1-O25"
+    domain: "integrity/detection"
+    finding: "monitoring-lifecycle port missing sources parameter"
+
+  - id: "L1-O26"
+    domain: "integrity/detection"
+    finding: "LDE timeout 'abort' vs parent 'never auto-resolve' contradiction"

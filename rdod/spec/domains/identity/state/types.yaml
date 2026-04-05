@@ -95,7 +95,7 @@ types:
         invariants:
           - "EstOnly (EO) restricts the identifier to establishment events only — no interaction events"
           - "DoNotDelegate (DND) prevents the identifier from acting as a delegator"
-          - "Traits are set at inception and are immutable for the lifetime of the identifier"
+          - "Traits are set at inception only — once set, a trait persists for the identifier's lifetime and cannot be removed (v2.0 admits c in rot wire format but keripy never applies it on rotation)"
 
   - name: "LastEstablishmentData"
     description: "Cached snapshot of the most recent establishment event's key configuration, used for efficient state queries without replaying the KEL."
