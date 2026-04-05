@@ -33,7 +33,9 @@ types:
             required: true
             description: "Operation type determining completion check"
             constraints:
-              enum: ["oobi", "witness", "delegation", "group", "query", "registry", "credential", "endrole", "done"]
+              enum: ["oobi", "witness", "delegation", "group", "query", "registry", "credential", "endrole"]
+            # Note: "done" removed — completion is tracked via the 'done' boolean field,
+            # not as an operation type. Per signify-client/resources/types.yaml invariant.
         invariants:
           - "Poll via GET /operations/{name} — returns 200 (done) or 202 (pending)"
           - "response is present only when done=true and error is absent"

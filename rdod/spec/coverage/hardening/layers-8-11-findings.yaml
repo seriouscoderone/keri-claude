@@ -1,0 +1,99 @@
+---
+layers: [8, 9, 10, 11]
+domains_analyzed: 11
+date: "2026-04-04"
+method: "spec-hardening — force implementation planning → fix"
+
+summary:
+  total_findings: 40+
+  contradictions_fixed: 1
+  remaining_open: 39+
+
+resolved:
+  - id: "L811-C1"
+    category: contradiction
+    domain: "signify-client"
+    file: "types.yaml"
+    finding: "Parent Operation.type enum included 'done' but resources/OperationStatus explicitly states 'done is NOT a type — completion tracked via done boolean'"
+    resolution: "Removed 'done' from parent type enum to match subdomain invariant"
+
+open:
+  # credential-lifecycle/registry
+  - id: "L811-O1"
+    finding: "No BackerConfiguration type for non-shieldable registry inception"
+  - id: "L811-O2"
+    finding: "No port for TEL event delivery to registry"
+  - id: "L811-O3"
+    finding: "bup variant references field 'b' (v1 legacy) not matching v2 field list"
+
+  # witness-service parent
+  - id: "L811-O4"
+    finding: "ReceiptedEvent type undefined — referenced in KERLResponse"
+  - id: "L811-O5"
+    finding: "FirstSeenRecord stores SAID but not raw event bytes"
+  - id: "L811-O6"
+    finding: "verification.yaml receipt check fragile — hardcodes B prefix instead of checking non-transferable property"
+
+  # credential-exchange parent
+  - id: "L811-O7"
+    finding: "4 of 6 IPEX message types (apply, agree, grant, admit) have no type definition"
+  - id: "L811-O8"
+    finding: "exchange-protocol postcondition hardcoded for grant only — contradicts bidirectional port"
+  - id: "L811-O9"
+    finding: "No outbound port to credential-lifecycle for post-admit state update"
+
+  # credential-lifecycle parent
+  - id: "L811-O10"
+    finding: "SealRequest referenced in port contract but undefined in types.yaml"
+  - id: "L811-O11"
+    finding: "TemporalKeyStateBinding invariant uses current state in postcondition, contradicting 'at seal-anchor time' rule"
+  - id: "L811-O12"
+    finding: "No inbound port for schema resolution despite SchemaResolutionError"
+
+  # privacy parent
+  - id: "L811-O13"
+    finding: "nested-partial DisclosureForm variant has no formal field structure"
+  - id: "L811-O14"
+    finding: "No port for computing AGID from attribute SAIDs"
+  - id: "L811-O15"
+    finding: "Public block partial disclosure guard in type but absent from port contract"
+  - id: "L811-O16"
+    finding: "Selective disclosure SAID ordering rule (schema vs sorted) unspecified"
+
+  # watcher-service parent
+  - id: "L811-O17"
+    finding: "DuplicityEvidence still undefined — third layer flagging this"
+  - id: "L811-O18"
+    finding: "No WatchedAIDRecord type for monitor configuration"
+  - id: "L811-O19"
+    finding: "'Stateless' claim contradicted by DEL/FirstSeenRecord persistence"
+
+  # cloud-agent-service parent
+  - id: "L811-O20"
+    finding: "LongRunningOperation Timedout state contradicts ServerOperation done XOR invariant"
+  - id: "L811-O21"
+    finding: "DeckName enum 'witners' typo (also flagged L0)"
+  - id: "L811-O22"
+    finding: "process-work port conflates enqueue and get-operation"
+  - id: "L811-O23"
+    finding: "message-router input still untyped (also flagged L0)"
+
+  # local-agent
+  - id: "L811-O24"
+    finding: "Contact.endpoints references undefined LocationScheme type"
+  - id: "L811-O25"
+    finding: "controller-operations port input is Habitat (output type), not operation parameters"
+  - id: "L811-O26"
+    finding: "witness-comms error uses watcher-service error namespace — wrong domain"
+
+  # signify-client parent
+  - id: "L811-O27"
+    finding: "GroupKeeper nesting unconstrained — recursive group-of-group allowed by type"
+  - id: "L811-O28"
+    finding: "Operation vs OperationStatus field name discrepancy (response vs result)"
+  - id: "L811-O29"
+    finding: "key-repository port conflates store and load — wrong input/output types"
+  - id: "L811-O30"
+    finding: "cloud-agent-comms port contract only correct for boot, not for resource operations"
+  - id: "L811-O31"
+    finding: "SessionState.passcode_timeout optional but state machine requires it"
