@@ -1,0 +1,155 @@
+---
+layer: 2
+domains_analyzed: 3
+date: "2026-04-04"
+method: "spec-hardening — force implementation planning → oracle resolution → fix"
+note: "cesr/composition was already analyzed in Layer 1 (build order shifted)"
+
+summary:
+  total_findings: 25+
+  contradictions_fixed: 1
+  remaining_open: 24+
+
+# ──────────────────────────────────────
+# RESOLVED
+# ──────────────────────────────────────
+
+resolved:
+  - id: "L2-C1"
+    category: naming
+    domain: "identity/establishment"
+    file: "types.yaml"
+    finding: "Type named 'Serder' — keripy class name not in KERI spec vocabulary"
+    resolution: "Renamed to 'KeyEventBody' — spec says 'key event message body'; keripy class is SerderKERI"
+    oracle: "keripy serdering.py:2118 confirms SerderKERI(Serder) is the KERI-specific subclass"
+
+# ──────────────────────────────────────
+# KEY ORACLE RESOLUTIONS
+# ──────────────────────────────────────
+
+oracle_resolutions:
+  - question: "Pre-rotation binding failure — escrow or reject?"
+    answer: "keripy treats it as PSE (partially-signed escrow) — non-matching keys are silently skipped, reducing exposed indices. If remaining signatures satisfy threshold, event succeeds; otherwise PSE."
+    source: "keripy eventing.py:2646-2661 (exposeds), 2531 (threshold check)"
+    impact: "The FSM routing pre_rotation_checked → escrowed_pse is CORRECT per keripy. PreRotationBindingError severity should be changed from 'fatal' to 'recoverable'."
+
+  - question: "TEL event validation — full body or SAID lookup?"
+    answer: "Full event body (Serder) + anchor reference (seqner + saider) passed into Tever.issue()/revoke()"
+    source: "keripy vdr/eventing.py:1505-1568"
+    impact: "credential-lifecycle/status authorize port input type must be full TELEvent, not TelEventUnion (SAID-only)"
+
+  - question: "Superseding recovery → credential notification?"
+    answer: "keripy does NOT proactively notify TEL/credential system. Anchor validity is lazily checked on verifyAnchor() calls."
+    source: "keripy eventing.py:2279-2318 — no tvy interaction on recovery path"
+    impact: "Cross-domain gap confirmed. DDD spec should note TEL verification is pull-based. StatusService invariant: anchor validity contingent on current winning KEL."
+
+  - question: "Delegable escrow distinct from PDE?"
+    answer: "Yes — fully separate db.delegables table with 1200s timeout, entered when delegated event is fully signed/witnessed but delegator approval missing"
+    source: "keripy eventing.py:3413-3445 (escrowDelegableEvent), 6460-6539 (processEscrowDelegables)"
+    impact: "identity/establishment FSM needs escrowed_delegable state distinct from escrowed_pde"
+
+  - question: "ValidationError cross-domain ref"
+    answer: "Defined in errors.yaml not types.yaml — identity/state reference types://identity/establishment#ValidationError is broken"
+    source: "identity/establishment/errors.yaml vs types.yaml"
+    impact: "Fix reference to errors:// or add error type alias in types.yaml"
+
+# ──────────────────────────────────────
+# OPEN
+# ──────────────────────────────────────
+
+open:
+  - id: "L2-O1"
+    domain: "identity/establishment"
+    finding: "InceptionEvent (13 fields), RotationEvent (12 fields) need Builders"
+
+  - id: "L2-O2"
+    domain: "identity/establishment"
+    finding: "PartialRotation, AugmentedRotation, ReserveRotation have no fields — stub types"
+
+  - id: "L2-O3"
+    domain: "identity/establishment"
+    finding: "validate-rotation port unclear: public API or internal pipeline phase?"
+
+  - id: "L2-O4"
+    domain: "identity/establishment"
+    finding: "No outbound port for KEL append (writing accepted events)"
+
+  - id: "L2-O5"
+    domain: "identity/establishment"
+    finding: "validate-event marked idempotent but signature accumulation is a side effect"
+
+  - id: "L2-O6"
+    domain: "identity/establishment"
+    finding: "Abandonment (n=[]) has no FSM state or verification property"
+
+  - id: "L2-O7"
+    domain: "identity/establishment"
+    finding: "No verification for EO trait enforcement, DND trait, d==i self-certification, p-chain continuity"
+
+  - id: "L2-O8"
+    domain: "identity/establishment"
+    finding: "FSM missing escrowed_delegable state (distinct from escrowed_pde per keripy)"
+
+  - id: "L2-O9"
+    domain: "identity/establishment"
+    finding: "types://identity/establishment#ValidationError — broken cross-domain ref (errors.yaml not types.yaml)"
+
+  - id: "L2-O10"
+    domain: "credential-lifecycle/status"
+    finding: "TELEvent type includes legacy v1 ilks (vcp, vrt, iss, bis, rev, brv) without deprecation marker"
+
+  - id: "L2-O11"
+    domain: "credential-lifecycle/status"
+    finding: "authorize port input (TelEventUnion) missing fields for C3-C5 constraints — needs full TELEvent"
+
+  - id: "L2-O12"
+    domain: "credential-lifecycle/status"
+    finding: "No backer signature bundle type for bup threshold verification"
+
+  - id: "L2-O13"
+    domain: "credential-lifecycle/status"
+    finding: "TelEventUnion vs TELEvent naming confusion — two overlapping types"
+
+  - id: "L2-O14"
+    domain: "credential-lifecycle/status"
+    finding: "state-reconstruction port returns single LifecycleStateSnapshot but registry has many credentials"
+
+  - id: "L2-O15"
+    domain: "credential-lifecycle/status"
+    finding: "CredentialLifecycle FSM has REJECTED pseudo-state modeled as real state"
+
+  - id: "L2-O16"
+    domain: "credential-lifecycle/status"
+    finding: "bup threshold satisfaction has no verification property"
+
+  - id: "L2-O17"
+    domain: "integrity/recovery"
+    finding: "SupersedingRecoveryEvent input missing delegating event context for B1-B3 rules"
+
+  - id: "L2-O18"
+    domain: "integrity/recovery"
+    finding: "SupersedingRule conflates rule label with decision outcome — needs union type"
+
+  - id: "L2-O19"
+    domain: "integrity/recovery"
+    finding: "reconciliation port output inverted — returns DisputedBranch, should return Trunk"
+
+  - id: "L2-O20"
+    domain: "integrity/recovery"
+    finding: "disputed-branch-query returns single DisputedBranch — should be array"
+
+  - id: "L2-O21"
+    domain: "integrity/recovery"
+    finding: "Rule C (recursive delegation) has no property-based verification test"
+
+  - id: "L2-O22"
+    domain: "integrity/recovery"
+    finding: "fork-detected → irreconcilable transition missing for rule A1 failure"
+
+  - id: "L2-O23"
+    domain: "cross-domain"
+    finding: "Superseding recovery invalidates KEL anchors for TEL events — no cascade/notification protocol"
+
+  - id: "L2-O24"
+    domain: "cross-domain"
+    finding: "TEL verification is lazy (pull-based) — StatusService must re-check anchors against current winning KEL"

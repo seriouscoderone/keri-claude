@@ -524,8 +524,8 @@ types:
           - "Local can promote remote (upgrade trust) but remote cannot demote local"
           - "Persisted alongside each event — survives escrow round-trips"
 
-  - name: "Serder"
-    description: "Domain-specific facade extending Sadder (from cesr/composition) with KERI key event awareness. Provides typed accessors for event-specific fields (verfers, digers, tholder, ntholder) on top of the generic SAD serialization/deserialization. This is the primary event object used throughout the identity domain."
+  - name: "KeyEventBody"
+    description: "Parsed key event document with typed field accessors for KERI-specific properties. Extends the generic SAD serialization from cesr/composition with key event awareness — provides typed access to signing keys, next key digests, thresholds, and event metadata. The KERI spec calls this a 'key event message body'; keripy calls it SerderKERI."
     variants:
       - name: "default"
         fields:
