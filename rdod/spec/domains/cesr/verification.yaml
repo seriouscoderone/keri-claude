@@ -675,6 +675,95 @@ properties:
     strategy: "Z3 — model 64 Base64 chars as integers, prove total function into 13 tables"
     notes: "Spec L1489-1523. Extends CESR-INV-013 (membership test) to prove the full dispatch is a total function. Finding: CESR-INV-017."
 
+  # --- Variable-Size Primitive Codes (H-O2) ---
+  - invariant: "Variable-size primitive codes (4A##, 4B##, 5A##, 5B##, 6A##, 6B##) MUST encode size in the soft chars such that the qb64 length equals hard_size + soft_size + (count * 4) for T-domain primitives."
+    term: "Sizage"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(cesr_variable_length_primitive())
+        def test_variable_size_primitive_encoding(prim):
+            sizage = lookup_sizage(prim.code)
+            assert sizage.fs == 0xFFFFFFFF, "Variable-length code must have fs=u32::MAX"
+            # Actual size encoded in soft chars
+            soft_chars = prim.qb64[sizage.hs:sizage.hs + sizage.ss]
+            encoded_count = b64_to_int(soft_chars)
+            expected_total = sizage.hs + sizage.ss + (encoded_count * 4)
+            assert len(prim.qb64) == expected_total, \
+                f"qb64 length mismatch: got {len(prim.qb64)}, expected {expected_total}"
+    strategy: "cesr_variable_length_primitive() — generates 4A##, 4B##, 5A##, 5B##, 6A##, 6B## primitives"
+    notes: "H-O2. Variable-size codes include 4A##/4B## (ls=0), 5A##/5B## (ls=1), 6A##/6B## (ls=2). Size is encoded in the soft portion (## = 2 Base64 chars). Implementations MUST test these code families explicitly."
+
+  # --- Stream-to-Primitive Round-Trip Consistency (L3-O7) ---
+  - invariant: "A sequence of primitives serialized to a stream and re-parsed MUST yield primitives identical to the originals: for all primitive lists P, parse_stream(serialize_stream(P)) == P."
+    term: "Composability"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(st.lists(cesr_primitive(), min_size=1, max_size=5))
+        def test_stream_primitive_roundtrip(primitives):
+            stream_t = ''.join(p.qb64 for p in primitives)
+            stream_b = b''.join(p.qb2 for p in primitives)
+            # T-domain round-trip
+            parsed_t = parse_stream_t(stream_t)
+            assert len(parsed_t) == len(primitives)
+            for orig, parsed in zip(primitives, parsed_t):
+                assert parsed.code == orig.code
+                assert parsed.raw == orig.raw
+            # B-domain round-trip
+            parsed_b = parse_stream_b(stream_b)
+            assert len(parsed_b) == len(primitives)
+            for orig, parsed in zip(primitives, parsed_b):
+                assert parsed.code == orig.code
+                assert parsed.raw == orig.raw
+    strategy: "st.lists(cesr_primitive(), min_size=1, max_size=5)"
+    notes: "L3-O7. Cross-cutting stream-to-primitive consistency invariant. Any parse of a serialized stream must reproduce the original primitive sequence exactly."
+
+  # --- Genus Propagation Invariant (L3-O8) ---
+  - invariant: "The active protocol genus MUST be consistently propagated through all code table lookups in a parsing session. A stream declaring genus G via GenusVersionCode MUST have all subsequent primitives resolved against genus G's code tables — mixing code tables from different genera in a single parse session is a protocol error."
+    term: "Protocol Genus"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(cesr_stream_with_genus())
+        def test_genus_propagation(stream_with_genus):
+            genus = stream_with_genus.declared_genus
+            parser = CESRParser(genus=genus)
+            primitives = parser.parse_all(stream_with_genus.bytes)
+            for prim in primitives:
+                # Every code resolved must be from the declared genus's tables
+                entry = lookup_genus_table(genus, prim.code)
+                assert entry is not None, \
+                    f"Code '{prim.code}' not found in genus '{genus}' tables"
+    strategy: "cesr_stream_with_genus() — generates streams with explicit GenusVersionCode preamble"
+    notes: "L3-O8. Genus propagation invariant. All code lookups in a parse session must use the genus declared by the leading GenusVersionCode. Cross-genus code table mixing is forbidden."
+
+  # --- versify → sizeify → saidify Ordering Invariant (L3-O9) ---
+  - invariant: "The construction pipeline for self-addressed data MUST follow this strict ordering: (1) versify() to inject version string with size=0, (2) sizeify() to serialize and fill in the actual byte count, (3) saidify() to compute and inject the SAID. Calling saidify() before sizeify() produces a SAID over content with incorrect size metadata. Calling sizeify() before versify() produces incorrect size (missing version string bytes)."
+    term: "Versify"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(sad_fields_strategy())
+        def test_versify_sizeify_saidify_ordering(fields):
+            # Correct order
+            sad = versify(fields, protocol='KERI', version=(2,0), kind='JSON')
+            sized = sizeify(sad)
+            final = saidify(sized)
+            # SAID must verify against the correctly-sized content
+            assert verify_said(final), "SAID verification failed with correct ordering"
+
+            # Wrong order: saidify before sizeify
+            sad2 = versify(fields, protocol='KERI', version=(2,0), kind='JSON')
+            wrong = saidify(sad2)  # size=0 in version string when SAID computed
+            assert not verify_said(wrong), "SAID should fail if saidify called before sizeify"
+    strategy: "sad_fields_strategy() — generates arbitrary field maps for SAD construction"
+    notes: "L3-O9. versify → sizeify → saidify is the mandatory construction pipeline. Violating the ordering produces SAIDs that cannot be independently verified. All KERI event builders MUST enforce this ordering."
+
 # Formalized port contracts
 contracts:
   - port_ref: "port://cesr/inbound/encoding"

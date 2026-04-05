@@ -8,11 +8,43 @@ ports:
     name: "Exchange Protocol"
     semantics: command
     idempotent: false
+    description: >
+      Dispatches an incoming IPEX message to the appropriate handler based on route.
+      Bidirectional — used by both discloser and disclosee parties. The output ExchangeResult
+      reflects the outcome from whichever party's perspective is calling (discloser or disclosee).
     contract:
       input: "types://credential-exchange/negotiation#IPEXMessage"
       output: "types://credential-exchange#ExchangeResult"
       errors:
         - "errors://credential-exchange#UnknownExchangeRouteError"
+        - "errors://credential-exchange#ExchangeAuthenticationError"
     refs: ["domain://credential-lifecycle"]
+    notes: |
+      L811-O8: The exchange-protocol port is bidirectional — both discloser and disclosee
+      call this port when receiving messages. The ExchangeResult.state indicates the outcome
+      from the receiver's perspective: 'admitted' when a grant is processed by the disclosee,
+      'spurned' when any party spurns, 'pending' for intermediate states.
 
   # Direct Issuance port defined in child: port://credential-exchange/negotiation/inbound/direct-issuance
+
+  # Outbound -- what credential-exchange delegates to credential-lifecycle
+  - id: "port://credential-exchange/outbound/credential-lifecycle"
+    type: outbound
+    name: "Credential Lifecycle"
+    semantics: query
+    idempotent: true
+    description: >
+      Queries credential-lifecycle to verify credential issuance status before admitting
+      a grant, and to retrieve the TEL proof bundle included in grant messages.
+    contract:
+      input: "types://cesr/primitives#SAID"
+      output: "types://credential-lifecycle#CredentialStateSnapshot"
+      errors:
+        - "errors://credential-exchange#CredentialNotIssuedError"
+        - "errors://credential-exchange#RegistryNotFoundError"
+    refs: ["domain://credential-lifecycle"]
+    notes: |
+      L811-O9: credential-exchange previously had no outbound port to credential-lifecycle.
+      This port covers two use cases:
+        1. Grant construction: retrieve TEL event + registry state for the proof bundle
+        2. Admit processing: verify the granted credential is in Issued state before storing

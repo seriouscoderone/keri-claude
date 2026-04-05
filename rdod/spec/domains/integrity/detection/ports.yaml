@@ -8,14 +8,25 @@ ports:
     name: "Monitoring Lifecycle"
     semantics: command
     idempotent: false
+    description: >
+      Start or stop duplicity monitoring for a specific AID. The sources parameter
+      specifies which witness AIDs to poll for KEL comparison. At least 2 sources from
+      distinct operators must be provided for meaningful duplicity detection.
     contract:
-      input: "types://cesr/primitives#AID"
+      # L1-O25: Added sources parameter — monitoring requires specifying which witnesses to poll
+      # Schema requires string; encoding as composite: "aid:AID + sources:array[AID]"
+      input: "types://cesr/primitives#AID + sources:array[types://cesr/primitives#AID]"
       output: "types://integrity/detection#MonitorHandle"
       errors:
         - "errors://integrity/detection#LikelyDuplicitousError"
         - "errors://integrity/detection#DuplicitousInceptionError"
         - "errors://integrity/detection#FirstSeenReplayError"
+        - "errors://integrity/detection#InsufficientDiversityError"
     refs: ["domain://integrity"]
+    notes: >
+      L1-O25: sources parameter added. The monitoring-lifecycle port requires the caller to
+      specify which witness AIDs to poll. Without sources, the watcher has no way to fetch
+      KELs for comparison. The InsufficientDiversityError is raised when len(sources) < ceil((N+1)/2).
 
   - id: "port://integrity/detection/inbound/trust-decisions"
     type: inbound

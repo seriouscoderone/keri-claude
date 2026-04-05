@@ -19,6 +19,63 @@ ports:
         - "errors://discovery#MissingRouteHandlerError"
     refs: ["domain://identity"]
 
+  - id: "port://discovery/inbound/accept-ksn"
+    type: inbound
+    name: "KSN Acceptance"
+    semantics: command
+    idempotent: false
+    description: >
+      Accepts a Key State Notification (KSN) reply from a watcher or witness. Applies
+      the BADA monotonic-sn acceptance policy — the KSN is accepted only if its sn is
+      >= the currently stored sn for the AID. On acceptance, updates the local key state
+      cache and triggers RPE (Reply Processing Escrow) drain for any pending messages
+      awaiting this AID's key state.
+    contract:
+      input: "types://discovery#KSNAcceptanceInput"
+      output: "types://identity/state#KeyState"
+      errors:
+        - "errors://discovery#StaleKSNError"
+        - "errors://discovery#InvalidKSNSignatureError"
+    refs: ["domain://identity"]
+    invariants:
+      - "BADA monotonic: new KSN sn must be >= stored sn for this AID"
+      - "KSN must be signed by a known watcher or witness"
+      - "On acceptance: RPE escrow drain is triggered for pending messages awaiting this AID"
+    notes: |
+      L67-O26: KSN acceptance port added. KSN (Key State Notification) messages arrive via
+      rpy (reply) messages with route /ksn. This port handles their BADA-governed acceptance
+      and feeds the result to the identity domain's key state cache.
+      L67-O25: RPE drain mechanism — after a KSN is accepted, the discovery domain sweeps
+      the RPE (Reply Processing Escrow) for messages blocked on this AID's key state. The
+      escrow drain is triggered synchronously after acceptance. The sweep re-submits each
+      escrowed message through the BADA acceptance pipeline.
+
+  - id: "port://discovery/inbound/re-resolve"
+    type: inbound
+    name: "OOBI Re-Resolution"
+    semantics: command
+    idempotent: false
+    description: >
+      Re-resolves a previously resolved OOBI, refreshing the local endpoint and key state
+      cache for an AID. Used when endpoints become stale or when a controller rotates keys
+      and announces new endpoints via updated end-role reply messages.
+    contract:
+      input: "types://discovery#OOBI"
+      output: "types://discovery#ResolvedEndpoint"
+      errors:
+        - "errors://discovery#ReResolutionTimeoutError"
+        - "errors://discovery#StaleReReplyError"
+        - "errors://discovery#ReResolutionValidationError"
+    refs: ["domain://identity"]
+    invariants:
+      - "Re-resolution fetches fresh reply messages from the endpoint"
+      - "Fresh reply messages must pass BADA acceptance to replace cached entries"
+      - "If re-resolution fails, prior cached endpoints remain valid until expiry"
+    notes: |
+      L67-O27: Re-resolution port added. The original discovery port is for first-time
+      OOBI resolution. Re-resolution is a distinct operation triggered by staleness detection
+      (e.g., a request fails because an endpoint is no longer reachable).
+
   - id: "port://discovery/outbound/url-resolution"
     type: outbound
     name: "URL Resolution"
@@ -30,3 +87,29 @@ ports:
       errors:
         - "errors://discovery#OOBIResolutionTimeoutError"
     refs: ["domain://externals/transport"]
+
+  - id: "port://discovery/outbound/identity-state"
+    type: outbound
+    name: "Identity and Key State Lookup"
+    semantics: query
+    idempotent: true
+    description: >
+      Queries the identity domain to verify KEL events and key state for AIDs encountered
+      during OOBI resolution. Discovery domain is a consumer of identity domain — it resolves
+      endpoints but delegates cryptographic key state verification to identity.
+    contract:
+      input: "types://cesr/primitives#AID"
+      output: "types://identity/state#KeyState"
+      errors:
+        - "errors://discovery#KELNotFoundError"
+        - "errors://discovery#KeyStateUnavailableError"
+    refs: ["domain://identity"]
+    invariants:
+      - "BADA acceptance for end-role and loc-scheme replies requires valid key state"
+      - "KEL verification is delegated to identity domain — discovery does not process KELs directly"
+    notes: |
+      L67-O22: Missing BADA outbound port to identity/state. BADA requires verifying that
+      reply messages are signed by the controller's current keys. The discovery domain must
+      query the identity domain for the current key state to validate reply message signatures.
+      Without this outbound port, BADA signature verification has no dependency path to the
+      signing key material.

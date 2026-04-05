@@ -1,6 +1,36 @@
 domain_ref: "credential-exchange/proof"
 
 types:
+  - name: "AuthenticationResult"
+    description: "Result of KRAM authentication of an IPEX or KERI message. Confirms the message was signed by a valid current key and is not a replay. Defined here (proof subdomain) rather than parent, per domain ownership rules."
+    variants:
+      - name: "success"
+        fields:
+          - name: "signer_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "AID whose key signed this message"
+          - name: "key_state_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the key state used for signature verification"
+          - name: "message_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the authenticated message"
+        invariants:
+          - "Signature verified against current key state"
+          - "Message datetime within KRAM timeliness window"
+          - "Message SAID not in replay cache"
+      - name: "failure"
+        fields:
+          - name: "reason"
+            type: "string"
+            required: true
+            description: "Authentication failure reason (stale datetime, replay detected, invalid signature)"
+        invariants:
+          - "Message MUST NOT be processed after authentication failure"
+
   - name: "RegistryState"
     description: "Current registry state snapshot used for TEL chain validation during proof verification."
     variants:

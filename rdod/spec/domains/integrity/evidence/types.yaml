@@ -26,6 +26,85 @@ types:
           - "first_seen_said != conflicting_said — identical SAIDs would mean the same event"
           - "Both events must be validly signed against key state at that sn"
 
+  # L5-O7: SuspectedFork — renamed from ForkDetected to distinguish the INPUT from the emitted event
+  - name: "SuspectedFork"
+    description: "Caller's claim that two different events exist at the same (prefix, sn). This is the INPUT type for the evidence-management port. Distinct from ForkDetected (the renamed legacy alias) to avoid collision with domain events."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID with the suspected fork"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "The sequence number where divergent events were found"
+          - name: "first_seen_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the event first seen at this sn"
+          - name: "conflicting_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the second, conflicting event at the same sn"
+          - name: "first_source"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "Witness AID that provided the first event"
+          - name: "conflicting_source"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "Witness AID that provided the conflicting event"
+        invariants:
+          - "first_seen_said != conflicting_said — identical SAIDs would mean the same event (not duplicity)"
+          - "Both events must be validly signed against key state at that sn for the claim to be valid"
+          - "first_source != conflicting_source — evidence from the same source has lower evidentiary value"
+
+  # L5-O8: LDEEntry — the type for an entry in the Likely Duplicitous Escrow (.ldes)
+  - name: "LDEEntry"
+    description: "An entry in the Likely Duplicitous Escrow (LDE, stored in .ldes). Represents a suspected fork that has not yet been confirmed as duplicity or resolved. Distinct from a DEL entry (confirmed, permanent evidence)."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID with suspected duplicity"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number where the suspected fork occurs"
+          - name: "first_seen_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the first-seen event at this sn"
+          - name: "conflicting_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the conflicting event at this sn"
+          - name: "escrowed_at"
+            type: "string"
+            required: true
+            description: "ISO 8601 datetime when the entry was added to the LDE"
+          - name: "status"
+            type: "string"
+            required: true
+            description: "Always 'suspected' for LDE entries"
+            constraints:
+              enum: ["suspected"]
+          - name: "db"
+            type: "string"
+            required: true
+            description: "The backing database — always '.ldes' for LDE entries"
+            constraints:
+              enum: [".ldes"]
+        invariants:
+          - "status is always 'suspected' — confirmed entries are in the DEL (.dels), never in .ldes"
+          - "Entry is mutable — can be promoted to DEL (on confirmation) or pruned (on timeout)"
+          - "Pruning occurs at escrowed_at + 3600 seconds (configurable); pruning is administrative, not resolution"
+          - "An entry in .ldes and an entry in .dels MUST NOT coexist for the same (aid, sn, said) pair"
+
   - name: "NotificationType"
     description: "Kinds of evidence notifications emitted by the evidence subdomain."
     variants:

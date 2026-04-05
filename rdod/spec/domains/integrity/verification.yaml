@@ -158,21 +158,40 @@ properties:
     strategy: "kel_strategy(min_events=3)"
     notes: "Same sn, different SAID = likely duplicitous."
 
-  - invariant: "Events are NEVER automatically reprocessed or resolved"
+  - invariant: "LDE entries are NEVER automatically promoted, resolved, or reprocessed — they await explicit human/judge intervention. However, LDE entries ARE subject to pruning after the escrow timeout (default 3600s). Pruning is administrative cleanup, not resolution: a pruned LDE entry means the duplicity investigation was abandoned due to inactivity, NOT that the duplicity was resolved. After pruning, the entry is removed from .ldes but the conflict is NOT cleared."
     term: "Likely Duplicitous Escrow"
     technique: property-based
     formal:
       language: python
       expression: |
-        @given(lde_event=lde_event_strategy())
-        def test_lde_never_resolved(lde_event):
+        @given(lde_event=lde_event_strategy(), elapsed=st.integers(min_value=0, max_value=7200))
+        def test_lde_never_auto_resolved(lde_event, elapsed):
+            # L1-O26: Clarification — LDE entries can be pruned (timeout) but never auto-resolved
             processor = EventProcessor()
             processor.escrow_lde(lde_event)
-            for _ in range(100):
-                resolved = processor.process_escrows()
-                assert lde_event.said not in [r.said for r in resolved]
-    strategy: "lde_event_strategy()"
-    notes: "LDE is permanent forensic evidence."
+            processor.advance_time(elapsed)
+            resolved_events = processor.process_escrows()
+            # LDE entries are NEVER in the auto-resolved set
+            assert lde_event.said not in [r.said for r in resolved_events], (
+                "LDE entries must never be auto-resolved regardless of elapsed time"
+            )
+            # After timeout, entry may be pruned (removed) but NOT resolved
+            if elapsed >= 3600:
+                lde_entry = processor.get_lde(lde_event.prefix, lde_event.sn)
+                pruned_entries = processor.get_pruned()
+                # The entry is either still present (not yet swept) or pruned — never resolved
+                was_pruned = any(e.said == lde_event.said for e in pruned_entries)
+                if was_pruned:
+                    assert lde_entry is None, "Pruned entry must be removed from .ldes"
+                    # Pruning != resolution — duplicity is still noted
+    strategy: "lde_event_strategy() x st.integers for elapsed time"
+    notes: >
+      L1-O26: Reconciliation of 'never auto-resolve' vs timeout. These are NOT contradictory:
+      LDE entries are never automatically promoted or resolved (the duplicity stays unresolved),
+      BUT they ARE pruned from the escrow queue after timeout (3600s default). Pruning removes
+      the entry from .ldes to prevent unbounded growth; it does not clear the duplicity.
+      Once promoted to .dels (DEL), entries are permanent and never pruned.
+      Summary: LDE (.ldes) = temporary suspected evidence, prunable; DEL (.dels) = permanent confirmed evidence, never pruned.
 
 contracts:
   - port_ref: "port://integrity/inbound/monitoring"
@@ -191,8 +210,9 @@ contracts:
     preconditions:
       - formal:
           language: python
-          expression: "lambda aid, event: event.type == 'rot' and event.aid == aid and event.signatures_verified()"
-        description: "Superseding event must be a verified rotation event for the specified AID"
+          # L67-O15: Added 'drt' — delegated identifiers recover via delegated rotation
+          expression: "lambda aid, event: event.type in ('rot', 'drt') and event.aid == aid and event.signatures_verified()"
+        description: "Superseding event must be a verified rotation event (rot or drt) for the specified AID; delegated identifiers use drt for recovery"
     postconditions:
       - formal:
           language: python

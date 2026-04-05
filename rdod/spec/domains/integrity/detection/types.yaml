@@ -115,22 +115,11 @@ types:
           - "Issued when duplicity evidence is present but resolution is ambiguous"
           - "Re-evaluated when new evidence (recovery rotation, witness update) arrives"
 
-  - name: "NoDuplicity"
-    description: "Result when no duplicity is found for an AID — identical to the parent integrity domain type."
-    variants:
-      - name: "default"
-        fields:
-          - name: "aid"
-            type: "string"
-            required: true
-            description: "The AID that was checked"
-          - name: "checked_at"
-            type: "string"
-            required: true
-            description: "ISO 8601 datetime when the check completed"
-        invariants:
-          - "All known witnesses returned consistent events at every sn"
-          - "Equivalent to types://integrity#NoDuplicity"
+  # L67-O10: NoDuplicity was duplicated in both integrity/detection/types.yaml and
+  # integrity/types.yaml. The canonical type is in the parent (integrity/types.yaml).
+  # This subdomain now references the parent type rather than redefining it.
+  # Use: types://integrity#NoDuplicity
+  # (type removed from this file to eliminate duplication)
 
   - name: "TrustReconciled"
     description: "Trust restored for an AID after duplicity investigation — the judge determined the AID is trustworthy again."

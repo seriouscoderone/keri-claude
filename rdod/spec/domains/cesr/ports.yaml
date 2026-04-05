@@ -30,6 +30,25 @@ ports:
         - "errors://cesr#UnknownCodeError"
     refs: ["domain://identity", "domain://credential-lifecycle"]
 
+  # --- Genus Negotiation (L3-O5: Protocol Gap) ---
+  # NOTE: No genus negotiation port is defined — this is a deliberate protocol gap.
+  # The CESR spec assumes genus is declared in-band via GenusVersionCode (-_GGGVVV) at
+  # stream start. There is no handshake or negotiation mechanism: if a parser does not
+  # support the declared genus, the connection fails. Future work (not currently spec'd):
+  #   - A GenusNegotiation port might allow endpoints to discover supported genera before streaming.
+  #   - This would be a transport-layer concern (e.g., HTTP Content-Type negotiation), not a
+  #     CESR encoding-layer concern.
+  # Tracking: L3-O5 — marked as protocol gap, not a spec defect.
+
+  # --- protocols.yaml (L3-O6: Needed for cold-start and mixed-mode) ---
+  # NOTE: protocols.yaml is absent from this spec. It is needed to enumerate:
+  #   - All supported protocol identifiers (PPPP: KERI, ACDC, etc.)
+  #   - Supported genus identifiers (GGG) per protocol
+  #   - Cold-start behavior when no GenusVersionCode precedes the stream
+  #   - Mixed-mode: streams that mix primitives from different genera
+  # Until protocols.yaml is authored, cold-start/mixed-mode behavior is underspecified.
+  # Tracking: L3-O6 — marked as needed, deferred to future spec work.
+
   # Subdomain inbound ports are defined in their respective ports.yaml files:
   #   - primitives: port://cesr/primitives/inbound/qualification
   #   - composition: port://cesr/composition/inbound/stream-composition

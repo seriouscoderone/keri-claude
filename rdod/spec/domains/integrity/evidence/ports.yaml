@@ -8,8 +8,16 @@ ports:
     name: "Evidence Management"
     semantics: command
     idempotent: false
+    description: >
+      Accepts a SuspectedFork notification (two conflicting events at the same AID/sn)
+      and validates it as duplicity evidence. On success, promotes to DuplicityEvidence
+      and stores in the DEL. On failure, raises an appropriate error.
     contract:
-      input: "types://integrity/evidence#ForkDetected"
+      # L5-O7: Renamed from ForkDetected to SuspectedFork to avoid name collision with the
+      # event type ForkDetected (which is the domain event emitted after detection).
+      # SuspectedFork is the INPUT type (caller's claim of a conflict).
+      # ForkDetected is the OUTPUT event (system's confirmed detection).
+      input: "types://integrity/evidence#SuspectedFork"
       output: "types://integrity/detection#DuplicityEvidence"
       errors:
         - "errors://integrity/evidence#NotDuplicityError"
@@ -36,6 +44,11 @@ ports:
     name: "Duplicity Evidence Repository"
     semantics: command
     idempotent: false
+    description: >
+      Persistence port covering both LDE (.ldes) and DEL (.dels) operations.
+      Supports write (add to LDE, append to DEL), read/query (get by AID/sn,
+      list all for AID), remove (from LDE — idempotent), and sweep/prune
+      (remove expired LDE entries). DEL is append-only and never pruned.
     contract:
       input: "types://integrity/detection#DuplicityEvidence"
       output: "types://integrity/detection#DuplicityEventLog"
@@ -48,3 +61,42 @@ ports:
       - "Confirmed duplicity evidence is append-only — once recorded, it is permanent"
       - "prune_expired removes all escrowed events older than max_age_seconds and returns the count removed"
       - "Duplicity evidence pairs the conflicting events at the same AID and sequence number"
+      # L5-O9: query operations
+      - "get_lde(aid, sn) retrieves the LDE entry for (aid, sn) if present; returns None if absent"
+      - "get_all_lde(aid) retrieves all LDE entries for a given AID"
+      - "get_del(aid, sn) retrieves all DEL entries for (aid, sn); returns empty list if none"
+      - "get_all_del(aid) retrieves the complete DEL for a given AID"
+      - "has_lde(aid, sn) returns boolean — presence check without full retrieval"
+    notes: >
+      L5-O9: Read/query operations added as invariants. The escrow-storage port is primarily a
+      command port (write, delete, sweep) but also exposes query capabilities needed by the
+      evidence-management inbound port to check for duplicate escrow entries and by the
+      monitoring-lifecycle port to surface evidence to callers.
+
+  # L5-O11: LDE→DEL promotion port (outbound)
+  - id: "port://integrity/evidence/outbound/evidence-promotion"
+    type: outbound
+    name: "Evidence Promotion"
+    semantics: command
+    idempotent: false
+    description: >
+      Promotes a suspected (LDE) entry to confirmed duplicity evidence (DEL) after
+      a second independent source has verified the conflicting event. Promotion requires
+      that both conflicting events carry valid signatures verified by independent sources.
+    contract:
+      input: "types://integrity/evidence#LDEEntry"
+      output: "types://integrity/detection#DuplicityEvidence"
+      errors: []
+    refs: ["domain://externals/persistence"]
+    invariants:
+      # L5-O11: Promotion criterion — second independent source must verify
+      - "Promotion MUST require signature verification of the conflicting event by at least one source independent of the first-seen source"
+      - "Promotion moves the entry from .ldes to .dels — the .ldes entry is removed and the .dels entry is appended"
+      - "Promotion is irreversible — once in .dels, the evidence is permanent"
+      - "If the second source's signature verification fails, promotion MUST NOT occur — the LDE entry remains suspected"
+    notes: >
+      L5-O11: Promotion criterion. The LDE→DEL promotion requires a second independent source
+      to verify the conflicting event's signatures. A single-source claim is insufficient for
+      confirmation — two independent sources with valid signatures constitute confirmed duplicity.
+      The promotion criterion is: both events have valid signatures AND at least two distinct
+      sources (different witness AIDs from different operators) have confirmed the conflict.

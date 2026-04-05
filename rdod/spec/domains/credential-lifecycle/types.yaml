@@ -36,6 +36,18 @@ types:
           - "State transitions: NotIssued → Issued (via bup/upd with ts='issued') → Revoked (via bup/upd with ts='revoked')"
           - "No reverse transitions — Revoked is terminal"
           - "Cannot skip states — must issue before revoking"
+        notes: |
+          Explicit FSM (L5-O23):
+            NotIssued --[upd/bup ts='issued']--> Issued
+            Issued    --[upd/bup ts='revoked']--> Revoked
+            Revoked   --[any]--> REJECTED (guard failure, event permanently rejected)
+
+          L2-O15 / L5-O15: REJECTED is NOT a credential state. It is a guard failure classification
+          returned by the StatusService when a TEL event requests an invalid state transition
+          (e.g., revoking a NotIssued credential, or re-issuing an already-Issued credential).
+          REJECTED events are returned as StatusWriteOutcome.rejected — they are never stored in
+          the TEL and do not modify the credential's lifecycle state. The credential remains in
+          its current state (NotIssued or Revoked) after a REJECTED outcome.
 
   # ACDC credential types
   - name: "Credential"
@@ -289,7 +301,7 @@ types:
           - "event_type determines which underlying TEL event was produced"
 
   - name: "SealRequest"
-    description: "Parameters for creating a KEL interaction event that anchors a seal — pairs an issuer AID with the seal to anchor."
+    description: "Parameters for creating a KEL interaction event that anchors a seal — pairs an issuer AID with the seal to anchor. The seal encodes the SAID and sequence number of the TEL event being authorized."
     variants:
       - name: "default"
         fields:
@@ -300,9 +312,58 @@ types:
           - name: "seal"
             type: "types://cesr/primitives#Seal"
             required: true
-            description: "The seal to anchor in the issuer's KEL"
+            description: "The seal to anchor in the issuer's KEL — contains TEL event SAID and sn"
+          - name: "registry_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "REGID of the registry whose TEL event is being authorized"
+          - name: "tel_event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the TEL event that this seal authorizes"
         invariants:
           - "Produces an interaction event (ixn) in the issuer's KEL with this seal in the anchors field"
+          - "The seal SAID must match tel_event_said for consistency verification"
+    notes: |
+      L811-O10: SealRequest was previously undefined. This type specifies the complete parameter
+      set for anchoring a TEL event in the issuer's KEL. The StatusService constructs this from
+      the authorized TEL event and passes it to the commit-authorization outbound port.
+
+  - name: "BackerConfiguration"
+    description: "Configuration of the backer (witness-equivalent) set for a shieldable registry. Backers authorize bup (shieldable update) events in the same way witnesses authorize KEL events."
+    variants:
+      - name: "default"
+        fields:
+          - name: "backers"
+            type: "array[types://cesr/primitives#AID]"
+            required: true
+            description: "Ordered list of authorized backer AIDs for this registry"
+          - name: "threshold"
+            type: "string"
+            required: true
+            description: "Backer signature threshold — integer (e.g., '2') or fractional (e.g., '1/2')"
+          - name: "registry_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "REGID this configuration applies to"
+        invariants:
+          - "Threshold must be satisfied by indexed signatures from the backers list"
+          - "Backers are non-transferable AIDs — they do not rotate (analogous to witnesses)"
+          - "Configuration is established at registry inception (rip) and immutable thereafter"
+          - "Bup events require BackerSignatureBundle satisfying this threshold before acceptance"
+        builder:
+          name: "BackerConfiguration.builder()"
+          required_fields:
+            - "registry(regid) — the registry this configuration belongs to"
+            - "backers([aid1, aid2, ...]) — ordered backer AID list"
+            - "threshold(expr) — threshold expression (integer or fractional string)"
+          invariants:
+            - "len(backers) >= threshold_integer if threshold is integer"
+            - "Threshold expression must parse as a valid KERI threshold"
+    notes: |
+      L811-O1: BackerConfiguration was missing. This type captures the backer set for a
+      shieldable registry. It is embedded in or referenced from the RegistryInceptionEvent
+      (rip) and is the basis for bup event threshold verification (L2-O16).
 
   - name: "TELEscrowType"
     description: "Classification of TEL escrow queues for credential events awaiting different blocking conditions."

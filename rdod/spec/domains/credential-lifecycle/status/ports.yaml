@@ -15,7 +15,7 @@ ports:
       (committed to TEL), escrowed (held pending missing prerequisites), or
       rejected.
     contract:
-      input: "types://credential-lifecycle/status#StateQueryInput"
+      input: "types://credential-lifecycle/status#TELEvent"
       output: "types://credential-lifecycle/status#StatusWriteOutcome"
       errors:
         - "errors://credential-lifecycle/status#InvalidCredentialStateError"
@@ -35,11 +35,19 @@ ports:
     name: "State Reconstruction"
     semantics: query
     idempotent: true
+    description: >
+      Replays all TEL events for a registry or credential to produce the current state.
+      Returns an array of LifecycleStateSnapshot (one per credential) when replaying a full
+      registry, or a single-element array when scoped to one credential. The array form
+      enables batch reconstruction without requiring callers to issue one query per credential.
     contract:
       input: "types://credential-lifecycle/status#StateReconstructionInput"
-      output: "types://credential-lifecycle/status#LifecycleStateSnapshot"
+      output: "array[types://credential-lifecycle/status#LifecycleStateSnapshot]"
       errors: []
     refs: ["domain://credential-lifecycle"]
+    notes: |
+      Scoping: if StateReconstructionInput.credential_said is provided, the result contains
+      exactly one snapshot; if absent, all credentials in the registry are reconstructed.
 
   # Outbound — CQRS read model (query-only projection of the TEL)
   - id: "port://credential-lifecycle/status/outbound/status-read-model"
@@ -75,7 +83,7 @@ ports:
       storage. All writes go through the StatusService, never directly to the
       repository.
     contract:
-      input: "types://credential-lifecycle/status#TelEventUnion"
+      input: "types://credential-lifecycle/status#TELEvent"
       output: "types://credential-lifecycle/status#StatusWriteOutcome"
       errors:
         - "errors://credential-lifecycle/status#StatusServiceStateError"

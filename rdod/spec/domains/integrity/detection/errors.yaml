@@ -121,3 +121,25 @@ errors:
         type: "integer"
         description: "How long the event was escrowed before timeout"
     related_port: "port://integrity/detection/outbound/lde-escrow"
+
+  # L1-O24: InsufficientDiversityError — was missing from this errors.yaml
+  - name: "InsufficientDiversityError"
+    description: "Watcher cannot reach sufficient distinct witness sources to perform a high-confidence duplicity check"
+    cause: "Available witness sources are fewer than ceil((N+1)/2) where N is the total witness count; the watcher can still check duplicity in degraded mode but the confidence level is reduced"
+    # 'ignore' = watcher continues in degraded mode (not abort — monitoring does not stop)
+    recovery: "ignore"
+    severity: "recoverable"
+    context:
+      - field: "prefix"
+        type: "string"
+        description: "The AID being monitored"
+      - field: "available_count"
+        type: "integer"
+        description: "Number of witness sources the watcher can currently reach"
+      - field: "required_count"
+        type: "integer"
+        description: "Minimum count needed for SUFFICIENT confidence: ceil((total_witnesses+1)/2)"
+      - field: "total_witnesses"
+        type: "integer"
+        description: "Total number of designated witnesses for this AID"
+    related_port: "port://integrity/detection/inbound/monitoring-lifecycle"

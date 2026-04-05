@@ -297,14 +297,24 @@ state_machines:
         to: "di-verified"
         trigger: "Delegator's KEL becomes available — retry validation from step 3"
         guard: "Delegator's KEL has been fetched and processed"
+      # H-O9: pruned is an explicit terminal state reached when escrow timeout expires
+      - from: "escrowed-delegable"
+        to: "pruned"
+        trigger: "Delegable escrow timeout exceeded (default 1200s, configurable)"
+        guard: "current_time - escrow_time >= delegable_timeout"
+      - from: "escrowed-pde"
+        to: "pruned"
+        trigger: "PDE escrow timeout exceeded (default 3600s, configurable)"
+        guard: "current_time - escrow_time >= pde_timeout"
     invariants:
       - "Events must pass steps in order — no skipping from received to seal-located"
       - "Escrowed events can be promoted back to the validation pipeline when new information arrives"
       - "Rejected events are terminal — they cannot re-enter the pipeline"
       - "Approved events have passed all four validation steps and are ready for KEL insertion"
-      - "Escrow timeout transitions to implicit pruned state: Delegable=1200s, PDE=3600s (configurable implementation parameters)"
+      - "Pruned events are terminal — they are removed from the escrow queue and cannot re-enter the pipeline; pruning is not rejection (no protocol error), it is administrative cleanup after timeout"
+      - "Escrow timeout durations: Delegable=1200s, PDE (via PSE)=3600s — these are configurable implementation parameters, not protocol normative values"
     initial_state: "received"
-    terminal_states: ["approved", "rejected"]
+    terminal_states: ["approved", "rejected", "pruned"]
 
 validation_constraints:
   - id: "C1_delegate_sigs_valid"

@@ -38,6 +38,7 @@ types:
           - "Construction from any one representation yields the other two"
           - "Qualification (type-level operation): constructing a Matter from raw bytes, qb64, or qb2 is idempotent — the same input always yields the same qualified primitive. Errors: InvalidPrimitiveCodeError, RawSizeMismatchError, InvalidQB64Error, InvalidQB2Error."
           - "Subtype-specific validation: Verfer construction additionally verifies key algorithm compatibility; Diger validates digest length; Siger/Cigar may raise SignatureVerificationError or DigestMismatchError on verify()."
+          - "Reserved/unassigned codes: all 26 uppercase letters (A-Z) are assigned; only lowercase 'a' (Salt_256) is assigned. Lowercase b-z are parser-recognized but RESERVED/UNASSIGNED — construction with a reserved code MUST raise InvalidPrimitiveCodeError with cause='reserved/unassigned' (distinct from 'unknown' or 'invalid format')."
 
   - name: "SigningThreshold"
     description: "CESR-encoded threshold expression (Tholder). Three encoding variants for representing signing quorum requirements. Tholder owns BOTH encoding/decoding AND satisfaction logic — satisfy() is a core part of Tholder, not delegated to a separate domain. This is a deliberate design choice following keripy."

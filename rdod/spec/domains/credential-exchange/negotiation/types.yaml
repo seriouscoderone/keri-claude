@@ -134,6 +134,61 @@ types:
         invariants:
           - "MUST bundle all three artifacts — missing any makes the grant unverifiable"
           - "Sent by discloser after agree (negotiated) or directly (direct issuance)"
+        builder:
+          name: "GrantMessage.builder()"
+          required_fields:
+            - "route('/ipex/grant') — fixed route value"
+            - "acdc(credential) — the ACDC credential being granted"
+            - "telEvent(event) — TEL issuance event (upd/bup with ts='issued')"
+            - "kelSeal(seal) — KEL interaction event seal authorizing the TEL event"
+          invariants:
+            - "acdc.said must match tel_event.transaction_acdc_said"
+            - "tel_event must be authorized by the kel_seal (seal references same ixn event)"
+            - "kel_seal must be verifiable against current issuer key state"
+
+  - name: "OfferPayload"
+    description: "Typed payload for an IPEX offer message — the structured content carried in the offer's a field."
+    variants:
+      - name: "default"
+        fields:
+          - name: "schema_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the credential schema being offered"
+          - name: "credential_preview"
+            type: "types://credential-lifecycle#Credential"
+            required: true
+            description: "Metadata ACDC (or partial credential) previewing what will be granted"
+          - name: "terms"
+            type: "map"
+            required: false
+            description: "Chain-link confidentiality terms (rules section content) — present if contractual agreement required"
+        invariants:
+          - "credential_preview may be a metadata ACDC (empty u field) for chain-link confidentiality"
+          - "If terms are present, the disclosee MUST agree before grant is sent"
+
+  - name: "ApplyPayload"
+    description: "Typed payload for an IPEX apply message — the structured content carried in the apply's a field."
+    variants:
+      - name: "default"
+        fields:
+          - name: "schema_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the desired credential schema"
+          - name: "requested_attributes"
+            type: "map"
+            required: false
+            description: "Attribute hints the applicant requests be included (advisory — issuer decides)"
+          - name: "message"
+            type: "string"
+            required: false
+            description: "Human-readable request context"
+        invariants:
+          - "schema_said is the only required field — issuer decides what attributes to include"
+        notes: |
+          L5-O15: OfferPayload and ApplyPayload were previously typed as 'map'. These typed
+          variants make the payload structure explicit for builder construction.
 
   - name: "NegotiationThread"
     description: "The state of an in-progress IPEX negotiation between two parties. Tracks the message chain and current protocol state."
@@ -171,6 +226,27 @@ types:
           - "State transitions follow the IPEX FSM defined in verification.yaml"
           - "Admitted and Spurned are terminal — no further messages accepted"
           - "Role alternation: apply/agree/admit from disclosee; offer/grant from discloser"
+        builder:
+          name: "NegotiationThread.builder()"
+          required_fields:
+            - "threadId(said) — SAID of the initial message"
+            - "discloser(aid) — AID of the issuer/holder"
+            - "disclosee(aid) — AID of the requester/verifier"
+            - "initialMessage(msg) — first message in the chain (apply or direct grant)"
+          invariants:
+            - "Initial state is Idle; transitions to Applied after apply, or Granted after direct grant"
+            - "threadId equals the SAID of the initial message (no separate UUID)"
+        notes: |
+          L5-O13: Spurn-and-restart. When a SpurnMessage is sent or received, the current
+          NegotiationThread transitions to the Spurned terminal state. A new negotiation
+          requires a new NegotiationThread with a new thread_id (a fresh apply message creates
+          a new SAID chain). There is no 'reset' operation — Spurned threads are immutable records.
+
+          L5-O20: v1/v2 ExchangeMessage discrimination. NegotiationThread does not carry the
+          protocol version — version is determined by the ExchangeMessage.v field of each message
+          in the messages array. v1 messages use rp/e fields; v2 messages use x/ri fields.
+          Implementations MUST handle mixed-version threads (rare: v1 apply, v2 grant) by
+          inspecting each message's version string independently.
 
   - name: "AdmitMessage"
     description: "An IPEX admit exchange message (exn) accepting a granted credential."

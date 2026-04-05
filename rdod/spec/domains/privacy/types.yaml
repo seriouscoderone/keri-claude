@@ -55,13 +55,15 @@ types:
       - name: "nested-partial"
         fields:
           - name: "sections"
-            type: "map"
+            type: "types://privacy#NestedPartialDisclosureMap"
             required: true
-            description: "Each top-level section (a, e, r) independently at a different disclosure level"
+            description: "Per-section disclosure map — each top-level section (a, e, r) at an independently chosen disclosure level"
         invariants:
           - "Each nested block can independently be compact, partial, or full"
           - "Verification follows the SAID tree — each block verifiable against its parent's SAID"
           - "Between partial (one level) and full (all levels)"
+          - "Public blocks (no u field) MUST be compact or full — no partial form for public sections"
+          - "SAID ordering: section SAIDs are verified per the schema-defined anyOf order (see ACDC spec §5.4)"
         examples:
           - "Credential with full attributes, compact edges, partial rules — reveals what you do but not who vouched for you"
       - name: "full"
@@ -109,6 +111,72 @@ types:
           - "Issuer signs shielded SAIDs, not the SADs themselves"
           - "Proof of inclusion: discloser unshields their SAID, verifier checks against bulk commitment"
           - "Distinct from Bulk-Issued pattern: this is the DISCLOSURE form, not the issuance pattern"
+
+  - name: "NestedPartialDisclosureMap"
+    description: "A per-section field structure for nested-partial disclosure — maps each top-level ACDC section label to its chosen disclosure level and optional field-level selections."
+    variants:
+      - name: "default"
+        fields:
+          - name: "attribute_section"
+            type: "string"
+            required: false
+            description: "Disclosure level for the attribute section (a)"
+            constraints:
+              enum: ["compact", "partial", "full"]
+          - name: "edge_section"
+            type: "string"
+            required: false
+            description: "Disclosure level for the edge section (e)"
+            constraints:
+              enum: ["compact", "partial", "full"]
+          - name: "rule_section"
+            type: "string"
+            required: false
+            description: "Disclosure level for the rule section (r)"
+            constraints:
+              enum: ["compact", "partial", "full"]
+          - name: "field_selections"
+            type: "map"
+            required: false
+            description: "For partial sections: which specific fields within a section to expand. Map from section label to list of field names to reveal."
+        invariants:
+          - "Absent section entry means compact (SAID-only) for that section"
+          - "Public sections (no u field) MUST use compact or full — partial is unavailable"
+          - "field_selections applies within partial sections — reveals only named fields"
+          - "SAID ordering rule (L811-O16): the canonical order for computing section SAIDs follows the schema-defined anyOf order per ACDC spec. Disclosed fields must appear in schema-canonical order to produce a valid SAID match."
+        notes: |
+          L811-O13: nested-partial previously had no field structure — it used a plain map.
+          This typed NestedPartialDisclosureMap makes the per-section granularity explicit.
+          L811-O16: SAID ordering in selective and nested-partial disclosure follows the
+          anyOf order defined in the JSON Schema for the section. The ACDC spec (§5.4)
+          specifies that the AGID is computed as the digest of the concatenation of attribute
+          SAIDs in schema-defined order, not insertion order. Implementations MUST sort
+          disclosed attributes by schema anyOf order before computing or verifying an AGID.
+
+  - name: "AGIDComputationInput"
+    description: "Input for computing an Aggregate Identifier (AGID) — the digest commitment over selectively-disclosable attribute SAIDs."
+    variants:
+      - name: "default"
+        fields:
+          - name: "attribute_saids"
+            type: "array[types://cesr/primitives#SAID]"
+            required: true
+            description: "SAIDs of all selectively-disclosable attributes, in schema-defined anyOf order"
+          - name: "digest_algorithm"
+            type: "string"
+            required: true
+            description: "Digest algorithm used for AGID computation (matches ACDC version)"
+            constraints:
+              enum: ["blake3-256", "sha3-256", "sha2-256"]
+        invariants:
+          - "attribute_saids MUST be in schema-defined anyOf order — not insertion order"
+          - "AGID = digest(concatenate(attribute_saids))"
+          - "Adding or removing attributes invalidates the AGID — issuer must reissue"
+        notes: |
+          L811-O14: No AGID computation port was previously defined. The AGIDComputationInput
+          type provides the parameters for AGID computation. The actual computation is a
+          cryptographic operation delegated to the externals/cryptographic-primitives domain.
+          See port://privacy/outbound/digest for the outbound port that performs this computation.
 
   - name: "ChainLinkConfidentialityGate"
     description: "A disclosure control that requires contractual agreement before revealing full credential content. Implemented through the IPEX offer/agree steps."

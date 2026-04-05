@@ -209,7 +209,7 @@ properties:
     notes: "Default OOE timeout is 1200s (20 minutes)."
 
   # Escrow Timeout invariants
-  - invariant: "Escrow timeout semantics: an escrowed item with age A and configured timeout T is active when A < T and MUST be pruned when A >= T. Timeout is checked during each processing cycle. Pruned items are permanently discarded — they cannot re-enter any escrow. Default timeouts: OOE=1200s, PSE=3600s, PWE=3600s, PDE=86400s."
+  - invariant: "Escrow timeout semantics: an escrowed item with age A and configured timeout T is active when A < T and MUST be pruned when A >= T. Timeout is checked during each processing cycle. Pruned items are permanently discarded — they cannot re-enter any escrow. Default timeouts: OOE=1200s, PSE=3600s, PWE=3600s, PDE=86400s, LDE=3600s. Reconciliation note (L67-O33): The LDE and PDE timeouts have different semantics — PDE has 86400s (24 hours) because delegation approval may require human action; LDE has 3600s (1 hour) because it holds forensic evidence. Implementations MAY configure LDE to retain events longer (forensic evidence value), but the default is 3600s. keripy TimeoutLDE=3600, TimeoutPDE=86400."
     term: "Escrow Timeout"
     technique: property-based
     formal:
@@ -247,8 +247,9 @@ properties:
             assert PSE_TIMEOUT == 3600, "PSE default timeout MUST be 3600s"
             assert PWE_TIMEOUT == 3600, "PWE default timeout MUST be 3600s"
             assert PDE_TIMEOUT == 86400, "PDE default timeout MUST be 86400s"
+            assert LDE_TIMEOUT == 3600, "LDE default timeout MUST be 3600s (configurable upward for forensic retention)"
     strategy: "st.integers for timeout and elapsed, plus boundary and default checks"
-    notes: "Active when A < T, pruned when A >= T. Pruned = permanent discard. Defaults: OOE=1200s, PSE=3600s, PWE=3600s, PDE=86400s."
+    notes: "Active when A < T, pruned when A >= T. Pruned = permanent discard. Defaults: OOE=1200s, PSE=3600s, PWE=3600s, PDE=86400s, LDE=3600s. PDE is 24h because delegation may require human intervention. LDE is 1h by default but may be extended for forensic value."
 
   # Misfit Event Escrow invariants
   - invariant: "Events are not automatically reprocessed -- they must be re-submitted from a local source"
@@ -270,7 +271,33 @@ properties:
   - invariant: "The four-way binding between AID, current controlling keypairs (Key State), the Controller entity, and the KEL MUST be cryptographically consistent. The AID is derived from or anchored to the initial keypair (SCID property). The Key State tracks current authoritative keypairs. The KEL provides verifiable history. The Controller holds the private keys."
     term: "Controller"
     technique: property-based
-    notes: "The fundamental security invariant of KERI — break any element and the system fails. Also known as the Tetrad Binding."
+    formal:
+      language: python
+      expression: |
+        # Property-based test stub — formal expression derivable from spec SCID property
+        # TODO: derive complete formal expression from spec section on Tetrad Binding / SCID
+        @given(kel=kel_strategy())
+        def test_tetrad_binding(kel):
+            aid = kel.prefix
+            inception = kel.events[0]
+            key_state = compute_key_state(kel)
+            # 1. AID is self-certifying from inception keys (SCID property)
+            if is_self_addressing(inception):
+                assert inception.d == aid, "Self-addressing AID must equal inception SAID"
+            else:
+                # Basic: AID equals the qualified public key
+                assert aid == inception.k[0], "Basic AID must equal the inception signing key"
+            # 2. Key state is derived from KEL (deterministic)
+            key_state_from_replay = compute_key_state(kel)
+            assert key_state == key_state_from_replay, "Key state must be deterministic from KEL"
+            # 3. All events in KEL are signed by keys whose digests were pre-committed
+            for i, event in enumerate(kel.events[1:], 1):
+                if event.t in ('rot', 'drt'):
+                    prior_est = kel.prior_establishment(i)
+                    for key in event.k:
+                        assert digest(key) in prior_est.n, "Rotation keys must match prior commitments"
+    strategy: "kel_strategy()"
+    notes: "The fundamental security invariant of KERI — break any element and the system fails. Also known as the Tetrad Binding. TODO: formal expression is a stub — derive complete SMT encoding from spec."
 
   - invariant: "Validation rules differ by event locality. A local event comes from a protected, trustable source (e.g., the device running the validation code). A remote event comes from an unprotected, untrustable source. Controllers and Witnesses SHOULD only sign and accept local events. A general Validator MUST verify all signatures regardless of locality."
     term: "Validator"

@@ -79,15 +79,37 @@ types:
           - "cascaded: acceptance triggered reprocessing of other escrowed events"
           - "pruned: event is no longer relevant (e.g., superseded by a later event)"
 
+  - name: "TelNotificationKind"
+    description: "Enumeration of notification kinds that trigger TEL escrow reprocessing. Each kind maps to a specific escrow queue drain operation."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum:
+                - "kel_arrived"
+                - "registry_created"
+                - "schema_resolved"
+                - "chain_resolved"
+                - "backer_signature_received"
+            notes: |
+              kel_arrived — a new KEL event arrived, may unblock MissingAnchor escrow
+              registry_created — registry inception (rip) processed, may unblock MissingRegistry escrow
+              schema_resolved — schema SAID now resolvable, may unblock MissingSchema escrow
+              chain_resolved — chained ACDC dependency resolved, may unblock MissingChain escrow
+              backer_signature_received — additional backer signature arrived, may unblock PartialWitness escrow
+
   - name: "TelNotification"
     description: "Notification that a TEL-related event occurred, used to trigger escrow reprocessing."
     variants:
       - name: "default"
         fields:
           - name: "kind"
-            type: "string"
+            type: "types://credential-lifecycle/verification#TelNotificationKind"
             required: true
-            description: "Type of notification (e.g., kel_arrived, registry_created, schema_resolved)"
+            description: "Type of notification — determines which escrow queue to drain"
           - name: "event_said"
             type: "string"
             required: true
@@ -97,13 +119,109 @@ types:
             required: true
             description: "REGID of the affected registry"
 
+  - name: "EscrowType"
+    description: "Enumeration of TEL escrow queue types. Each type corresponds to a distinct blocking condition. Extended codes cover bup-specific partial-witness scenarios."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            constraints:
+              enum:
+                - "OOT"
+                - "MRE"
+                - "MIE"
+                - "MAE"
+                - "MSE"
+                - "MCE"
+                - "PWE"
+            notes: |
+              OOT — Out-Of-Order: event sn > expected; prior event not yet received
+              MRE — Missing Registry Escrow: registry inception (rip) not yet received
+              MIE — Missing Issuer Escrow: issuer KEL not yet available
+              MAE — Missing Anchor Escrow: KEL anchor seal not yet found
+              MSE — Missing Schema Escrow: credential schema SAID not yet resolvable
+              MCE — Missing Chain Escrow: chained ACDC dependency not yet resolved
+              PWE — Partial Witness Escrow (bup only): insufficient backer signatures for threshold
+    notes: |
+      L5-O21: PWE (Partial Witness Escrow) is specific to bup events — bup requires a backer
+      signature threshold to be satisfied before the event is accepted. Partial backer signature
+      sets are held in PWE until the threshold is met or the escrow times out.
+
+  - name: "BackerSignatureBundle"
+    description: "A collection of backer (witness-equivalent) signatures for a shieldable update event (bup). Required because bup events must reach a backer signature threshold before acceptance — analogous to witness receipts for KEL events."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the bup event this bundle covers"
+          - name: "signatures"
+            type: "array[types://cesr/primitives#IndexedSignature]"
+            required: true
+            description: "Indexed signatures from backers, ordered by backer index in the registry's backer list"
+          - name: "threshold"
+            type: "string"
+            required: true
+            description: "Required backer signature threshold — must be satisfied for acceptance"
+          - name: "backers"
+            type: "array[types://cesr/primitives#AID]"
+            required: true
+            description: "Ordered list of authorized backers for this registry"
+        invariants:
+          - "len(signatures) must satisfy the threshold expression before the bundle is accepted"
+          - "Each signature index corresponds to a position in the backers list"
+          - "Partial bundle (threshold not met) is held in PWE escrow until additional signatures arrive"
+          - "Threshold verification: same algorithm as KEL multi-sig threshold satisfaction"
+        notes: |
+          L2-O12: BackerSignatureBundle is the bup counterpart to KEL witness receipt bundles.
+          L2-O16: Bup threshold invariant — a bup event MUST NOT be applied until
+          len(satisfied_signatures) satisfies the registry's backer threshold expression.
+          L5-O26: Partial witness escrow for bup — when a bup arrives with fewer backer
+          signatures than required, it is placed in PWE escrow. As additional backer
+          signatures arrive (via message-transport), they are appended to the bundle. When
+          the threshold is met, the bundle is promoted from PWE to accepted.
+
+  - name: "TemporalKeyStateBinding"
+    description: "Binding of a TEL event to the issuer's key state at the time the event was created. Required for verifying historical events after key rotation — the event was signed by keys that may no longer be current."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the TEL event whose key-state binding is recorded"
+          - name: "key_state_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the key state (KSN) at the time the TEL event was created"
+          - name: "sn_at_creation"
+            type: "integer"
+            required: true
+            description: "KEL sequence number of the issuer at the time of TEL event creation"
+        invariants:
+          - "Verification uses the historical key state, not the current key state"
+          - "Post-rotation: events created before rotation are verified against pre-rotation keys"
+          - "Cross-reference: parent invariant in identity/state domain — KeyState temporal anchoring"
+        notes: |
+          L5-O25: TemporalKeyStateBinding references the parent invariant defined in
+          types://identity/state#KeyState — specifically the rule that verification of a
+          signed event must use the key state as of the event's creation datetime, not the
+          resolver's current key state. See identity/state/verification.yaml for the invariant.
+          L811-O11: The postcondition of the bup authorization-lookup port returns the
+          historical key state (at creation time), not the current key state. This is
+          intentional — validation of a bup event must verify the issuer's signature against
+          the keys in effect when the bup was produced.
+
   - name: "EscrowFilter"
     description: "Filter criteria for querying escrowed TEL events from the escrow repository."
     variants:
       - name: "default"
         fields:
           - name: "escrow_type"
-            type: "string"
+            type: "types://credential-lifecycle/verification#EscrowType"
             required: true
             description: "Category of escrow to query"
           - name: "registry_said"

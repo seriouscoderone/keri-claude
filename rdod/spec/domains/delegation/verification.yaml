@@ -301,6 +301,69 @@ properties:
     strategy: "establishment_event_strategy() — with and without DID in c"
     notes: "DID trait is a boolean flag in the config array."
 
+  # L4-O4: Multi-level PDE cascade verification (stub)
+  - invariant: "For a delegation chain of depth N, a PDE cascade occurs when ALL levels in the chain are simultaneously waiting for delegator seals; every level must independently satisfy the four-step validation pipeline before the leaf delegated event can be accepted; a partially-satisfied chain (some seals present, some missing) MUST NOT accept the leaf event"
+    term: "Partially-Delegated Escrow"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(chain=delegation_chain_strategy(min_length=2, max_length=4))
+        def test_pde_cascade_all_levels_required(chain):
+            # Build a leaf event at the deepest level
+            leaf_event = build_delegated_event(chain[-1])
+            # Provide seals for all but one level
+            for i, level in enumerate(chain[:-1]):
+                if i == len(chain) - 2:
+                    # Omit the seal at the penultimate level
+                    continue
+                provide_delegator_seal(level, chain[i + 1])
+            result = validate_delegation_chain(leaf_event, chain)
+            # L4-O4 stub: full cascade verification is deferred to v0.2
+            # The assertion here is that partial seals are insufficient
+            assert result.disposition != 'approved', (
+                "Leaf event must not be approved when any level is missing its delegator seal"
+            )
+    strategy: "delegation_chain_strategy() — multi-level chains with partial seal coverage"
+    notes: >
+      L4-O4: Multi-level PDE cascade verification stub. Full specification of the cascade
+      algorithm (which levels must be resolved in which order, escrow interactions across
+      levels) is deferred to v0.2. The key invariant is: every level must independently
+      satisfy the delegation validation pipeline before the leaf event can be accepted.
+
+  # L4-O5: DelegationBinding rotation variant — explicit seal matching
+  - invariant: "A DelegationBinding for a drt event MUST verify that the delegator's approval seal references the specific drt event being bound, not a prior dip or an earlier drt; seal.d MUST equal the SAID of the current drt event; a seal for a prior rotation event MUST NOT authorize a new rotation"
+    term: "Delegation Binding"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(drt=delegated_rotation_strategy(),
+               prior_drt=delegated_rotation_strategy(),
+               delegator_kel=kel_strategy())
+        def test_rotation_binding_seal_specificity(drt, prior_drt, delegator_kel):
+            assume(drt.sn > prior_drt.sn)
+            # Delegator provides seal for prior_drt, not for current drt
+            prior_seal = build_seal(i=drt.aid, s=prior_drt.sn, d=prior_drt.said)
+            delegator_kel_with_prior_seal = add_seal_to_kel(delegator_kel, prior_seal)
+            result = validate_delegation(drt, delegator_kel_with_prior_seal)
+            # Seal for a prior drt MUST NOT authorize the current drt
+            assert result.disposition != 'approved', (
+                f"Seal for prior drt (sn={prior_drt.sn}) must not authorize current drt (sn={drt.sn})"
+            )
+            # Correct seal must match current drt's SAID
+            correct_seal = build_seal(i=drt.aid, s=drt.sn, d=drt.said)
+            delegator_kel_with_correct_seal = add_seal_to_kel(delegator_kel, correct_seal)
+            result2 = validate_delegation(drt, delegator_kel_with_correct_seal)
+            assert result2.disposition == 'approved', (
+                f"Seal for current drt (sn={drt.sn}, said={drt.said}) must authorize it"
+            )
+    strategy: "delegated_rotation_strategy() x kel_strategy()"
+    notes: >
+      L4-O5: DelegationBinding rotation variant. Seal matching must be specific to the current
+      drt event's SAID. A delegator providing a seal for a prior rotation does not implicitly
+      authorize subsequent rotations. Each rotation requires its own delegator seal.
+
   # --- Delegator Approval Rules (Finding KERI-INV-020) ---
   - invariant: "A delegator SHOULD NOT auto-approve a delegable rotation that changes the witness pool beyond the prior threshold. The AID for a delegated identifier MUST be a fully qualified SAID of its inception event content including the di (delegator AID) field — changing the di field MUST change the delegated AID, cryptographically binding the delegate to a specific delegator."
     term: "Delegated Inception"

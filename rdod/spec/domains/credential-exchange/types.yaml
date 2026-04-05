@@ -1,6 +1,142 @@
 domain_ref: "credential-exchange"
 
 types:
+  # L811-O7: IPEX message type stubs at the parent domain level for external reference
+  - name: "ApplyMessage"
+    description: "IPEX apply — a request by a disclosee to receive a credential of a given schema. Initial message in a negotiated issuance flow. Detailed type defined in credential-exchange/negotiation#IPEXMessage.apply."
+    variants:
+      - name: "stub"
+        fields:
+          - name: "route"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["/ipex/apply"]
+          - name: "schema_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the desired credential schema"
+        invariants:
+          - "First message in negotiation thread — p field is empty"
+          - "Delegates to: types://credential-exchange/negotiation#IPEXMessage (apply variant)"
+
+  - name: "AgreeMessage"
+    description: "IPEX agree — a disclosee's acceptance of the terms offered in an offer message. Required for chain-link confidentiality flows. Detailed type defined in credential-exchange/negotiation#AgreeMessage."
+    variants:
+      - name: "stub"
+        fields:
+          - name: "route"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["/ipex/agree"]
+          - name: "offer_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the offer message being agreed to"
+        invariants:
+          - "p field references the offer message's SAID"
+          - "Delegates to: types://credential-exchange/negotiation#AgreeMessage"
+
+  - name: "GrantMessage"
+    description: "IPEX grant — delivers a credential with its full proof bundle (ACDC + TEL event + KEL seal). Detailed type defined in credential-exchange/negotiation#GrantMessage."
+    variants:
+      - name: "stub"
+        fields:
+          - name: "route"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["/ipex/grant"]
+          - name: "acdc"
+            type: "types://credential-lifecycle#Credential"
+            required: true
+          - name: "tel_event"
+            type: "types://credential-lifecycle/status#TELEvent"
+            required: true
+          - name: "kel_seal"
+            type: "types://cesr/primitives#Seal"
+            required: true
+        invariants:
+          - "MUST bundle all three artifacts — ACDC + TEL event + KEL seal"
+          - "Delegates to: types://credential-exchange/negotiation#GrantMessage"
+        builder:
+          name: "GrantMessage.builder()"
+          required_fields:
+            - "acdc(credential) — the ACDC being granted"
+            - "telEvent(event) — TEL issuance event proving credential was issued"
+            - "kelSeal(seal) — KEL event seal authorizing the TEL event"
+          invariants:
+            - "acdc.said must match tel_event.transaction_acdc_said"
+            - "tel_event must be authorized by kel_seal"
+            - "kel_seal must be verifiable against issuer's current key state"
+
+  - name: "AdmitMessage"
+    description: "IPEX admit — a disclosee's acknowledgment of a received grant. Terminal message. Detailed type defined in credential-exchange/negotiation#AdmitMessage."
+    variants:
+      - name: "stub"
+        fields:
+          - name: "route"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["/ipex/admit"]
+          - name: "grant_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the grant message being admitted"
+        invariants:
+          - "Terminal — no further messages in this thread"
+          - "Delegates to: types://credential-exchange/negotiation#AdmitMessage"
+
+  # L67-O5: Proof-of-Issuance and Proof-of-Disclosure type stubs
+  - name: "ProofOfIssuance"
+    description: "Cryptographic proof that a credential was issued — the pairing of the TEL issuance event with the KEL seal that authorized it. Distinct from the credential itself: PoI proves the act of issuance, not the credential's claims."
+    variants:
+      - name: "default"
+        fields:
+          - name: "tel_event"
+            type: "types://credential-lifecycle/status#TELEvent"
+            required: true
+            description: "TEL event (upd/bup with ts='issued') recording the issuance"
+          - name: "kel_seal"
+            type: "types://cesr/primitives#Seal"
+            required: true
+            description: "KEL interaction event seal that authorized the TEL issuance event"
+          - name: "issuer_key_state"
+            type: "types://identity/state#KeyState"
+            required: true
+            description: "Issuer key state at the time of issuance (for temporal binding)"
+        invariants:
+          - "tel_event.transaction_state must equal 'issued'"
+          - "kel_seal must be present in the issuer's KEL at the stated sn"
+          - "kel_seal must be verifiable against issuer_key_state"
+          - "Constitutes the proof required in an IPEX grant message"
+
+  - name: "ProofOfDisclosure"
+    description: "Cryptographic proof that a holder legitimately disclosed a credential — the admit message that acknowledges the grant. Distinct from PoI: PoD proves that a specific party received and acknowledged the credential."
+    variants:
+      - name: "default"
+        fields:
+          - name: "grant_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the grant message that transferred the credential"
+          - name: "admit_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the admit message acknowledging receipt"
+          - name: "disclosee_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "AID of the party who admitted the grant"
+        invariants:
+          - "admit_said must reference grant_said in its p field"
+          - "admit must be signed by disclosee_aid"
+          - "Together with PoI: proves a specific party received a specific issued credential"
+
+  # AuthenticationResult is defined in types://credential-exchange/proof#AuthenticationResult
+
   - name: "OfferMessage"
     description: "An IPEX offer exchange message (exn) presenting a credential preview to a prospective holder."
     variants:

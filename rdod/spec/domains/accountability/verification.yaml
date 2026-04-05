@@ -257,6 +257,36 @@ properties:
     strategy: "witness_aid_strategy() x witnessed_event_strategy()"
     notes: "Spec L3002-3085. Finding: KERI-INV-018."
 
+  # L67-O3: ReceiptMessage.d SAID inversion verification property
+  - invariant: "ReceiptMessage.d MUST equal the SAID of the receipted event, NOT a self-SAID of the receipt message. The receipt body is NOT SAIDified — d is a foreign reference. A validator that computes SAID(ReceiptMessage) and compares to d WILL get a mismatch because d is SAID(referenced_event), not SAID(receipt_body)."
+    term: "Receipt"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(receipt_msg=receipt_message_strategy(), referenced_event=key_event_strategy())
+        def test_receipt_d_field_is_event_said(receipt_msg, referenced_event):
+            # Build a valid receipt message: d = SAID of the referenced event
+            receipt_msg.d = referenced_event.said
+            receipt_msg.i = referenced_event.aid
+            receipt_msg.s = referenced_event.sn
+            # d must match the referenced event's SAID
+            assert receipt_msg.d == referenced_event.said, (
+                "ReceiptMessage.d must be the SAID of the referenced event"
+            )
+            # d must NOT equal SAID(receipt_msg) — the receipt body is not self-SAIDified
+            receipt_body_said = compute_said(receipt_msg)
+            assert receipt_msg.d != receipt_body_said, (
+                "ReceiptMessage.d is a foreign SAID — it must NOT equal SAID(receipt_body)"
+            )
+    strategy: "receipt_message_strategy() x key_event_strategy()"
+    notes: >
+      L67-O3: The d field inversion: in KERI event messages (icp, rot, ixn), d is the SAID of
+      the message itself (self-SAIDified). In receipt messages (rct), d is the SAID of the EVENT
+      being receipted — it is a foreign reference, not a self-SAID. This is a deliberate design
+      choice: the receipt message is NOT in the KEL and need not be independently retrievable by SAID.
+      The witness signatures (CESR attachments) commit to the event by signing event_raw, not receipt_raw.
+
 contracts:
   - port_ref: "port://accountability/inbound/receipting"
     preconditions:

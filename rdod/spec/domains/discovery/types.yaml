@@ -179,3 +179,144 @@ types:
           - "key_state is derived from processing the KEL returned during resolution"
           - "endpoints are verified via BADA acceptance policy"
           - "Resolution is untrusted until the KEL is cryptographically verified"
+
+  - name: "DiscoveryReplyMessage"
+    description: "A signed reply message (rpy) used in endpoint authorization. Routes /end/role and /loc/scheme carry endpoint data; route /ksn carries key state notifications. Subject to BADA acceptance policy."
+    variants:
+      - name: "end-role"
+        fields:
+          - name: "route"
+            type: "string"
+            required: true
+            description: "Reply route"
+            constraints:
+              enum: ["/end/role/add", "/end/role/cut"]
+          - name: "cid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "Controller AID authorizing this endpoint"
+          - name: "role"
+            type: "string"
+            required: true
+            description: "Service role"
+            constraints:
+              enum: ["witness", "watcher", "agent", "controller", "mailbox"]
+          - name: "eid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "Endpoint service AID"
+          - name: "dt"
+            type: "string"
+            required: true
+            description: "ISO 8601 datetime — BADA uses this for staleness comparison"
+        invariants:
+          - "Must be signed by the controller AID (cid) whose endpoint this authorizes"
+          - "BADA: accepted if dt >= last accepted dt for this (cid, role, eid) triple"
+      - name: "loc-scheme"
+        fields:
+          - name: "route"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["/loc/scheme"]
+          - name: "eid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "Service AID whose location is being declared"
+          - name: "scheme"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["http", "https", "tcp", "ws", "wss"]
+          - name: "url"
+            type: "string"
+            required: true
+            description: "Full URL for the service"
+          - name: "dt"
+            type: "string"
+            required: true
+            description: "ISO 8601 datetime — BADA staleness comparison"
+        invariants:
+          - "Must be signed by the service AID (eid)"
+          - "BADA: accepted if dt >= last accepted dt for this (eid, scheme) pair"
+    notes: |
+      L67-O23: DiscoveryReplyMessage (ReplyMessage) was not previously defined in the discovery
+      domain. The keri-messaging domain has ReplyMessage as a generic type; this is the
+      discovery-domain-specific variant carrying endpoint authorization data.
+
+  - name: "BADAComparisonKey"
+    description: "Discriminated union of the key types used for BADA (Best Available Data Accepted) staleness comparison. Each route has a different key structure."
+    variants:
+      - name: "end-role-key"
+        fields:
+          - name: "cid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "Controller AID"
+          - name: "role"
+            type: "string"
+            required: true
+            description: "Service role"
+          - name: "eid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "Endpoint service AID"
+        invariants:
+          - "Triple (cid, role, eid) uniquely identifies an end-role authorization"
+          - "BADA: new message accepted if its dt > stored dt for this triple"
+      - name: "loc-scheme-key"
+        fields:
+          - name: "eid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "Endpoint service AID"
+          - name: "scheme"
+            type: "string"
+            required: true
+            description: "URL scheme (http, https, tcp, etc.)"
+        invariants:
+          - "Pair (eid, scheme) uniquely identifies a location scheme binding"
+          - "BADA: new message accepted if its dt > stored dt for this pair"
+      - name: "ksn-key"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "Controller AID whose key state notification is being stored"
+          - name: "watcher_aid"
+            type: "types://cesr/primitives#AID"
+            required: false
+            description: "Watcher AID that produced this KSN (present for watcher-sourced KSNs)"
+        invariants:
+          - "BADA: new KSN accepted if its sn > stored sn for this aid"
+          - "Different watchers can provide KSNs for the same AID — compared by sn not dt"
+    notes: |
+      L67-O24: BADAComparisonKey was not previously defined. The discriminated union makes
+      explicit that different BADA-governed routes use different comparison key structures.
+      end-role and loc-scheme use datetime (dt) for staleness; KSN uses sequence number (sn).
+
+  - name: "KSNAcceptanceInput"
+    description: "Input for accepting a Key State Notification (KSN) reply from a watcher or witness. The KSN carries the latest observed key state for an AID."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "AID whose key state is being reported"
+          - name: "key_state"
+            type: "types://identity/state#KeyState"
+            required: true
+            description: "Key state as reported by the source"
+          - name: "source_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "AID of the watcher or witness providing this KSN"
+          - name: "said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the rpy message carrying this KSN"
+        invariants:
+          - "KSN must be signed by source_aid"
+          - "key_state.sn must be >= current stored sn for this aid (BADA monotonic)"
+          - "key_state must be cryptographically verifiable against the aid's KEL"

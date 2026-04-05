@@ -8,6 +8,9 @@ ports:
     name: "Identity Management"
     semantics: command
     idempotent: false
+    description: >
+      Creates a new identifier by constructing and submitting an inception event.
+      Delegates to identity/establishment for validation and identity/state for KEL commit.
     contract:
       input: "types://identity#InceptionConfig"
       output: "types://identity/establishment#InceptionEvent"
@@ -15,20 +18,49 @@ ports:
         - "errors://identity/establishment#ValidationError"
     refs: ["domain://identity"]
 
+  - id: "port://identity/inbound/rotate-keys"
+    type: inbound
+    name: "Key Rotation"
+    semantics: command
+    idempotent: false
+    description: >
+      Rotates the signing keys for an existing identifier. Accepts new signing keys
+      (which must satisfy the prior next key digest commitments), new next key commitments,
+      optional witness set changes, and optional data anchors. Produces a rotation event
+      (rot or drt for delegated identifiers). Delegates to identity/establishment for
+      dual threshold validation (kt + nt) and identity/state for KEL commit.
+    contract:
+      input: "types://identity/key-commitment#KeyConfiguration"
+      output: "types://identity/establishment#RotationEvent"
+      errors:
+        - "errors://identity/establishment#ValidationError"
+        - "errors://identity/key-commitment#PreRotationBindingError"
+        - "errors://identity/thresholds#DualThresholdError"
+    refs: ["domain://identity"]
+
+  # Data Anchoring is defined in child domain identity/anchoring
+  # via port://identity/anchoring/inbound/data-anchoring — referenced here for discovery.
+  # Clients SHOULD call the parent port identity/inbound/anchor-data which delegates
+  # to identity/anchoring. See domain.yaml subdomains for via_port reference.
+
   - id: "port://identity/inbound/event-processing"
     type: inbound
     name: "Event Processing"
     semantics: command
     idempotent: false
+    description: >
+      Processes an incoming signed key event through the full validation pipeline and
+      commits it to the KEL (or routes it to an escrow queue). Returns a WriteOutcome
+      discriminated union: accepted (committed to KEL), escrowed (held pending resolution
+      of a blocking condition), or rejected (permanently refused).
+      Note: escrow outcomes (OOE, PSE, PWE, PDE, LDE, MFE) are NOT errors — they are
+      valid intermediate states in the KERI protocol's asynchronous event processing model.
+      The WriteOutcome discriminated union is the correct model; listing escrow types as
+      errors would misrepresent the protocol semantics.
     contract:
       input: "types://identity/establishment#SignedEventMessage"
-      output: "types://identity#EventValidated"
+      output: "types://identity/state#WriteOutcome"
       errors:
-        - "errors://identity/establishment#OutOfOrderError"
-        - "errors://identity/establishment#MissingSignatureError"
-        - "errors://identity/establishment#MissingWitnessSignatureError"
-        - "errors://identity/establishment#MissingDelegationError"
-        - "errors://identity/establishment#LikelyDuplicitousError"
         - "errors://identity/establishment#ValidationError"
     refs: ["domain://identity"]
 

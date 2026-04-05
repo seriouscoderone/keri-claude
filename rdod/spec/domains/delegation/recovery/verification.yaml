@@ -130,11 +130,50 @@ properties:
                 assert not can_supersede_by_later_arrival(r), (
                     f"Earlier rotation at sn={sn} must not be supersedable"
                 )
-            # Latest can potentially be superseded by a new candidate
+            # Latest can potentially be superseded by a new candidate that satisfies B1, B2, or B3
             new_candidate = build_superseding_rotation(latest)
-            assert can_be_superseded(latest, new_candidate) or not can_be_superseded(latest, new_candidate)
+            result = apply_superseding_rules(new_candidate, latest)
+            # L1-O23: Real assertion: only latest-seen rotation is eligible; earlier rotations are not
+            assert result.superseding_candidate == latest, (
+                "Only the latest-seen rotation at sn is eligible to be superseded"
+            )
     strategy: "st.lists of delegated rotations at the same sn"
     notes: "Only the most recently seen delegated rotation can be superseded — this limits the attack window."
+
+  # L1-O22: Rule C verification property (stub — full recursive verification requires multi-level KEL access)
+  - invariant: "Rule C (recursive delegation superseding): when neither A-rules nor B-rules resolve the superseding question at the current delegation level, verification MUST recurse up to the delegator's KEL and apply A/B rules there; recursion continues until the root non-delegated KEL is reached; at the root, only A-rules apply; if no rule is satisfied at any level, Rule C1 applies (incumbent wins)"
+    term: "Delegated Superseding Rules"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(chain=delegation_chain_strategy(min_length=2, max_length=4),
+               candidate=delegated_rotation_strategy(),
+               incumbent=delegated_rotation_strategy())
+        def test_rule_c_recursive_resolution(chain, candidate, incumbent):
+            # Rule C requires multi-level traversal
+            assume(candidate.sn == incumbent.sn)
+            result = apply_superseding_rules_recursive(candidate, incumbent, chain)
+            # If resolved at level L, rule must be one of A0, B1, B2, B3
+            if result.resolved:
+                assert result.rule in ('A0', 'B1', 'B2', 'B3'), (
+                    f"Resolution rule must be A0/B1/B2/B3, got {result.rule}"
+                )
+                assert result.level >= 0 and result.level < len(chain), (
+                    "Resolution level must be within the chain"
+                )
+            else:
+                # Rule C1 applies — incumbent wins
+                assert result.rule == 'C1', (
+                    "Unresolved recursion must produce C1 (incumbent wins)"
+                )
+                assert result.order == 'IncumbentRetains'
+    strategy: "delegation_chain_strategy() x delegated_rotation_strategy() x2"
+    notes: >
+      L1-O22: Rule C is the recursive delegation superseding rule. It traverses the delegation chain
+      upward, applying A/B rules at each level. This invariant is a stub — full verification requires
+      multi-level KEL access and recursive evaluation. The termination condition (C1) ensures that
+      the algorithm always terminates at the root non-delegated KEL.
 
   - invariant: "In custodial delegation, the delegator MUST hold or control the delegatee's pre-rotated private keys; this means the delegator can perform recovery rotation on behalf of the delegatee without the delegatee's cooperation"
     term: "Custodial Delegation"

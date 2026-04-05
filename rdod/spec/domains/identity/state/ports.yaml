@@ -106,7 +106,7 @@ ports:
       A reply is stale if it has a lower sn than the stored reply, or the same sn
       but an earlier datetime.
     contract:
-      input: "reply message with endorser AID and datetime"
+      input: "types://identity/state#BADAInput"
       output: "boolean (accepted or stale)"
       errors:
         - "errors://identity/state#UnverifiedReplyError"
@@ -123,8 +123,11 @@ ports:
       resolved are promoted to the KEL. Timed-out events are pruned.
       Note: escrow-drain operates on MUTABLE escrow queues (add/remove/prune),
       not on the append-only KEL. Pruning does not violate the append-only invariant.
+      Note: WriteOutcome is the correct model for escrow drain results. The escrow
+      queues themselves are not errors — they are pending-write state. The drain
+      re-submits each escrowed event through the guard and collects outcomes.
     contract:
-      input: "string"
+      input: "types://identity/state#EscrowQueueIdentifier"
       output: "types://identity/state#EscrowReprocessResult"
       errors: []
     refs: ["domain://externals/persistence"]

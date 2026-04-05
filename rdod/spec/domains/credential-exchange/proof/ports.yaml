@@ -8,6 +8,11 @@ ports:
     name: "Disclosure Verification"
     semantics: query
     idempotent: true
+    description: >
+      Verifies the full proof chain for a disclosed credential — checks that the ACDC SAID
+      matches the TEL event's credential reference, that the TEL event is authorized by the
+      KEL seal, and that the KEL seal is verifiable against the issuer's key state.
+      Does NOT authenticate the transport message (that is KRAM's job, authenticate-message).
     contract:
       input: "types://credential-exchange/negotiation#GrantBundle"
       output: "types://credential-exchange/proof#RegistryState"
@@ -16,18 +21,44 @@ ports:
         - "errors://credential-exchange/proof#ProofChainVerificationError"
         - "errors://credential-exchange/proof#ProofOfDisclosureError"
     refs: ["domain://credential-exchange"]
+    notes: |
+      L67-O7: verify-disclosure conflates two operations in the original spec. The two
+      distinct responsibilities are:
+        1. Proof-chain verification — ACDC SAID matches TEL, TEL authorized by KEL seal
+           (this port's responsibility: verify-disclosure)
+        2. Transport authentication — KRAM signature check + replay protection
+           (authenticate-message port's responsibility)
+      Callers MUST call authenticate-message before verify-disclosure for incoming messages.
+      verify-disclosure MAY be called standalone for locally-constructed disclosures.
+      L67-O8: MCF (Message Commitment Format) computation invariant stub —
+        The ACDC SAID in the grant bundle MUST equal SAID(serialize(acdc_fields)) with the
+        d field replaced by a placeholder. Verification recomputes this SAID and rejects
+        grants where the claimed SAID does not match the content.
 
   - id: "port://credential-exchange/proof/inbound/authenticate-message"
     type: inbound
     name: "KRAM Authentication"
     semantics: query
     idempotent: true
+    description: >
+      Authenticates an IPEX message using KRAM (KERI Request Authentication Mechanism).
+      Verifies the message signature against the sender's current key state, checks that
+      the message datetime is within the timeliness window, and confirms the message SAID
+      is not in the replay cache.
     contract:
       input: "types://credential-exchange/negotiation#IPEXMessage"
-      output: "types://credential-exchange/proof#RegistryState"
+      output: "types://credential-exchange/proof#AuthenticationResult"
       errors:
         - "errors://credential-exchange/proof#AuthenticationError"
     refs: ["domain://credential-exchange"]
+    notes: |
+      L67-O6: authenticate-message previously returned RegistryState, which is incorrect.
+      The output is AuthenticationResult — the outcome of KRAM authentication (success with
+      signer AID, or failure with reason). RegistryState is not a product of authentication.
+      L67-O9: RegistryState chicken-and-egg. RegistryState (mode: shieldable vs non-shieldable)
+      is needed to interpret bup vs upd events in the TEL chain. The mode is provided as input
+      to the TEL validation step (tel-chain-validation outbound port), not derived from the
+      authentication result. Callers MUST resolve registry mode before calling tel-chain-validation.
 
   # Outbound -- what proof delegates to
   - id: "port://credential-exchange/proof/outbound/tel-chain-validation"
@@ -35,6 +66,11 @@ ports:
     name: "TEL Chain Validation"
     semantics: query
     idempotent: true
+    description: >
+      Validates the TEL event chain for a credential — checks sequence number continuity,
+      hash chain linkage, and KEL seal authorization. Requires the registry mode (shieldable/
+      non-shieldable) to be provided by the caller, resolving the chicken-and-egg: mode is
+      looked up from the registry inception event (rip) before invoking this port.
     contract:
       input: "types://credential-lifecycle/status#TELEvent"
       output: "types://credential-exchange/proof#RegistryState"

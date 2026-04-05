@@ -23,8 +23,76 @@ ports:
     name: "Message Construction"
     semantics: query
     idempotent: true
+    description: >
+      Constructs a complete KERI message from a typed MessageConstructionRequest.
+      Computes the SAID after assembling all fields in canonical order.
     contract:
-      input: "types://keri-messaging#MessageType"
-      output: "types://keri-messaging#ExchangeMessage"
-      errors: []
+      input: "types://keri-messaging#MessageConstructionRequest"
+      output: "types://keri-messaging#KeyEventMessage"
+      errors:
+        - "errors://keri-messaging#InvalidFieldOrderError"
+        - "errors://keri-messaging#MissingRequiredFieldError"
     refs: []
+    notes: |
+      L4-O9: Input changed from MessageType (bare enum) to MessageConstructionRequest
+      (structured type with sender AID, route, payload, prior SAID).
+      Output changed from ExchangeMessage (exchange-specific) to KeyEventMessage
+      (generic wire-format message covering all KERI message types).
+
+  - id: "port://keri-messaging/inbound/kram-validate"
+    type: inbound
+    name: "KRAM Validation"
+    semantics: query
+    idempotent: true
+    description: >
+      Validates a KERI message against the KRAM (KERI Request Authentication Mechanism)
+      acceptance policy: verifies the signature against the sender's current key state,
+      checks datetime timeliness, and detects replays via the KRAM cache.
+    contract:
+      input: "types://keri-messaging#KeyEventMessage"
+      output: "types://credential-exchange/proof#AuthenticationResult"
+      errors:
+        - "errors://keri-messaging#KRAMSignatureError"
+        - "errors://keri-messaging#KRAMTimelinessError"
+        - "errors://keri-messaging#KRAMReplayError"
+        - "errors://keri-messaging#KRAMKeyStateError"
+    refs: []
+    invariants:
+      - "Signature verification uses sender's current key state (from identity domain)"
+      - "Datetime must be within configured timeliness window (default: 10 seconds)"
+      - "Message SAID must not appear in KRAMCacheEntry store"
+      - "On success: KRAMCacheEntry is written with (sender_aid, message_said, accepted_at)"
+    notes: |
+      L4-O10: KRAM validation port added. KRAM is the cross-cutting authentication mechanism
+      for all non-establishment KERI messages (qry, rpy, exn). The KRAM cache (KRAMCacheEntry)
+      prevents replay attacks by recording accepted message SAIDs.
+      L4-O13: Multi-sig key state change — when the sender rotates keys, prior cache entries
+      are invalidated by comparing last_sn with the current sender KEL sn.
+
+  - id: "port://keri-messaging/inbound/route-dispatch"
+    type: inbound
+    name: "Route Dispatch"
+    semantics: command
+    idempotent: false
+    description: >
+      Dispatches an authenticated KERI message to the appropriate handling domain based
+      on the message type (t field) and route (r field). After KRAM validation succeeds,
+      the message is routed to the domain that handles its route prefix.
+    contract:
+      input: "types://keri-messaging#KeyEventMessage"
+      output: void
+      errors:
+        - "errors://keri-messaging#UnknownRouteError"
+        - "errors://keri-messaging#MissingRouteHandlerError"
+    refs: []
+    invariants:
+      - "MUST NOT dispatch messages that failed KRAM validation"
+      - "Route prefix determines target domain: /ipex/* → credential-exchange, /end/* → discovery, /loc/* → discovery, /ksn → identity, /log → identity, /mbx → cloud-agent"
+      - "Unknown route prefix raises UnknownRouteError — message is discarded"
+    notes: |
+      L4-O11: Route dispatch port added. This port is the central message router for the
+      keri-messaging domain. It sits between KRAM validation and the handling domains.
+      L4-O14: BADA is handled in the discovery domain, not here. qry/rpy messages with
+      routes /end/role and /loc/scheme are dispatched to the discovery domain, which applies
+      BADA acceptance policy. Cross-reference: port://discovery/inbound/discovery.
+      See discovery domain for BADA rules.

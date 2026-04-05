@@ -8,8 +8,13 @@ ports:
     name: "Threshold Satisfaction"
     semantics: query
     idempotent: true
+    description: >
+      Evaluates whether a set of verified signature indices satisfies a threshold expression.
+      Input: threshold expression (types://cesr/primitives#SigningThreshold — simple integer
+      or fractional weight list) and verified_indices (array[integer] — indices of keys
+      whose signatures have been verified).
     contract:
-      input: "Threshold expression and array of signature indices"
+      input: "SigningThreshold expression (string or weighted list) + array[integer] verified_indices — see types://cesr/primitives#SigningThreshold"
       output: "boolean"
       errors:
         - "errors://identity/thresholds#ThresholdNotSatisfiedError"
@@ -21,8 +26,14 @@ ports:
     name: "Dual Threshold Verification"
     semantics: query
     idempotent: true
+    description: >
+      Evaluates both the signing threshold (kt) and the prior next threshold (nt) independently
+      for rotation events. Input: signing_threshold (types://cesr/primitives#SigningThreshold — kt),
+      rotation_threshold (types://cesr/primitives#SigningThreshold — prior nt),
+      indices (array[integer] — verified signing key indices for kt check),
+      ondices (array[integer] — verified next-key binding indices for nt check).
     contract:
-      input: "Signing threshold, rotation threshold, indices, and ondices"
+      input: "signing_threshold (SigningThreshold kt) + rotation_threshold (SigningThreshold prior nt) + indices (array[integer] for kt) + ondices (array[integer] for nt) — see types://cesr/primitives#SigningThreshold"
       output: "boolean"
       errors:
         - "errors://identity/thresholds#DualThresholdError"
@@ -31,14 +42,41 @@ ports:
 
   - id: "port://identity/thresholds/inbound/witness-configuration"
     type: inbound
-    name: "Witness Configuration Management"
+    name: "Witness Configuration Validation"
     semantics: command
     idempotent: false
+    description: >
+      Validates and constructs a witness configuration (witness list + TOAD).
+      Concern separation note: this port owns ONLY witness threshold validation and
+      configuration construction (uniqueness, TOAD bounds, non-transferable AID check).
+      It does NOT own group coordination or multi-signature accumulation — those are
+      handled by GroupCoordination, which is a separate operational concern for
+      in-flight multi-signature events. Witness configuration is static per establishment
+      event; group coordination is dynamic per signing round.
     contract:
-      input: "types://identity/establishment#WitnessAID"
-      output: "types://identity/thresholds#GroupCoordination"
+      input: "types://identity/thresholds#WitnessConfiguration"
+      output: "types://identity/thresholds#WitnessConfiguration"
       errors:
         - "errors://identity/thresholds#WitnessThresholdNotSatisfiedError"
         - "errors://identity/thresholds#InvalidWitnessThresholdError"
+    refs: ["domain://identity"]
+
+  - id: "port://identity/thresholds/inbound/group-coordination"
+    type: inbound
+    name: "Multi-Signature Group Coordination"
+    semantics: command
+    idempotent: false
+    description: >
+      Manages in-progress multi-signature coordination — accumulating signatures
+      from group members toward threshold satisfaction. This is a separate port
+      from witness-configuration because group coordination is dynamic (per signing
+      round) while witness configuration is static (per establishment event).
+      The Counselor pattern (keria) uses this port for multi-sig orchestration.
+      Note: Counselor is a coordination pattern, not a first-class domain type —
+      it is the external orchestration layer that drives calls to this port.
+    contract:
+      input: "types://identity/thresholds#GroupCoordination"
+      output: "types://identity/thresholds#GroupCoordination"
+      errors:
         - "errors://identity/thresholds#GroupCoordinationTimeoutError"
     refs: ["domain://identity"]

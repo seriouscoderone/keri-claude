@@ -2,7 +2,7 @@ domain_ref: "cesr"
 
 types:
   - name: "CodeEntry"
-    description: "A single entry in the CESR code table defining a primitive's encoding geometry."
+    description: "A single entry in the CESR code table defining a primitive's encoding geometry. For non-indexed codes, soft_size is the count/size field. For indexed codes (Siger), soft_size splits into primary_index_size (ms) and secondary_index_size (os)."
     variants:
       - name: "default"
         fields:
@@ -13,23 +13,35 @@ types:
           - name: "hard_size"
             type: "integer"
             required: true
-            description: "Number of hard (type-identifying) characters in qb64"
+            description: "Number of hard (type-identifying) characters in qb64 (hs)"
           - name: "soft_size"
             type: "integer"
             required: true
-            description: "Number of soft (value-carrying) characters in the code prefix"
+            description: "Number of soft (value-carrying or index-carrying) characters in the code prefix (ss)"
           - name: "full_size"
             type: "integer"
             required: true
-            description: "Total qb64 character count (hard + soft + payload)"
+            description: "Total qb64 character count (hard + soft + payload). u32::MAX for variable-length."
           - name: "lead_size"
             type: "integer"
             required: true
-            description: "Number of lead pad bytes in the raw material"
+            description: "Number of lead pad bytes in the raw material (ls)"
+          - name: "primary_index_size"
+            type: "integer"
+            required: false
+            description: "For indexed codes only: number of soft chars encoding the primary (signing) index (ms). Absent for non-indexed codes."
+          - name: "secondary_index_size"
+            type: "integer"
+            required: false
+            description: "For indexed codes only: number of soft chars encoding the secondary (rotation/other) index (os). Absent for non-indexed codes and single-indexed codes."
         invariants:
-          - "full_size is always a multiple of 4 (quadlet alignment)"
+          - "full_size is always a multiple of 4 (quadlet alignment) when not variable-length"
           - "hard_size + soft_size = total code prefix length"
           - "lead_size is 0, 1, or 2"
+          - "For indexed codes: primary_index_size + secondary_index_size = soft_size"
+          - "For non-indexed codes: primary_index_size and secondary_index_size are absent (None)"
+          - "Single-indexed codes (B#, D#): secondary_index_size = 0, primary_index_size = soft_size"
+          - "Dual-indexed codes (A#, C#, 2A##, 2B##): primary_index_size = secondary_index_size = soft_size / 2"
 
   - name: "SerializationKind"
     description: "Serialization format for KERI message bodies."
@@ -46,6 +58,13 @@ types:
           - "CBOR: RFC 8949 binary encoding"
           - "MGPK: MessagePack binary encoding"
           - "CESR: native CESR event encoding (no external serialization)"
+          - "HIDDEN CONTRACT (L3-O4): SerializationKind.CESR is NOT a wire-serialization format. It is an in-memory indicator used by Sadder/Serder to signal that the raw bytes are already CESR-encoded (e.g., when reading from a CESR native stream). When kind=CESR, sizeify() and saidify() use the raw bytes directly without re-encoding. Callers MUST treat CESR differently from JSON/CBOR/MGPK: there is no 'CESR serializer' — the bytes ARE the wire format already."
+
+  # VersionString is defined in cesr/composition/types.yaml (message-framing metadata).
+  # Reference it here for discoverability — the canonical definition lives at:
+  #   types://cesr/composition#VersionString
+  # Fields: protocol (PPPP), major (M), minor (mm), cesr_major (G), cesr_minor (gg), kind (KKKK), size (BBBB)
+  # Construction: versify() → sizeify() → saidify(). Never hand-craft the string.
 
   - name: "FixedFieldBlock"
     description: "A CESR data structure whose fields follow a fixed positional order with virtual (mnemonic-only, never serialized) labels, in contrast to labeled SAD field maps. Used for Shielded Attribute Blocks and Bound Shielded Attribute Blocks."
@@ -63,5 +82,5 @@ types:
         invariants:
           - "Fields are concatenated in fixed positional order — no field labels in the wire format"
           - "Virtual labels are mnemonic only — used for documentation and developer convenience"
-          - "SAID computation uses dummy character replacement on the designated self-addressing field position"
+          - "SAID computation uses dummy character replacement on the designated self-addressing field position: the SAID field position is filled with '#' characters repeated to the qb64 length of the target digest code (e.g., 44 '#' chars for Blake3-256 code 'E'). The '#' character is not a valid Base64 character — its presence uniquely signals the placeholder and cannot be confused with actual content."
           - "Transmitted as CESR attachment groups (e.g., ShieldedStateQuadruples count code)"

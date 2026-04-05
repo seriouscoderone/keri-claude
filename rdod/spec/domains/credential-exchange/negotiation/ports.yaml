@@ -11,8 +11,18 @@ ports:
     contract:
       input: "types://credential-exchange/negotiation#IPEXMessage"
       output: "types://credential-exchange/negotiation#IPEXMessage"
-      errors: []
+      errors:
+        - "errors://credential-exchange/negotiation#InvalidThreadStateError"
+        - "errors://credential-exchange/negotiation#UnauthorizedPartyError"
+        - "errors://credential-exchange/negotiation#StaleMessageError"
     refs: ["domain://credential-exchange"]
+    notes: |
+      L5-O16: negotiate port now declares error references.
+      InvalidThreadStateError — message received in wrong FSM state (e.g., offer before apply).
+      UnauthorizedPartyError — message signed by wrong party for this FSM step.
+      StaleMessageError — message datetime outside KRAM timeliness window.
+      Note: MissingSignatureError and MissingSchemaError are mapped to dispatch-message
+      (the lower-level handler) — negotiate delegates validation to dispatch-message.
 
   - id: "port://credential-exchange/negotiation/inbound/direct-issuance"
     type: inbound
@@ -22,8 +32,16 @@ ports:
     contract:
       input: "types://credential-exchange/negotiation#GrantMessage"
       output: "types://credential-exchange/negotiation#AdmitMessage"
-      errors: []
+      errors:
+        - "errors://credential-exchange/negotiation#MissingProofBundleError"
+        - "errors://credential-exchange/negotiation#CredentialVerificationError"
     refs: ["domain://credential-exchange"]
+    notes: |
+      L5-O16: direct-issuance port now declares error references.
+      MissingProofBundleError — grant does not include all three required artifacts.
+      CredentialVerificationError — TEL or KEL chain verification failed.
+      Note: MissingSignatureError is mapped to dispatch-message — direct-issuance delegates
+      signature verification to the dispatch-message handler.
 
   - id: "port://credential-exchange/negotiation/inbound/construct-message"
     type: inbound
@@ -60,8 +78,70 @@ ports:
     name: "Exchange Message Transport"
     semantics: command
     idempotent: false
+    description: >
+      Delivers an IPEX message to its destination AID via the configured transport.
+      Output is void — delivery is fire-and-forget at the transport layer. Delivery
+      confirmation comes via the recipient's subsequent reply message in the thread.
     contract:
       input: "types://credential-exchange/negotiation#IPEXMessage"
-      output: "types://credential-exchange/negotiation#IPEXMessage"
-      errors: []
+      output: void
+      errors:
+        - "errors://credential-exchange/negotiation#DeliveryFailedError"
     refs: ["domain://externals/transport"]
+    notes: |
+      L5-O18: message-transport output changed from IPEXMessage to void. The transport layer
+      delivers the message and returns no content — the IPEX protocol is async and the
+      caller does not get a synchronous delivery receipt from the transport.
+
+  - id: "port://credential-exchange/negotiation/outbound/escrow-lookup"
+    type: outbound
+    name: "Escrow Lookup"
+    semantics: query
+    idempotent: true
+    description: >
+      Queries the IPEX exchange escrow — retrieves pending exchange messages that were
+      held awaiting a missing KEL, TEL, schema, or signatures.
+    contract:
+      input: "types://credential-exchange/negotiation#EscrowReason"
+      output: "array[types://credential-exchange/negotiation#IPEXMessage]"
+      errors: []
+    refs: ["domain://externals/persistence"]
+    notes: |
+      L5-O17: outbound escrow lookup port added. IPEX messages can be escrowed when
+      KEL/TEL/schema dependencies are missing. This port drains the escrow queues.
+
+  - id: "port://credential-exchange/negotiation/outbound/kel-lookup"
+    type: outbound
+    name: "KEL Lookup"
+    semantics: query
+    idempotent: true
+    description: >
+      Queries the identity domain to retrieve KEL events or key state for an AID.
+      Used when verifying that the grant's KEL seal is valid.
+    contract:
+      input: "types://cesr/primitives#AID"
+      output: "types://identity/state#KeyState"
+      errors:
+        - "errors://credential-exchange/negotiation#KELNotFoundError"
+    refs: ["domain://identity"]
+    notes: |
+      L5-O17: outbound KEL lookup port added. Grant verification requires resolving
+      the issuer's current key state to validate the KEL seal.
+
+  - id: "port://credential-exchange/negotiation/outbound/tel-lookup"
+    type: outbound
+    name: "TEL Lookup"
+    semantics: query
+    idempotent: true
+    description: >
+      Queries the credential-lifecycle domain to retrieve TEL events or registry state.
+      Used when verifying that the granted credential's TEL proof chain is intact.
+    contract:
+      input: "types://cesr/primitives#SAID"
+      output: "types://credential-lifecycle/status#LifecycleStateSnapshot"
+      errors:
+        - "errors://credential-exchange/negotiation#TELNotFoundError"
+    refs: ["domain://credential-lifecycle"]
+    notes: |
+      L5-O17: outbound TEL lookup port added. Admit processing must verify the TEL
+      state of the granted credential before storing it.

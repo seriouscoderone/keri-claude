@@ -170,7 +170,7 @@ properties:
     strategy: "public_key_strategy()"
     notes: "Digest is qualified with CESR code and verifiable against the public key."
 
-  - invariant: "An empty next key digest list (n = []) signals a non-transferable AID"
+  - invariant: "Transferability is determined by the n field (next key digests), NOT by the prefix code alone. An AID with the E-prefix (self-addressing SAID) is transferable iff n is non-empty at inception. An AID with the B-prefix (Ed25519N non-transferable) has n=[] and is non-transferable. The prefix code indicates the key derivation method; the n field determines transferability. Postcondition for any transferability check: is_transferable == (len(n_field) > 0), not prefix_code.endswith('N')."
     term: "Next Key Digests"
     technique: smt
     formal:
@@ -180,12 +180,19 @@ properties:
         n_length = Int('n_length')
         is_transferable = Bool('is_transferable')
         s = Solver()
+        # Transferability is defined by n field length, not prefix code
         s.add(is_transferable == (n_length > 0))
-        # When n is empty, AID is non-transferable
+        # When n is empty, AID is non-transferable (regardless of prefix code)
         s.add(n_length == 0)
         s.add(is_transferable)
         assert s.check() == unsat  # Cannot be transferable with empty n
-    notes: "Empty n field is the definitive signal for non-transferability."
+        # When n is non-empty, AID IS transferable (E-prefix with n != [] is transferable)
+        s2 = Solver()
+        s2.add(is_transferable == (n_length > 0))
+        s2.add(n_length > 0)
+        s2.add(Not(is_transferable))
+        assert s2.check() == unsat  # Non-empty n must be transferable
+    notes: "The n field is the definitive signal for transferability — not the prefix code. E-prefix (self-addressing) AIDs are transferable when n != []. B-prefix (Ed25519N) AIDs always have n=[]."
 
   # Key Configuration invariants
   - invariant: "The pairing is atomic: current keys and next digests are always updated together at each establishment event"

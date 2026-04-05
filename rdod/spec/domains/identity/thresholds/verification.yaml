@@ -6,6 +6,36 @@ domain_ref: "identity/thresholds"
 # in other languages should express equivalent assertions in their native testing framework.
 
 properties:
+  # Multi-clause weighted threshold invariant (L1-O14)
+  - invariant: "Multi-clause weighted threshold: when a threshold expression is a list-of-lists (multi-clause), satisfaction requires ALL clauses to be satisfied (AND semantics), not any one clause (OR semantics). Each clause is a fractionally weighted threshold; the overall threshold passes iff every clause independently passes."
+    term: "Fractionally Weighted Threshold"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        # TODO: derive formal expression from spec multi-clause threshold section
+        # keripy: Tholder with limen list — each sublist is a clause; all must pass
+        @given(clauses=st.lists(
+            st.lists(st.fractions(min_value=Fraction(0), max_value=Fraction(1)),
+                     min_size=1, max_size=5),
+            min_size=2, max_size=3))
+        def test_multi_clause_all_required(clauses):
+            # Multi-clause: [[f1a, f1b], [f2a, f2b], ...] — ALL must be satisfied
+            tholder = parse_threshold(clauses)
+            assert tholder.multi_clause  # verify it is multi-clause
+            # If any clause is unsatisfied, overall threshold fails
+            # Example: 2-clause threshold [[1/2, 1/2], [1/3, 1/3, 1/3]]
+            # Only clause-0-key-indices and clause-1-key-indices are relevant per clause
+            for i, clause in enumerate(clauses):
+                clause_indices = list(range(len(clause)))
+                clause_result = tholder.satisfy_clause(i, clause_indices)
+                if not clause_result:
+                    assert not tholder.satisfy(clause_indices), (
+                        f"Clause {i} failed but overall threshold passed — violates AND semantics"
+                    )
+    strategy: "st.lists of st.lists of fractions — simulates multi-clause threshold"
+    notes: "TODO: complete formal expression with specific keripy Tholder multi-clause behavior. Spec section: Fractionally Weighted Thresholds. AND semantics means any single unsatisfied clause blocks the overall threshold."
+
   # Signing Threshold invariants
   - invariant: "Simple threshold M MUST satisfy 1 <= M <= len(keys); M == 0 MUST be rejected (no-op threshold); M > len(keys) MUST be rejected (unsatisfiable threshold)"
     term: "Signing Threshold"

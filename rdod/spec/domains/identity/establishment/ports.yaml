@@ -58,7 +58,34 @@ ports:
       errors: []
     refs: ["domain://externals/persistence"]
 
-  # Abstract inbound port interfaces — contracts only, resolved at composition time
+  # Outbound — establishment must commit accepted events to the KEL
+  - id: "port://identity/establishment/outbound/kel-append"
+    type: outbound
+    name: "KEL Append"
+    semantics: command
+    idempotent: false
+    description: >
+      After an event passes all establishment validation steps (signatures, thresholds,
+      witnesses, delegation), it must be committed to the KEL. This outbound port
+      delegates the append operation to the identity/state domain (IdentityService),
+      which owns the KEL and produces a WriteOutcome.
+      Note: naming follows port direction convention — 'kel-append' describes the action
+      taken (appending to the KEL), not the target system (which is the KelRepository
+      via the IdentityService guard).
+    contract:
+      input: "types://identity/establishment#SignedEventMessage"
+      output: "types://identity/state#WriteOutcome"
+      errors: []
+    refs: ["domain://identity/state"]
+
+  # Abstract port interfaces — these are calls establishment makes OUT to peer domains.
+  # Port naming note (L67-O34): These ports are named with 'inbound' in the ID for historical
+  # consistency with the original spec design, but they represent OUTBOUND calls from
+  # establishment to peer subdomains (identity/thresholds and accountability). They are
+  # abstract interfaces resolved at composition time — establishment declares what it needs
+  # (the abstract contract), and the composition layer wires in the concrete implementation.
+  # Think of them as "required interfaces" in the component model sense.
+  # Future refactor: rename to 'outbound' to align with port direction conventions.
   - id: "port://identity/establishment/inbound/threshold-satisfaction"
     type: inbound
     name: "Threshold Satisfaction"
@@ -69,6 +96,8 @@ ports:
       Accepts a threshold expression and a list of verified signature indices,
       returns whether the threshold is satisfied. Resolved at composition time
       by the identity/thresholds domain — not a build-time import.
+      Port naming note: labeled 'inbound' for historical consistency but represents
+      an outbound call from establishment to identity/thresholds. See L67-O34.
     contract:
       input: "threshold expression (string) + verified indices (array[integer])"
       output: "boolean"

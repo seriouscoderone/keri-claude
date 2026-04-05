@@ -78,6 +78,15 @@ types:
           - "Activated by the RB config trait in establishment events"
           - "Deactivated by the NRB config trait"
 
+  # L67-O1: WitnessReceipt vs Receipt type unification note
+  # WitnessReceipt (this file) is the canonical domain type — it is the adopter-centric concept.
+  # Receipt (types://accountability/consensus#Receipt) is the consensus subdomain's view of the
+  # same concept, used within the KAWA algorithm. They represent the same artifact from different angles:
+  # - WitnessReceipt: the witness's signed proof of observation (what the witness produces)
+  # - Receipt: the consensus-validated artifact (what KAWA counts toward TOAD)
+  # A future revision SHOULD unify these into a single canonical type. For now, WitnessReceipt
+  # in accountability/types.yaml is the source of truth; accountability/consensus#Receipt aliases it.
+
   - name: "ReceiptMessage"
     description: "The receipt message (rct) that conveys witness signatures as proof of first-seen observation."
     variants:
@@ -96,7 +105,7 @@ types:
           - name: "d"
             type: "string"
             required: true
-            description: "SAID of the receipted event (NOT the receipt itself)"
+            description: "SAID of the receipted event (NOT the receipt itself). Note: the receipt body is NOT SAIDified — d refers to the EVENT being receipted, not this message."
           - name: "i"
             type: "string"
             required: true
@@ -108,4 +117,14 @@ types:
         invariants:
           - "d matches the SAID of the original event — the receipt references the event by content hash"
           - "Witness signatures are attached as CESR attachments, not in the body"
-          - "Receipt body is NOT SAIDified itself — d is the referenced event's SAID"
+          - "Receipt body is NOT SAIDified itself — d is the referenced event's SAID, not a self-SAID"
+          # L67-O3: Verification property for SAID inversion
+          - "VERIFICATION: verify(ReceiptMessage.d == referenced_event.said) must hold; d is the FOREIGN SAID of the event being receipted, not a self-referential SAID of the receipt message"
+
+  # L67-O4: RegistrarBacker — deferred to v0.2
+  # RegistrarBacker is spec-inert in v0.1: the KERI spec defines it and the RB/NRB config
+  # traits activate/deactivate it, but the full ledger-anchoring protocol for RegistrarBacker
+  # is not implemented in keripy or keriox as of this writing. The type definition above
+  # captures the structural definition; the behavioral specification (how anchoring works,
+  # what the ledger records, how validators check it) is deferred to v0.2.
+  # See: KERI spec sections on Backer Registrar, RB/NRB config traits.

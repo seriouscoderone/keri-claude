@@ -1,5 +1,10 @@
 domain_ref: "accountability/receipting"
 
+# L5-O1: WitnessReceipt is defined in the parent accountability domain (accountability/types.yaml).
+# This subdomain uses types://accountability#WitnessReceipt by reference.
+# Import note: WitnessReceipt = types://accountability#WitnessReceipt (canonical definition)
+# See: /rdod/spec/domains/accountability/types.yaml — WitnessReceipt type
+
 types:
   - name: "ReceiptType"
     description: "Classification of witness receipt by the witness's transferability."
@@ -47,10 +52,54 @@ types:
             required: true
             description: "Ordered sequence of key events"
           - name: "receipts"
-            type: "map[string, array[WitnessReceipt]]"
+            type: "map[string, array[types://accountability#WitnessReceipt]]"
             required: true
             description: "Map from event SAID to list of witness receipts for that event"
         invariants:
           - "Every event in events has at least TOAD receipts in the receipts map"
           - "Events are ordered by sequence number with no gaps"
           - "KERL = KEL + receipts — the KEL is extractable by removing receipts"
+
+  # L5-O3: KerlAssemblyResult — returned by kerl-assembly port instead of full KERL
+  - name: "KerlAssemblyResult"
+    description: "Result of attaching a receipt to the KERL. Reports whether the TOAD threshold is now satisfied for the receipted event."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the event whose receipt was just attached"
+          - name: "receipt_count"
+            type: "integer"
+            required: true
+            description: "Total number of receipts for this event after attachment"
+          - name: "toad"
+            type: "integer"
+            required: true
+            description: "The threshold (TOAD) for this identifier"
+          - name: "toad_satisfied"
+            type: "boolean"
+            required: true
+            description: "Whether receipt_count >= toad after this attachment"
+        invariants:
+          - "toad_satisfied == (receipt_count >= toad)"
+          - "receipt_count increments by exactly 1 on each successful attachment (or stays the same for duplicate)"
+
+  # L5-O6: EscrowType — enum for receipt escrow queue classification
+  - name: "EscrowType"
+    description: "Classification of which escrow queue a receipt is held in while waiting for the blocking condition to resolve."
+    variants:
+      - name: "default"
+        fields:
+          - name: "value"
+            type: "string"
+            required: true
+            description: "The escrow queue type"
+            constraints:
+              # L5-O6: Added EscrowType enum with values from the errors.yaml context
+              enum: ["URE", "UWE", "VRE"]
+        invariants:
+          - "URE: Unverified Receipt Escrow — non-transferable receipt waiting for the receipted event to arrive in the KEL"
+          - "UWE: Unverified Witness Receipt Escrow — witness receipt (wiger) waiting for the receipted event"
+          - "VRE: Verified Receipt Escrow — transferable receipt quadruple waiting for either the receipted event or the receipter's establishment event"

@@ -107,6 +107,9 @@ errors:
         type: "string"
         description: "The SAID of the already-escrowed event"
     related_port: "port://integrity/evidence/inbound/evidence-management"
+    # L5-O10: These errors handle edge cases at the evidence-management boundary:
+    # NotDuplicityError = same SAID (not a fork); DuplicateEscrowError = resubmission guard;
+    # InvalidEvidenceError = signature verification failure. All are guard conditions, not contradictions.
 
   - name: "NotificationDeliveryError"
     description: "Failed to deliver a notification to one or more subscribers via internal coordination"

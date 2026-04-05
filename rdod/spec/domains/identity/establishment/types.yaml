@@ -3,6 +3,30 @@ domain_ref: "identity/establishment"
 types:
   - name: "InceptionEvent"
     description: "Creates a new KERI identifier. Establishes all five type dimensions: transferability, delegation, witnessing, signing model, and operational constraints."
+    builder:
+      description: "Construct an InceptionEvent via typed parameters. Handles SAID computation, field ordering, and delegation flag automatically."
+      required_fields:
+        - signing_keys: "array[VerificationKey] — initial signing public keys (k field)"
+        - signing_threshold: "string — M-of-N integer or fractional weight list (kt field)"
+        - next_key_digests: "array[Digest] — pre-rotation commitments (n field); empty for non-transferable"
+        - next_threshold: "string — '0' for non-transferable, threshold expression for transferable (nt field)"
+        - witnesses: "array[WitnessAID] — designated witness AIDs (b field); empty for unwitnessed"
+        - witness_threshold: "integer — TOAD (bt field); 0 for unwitnessed"
+      optional_fields:
+        - config_traits: "array[string] — EO, DND, DID, RB, NRB; defaults to [] (c field)"
+        - anchors: "array[Seal] — seal list for anchoring at inception; defaults to [] (a field)"
+        - delegator: "string — delegator AID; if present, produces dip ilk instead of icp"
+      construction_invariants:
+        - "len(signing_keys) >= 1"
+        - "For simple integer signing_threshold: 1 <= integer(signing_threshold) <= len(signing_keys)"
+        - "If next_key_digests is empty: next_threshold MUST be '0' (non-transferable)"
+        - "If delegator is present: ilk = 'dip', di field is set to delegator"
+        - "If delegator is absent: ilk = 'icp'"
+        - "0 <= witness_threshold <= len(witnesses)"
+        - "If witnesses is empty: witness_threshold MUST be 0"
+        - "SAID computed as: serialize event with d=i=placeholder, hash, insert; for self-addressing, d and i are the same SAID"
+        - "Field canonical ordering: v, t, d, i, s, kt, k, nt, n, bt, b, c, a (plus di for delegated)"
+        - "s field is always '0' (hex-encoded)"
     variants:
       - name: "non-delegated"
         fields:
@@ -170,6 +194,34 @@ types:
 
   - name: "RotationEvent"
     description: "Changes the signing keys, next key commitments, and/or witness set for an existing identifier."
+    builder:
+      description: "Construct a RotationEvent with validated pre-rotation binding, dual threshold check, and witness set delta."
+      required_fields:
+        - aid: "string — AID prefix of the identifier being rotated (i field)"
+        - sn: "integer — next expected sequence number (s field, hex-encoded)"
+        - prior_event_said: "string — SAID of the event at sn-1 (p field)"
+        - new_signing_keys: "array[VerificationKey] — revealed pre-committed keys (k field)"
+        - new_signing_threshold: "string — new signing threshold (kt field)"
+        - new_next_key_digests: "array[Digest] — commitments for the NEXT rotation (n field); empty for abandonment"
+        - new_next_threshold: "string — '0' for abandonment, threshold expression for transferable (nt field)"
+        - witness_threshold: "integer — new TOAD (bt field)"
+      optional_fields:
+        - witnesses_to_remove: "array[WitnessAID] — witnesses removed (br field); defaults to []"
+        - witnesses_to_add: "array[WitnessAID] — witnesses added (ba field); defaults to []"
+        - anchors: "array[Seal] — seal list (a field); defaults to []"
+        - delegator: "string — delegator AID; if present, produces drt ilk instead of rot"
+      construction_invariants:
+        - "For each key in new_signing_keys: digest(key) MUST match one of the prior establishment event's n field entries"
+        - "The matched indices from prior n must satisfy the prior next threshold (nt) — dual threshold check"
+        - "len(new_signing_keys) >= 1 for non-abandonment rotation"
+        - "For abandonment: new_next_key_digests = [], new_next_threshold = '0'"
+        - "prior_event_said MUST equal the SAID of the event at sn-1"
+        - "new witness set = (current witnesses - witnesses_to_remove) + witnesses_to_add"
+        - "0 <= witness_threshold <= len(new witness set)"
+        - "witnesses_to_remove: each AID MUST currently be in the witness set"
+        - "witnesses_to_add: each AID MUST NOT already be in the witness set after removals"
+        - "If delegator is present: ilk = 'drt'; requires delegator seal in delegator's KEL"
+        - "Field canonical ordering: v, t, d, i, s, p, kt, k, nt, n, bt, br, ba, a (plus any delegated fields)"
     variants:
       - name: "non-delegated"
         fields:
@@ -689,7 +741,8 @@ types:
           - "Must be re-submitted through the local protected channel"
 
   - name: "PartialRotation"
-    description: "A Rotation that reveals only a subset of pre-committed keys, holding others as Reserve Keys for future use."
+    description: "A Rotation that reveals only a subset of pre-committed keys, holding others as Reserve Keys for future use. Behavioral subtype of RotationEvent — has no additional fields beyond RotationEvent. The distinction is in the COUNT of keys revealed relative to the prior n list: fewer revealed keys than total pre-committed keys."
+    behavioral_subtype_note: "PartialRotation IS a RotationEvent — same wire format, same Builder. The 'partial' qualifier describes the semantics: the k list reveals fewer keys than the full prior n list. No separate type constructor needed; the RotationEvent Builder produces partial rotation when len(new_signing_keys) < len(prior_n)."
     variants:
       - name: "default"
         invariants:
@@ -697,7 +750,8 @@ types:
           - "Unrevealed keys remain blinded as Reserve Keys"
 
   - name: "AugmentedRotation"
-    description: "A Rotation that adds new signing keys not previously committed as pre-rotated keys, expanding the current key set beyond the pre-committed set."
+    description: "A Rotation that adds new signing keys not previously committed as pre-rotated keys, expanding the current key set beyond the pre-committed set. Behavioral subtype of RotationEvent — no additional fields."
+    behavioral_subtype_note: "AugmentedRotation IS a RotationEvent — same wire format. The 'augmented' qualifier means the k list contains keys BEYOND those pre-committed in the prior n list. The extra keys are new additions that bypass the pre-rotation constraint for signing authority augmentation. The RotationEvent Builder accepts additional_signing_keys for this case."
     variants:
       - name: "default"
         invariants:
@@ -705,7 +759,8 @@ types:
           - "Prior next threshold must still be satisfied by the pre-committed subset"
 
   - name: "ReserveRotation"
-    description: "Recovery from total signing key compromise using previously uncommitted Reserve Keys from an earlier Establishment Event."
+    description: "Recovery from total signing key compromise using previously uncommitted Reserve Keys from an earlier Establishment Event. Behavioral subtype of RotationEvent — no additional fields."
+    behavioral_subtype_note: "ReserveRotation IS a RotationEvent — same wire format. The 'reserve' qualifier means the k list reveals keys that were pre-committed but NOT used in the immediately preceding rotation (held back as reserve). Reserve Rotation enables recovery when current signing keys are compromised because the reserve keys were never exposed."
     variants:
       - name: "default"
         invariants:

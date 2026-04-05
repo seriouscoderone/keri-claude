@@ -632,6 +632,72 @@ contracts:
           language: "pseudocode"
           expression: "rejected(event) implies key_state(event.i) == key_state_before"
 
+  # --- Additional Protocol Invariants (L2-O7) ---
+  - invariant: "EstOnly (EO) trait: validators MUST reject interaction events (ixn) for any AID whose key state has 'EO' in config_traits. Rejection is immediate — no escrow."
+    term: "Configuration Traits"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=interaction_event_strategy(), key_state=key_state_with_eo_strategy())
+        def test_eo_rejects_ixn(event, key_state):
+            assume('EO' in key_state.config_traits and event.t == 'ixn')
+            result = validate(event, key_state)
+            assert result.is_rejected(), "EO trait: ixn events MUST be rejected immediately"
+    strategy: "interaction_event_strategy(), key_state_with_eo_strategy()"
+    notes: "TODO: derive from spec section on configuration traits. Spec: EO trait prohibits non-establishment events."
+
+  - invariant: "DoNotDelegate (DND) trait: validators MUST reject dip/drt events that name an AID with 'DND' in config_traits as their delegator. Rejection is immediate — no escrow."
+    term: "Configuration Traits"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event=delegated_inception_strategy(), delegator_state=key_state_with_dnd_strategy())
+        def test_dnd_rejects_delegation(event, delegator_state):
+            assume('DND' in delegator_state.config_traits)
+            result = validate_delegation(event, delegator_state)
+            assert result.is_rejected(), "DND trait: dip/drt with DND delegator MUST be rejected"
+    strategy: "delegated_inception_strategy(), key_state_with_dnd_strategy()"
+    notes: "TODO: derive from spec section on configuration traits. Spec: DND prevents an AID from acting as a delegator."
+
+  - invariant: "Self-addressing inception (icp/dip): the d field and the i field MUST be equal — both are the SAID of the inception event body. For basic (non-self-addressing) inception: i is the qualified public key and d is the SAID of the event body; d != i in this case."
+    term: "Inception Event"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(icp=inception_event_strategy())
+        def test_d_equals_i_for_self_addressing(icp):
+            if is_self_addressing(icp):
+                assert icp.d == icp.i, "Self-addressing inception: d and i must be equal (both are the event SAID)"
+            else:
+                # Basic inception: i is the public key prefix, d is the event SAID
+                assert icp.i != icp.d, "Basic inception: i (public key) != d (event SAID)"
+    strategy: "inception_event_strategy() — both self-addressing and basic variants"
+    notes: "TODO: formal expression derivable from spec SAID computation rules. Self-addressing = Blake3-256/SHA-256 prefix on i. Basic = Ed25519/ECDSA key prefix on i."
+
+  - invariant: "Prior event hash chain (p field): for every non-inception event (rot, ixn, drt), the p field MUST equal the SAID (d field) of the event at sn-1. Inception events have no p field. Verification: compute_said(event_at_sn_minus_1) == this_event.p."
+    term: "Prior Event Digest"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(kel=kel_strategy(min_events=2))
+        def test_p_chain_integrity(kel):
+            for i, event in enumerate(kel.events):
+                if event.t in ('rot', 'ixn', 'drt'):
+                    prior = kel.events[i - 1]
+                    assert event.p == prior.d, (
+                        f"p-chain broken at sn={event.sn}: p={event.p!r} != prior.d={prior.d!r}"
+                    )
+                if event.t in ('icp', 'dip'):
+                    assert not hasattr(event, 'p') or event.p is None, (
+                        "Inception events MUST NOT have a p field"
+                    )
+    strategy: "kel_strategy(min_events=2)"
+    notes: "TODO: derive from spec section on Prior Event Digest. The p-chain creates tamper-evidence backward to the inception. Any modification invalidates all subsequent p checks."
+
 state_machines:
   - name: "Event Validation Pipeline"
     term: "Event Validation Pipeline"
@@ -646,10 +712,12 @@ state_machines:
       - "witness_checked"
       - "delegation_checked"
       - "accepted"
+      - "accepted_abandoned"
       - "escrowed_ooe"
       - "escrowed_pse"
       - "escrowed_pwe"
       - "escrowed_pde"
+      - "escrowed_delegable"
       - "escrowed_lde"
       - "escrowed_misfit"
       - "rejected"
@@ -735,19 +803,37 @@ state_machines:
         trigger: "delegator seal not found"
         guard: "not delegation_seal_found(event)"
       - from: "delegation_checked"
+        to: "escrowed_pde"
+        trigger: "delegator seal not found (remote validator role)"
+        guard: "not delegation_seal_found(event) and role == 'remote_validator'"
+      - from: "delegation_checked"
+        to: "escrowed_delegable"
+        trigger: "delegation approval pending (local delegator role — own delegated AID)"
+        guard: "not delegation_seal_found(event) and role == 'local_delegator'"
+      - from: "delegation_checked"
         to: "accepted"
-        trigger: "delegator seal found"
-        guard: "delegation_seal_found(event)"
+        trigger: "delegator seal found (non-abandoned)"
+        guard: "delegation_seal_found(event) and not abandonment_rotation(event)"
+      - from: "delegation_checked"
+        to: "accepted_abandoned"
+        trigger: "valid abandonment rotation — n=[], nt='0'"
+        guard: "delegation_seal_found(event) and abandonment_rotation(event)"
+      - from: "accepted"
+        to: "accepted_abandoned"
+        trigger: "non-delegated abandonment rotation accepted"
+        guard: "event.t in ('rot',) and event.n == [] and event.nt == '0'"
     invariants:
-      - "Every event either reaches 'accepted', an escrow state, or 'rejected'"
+      - "Every event either reaches 'accepted', 'accepted_abandoned', an escrow state, or 'rejected'"
       - "No event bypasses signature verification to reach 'accepted'"
       - "Rotation events must pass through 'pre_rotation_checked' before 'witness_checked'"
       - "Delegated events must pass through 'delegation_checked' before 'accepted'"
       - "Local source protection is checked before signature verification"
       - "Escrowed events re-enter the pipeline at 'received' when their blocking condition resolves"
       - "Interaction events (ixn) go through signature threshold and witness threshold checks but NOT delegation checks — delegation validation applies only to establishment events (icp, rot, dip, drt)"
+      - "accepted_abandoned is a terminal state — no further events are valid for this AID after abandonment. Any subsequent event targeting this AID MUST be rejected."
+      - "escrowed_delegable is distinct from escrowed_pde: escrowed_delegable is used when THIS node IS the delegator, holding the delegated event until it decides to anchor the approval. escrowed_pde is used when THIS node is a remote validator waiting for the delegator's anchor to appear."
     initial_state: "received"
-    terminal_states: ["accepted", "rejected", "escrowed_ooe", "escrowed_pse", "escrowed_pwe", "escrowed_pde", "escrowed_lde", "escrowed_misfit"]
+    terminal_states: ["accepted", "accepted_abandoned", "rejected", "escrowed_ooe", "escrowed_pse", "escrowed_pwe", "escrowed_pde", "escrowed_delegable", "escrowed_lde", "escrowed_misfit"]
 
 # Declarative validation constraints with dependencies.
 # The establishment pipeline as a composable constraint graph.

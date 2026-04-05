@@ -263,7 +263,7 @@ types:
           - "All ACDC-specific fields are derived from the underlying SAD field map"
 
   - name: "TELEvent"
-    description: "A Transaction Event Log event that records credential state changes (issuance, revocation, updates). The TEL is anchored to a KEL via seals. TEL events include registry inception (vcp), registry rotation (vrt), issuance (iss/bis), revocation (rev/brv), and update (upd/bup)."
+    description: "A Transaction Event Log event that records credential state changes (issuance, revocation, updates). The TEL is anchored to a KEL via seals. ACDC v2 normative ilks: rip (registry inception), upd (non-shieldable update), bup (shieldable update). Legacy v1 ilks (vcp, vrt, iss, bis, rev, brv) are retained for migration compatibility only."
     variants:
       - name: "default"
         fields:
@@ -272,11 +272,20 @@ types:
             required: true
             description: "The TEL event type ilk"
             constraints:
-              enum: ["vcp", "vrt", "iss", "bis", "rev", "brv", "upd", "bup"]
+              enum: ["rip", "upd", "bup", "vcp", "vrt", "iss", "bis", "rev", "brv"]
+            notes: |
+              Normative v2 ilks: rip, upd, bup.
+              DEPRECATED legacy v1 ilks (retained for migration compatibility only):
+                vcp — legacy registry inception (replaced by rip)
+                vrt — legacy registry rotation (no v2 equivalent; v2 registries are immutable)
+                iss — legacy non-backer issuance (replaced by upd with ts='issued')
+                bis — legacy backer issuance (replaced by bup with ts='issued')
+                rev — legacy non-backer revocation (replaced by upd with ts='revoked')
+                brv — legacy backer revocation (replaced by bup with ts='revoked')
           - name: "registry_id"
             type: "string"
             required: true
-            description: "SAID of the registry inception event"
+            description: "SAID of the registry inception event (REGID)"
           - name: "said"
             type: "types://cesr/primitives#SAID"
             required: true
@@ -295,7 +304,30 @@ types:
             type: "types://cesr/primitives#Seal"
             required: false
             description: "Optional anchor seal back to the issuer's KEL"
+          - name: "backers"
+            type: "array[types://cesr/primitives#AID]"
+            required: false
+            description: "Backer AIDs whose signatures are required for threshold satisfaction (bup events)"
+          - name: "threshold"
+            type: "string"
+            required: false
+            description: "Backer signature threshold — integer or fractional threshold expression (bup events)"
+          - name: "transaction_acdc_said"
+            type: "types://cesr/primitives#SAID"
+            required: false
+            description: "SAID of the credential this event applies to (upd/bup events; ta field)"
+          - name: "transaction_state"
+            type: "string"
+            required: false
+            description: "Target credential state after this event (upd/bup events; ts field)"
+            constraints:
+              enum: ["issued", "revoked"]
         invariants:
           - "TEL events form an append-only log per registry, anchored to the issuer's KEL via seals"
           - "sequence_number must equal prior event's sequence_number + 1"
           - "prior_event_said must match the SAID of the immediately preceding event in the TEL"
+          - "Legacy v1 ilks (vcp, vrt, iss, bis, rev, brv) are deprecated — implementations MUST still accept them for migration compatibility but SHOULD NOT generate new events using them"
+
+  # Aliases and consolidation note
+  # L2-O13: TelEventUnion is an alias for TELEvent. TelEventUnion is retained in status/types.yaml
+  # as a forward-compatible alias but TELEvent is the normative name. Callers should use TELEvent.

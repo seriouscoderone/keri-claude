@@ -8,13 +8,21 @@ ports:
     name: "Data Anchoring"
     semantics: command
     idempotent: false
+    description: >
+      Anchors a list of cryptographic commitments (seals) to the identifier's KEL
+      by creating an interaction event. The a field of the ixn event carries the
+      full seal list — a single Seal or multiple Seals are both valid inputs.
+      Forbidden for non-transferable identifiers and identifiers with the EO trait.
     contract:
-      input: "types://cesr/primitives#Seal"
+      input: "array[types://cesr/primitives#Seal]"
       output: "types://identity/establishment#InteractionEvent"
       errors:
         - "errors://identity/anchoring#AnchoringNotPermittedError"
         - "errors://identity/anchoring#NonTransferableAnchoringError"
         - "errors://identity/anchoring#InvalidSealError"
+    postconditions:
+      - "The returned InteractionEvent contains the full seal list in the a field"
+      - "len(result.a) == len(input seals)"
     refs: ["domain://identity"]
 
   - id: "port://identity/anchoring/inbound/seal-query"
@@ -23,7 +31,24 @@ ports:
     semantics: query
     idempotent: true
     contract:
-      input: "AID prefix and sequence number"
-      output: "array of types://cesr/primitives#Seal"
+      input: "types://identity/anchoring#SealQueryInput"
+      output: "array[types://cesr/primitives#Seal]"
       errors: []
     refs: ["domain://identity"]
+
+  # Outbound — anchoring must write the resulting ixn event to the KEL
+  - id: "port://identity/anchoring/outbound/kel-append"
+    type: outbound
+    name: "KEL Append"
+    semantics: command
+    idempotent: false
+    description: >
+      Anchoring produces an interaction event that must be committed to the KEL.
+      This outbound port delegates the KEL write to the IdentityService (identity/state),
+      which validates and appends the event.
+    contract:
+      input: "types://identity/establishment#SignedEventMessage"
+      output: "types://identity/state#WriteOutcome"
+      errors:
+        - "errors://identity/establishment#ValidationError"
+    refs: ["domain://identity/state"]

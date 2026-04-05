@@ -142,17 +142,16 @@ terms:
 
   - term: "Seqner"
     synonyms: ["Sequence Number Primitive"]
-    definition: "A sequence number primitive encoding an integer as a CESR qualified value. Used for event sequence numbers, first-seen numbers, and other ordinal values."
+    definition: "A FIXED-code sequence number primitive. Seqner always uses code M (2-byte, 4 chars qb64) regardless of value magnitude. Distinct from Number, which auto-sizes. Used for event sequence numbers, first-seen numbers, and other ordinal values in protocol group attachments."
     invariants:
-      - "Code M for short 2-byte numbers (0-65535) — 4 chars qb64"
-      - "Code 0H for long 4-byte numbers — 8 chars qb64"
-      - "Code N for big 8-byte numbers — 12 chars qb64"
-      - "Code R for tall 5-byte numbers — 8 chars qb64"
+      - "Always uses code M (short, 2 bytes raw, 4 chars qb64) — code is fixed, not auto-selected"
+      - "Value range: 0–65,535 (u16); values > 65535 are not representable by Seqner — use Number instead"
+      - "Contrast with Number: Number auto-selects the smallest code for the value (M/0H/N/R/S/T/U); Seqner fixes to M"
       - "Provides .sn property for the integer sequence number value"
     examples:
       - "Seqner(sn=0) — sequence number 0, code 'M', qb64 'MAAA'"
       - "Seqner(sn=257) — sequence number 257, code 'M', qb64 'MAQB'"
-    related_terms: ["Matter"]
+    related_terms: ["Number", "Matter"]
 
   - term: "SAID"
     synonyms: ["Self-Addressing Identifier", "Self-Addressing Data Identifier"]
@@ -362,16 +361,21 @@ terms:
 
   - term: "Number"
     synonyms: ["Variable-Length Number"]
-    definition: "A variable-length unsigned integer primitive. Auto-selects the smallest code that fits the value: Short (u16), Long (u32), Big (u64), Huge (u128)."
+    definition: "An AUTO-SIZED unsigned integer primitive. Number auto-selects the smallest code that fits the value (M/0H/N/R/S/T/U). Distinct from Seqner, which always uses fixed code M regardless of value."
     invariants:
+      - "Auto-selects smallest code that fits the value — code is chosen by value magnitude, not fixed"
       - "Short (code M): 0–65,535 (2 bytes, 4 chars qb64)"
       - "Long (code 0H): 0–4,294,967,295 (4 bytes, 8 chars qb64)"
       - "Big (code N): 0–2^64-1 (8 bytes, 12 chars qb64)"
-      - "Huge (code 0A alias): 0–2^128-1 (16 bytes, 24 chars qb64)"
-      - "Constructor auto-selects code based on numeric value"
+      - "Tall (code R): 0–2^40-1 (5 bytes, 8 chars qb64)"
+      - "Large (code S): 0–2^88-1 (11 bytes, 16 chars qb64)"
+      - "Great (code T): 0–2^112-1 (14 bytes, 20 chars qb64)"
+      - "Vast (code U): 0–2^136-1 (17 bytes, 24 chars qb64)"
+      - "Contrast with Seqner: Seqner is always code M (fixed); Number is code-auto-selected"
     examples:
       - "Number(num=42) → code 'M', 4 chars qb64"
       - "Number(num=100000) → code '0H', 8 chars qb64"
+      - "Number(num=2**64) → code 'R' or 'S' depending on size"
     related_terms: ["Seqner", "NumDex", "Matter"]
 
   - term: "Dater"

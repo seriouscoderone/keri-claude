@@ -73,10 +73,13 @@ types:
             required: true
             description: "Which event takes priority"
             constraints:
-              enum: ["FirstSupersedes", "SecondSupersedes", "Neither"]
+              # L1-O20: renamed from FirstSupersedes/SecondSupersedes to Candidate/Incumbent
+              # for domain clarity: Candidate is the incoming rotation, Incumbent is the accepted one
+              enum: ["CandidateSupersedes", "IncumbentRetains", "Neither"]
         invariants:
-          - "FirstSupersedes means the candidate replaces the incumbent"
-          - "Neither means neither event can supersede the other — both may be duplicitous"
+          - "CandidateSupersedes means the incoming (candidate) rotation replaces the currently accepted (incumbent) event"
+          - "IncumbentRetains means the currently accepted event is not displaced — the candidate does not satisfy any superseding rule"
+          - "Neither means neither event can supersede the other — both may be duplicitous (edge case)"
 
   - name: "EventType"
     description: "Event type classification used in superseding rule evaluation."
@@ -110,6 +113,13 @@ types:
             type: "string"
             required: true
             description: "SAID of the delegating event"
+          - name: "seal_index"
+            type: "integer"
+            required: true
+            description: "Ordinal position of the delegation seal within the anchor (a) list of the delegating event, zero-based. Used for Rule B2: within the same delegating event, the seal with the higher index supersedes."
+            constraints:
+              min_value: 0
         invariants:
           - "Used in Rule B1 — higher delegating event sn means the superseding rotation wins; comparison uses sn (sequence number), NOT fn (first-seen number)"
-          - "Used in Rule B2 — within the same delegating event, later seal index wins"
+          - "Used in Rule B2 — within the same delegating event, later seal index wins; seal_index is the zero-based position in the anchor list"
+          - "seal_index is 0 for the first seal, 1 for the second, etc.; ties are not possible within a single delegating event because each seal occupies a distinct array position"

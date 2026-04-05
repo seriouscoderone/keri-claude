@@ -35,6 +35,40 @@ types:
           - "satisfied = threshold.satisfy(collected_indices)"
           - "Coordination times out if not satisfied within the configured period"
 
+  - name: "WitnessConfiguration"
+    description: "Complete configuration of the witness pool for an identifier — the witness AID list and the TOAD (witness threshold). Owned by the thresholds subdomain because it governs threshold satisfaction and configuration validation."
+    variants:
+      - name: "default"
+        fields:
+          - name: "witnesses"
+            type: "array[WitnessAID]"
+            required: true
+            description: "Ordered set of unique non-transferable witness AIDs"
+            constraints:
+              description: "AIDs must be unique; duplicates are rejected"
+          - name: "toad"
+            type: "integer"
+            required: true
+            description: "Threshold of Accountable Duplicity (TOAD) — minimum witness receipts required for event acceptance"
+            constraints:
+              min: 0
+        invariants:
+          - "0 <= toad <= len(witnesses) — TOAD must be satisfiable given the witness count"
+          - "Witness AIDs must be unique — no duplicates permitted"
+          - "Witness AIDs must be non-transferable (B prefix for Ed25519, 1AAA for secp256k1, etc.)"
+          - "An empty witness list (witnesses=[]) must have toad=0"
+          - "toad=0 with non-empty witnesses is valid — unwitnessed operation mode even though witnesses exist"
+    builder:
+      description: "Construct a WitnessConfiguration with validated witness list and TOAD."
+      required_fields:
+        - witnesses: "array of non-transferable AIDs — each must be a valid WitnessAID"
+        - toad: "integer TOAD — must satisfy 0 <= toad <= len(witnesses)"
+      construction_invariants:
+        - "Reject if any witness AID is transferable (wrong prefix code)"
+        - "Reject if duplicate AIDs appear in the list"
+        - "Reject if toad > len(witnesses)"
+        - "Reject if toad < 0"
+
   - name: "WitnessRemoveList"
     description: "List of Witness AIDs to be removed from the current Witness list during a Rotation Event. Field label: br."
     variants:

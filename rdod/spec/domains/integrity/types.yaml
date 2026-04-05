@@ -50,13 +50,16 @@ types:
           - name: "fork_sn"
             type: "integer"
             required: true
-            description: "Sequence number where the branch diverges from the authoritative KEL"
+            description: "Sequence number where the branch diverges from the authoritative KEL. The event AT fork_sn is the first displaced event — it is included in branch_events."
           - name: "branch_events"
             type: "array[string]"
             required: true
             description: "SAIDs of the events on the displaced branch, in order"
         invariants:
-          - "All events are from sn >= fork_sn"
+          # L67-O11: fork_sn is INCLUSIVE — events at sn >= fork_sn are displaced
+          - "All events are from sn >= fork_sn; the event AT fork_sn is the first displaced event (inclusive lower bound)"
+          - "branch_events[0] is the event at fork_sn; subsequent entries are at fork_sn+1, fork_sn+2, etc."
+          - "The superseding rotation is placed at fork_sn in the trunk — trunk and branch share the sn but differ in SAID"
           - "Branch events are retained in the DEL, not discarded"
 
   - name: "NonEstablishmentDeadAttack"

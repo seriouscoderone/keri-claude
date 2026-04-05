@@ -37,9 +37,16 @@ ports:
     name: "Partial Rotation"
     semantics: query
     idempotent: true
+    description: >
+      Validates a partial rotation — verifying that the subset of revealed keys
+      satisfies the prior next threshold, and that each revealed key matches one
+      of the prior next key digest commitments. Unrevealed keys remain as Reserve Keys.
+      Input: revealed_keys (array[PublicKey] — keys being revealed, subset of prior next
+      commitments), prior_next_digests (array[Digest] — full prior n field), and
+      prior_next_threshold (string — the prior nt expression the revealed subset must satisfy).
     contract:
-      input: "types://identity/key-commitment#PublicKey"
-      output: "types://identity/key-commitment#MatchedIndex"
+      input: "array[types://identity/key-commitment#PublicKey] revealed_keys + array[Digest] prior_next_digests + string prior_next_threshold"
+      output: "array[types://identity/key-commitment#MatchedIndex]"
       errors:
         - "errors://identity/key-commitment#PartialRotationThresholdError"
     refs: ["domain://identity"]

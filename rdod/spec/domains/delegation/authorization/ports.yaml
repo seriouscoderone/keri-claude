@@ -24,9 +24,18 @@ ports:
     name: "Seal Construction"
     semantics: command
     idempotent: false
+    description: >
+      Accepts an array of DelegationSeals (one per delegated event being approved) and
+      constructs the AnchorPayload to embed in the delegating event. Multiple delegations
+      can be batched into a single delegating event — one seal per delegated event in the array.
     contract:
-      input: "types://delegation/authorization#DelegationSeal"
+      input: "array[types://delegation/authorization#DelegationSeal]"
       output: "types://delegation/authorization#AnchorPayload"
       errors:
         - "errors://delegation/authorization#SealMismatchError"
     refs: ["domain://delegation"]
+    notes: >
+      H-O10: Changed from single DelegationSeal to array[DelegationSeal]. The KERI spec
+      allows a delegating event to approve multiple delegated events in a single anchor (a) list.
+      The input MUST be an array of length >= 1; the output AnchorPayload.seals contains
+      all provided seals in order.

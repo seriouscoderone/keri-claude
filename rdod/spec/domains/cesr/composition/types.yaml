@@ -62,13 +62,14 @@ types:
             type: "CountCode"
             required: true
             description: "Group header — type and size"
-          - name: "primitives"
-            type: "array[Primitive]"
+          - name: "items"
+            type: "array[CESRGroup]"
             required: true
-            description: "Ordered sequence of CESR primitives"
+            description: "Ordered sequence of nested CESR groups (not flat primitives). Each item is itself a count-code-prefixed group (e.g., signature couples, seal triples, quadruples)."
         invariants:
-          - "Total encoded size of primitives must equal counter.count quadlets/triplets"
+          - "Total encoded size of all items must equal counter.count quadlets/triplets"
           - "Attachment groups (-C##) are never part of signed content"
+          - "Items are CESRGroups (count-code prefixed), not bare primitives — nesting is the attachment structure"
       - name: "message"
         fields:
           - name: "body"
@@ -102,7 +103,13 @@ types:
           - "1=CESR count code, 2=CESR op code, 3=JSON, 4=MGPK FixMap, 5=CBOR map, 6=MGPK Map16/32, 7=CESR binary"
 
   - name: "VersionString"
-    description: "Self-describing header encoding protocol, version, serialization format, and message size."
+    description: >
+      Self-describing header encoding protocol, version, serialization format, and message size.
+      Seven named components (PPPP, M, mm, G, gg, KKKK, BBBB) concatenated into a fixed-format string.
+      Builder note: never construct a VersionString by hand-crafting the string — use versify().
+      versify(protocol, version, genus, kind) constructs with BBBB=0000 (zero size placeholder);
+      sizeify() fills in the actual byte count after serialization;
+      saidify() computes the SAID last. Pipeline: versify() → sizeify() → saidify() — order is mandatory.
     variants:
       - name: "v2"
         fields:
@@ -143,6 +150,7 @@ types:
           - "Regex: [A-Z]{4}[A-Za-z0-9_-]{3}[A-Za-z0-9_-]{3}(JSON|CBOR|MGPK|CESR)[A-Za-z0-9_-]{4}\\."
           - "BBBB is Base64-encoded total serialization length (max 16,777,216 = 64^4)"
           - "Must be the FIRST field in any field map"
+          - "Construction pipeline: versify() → serialize → sizeify() → saidify(). Calling saidify() before sizeify() produces a SAID over the wrong content."
       - name: "v1"
         fields:
           - name: "protocol"
@@ -238,3 +246,37 @@ types:
           - "Path must be a valid SAD Path Language expression"
           - "Signatures verify against the serialized content at the resolved path"
           - "Transposable: changing the root path does not invalidate signatures on nested content"
+
+  - name: "GenusVersionCode"
+    description: >
+      The 8-character self-framing code that identifies the active protocol genus and its version.
+      Embedded in CESR streams as the first element to establish which code tables are in effect
+      for parsing subsequent primitives. Format: -_GGGVVV where GGG is the 3-char genus identifier
+      and VVV is the 3-char version (Mmm: major 1 char + minor 2 chars). This code is universal —
+      all genera share it as a cold-start signal.
+    variants:
+      - name: "default"
+        fields:
+          - name: "genus"
+            type: "string"
+            required: true
+            description: "3-char Base64 genus identifier (GGG)"
+            constraints:
+              pattern: "^[A-Za-z0-9_-]{3}$"
+          - name: "major"
+            type: "integer"
+            required: true
+            description: "Genus major version (M — 1 Base64 char, 0-63)"
+          - name: "minor"
+            type: "integer"
+            required: true
+            description: "Genus minor version (mm — 2 Base64 chars, 0-4095)"
+        invariants:
+          - "Wire format: -_ + GGG + M + mm = 8 chars total (composable: 8 chars = 2 quadlets)"
+          - "Genus 'AAA' = KERI/ACDC protocol stack (the reference genus)"
+          - "All genera MUST share universal code tables (genus/version code itself, universal count codes)"
+          - "Genus-specific code tables may vary; parsers MUST use the declared genus to select the active code table"
+          - "A stream MUST include a GenusVersionCode before any genus-specific primitives if the genus is non-default"
+        examples:
+          - "'-_AAACAA' — KERI/ACDC genus AAA at version 2.00 (C=major 2, AA=minor 0)"
+          - "'-_AAABAA' — KERI/ACDC genus AAA at version 1.00 (B=major 1, AA=minor 0)"

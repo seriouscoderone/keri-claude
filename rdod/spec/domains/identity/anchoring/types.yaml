@@ -6,6 +6,25 @@ domain_ref: "identity/anchoring"
 # This domain uses those types directly via kernel adoption — no local redefinition needed.
 
 types:
+  - name: "SealQueryInput"
+    description: "Input for querying the seal list anchored at a specific event in a KEL."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "AID prefix of the identifier whose KEL is queried"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the event whose seal list (a field) is requested"
+            constraints:
+              min: 0
+        invariants:
+          - "The (aid, sn) pair must identify an existing accepted event in the KEL"
+          - "If no event at this sn, returns empty array"
+
   - name: "CommitmentContext"
     description: "The semantic context of a seal (cryptographic commitment) within a Key Event. A seal's meaning depends on where it appears: in an interaction event it commits data; in a delegating event it approves delegation; in a TEL-anchoring event it authorizes a credential operation. This type captures the adopter-centric purpose, not the wire-format encoding (which is handled by cesr/primitives#Seal)."
     variants:

@@ -11,6 +11,9 @@ ports:
     contract:
       input: "types://privacy#DisclosureRequest"
       output: "types://privacy#DisclosureResult"
+      preconditions:
+        - "If DisclosureRequest.options.form is 'partial' or 'nested-partial': the credential section targeted for partial disclosure MUST have a u field with high entropy (>= 128 bits). Public blocks (no u field) MUST use compact or full form — guard rejects partial requests for public blocks."
+        - "If form is 'selective': the credential MUST have an uppercase A (aggregate) field — the credential was issued as selectively-disclosable."
       errors:
         - "errors://privacy#InvalidDisclosureFormError"
         - "errors://privacy#DisclosureMonotonicityViolation"
@@ -18,7 +21,38 @@ ports:
         - "errors://privacy#ChainLinkConfidentialityViolation"
         - "errors://privacy#DisclosureConstraintError"
         - "errors://privacy#MutualExclusionViolation"
+        - "errors://privacy#PublicBlockDisclosureGuardError"
     refs: ["domain://credential-lifecycle"]
+    notes: |
+      L811-O15: Public block guard — the port now declares the precondition that partial
+      disclosure form is only valid for blocks with u fields (Private or Metadata classification).
+      Public blocks have no u field and no shielding, so partial form is meaningless:
+      the verifier can compute the full content from the SAID via rainbow table. Attempting
+      partial disclosure on a public block raises PublicBlockPartialDisclosureError.
+
+  - id: "port://privacy/inbound/compute-agid"
+    type: inbound
+    name: "AGID Computation"
+    semantics: query
+    idempotent: true
+    description: >
+      Computes the Aggregate Identifier (AGID) for a selectively-disclosable attribute section.
+      The AGID is the cryptographic digest of the concatenation of all attribute SAIDs in
+      schema-defined anyOf order. Delegates the digest operation to the cryptographic primitives
+      outbound port.
+    contract:
+      input: "types://privacy#AGIDComputationInput"
+      output: "types://cesr/primitives#SAID"
+      errors:
+        - "errors://privacy#InvalidSAIDOrderError"
+    refs: []
+    invariants:
+      - "Attribute SAIDs MUST be in schema-defined anyOf order (not insertion order)"
+      - "AGID = digest(concat(saids)) using the algorithm specified in AGIDComputationInput"
+    notes: |
+      L811-O14: AGID computation port added. This covers the selective disclosure path where
+      the uppercase A (aggregate) field value must be computed or verified. The computation
+      is delegated to port://privacy/outbound/digest.
 
   # Outbound — delegates to subdomains
   #   - disclosure: port://privacy/disclosure/inbound/mode-definitions

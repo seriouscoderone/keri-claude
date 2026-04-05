@@ -130,6 +130,209 @@ types:
       - format: "json"
         notes: "Standard KERI serialization. Fields in canonical insertion order."
 
+  - name: "XIPMessage"
+    description: "Exchange Inception message (xip) — the first message of a v2 exchange transaction. The x field self-references this message's own SAID, establishing the transaction identifier. All subsequent exn messages in the same transaction reference this xip's SAID in their x field."
+    variants:
+      - name: "default"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string (KERI20...)"
+          - name: "t"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["xip"]
+            description: "Message type — exchange inception"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID of this xip message"
+          - name: "i"
+            type: "string"
+            required: true
+            description: "Sender AID"
+          - name: "x"
+            type: "string"
+            required: true
+            description: "Exchange transaction identifier — MUST equal this message's own SAID (d field). Self-referencing SAID."
+          - name: "p"
+            type: "string"
+            required: true
+            description: "Prior — empty string for xip (no prior message)"
+            constraints:
+              enum: [""]
+          - name: "dt"
+            type: "string"
+            required: true
+            description: "Datetime — ISO 8601, subject to KRAM timeliness"
+          - name: "r"
+            type: "string"
+            required: true
+            description: "Route — determines which domain handles this exchange"
+          - name: "q"
+            type: "map"
+            required: true
+            description: "Query/modifier data"
+          - name: "a"
+            type: "map"
+            required: true
+            description: "Payload — domain-specific data"
+        invariants:
+          - "x field MUST equal d field (self-referencing SAID) — this is the transaction anchor"
+          - "p field MUST be empty — xip has no prior message"
+          - "All subsequent exn in this transaction reference x = this xip's d value"
+          - "Subject to KRAM replay protection — dt must be within timeliness window"
+          - "Must be signed by sender's current keys"
+    notes: |
+      L4-O6: XIPMessage (exchange inception) was not previously defined. In KERI v2, the first
+      message of an exchange transaction is a xip (not exn). The self-referencing x=d invariant
+      is the normative way to establish the transaction identifier without a separate UUID.
+
+  - name: "ReceiptMessage"
+    description: "Receipt message (rct or vrc) — acknowledges a Key Event. Non-transferable witnesses produce rct; transferable validators produce vrc. The d field references the SAID of the receipted event (inverted — not the SAID of this receipt message)."
+    variants:
+      - name: "non-transferable"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string"
+          - name: "t"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["rct"]
+            description: "Message type — non-transferable receipt"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID of the receipted event — this is the event being receipted, NOT this message's SAID"
+          - name: "i"
+            type: "string"
+            required: true
+            description: "AID of the controller whose event is being receipted"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Sequence number of the receipted event (hex-encoded)"
+        invariants:
+          - "d field is the SAID of the receipted event (inversion — not this message's SAID)"
+          - "Attached CESR group contains witness non-transferable signatures"
+          - "Witness AID must be in the controller's witness pool at the event's sn"
+      - name: "transferable"
+        fields:
+          - name: "v"
+            type: "string"
+            required: true
+            description: "Version string"
+          - name: "t"
+            type: "string"
+            required: true
+            constraints:
+              enum: ["vrc"]
+            description: "Message type — transferable receipt (validator)"
+          - name: "d"
+            type: "string"
+            required: true
+            description: "SAID of the receipted event (inverted — not this message's SAID)"
+          - name: "i"
+            type: "string"
+            required: true
+            description: "AID of the controller whose event is being receipted"
+          - name: "s"
+            type: "string"
+            required: true
+            description: "Sequence number of the receipted event"
+          - name: "a"
+            type: "map"
+            required: true
+            description: "Transferable receipt binding — event SAID + validator AID + sn of validator's current event"
+        invariants:
+          - "d field is the SAID of the receipted event (inversion invariant)"
+          - "a.i is the receipting validator's AID"
+          - "a.s is the sn of the validator's KEL event that commits to this receipt"
+          - "Attached CESR group contains validator transferable signatures"
+    notes: |
+      L4-O7: ReceiptMessage was not previously defined. The d field inversion is a normative
+      KERI behavior: unlike all other KERI messages where d = SAID of the message itself,
+      receipt messages set d = SAID of the event being receipted. This enables efficient
+      indexing of receipts by the receipted event's identifier.
+
+  - name: "KRAMCacheEntry"
+    description: "A replay-protection cache entry for KRAM (KERI Request Authentication Mechanism). Keyed by a dual-key structure: (sender AID, message SAID). Stores the latest accepted message datetime per sender to enforce monotonic datetime ordering."
+    variants:
+      - name: "default"
+        fields:
+          - name: "sender_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "AID of the message sender — first key dimension"
+          - name: "message_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the authenticated message — second key dimension"
+          - name: "accepted_at"
+            type: "string"
+            required: true
+            description: "ISO 8601 datetime of the accepted message — used for timeliness comparison"
+          - name: "last_sn"
+            type: "integer"
+            required: false
+            description: "Sender's KEL sn at time of acceptance — used for key state staleness check"
+        invariants:
+          - "Dual-key: (sender_aid, message_said) uniquely identifies an accepted message"
+          - "A message is a replay if its (sender_aid, message_said) pair already exists in cache"
+          - "Timeliness: accepted_at of new message must be > accepted_at of previous message from same sender"
+          - "Cache entries expire after the KRAM timeliness window (implementation-defined, typically 10 seconds)"
+          - "Key state change (multi-sig rotation) invalidates prior cache entries for the sender — last_sn tracks this"
+        notes: |
+          L4-O8: KRAMCacheEntry was not previously defined. The dual-key structure (sender AID,
+          message SAID) is the normative KRAM cache design — SAIDs are content-addressed so replay
+          detection by SAID is exact. The sender AID dimension enables per-sender datetime ordering.
+          L4-O13: KRAM multi-sig key state change — when the sender's KEL rotation changes their
+          signing key set, prior cache entries with the old keys are no longer valid for the new
+          key state. Implementations should invalidate cache entries when last_sn < current sender sn.
+
+  - name: "MessageConstructionRequest"
+    description: "Typed input for the message-construction port — specifies what kind of KERI message to build and its parameters. Replaces the bare MessageType input with a structured request."
+    variants:
+      - name: "default"
+        fields:
+          - name: "message_type"
+            type: "types://keri-messaging#MessageType"
+            required: true
+            description: "The type of KERI message to construct"
+          - name: "sender_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "AID of the sending controller"
+          - name: "target_aid"
+            type: "types://cesr/primitives#AID"
+            required: false
+            description: "AID of the target (for directed messages like qry, exn)"
+          - name: "route"
+            type: "string"
+            required: false
+            description: "Route for routed messages (qry, rpy, exn) — determines handling domain"
+          - name: "payload"
+            type: "map"
+            required: false
+            description: "Message-type-specific payload fields"
+          - name: "prior_said"
+            type: "types://cesr/primitives#SAID"
+            required: false
+            description: "SAID of the prior message in thread (for exn, xip chains)"
+        invariants:
+          - "message_type determines which fields of payload are required"
+          - "sender_aid must have valid key state for signing"
+          - "route is required for qry, rpy, and exn message types"
+    notes: |
+      L4-O9: message-construction port previously had input type MessageType (a bare enum value),
+      which does not provide enough information to construct a complete message. MessageConstructionRequest
+      is the typed replacement.
+
   - name: "QueryMessage"
     description: "Request for information from another controller or service. Routes determine what is being queried."
     variants:
@@ -158,7 +361,7 @@ types:
             required: true
             description: "Route — what is being queried"
             constraints:
-              enum: ["logs", "ksn", "mbx", "tels", "tsn"]
+              enum: ["log", "ksn", "mbx", "tels", "tsn"]
           - name: "rr"
             type: "string"
             required: true
@@ -168,7 +371,7 @@ types:
             required: true
             description: "Query parameters (prefix, sn, SAID filters)"
         invariants:
-          - "Routes logs/ksn/mbx handled by identity domain"
+          - "Routes log/ksn/mbx handled by identity domain"
           - "Routes tels/tsn handled by credential-lifecycle domain"
           - "Subject to KRAM replay protection"
         examples:
@@ -176,7 +379,11 @@ types:
             description: "Query for KEL logs"
             value: |
               {"v":"KERI10JSON0000c9_","t":"qry","d":"EGN68_seecuzXQO15FFGJLVwZCBCPYW-hy29fjWWPQbp","dt":"2021-01-01T00:00:00.000000+00:00","r":"log","rr":"","q":{"i":"DAvCLRr5luWmp7keDvDuLP0kIqcyBYq79b3Dho1QvrjI"}}
-            notes: "r='log' queries for KEL events. q.i is the target AID. From keripy test_eventing.py"
+            notes: "r='log' queries for KEL events (not 'logs'). q.i is the target AID. From keripy test_eventing.py"
+        notes: |
+          L4-O12: QueryMessage.r route value check. The KERI spec and keripy use 'log' (not 'logs')
+          for KEL event queries. The previous enum ['logs', 'ksn', 'mbx', 'tels', 'tsn'] was incorrect.
+          Corrected to ['log', 'ksn', 'mbx', 'tels', 'tsn'] per keripy eventing.py QueryDom definition.
 
   - name: "ReplyMessage"
     description: "Response to a query or unsolicited state notification. Route determines the content type."

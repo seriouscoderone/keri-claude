@@ -252,8 +252,15 @@ contracts:
 state_machines:
   - name: "receipt-escrow-lifecycle"
     term: "Receipt Escrows"
-    states: ["received", "escrowed", "promoted", "pruned"]
+    # L5-O5: Added 'verified' state — the happy path when a receipt arrives for a known event
+    states: ["received", "verified", "escrowed", "promoted", "pruned"]
     transitions:
+      # Happy path: receipt arrives for an event already in the KEL
+      - from: "received"
+        to: "verified"
+        trigger: "ReceiptVerified — receipt arrives for an event already in the KEL and signature verifies"
+        guard: "Matching event at (aid, sn, said) exists in the KEL AND witness signature verifies"
+      # Escrow path: receipt arrives before the event
       - from: "received"
         to: "escrowed"
         trigger: "ReceiptEscrowed — receipt arrives for an event not yet in the KEL"
@@ -267,8 +274,10 @@ state_machines:
         trigger: "Timeout exceeded (3600 seconds)"
         guard: "current_time - escrow_time > 3600"
     invariants:
+      - "L5-O5: The happy path is received → verified (event already present); escrow is the exception path"
       - "An escrowed receipt either gets promoted (event arrives) or pruned (timeout) — never stays permanently"
       - "Promotion requires matching AID, sn, and SAID between the escrowed receipt and the arriving event"
       - "Pruned receipts are permanently removed — they cannot be re-escrowed or promoted"
+      - "Verified receipts contribute to the TOAD count; promoted receipts also contribute (same as verified after promotion)"
     initial_state: "received"
-    terminal_states: ["promoted", "pruned"]
+    terminal_states: ["verified", "promoted", "pruned"]

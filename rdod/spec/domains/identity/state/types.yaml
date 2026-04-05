@@ -3,6 +3,31 @@ domain_ref: "identity/state"
 types:
   - name: "KeyState"
     description: "The current cryptographic configuration of an identifier at a given point in its event history. Derived from processing the KEL up to a specific establishment event."
+    builder:
+      description: "Construct KeyState from a fully-processed establishment event and its context. All fields are derived — not directly authored."
+      required_fields:
+        - prefix: "AID string — from event i field"
+        - sn: "sequence number — from event s field (integer parsed from hex)"
+        - digest: "SAID of the latest event — from event d field"
+        - ilk: "event type — from event t field"
+        - signing_keys: "current signing public keys — from event k field"
+        - signing_threshold: "threshold expression — from event kt field"
+        - next_key_digests: "pre-rotation commitments — from event n field"
+        - next_threshold: "next key threshold — from event nt field"
+        - witness_threshold: "TOAD — from event bt field (integer parsed from hex)"
+        - witnesses: "current witnesses — derived by applying br/ba changes to prior set"
+        - config_traits: "active traits — from inception c field; traits persist for identifier lifetime"
+        - transferable: "boolean — derived: non-empty next_key_digests at inception means transferable"
+        - last_establishment_sn: "sn of most recent icp/rot/dip/drt event"
+        - first_seen_sn: "fn ordinal assigned at acceptance time by the storage layer"
+      construction_invariants:
+        - "transferable == (next_key_digests was non-empty at inception) — determined once at inception, immutable"
+        - "If next_key_digests is empty and sn == 0: non-transferable (never had commitments)"
+        - "If next_key_digests is empty and sn > 0: abandoned (had commitments, rotation set n=[])"
+        - "witnesses = (prior_witnesses - br) + ba, applied during each establishment event"
+        - "config_traits are set at inception only — rotation c field is accepted by wire format but has no effect in practice"
+        - "last_establishment_sn is updated only on icp/rot/dip/drt events, never on ixn"
+        - "first_seen_sn is assigned by persistence layer — not part of the event body"
     variants:
       - name: "default"
         fields:
@@ -82,20 +107,27 @@ types:
             notes: "Derived from non-transferable icp. next_key_digests=[] and sn=0 means non-transferable. Logical representation — keripy exposes via Kever attributes."
 
   - name: "TraitCode"
-    description: "Configuration trait enum controlling operational constraints on an identifier."
+    description: "Configuration trait enum controlling operational constraints on an identifier. Note on naming: three naming systems coexist — (1) field value / wire format: 'EO', 'DND', 'DID', 'RB', 'NRB'; (2) human name: 'EstOnly', 'DoNotDelegate', 'DID', 'RegistrarBackers', 'NoRegistrarBackers'; (3) protocol spec term: 'Establishment Only', 'Do Not Delegate', 'DID', 'Registrar Backers', 'No Registrar Backers'. The spec uses all three interchangeably; implementations SHOULD accept the wire-format value and expose the human name for readability."
     variants:
       - name: "default"
         fields:
           - name: "value"
             type: "string"
             required: true
-            description: "The configuration trait code"
+            description: "The configuration trait code (wire-format value)"
             constraints:
-              enum: ["EstOnly", "DoNotDelegate", "DID", "RegistrarBackers", "NoRegistrarBackers"]
-        invariants:
-          - "EstOnly (EO) restricts the identifier to establishment events only — no interaction events"
-          - "DoNotDelegate (DND) prevents the identifier from acting as a delegator"
-          - "Traits are set at inception only — once set, a trait persists for the identifier's lifetime and cannot be removed (v2.0 admits c in rot wire format but keripy never applies it on rotation)"
+              enum: ["EO", "DND", "DID", "RB", "NRB"]
+    naming_note: |
+      Wire format → human name → spec term:
+        EO  → EstOnly          → Establishment Only
+        DND → DoNotDelegate    → Do Not Delegate
+        DID → DID              → DID (reserved for DID method compatibility)
+        RB  → RegistrarBackers → Registrar Backers
+        NRB → NoRegistrarBackers → No Registrar Backers
+    invariants:
+      - "EstOnly (EO) restricts the identifier to establishment events only — no interaction events"
+      - "DoNotDelegate (DND) prevents the identifier from acting as a delegator"
+      - "Traits are set at inception only — once set, a trait persists for the identifier's lifetime and cannot be removed (v2.0 admits c in rot wire format but keripy never applies it on rotation)"
 
   - name: "LastEstablishmentData"
     description: "Cached snapshot of the most recent establishment event's key configuration, used for efficient state queries without replaying the KEL."
@@ -234,6 +266,49 @@ types:
         invariants:
           - "The event is not stored — it is dropped"
           - "Rejection is terminal — the event will not be retried unless re-submitted by the caller"
+
+  - name: "BADAInput"
+    description: "Input for BADA (Best Available Data Algorithm) reply acceptance. BADA compares an incoming reply against the stored reply for the same route and endorser to determine freshness. Only fresher replies replace stored ones."
+    variants:
+      - name: "default"
+        fields:
+          - name: "reply_message"
+            type: "types://keri-messaging#ReplyMessage"
+            required: true
+            description: "The incoming rpy message to evaluate for acceptance"
+          - name: "endorser_aid"
+            type: "string"
+            required: true
+            description: "AID of the entity whose key state determines reply freshness (for transferable endorsers: compared by sn + datetime; for non-transferable: compared by datetime only)"
+          - name: "datetime"
+            type: "string"
+            required: true
+            description: "ISO 8601 datetime extracted from the reply message — used for staleness comparison"
+        invariants:
+          - "For transferable endorsers: incoming reply is fresher if (endorser_sn, datetime) > stored (endorser_sn, datetime) lexicographically"
+          - "For non-transferable endorsers: incoming reply is fresher if datetime > stored datetime"
+          - "A stale reply (same or earlier sn + earlier or equal datetime) MUST be rejected — stored reply is preserved"
+          - "Reply acceptance is idempotent: re-submitting the same reply produces the same result"
+
+  - name: "EscrowQueueIdentifier"
+    description: "Typed identifier for an escrow queue, used when requesting drain operations. Each queue holds events awaiting a specific blocking condition."
+    variants:
+      - name: "default"
+        fields:
+          - name: "queue"
+            type: "string"
+            required: true
+            description: "Escrow queue name"
+            constraints:
+              enum: ["OOE", "PSE", "PWE", "PDE", "LDE", "MFE", "all"]
+        invariants:
+          - "OOE: Out-of-Order Escrow — waiting for missing prior events"
+          - "PSE: Partially-Signed Escrow — waiting for additional controller signatures"
+          - "PWE: Partially-Witnessed Escrow — waiting for witness receipts to reach TOAD"
+          - "PDE: Partially-Delegated Escrow — waiting for delegator anchoring seal"
+          - "LDE: Likely-Duplicitous Escrow — conflicting event held as evidence"
+          - "MFE: Misfit Event Escrow — remote-sourced event for a locally-protected AID"
+          - "'all' drains all queues in processing order: OOE → PSE → PWE → PDE"
 
   - name: "EscrowReprocessResult"
     description: "Result of draining an escrow queue — events that were pending may now be accepted, remain escrowed, or be rejected."

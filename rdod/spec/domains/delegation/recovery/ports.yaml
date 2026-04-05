@@ -26,3 +26,28 @@ ports:
       output: "types://delegation/recovery#SupersedingOrder"
       errors: []
     refs: ["domain://delegation"]
+
+  # L1-O21: Outbound ports — delegation/recovery requires delegator KEL access
+  # to evaluate B1, B2, B3 rules. These were missing from the original spec.
+  - id: "port://delegation/recovery/outbound/delegator-kel-query"
+    type: outbound
+    name: "Delegator KEL Query"
+    semantics: query
+    idempotent: true
+    description: >
+      Recovery rule evaluation (B1, B2, B3) requires reading the delegator's KEL to
+      compare the delegating events that authorized the candidate and incumbent rotations.
+      This outbound port delegates to the identity/state domain to retrieve the delegator's
+      current key event log.
+    contract:
+      input: "types://cesr/primitives#AID"
+      output: "types://identity/state#KeyState"
+      errors:
+        - "errors://delegation/recovery#DelegatorRevocationError"
+    refs: ["domain://identity"]
+    notes: >
+      L1-O21: Added. Rule B1 requires comparing delegating_sn(candidate) vs delegating_sn(incumbent).
+      Rule B2 requires reading the seal list of the delegating event. Rule B3 requires knowing
+      the event type (rot vs ixn) of the delegating event. All three require reading the delegator's KEL.
+      Uses DelegatorRevocationError (already in this domain's errors.yaml) as the not-found error.
+      Output uses KeyState (defined in identity/state/types.yaml) which includes key state information.

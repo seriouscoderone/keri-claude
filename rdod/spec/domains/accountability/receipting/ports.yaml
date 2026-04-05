@@ -8,8 +8,14 @@ ports:
     name: "Receipt Lifecycle"
     semantics: command
     idempotent: false
+    description: >
+      Process an incoming receipt for a specific key event. The receipt covers a specific
+      event identified by event_said. The signing keys are the witness's keys used to verify
+      the receipt signature.
     contract:
-      input: "types://accountability/receipting#SigningKeys"
+      # L5-O2: Added event_said to input — receipt-lifecycle must know which event is being receipted
+      # Schema requires string; encoding as composite
+      input: "types://cesr/primitives#SAID + signing_keys:types://accountability/receipting#SigningKeys"
       output: "types://accountability/consensus#Receipt"
       errors:
         - "errors://accountability/receipting#UnverifiedReceiptError"
@@ -19,15 +25,26 @@ ports:
         - "errors://accountability/receipting#UnknownWitnessError"
         - "errors://accountability/receipting#EscrowTimeoutError"
     refs: ["domain://accountability"]
+    notes: >
+      L5-O2: event_said added to input. A receipt is always bound to a specific event;
+      without the event_said the port has no way to verify that the receipt covers the
+      correct event or to look up the event for two-phase verification.
 
   - id: "port://accountability/receipting/inbound/kerl-assembly"
     type: inbound
     name: "KERL Assembly"
     semantics: command
     idempotent: false
+    description: >
+      Attach a receipt to the KERL. Returns a KerlAssemblyResult indicating whether the
+      TOAD threshold was reached. Does NOT return the full KERL on each call — the KERL
+      is retrieved via a separate query port. This design avoids returning large payloads
+      on every receipt attachment.
     contract:
       input: "types://accountability/consensus#Receipt"
-      output: "types://accountability/receipting#KERL"
+      # L5-O3: Changed from full KERL to KerlAssemblyResult — assembly is an incremental
+      # operation; returning the full KERL on each attachment is wasteful and incorrect
+      output: "types://accountability/receipting#KerlAssemblyResult"
       errors: []
     refs: ["domain://accountability"]
 
@@ -37,6 +54,10 @@ ports:
     name: "Receipt Repository"
     semantics: command
     idempotent: false
+    description: >
+      Persistence port covering both write and read operations for receipts.
+      Write operations: store, escrow, promote, remove. Read operations: get_receipts
+      (by AID + sn), get_escrowed (by AID + sn + escrow_type), has_receipt.
     contract:
       input: "types://accountability/consensus#Receipt"
       output: "types://accountability/consensus#Receipt"
@@ -47,3 +68,13 @@ ports:
       - "Escrowed receipts are temporary — promoted to stored receipts or discarded"
       - "Removal of escrowed receipts is idempotent"
       - "Receipts are keyed by AID, sequence number, and event SAID"
+      # L5-O4: Query operations
+      - "get_receipts(aid, sn) returns all stored receipts for (aid, sn); returns empty array if none"
+      - "get_escrowed(aid, sn, escrow_type) returns all escrowed receipts of the specified type for (aid, sn)"
+      - "has_receipt(aid, sn, said) returns boolean — checks presence of a specific receipt"
+      - "count_receipts(aid, sn) returns integer — total verified receipt count for (aid, sn)"
+    notes: >
+      L5-O4: Query operations added as invariants. The persistence port is primarily commanded
+      (write receipts, escrow receipts, promote, remove) but also supports read operations needed
+      by the receipt-lifecycle port to check thresholds and by the kerl-assembly port to build
+      the KERL. A future revision SHOULD split read and write into separate port declarations.

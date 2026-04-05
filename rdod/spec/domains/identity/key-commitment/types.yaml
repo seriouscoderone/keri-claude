@@ -83,6 +83,20 @@ types:
 
   - name: "KeyConfiguration"
     description: "A complete set of current signing keys, threshold, and next key commitments for an identifier."
+    builder:
+      description: "Construct a KeyConfiguration with validated key list, threshold, and pre-rotation commitments."
+      required_fields:
+        - keys: "array of PublicKey — at least one signing key required"
+        - threshold: "threshold expression — integer string or fractional weight list"
+        - next_keys: "array of Digest — pre-rotation commitments; empty only for non-transferable or abandonment"
+        - next_threshold: "threshold expression for next keys — '0' with empty next_keys for non-transferable"
+      construction_invariants:
+        - "len(keys) >= 1 — at least one signing key required"
+        - "For simple integer threshold: integer(threshold) >= 1 and integer(threshold) <= len(keys)"
+        - "For weighted threshold: sum of weights across all keys >= 1 (satisfiable)"
+        - "If next_keys is empty: next_threshold MUST be '0' (non-transferable or abandonment)"
+        - "If next_keys is non-empty: next_threshold MUST be >= 1 and <= len(next_keys)"
+        - "Digest algorithm for next_keys MUST be consistent across all commitments in the set"
     variants:
       - name: "default"
         fields:

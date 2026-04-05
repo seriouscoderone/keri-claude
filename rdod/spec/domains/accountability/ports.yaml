@@ -8,9 +8,18 @@ ports:
     name: "Receipting"
     semantics: command
     idempotent: false
+    description: >
+      Process an incoming receipt from a witness. The input is a Receipt (the witness's
+      signed proof of observation), not a raw key event. The receipting subdomain verifies
+      the receipt's signature and stores it; the KERL is assembled incrementally.
     contract:
+      # L67-O2: Clarification note — the input IS a Receipt (witness's signed artifact),
+      # NOT a key event. The receipting port receives already-arrived receipts for events
+      # that may or may not be in the KEL. The distinction matters:
+      # - Key events arrive via the identity domain's event processing pipeline
+      # - Receipts arrive separately and are correlated to events by SAID
       input: "types://accountability/consensus#Receipt"
-      output: "types://accountability/receipting#KERL"
+      output: "types://accountability/receipting#KerlAssemblyResult"
       errors:
         - "errors://accountability/receipting#UnverifiedWitnessReceiptError"
         - "errors://accountability/receipting#UnverifiedReceiptError"

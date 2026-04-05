@@ -27,6 +27,11 @@ ports:
         - "errors://credential-lifecycle/verification#OutOfOrderTELError"
         - "errors://credential-lifecycle/verification#IncompleteVerifiableEventError"
     refs: ["domain://credential-lifecycle"]
+    notes: |
+      L5-O27: The input type VerifiableEvent already structurally requires all three components
+      (tel_event, kel_seal, registry_state). No redundant precondition "all three must be present"
+      is needed — the type constraint enforces it. The IncompleteVerifiableEventError is retained
+      for runtime enforcement when the type arrives partially populated via dynamic deserialization.
 
   - id: "port://credential-lifecycle/verification/inbound/reprocess-pending"
     type: inbound
@@ -56,12 +61,13 @@ ports:
       history, credential status, and registry state.
     contract:
       input: "types://cesr/primitives#SAID"
-      output: "types://credential-lifecycle/status#LifecycleStateSnapshot"
+      output: "types://credential-lifecycle/verification#VerifiableEvent"
       errors: []
     refs: ["domain://externals/persistence"]
     invariants:
       - "Read-only: this port never mutates state, only queries it"
       - "Consistency: returned state reflects all events processed up to the point of the query"
+      - "Returns the full VerifiableEvent bundle (TEL event + KEL seal + registry state) needed for authorization chain verification"
 
   - id: "port://credential-lifecycle/verification/outbound/verification-repository"
     type: outbound

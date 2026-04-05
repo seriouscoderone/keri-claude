@@ -176,4 +176,56 @@ types:
           - "Not present in inception events (icp, dip)"
           - "Creates tamper-evident backward chain"
 
+  - name: "RotationConfig"
+    description: "Construction parameters for rotating an existing identifier's keys. The symmetric counterpart to InceptionConfig — captures all parameters needed to build a rotation event (rot or drt)."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "string"
+            required: true
+            description: "AID of the identifier being rotated"
+          - name: "new_signing_keys"
+            type: "array[PublicKey]"
+            required: true
+            description: "New signing keys — must match prior next key digest commitments"
+            constraints:
+              min_length: 1
+          - name: "new_signing_threshold"
+            type: "string"
+            required: true
+            description: "New signing threshold expression for the new signing keys"
+          - name: "new_next_key_digests"
+            type: "array[string]"
+            required: true
+            description: "Pre-rotation commitments for the NEXT rotation. Empty for abandonment."
+          - name: "new_next_threshold"
+            type: "string"
+            required: true
+            description: "Next key threshold. '0' for abandonment."
+          - name: "witness_threshold"
+            type: "integer"
+            required: true
+            description: "New TOAD — witness threshold after rotation"
+            constraints:
+              min: 0
+          - name: "witnesses_to_remove"
+            type: "array[WitnessAID]"
+            required: true
+            description: "Witnesses to remove (br field). Empty if no changes."
+          - name: "witnesses_to_add"
+            type: "array[WitnessAID]"
+            required: true
+            description: "Witnesses to add (ba field). Empty if no changes."
+          - name: "anchors"
+            type: "array[Seal]"
+            required: true
+            description: "Optional seals to anchor in the rotation event (a field)"
+        invariants:
+          - "For each key in new_signing_keys: digest(key) MUST match one entry in prior next key digest list"
+          - "The matched subset must satisfy the prior next threshold (dual threshold check)"
+          - "If new_next_key_digests is empty: new_next_threshold MUST be '0' (abandonment)"
+          - "new witness set = (prior witnesses - witnesses_to_remove) + witnesses_to_add"
+          - "0 <= witness_threshold <= len(new witness set)"
+
   # ExchangeMessage, QueryMessage, ReplyMessage moved to domain://keri-messaging

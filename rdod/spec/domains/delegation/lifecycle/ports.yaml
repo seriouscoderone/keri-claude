@@ -72,3 +72,19 @@ ports:
       output: "types://identity/state#WriteOutcome"
       errors: []
     refs: ["domain://identity"]
+
+  # H-O8: Escrow sweep trigger — note: periodic polling, not push
+  # The DelegationService is responsible for periodically sweeping both
+  # PDE and Delegable escrow queues. This sweep is triggered by a timer
+  # (configurable interval — keripy uses an HIO doer pattern) rather than
+  # by a push event. There is no inbound port for the sweep trigger; instead,
+  # the service polls on a schedule. Implementations SHOULD expose the sweep
+  # interval as a configurable parameter.
+  #
+  # NOTE (L4-O1): This outbound identity-service port covers the inception
+  # approval flow. Rotation approval (drt) requires the same port but with
+  # the delegatee's rotation event as input. The port contract SHOULD be
+  # extended to explicitly support rotation events as well — drt events
+  # undergo the same multi-step delegation validation pipeline as dip events.
+  # A future revision SHOULD add a distinct rotation approval operation or
+  # note that the approve port is type-agnostic (accepts dip and drt equally).
