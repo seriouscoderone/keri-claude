@@ -1,0 +1,111 @@
+---
+layers: [6, 7]
+domains_analyzed: 6
+date: "2026-04-04"
+method: "spec-hardening — force implementation planning → fix"
+
+summary:
+  total_findings: 40+
+  contradictions_fixed: 1
+  remaining_open: 39+
+
+resolved:
+  - id: "L67-C1"
+    category: contradiction
+    domain: "witness-service/api"
+    file: "ports.yaml"
+    finding: "event-submission port declared idempotent:false but UL ('Receipt Response': duplicate submissions return cached receipt) and verification (test_resubmission_idempotent) both confirm idempotent behavior"
+    resolution: "Changed to idempotent:true with explanatory comment"
+
+open:
+  # accountability parent
+  - id: "L67-O1"
+    finding: "WitnessReceipt vs consensus/Receipt vs witness-service/EventSubmissionResult.receipt — three incompatible receipt types"
+  - id: "L67-O2"
+    finding: "accountability/inbound/receipting input type is Receipt but callers submit key events, not receipts"
+  - id: "L67-O3"
+    finding: "ReceiptMessage.d SAID inversion (d = receipted event SAID) has no verification property"
+  - id: "L67-O4"
+    finding: "RegistrarBacker type is spec-inert — no ports, errors, or verification"
+
+  # credential-exchange/proof
+  - id: "L67-O5"
+    finding: "No ProofOfIssuance or ProofOfDisclosure first-class types despite being central concepts"
+  - id: "L67-O6"
+    finding: "authenticate-message port returns RegistryState — wrong output type for KRAM auth"
+  - id: "L67-O7"
+    finding: "verify-disclosure conflates KRAM auth and three-link chain verification in one port"
+  - id: "L67-O8"
+    finding: "MCF computation algorithm has no formal verification expression"
+  - id: "L67-O9"
+    finding: "RegistryState.mode needed as input but is port output — chicken-and-egg"
+
+  # integrity parent
+  - id: "L67-O10"
+    finding: "NoDuplicity duplicated in parent and detection subdomain"
+  - id: "L67-O11"
+    finding: "DisputedBranch fork point boundary (inclusive/exclusive sn) unspecified"
+  - id: "L67-O12"
+    finding: "Attack taxonomy types (5 attack types) are spec-inert — no ports, errors"
+  - id: "L67-O13"
+    finding: "inbound/monitoring missing sources input parameter"
+  - id: "L67-O14"
+    finding: "inbound/evidence-query returns singular DuplicityEvidence, should be array"
+  - id: "L67-O15"
+    finding: "inbound/recovery precondition only allows rot, should also allow drt"
+
+  # witness-service/api
+  - id: "L67-O16"
+    finding: "EventSubmissionResult.receipted only models Cigar — missing transferable witness variant"
+  - id: "L67-O17"
+    finding: "KERLResponse references undefined ReceiptedEvent type"
+  - id: "L67-O18"
+    finding: "No OOBI verification properties at all — security-sensitive port unverified"
+  - id: "L67-O19"
+    finding: "Duplicate witness query ports in parent and api subdomain (also flagged L4)"
+  - id: "L67-O20"
+    finding: "No outbound port for witness-to-witness receipt dissemination"
+  - id: "L67-O21"
+    finding: "No outbound port for KERL persistence"
+
+  # discovery
+  - id: "L67-O22"
+    finding: "Missing outbound port for BADA call to identity/state"
+  - id: "L67-O23"
+    finding: "No ReplyMessage type — BADA operates on untyped input"
+  - id: "L67-O24"
+    finding: "BADAComparisonKey type missing — sn-first vs datetime-only not structurally enforced"
+  - id: "L67-O25"
+    finding: "RPE (reply escrow) drain mechanism undefined — no port, no timeout formalized"
+  - id: "L67-O26"
+    finding: "No KSN-acceptance inbound port"
+  - id: "L67-O27"
+    finding: "No OOBI re-resolution/cache-refresh port"
+
+  # identity parent
+  - id: "L67-O28"
+    finding: "Parent has no rotate-keys or anchor-data inbound ports — clients must reach into subdomains"
+  - id: "L67-O29"
+    finding: "event-processing port models escrow as errors, not as normal WriteOutcome variant"
+  - id: "L67-O30"
+    finding: "RotationConfig type missing at parent level"
+  - id: "L67-O31"
+    finding: "TraitCode three-naming-system inconsistency (EstOnly/EO/Establishment Only)"
+  - id: "L67-O32"
+    finding: "Tetrad binding invariant (foundational KERI security) has no formal expression"
+  - id: "L67-O33"
+    finding: "LDE/PDE timeout defaults inconsistent between UL and verification"
+  - id: "L67-O34"
+    finding: "establishment subdomain has backwards port naming — inbound ports that are actually outbound calls"
+
+  # cross-domain
+  - id: "L67-O35"
+    finding: "DuplicityEvidence handoff from witness to integrity has no formal interface"
+  - id: "L67-O36"
+    finding: "KRAM inapplicability to KEL events not explicitly stated"
+  - id: "L67-O37"
+    finding: "TEL event type (upd/bup) depends on RegistryState.mode which is the verification output, not input"
+  - id: "L67-O38"
+    finding: "BADA ownership unclear — discovery and identity/state both implement BADA logic"
+  - id: "L67-O39"
+    finding: "identity parent state-query returns KeyState but subdomain returns LastEstablishmentData — type mismatch"

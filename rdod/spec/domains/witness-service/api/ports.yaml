@@ -6,7 +6,7 @@ ports:
     type: inbound
     name: "Event Submission"
     semantics: command
-    idempotent: false
+    idempotent: true  # duplicate submissions return cached receipt — per UL ("Receipt Response") and verification (test_resubmission_idempotent)
     contract:
       input: "CESR-encoded key event message"
       output: "types://witness-service/api#EventSubmissionResult"
