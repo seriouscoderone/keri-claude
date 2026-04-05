@@ -586,10 +586,10 @@ state_machines:
         to: "Spurned"
         trigger: "spurn message from either party"
         guard: "spurn.p == agree.d"
-      - from: "Granted"
-        to: "Spurned"
-        trigger: "spurn message from disclosee"
-        guard: "spurn.p == grant.d"
+      # Note: Granted→Spurned removed — three invariants agree grant cannot be spurned:
+      # (1) response constraints: 'grant': {'admit'} only
+      # (2) explicit invariant: "Spurn MUST NOT be valid against grant or admit"
+      # (3) transition table test: ('granted', 'admit') is the only exit from granted
     invariants:
       - "Admitted is the ONLY successful terminal state"
       - "Spurned is terminal — no further messages accepted in this thread"
