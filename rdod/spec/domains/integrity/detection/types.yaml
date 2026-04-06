@@ -40,6 +40,22 @@ types:
           - "At least 2 sources from distinct operators must be present"
           - "Monitoring remains active until explicitly cancelled or duplicity confirmed"
 
+  - name: "MonitoringRequest"
+    description: "Request to start duplicity monitoring for a specific AID against a set of witness or watcher sources."
+    variants:
+      - name: "default"
+        fields:
+          - name: "target_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID to monitor for duplicity"
+          - name: "sources"
+            type: "array[types://cesr/primitives#AID]"
+            required: true
+            description: "Witness or watcher AIDs to cross-check against"
+        invariants:
+          - "At least 2 sources from distinct operators must be provided for meaningful duplicity detection"
+
   - name: "DuplicityEvidence"
     description: "Evidence of conflicting events for the same AID at the same sequence number, collected from multiple witness sources."
     variants:
@@ -61,6 +77,14 @@ types:
             type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the conflicting (challenger) event"
+          - name: "first_event_bytes"
+            type: "bytes"
+            required: true
+            description: "Serialized event body of the first-seen (incumbent) event"
+          - name: "conflicting_event_bytes"
+            type: "bytes"
+            required: true
+            description: "Serialized event body of the conflicting (challenger) event"
           - name: "first_source"
             type: "types://cesr/primitives#AID"
             required: true
@@ -72,6 +96,8 @@ types:
         invariants:
           - "first_event_said != conflicting_event_said — identical SAIDs is not duplicity"
           - "Both events must be at the same (aid, sn) — different sn is not duplicity"
+          - "first_event_said must equal the SAID digest of first_event_bytes"
+          - "conflicting_event_said must equal the SAID digest of conflicting_event_bytes"
           - "Evidence is permanent — stored in the DEL, never deleted"
 
   - name: "TrustDecision"

@@ -300,7 +300,7 @@ types:
             required: true
             description: "Escrow queue name"
             constraints:
-              enum: ["OOE", "PSE", "PWE", "PDE", "LDE", "MFE", "all"]
+              enum: ["OOE", "PSE", "PWE", "PDE", "LDE", "MFE", "RPE", "all"]
         invariants:
           - "OOE: Out-of-Order Escrow — waiting for missing prior events"
           - "PSE: Partially-Signed Escrow — waiting for additional controller signatures"
@@ -308,6 +308,7 @@ types:
           - "PDE: Partially-Delegated Escrow — waiting for delegator anchoring seal"
           - "LDE: Likely-Duplicitous Escrow — conflicting event held as evidence"
           - "MFE: Misfit Event Escrow — remote-sourced event for a locally-protected AID"
+          - "RPE: Reply Processing Escrow — reply message whose endorser key state is not yet available"
           - "'all' drains all queues in processing order: OOE → PSE → PWE → PDE"
 
   - name: "EscrowReprocessResult"

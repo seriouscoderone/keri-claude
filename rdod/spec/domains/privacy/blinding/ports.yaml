@@ -23,7 +23,7 @@ ports:
   - id: "port://privacy/blinding/inbound/blinded-state"
     type: inbound
     name: "Shielded State"
-    semantics: command
+    semantics: query
     idempotent: true
     description: >
       Derives the shielded state for a credential registry event — given a shared
@@ -32,7 +32,7 @@ ports:
       credential-lifecycle's shielded-state port; also invoked as a protocol step
       when a registry is shieldable.
     contract:
-      input: "Shared secret salt, sequence number, registry SAID"
+      input: "types://privacy/blinding#BlindedStateInput"
       output: "types://privacy/blinding#ShieldedAttributeBlock"
       errors: []
     refs: ["domain://credential-lifecycle", "domain://privacy"]
@@ -47,8 +47,8 @@ ports:
       state by trying all state values in the finite state set against candidate
       ACDC SAIDs.
     contract:
-      input: "BLID, salt, event sequence number, candidate ACDC SAIDs"
-      output: "Discovered state (credential SAID + state value) or not found"
+      input: "types://privacy/blinding#StateDiscoveryInput"
+      output: "types://privacy/blinding#StateDiscoveryResult"
       errors:
         - "errors://privacy/blinding#StateDiscoveryError"
         - "errors://privacy/blinding#ShieldingKeyMismatchError"
@@ -75,8 +75,8 @@ ports:
     semantics: query
     idempotent: true
     contract:
-      input: "Salt and sequence number"
-      output: "UUID string"
+      input: "types://privacy/blinding#UuidDerivationInput"
+      output: "string"
       errors:
         - "errors://privacy/blinding#InsufficientSaltEntropyError"
         - "errors://privacy/blinding#UUIDDerivationError"

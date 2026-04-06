@@ -25568,7 +25568,7 @@ const RDOD_DATA = {
         "semantics": "query",
         "idempotent": true,
         "contract": {
-          "input": "types://delegation/recovery#DelegatingEventRef",
+          "input": "types://delegation/recovery#SupersedingComparisonInput",
           "output": "types://delegation/recovery#SupersedingOrder",
           "errors": []
         },
@@ -25586,9 +25586,7 @@ const RDOD_DATA = {
         "contract": {
           "input": "types://cesr/primitives#AID",
           "output": "types://identity/state#KeyState",
-          "errors": [
-            "errors://delegation/recovery#DelegatorRevocationError"
-          ]
+          "errors": []
         },
         "refs": [
           "domain://identity"
@@ -25780,6 +25778,7 @@ const RDOD_DATA = {
         "recovery": "escrow",
         "recovery_target": "PDE",
         "severity": "transient",
+        "related_port": "port://delegation/recovery/inbound/recovery-rules",
         "context": [
           {
             "field": "delegate_prefix",
@@ -25804,6 +25803,7 @@ const RDOD_DATA = {
         "cause": "Watcher reports duplicity on the delegator's KEL — all delegated identifiers under this delegator are at risk",
         "recovery": "escalate",
         "severity": "recoverable",
+        "related_port": "port://delegation/recovery/inbound/recovery-rules",
         "context": [
           {
             "field": "delegator_prefix",
@@ -25834,7 +25834,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "delegator_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "AID of the delegator authorizing this rotation"
               }
@@ -26009,6 +26009,29 @@ const RDOD_DATA = {
               "Used in Rule B1 — higher delegating event sn means the superseding rotation wins; comparison uses sn (sequence number), NOT fn (first-seen number)",
               "Used in Rule B2 — within the same delegating event, later seal index wins; seal_index is the zero-based position in the anchor list",
               "seal_index is 0 for the first seal, 1 for the second, etc.; ties are not possible within a single delegating event because each seal occupies a distinct array position"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "SupersedingComparisonInput",
+        "description": "Input pair for comparing two conflicting delegated events to determine superseding priority.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "candidate",
+                "type": "types://delegation/recovery#DelegatingEventRef",
+                "required": true,
+                "description": "The potentially superseding event's delegation reference"
+              },
+              {
+                "name": "incumbent",
+                "type": "types://delegation/recovery#DelegatingEventRef",
+                "required": true,
+                "description": "The currently accepted event's delegation reference"
+              }
             ]
           }
         ]
@@ -34933,7 +34956,7 @@ const RDOD_DATA = {
         "semantics": "query",
         "idempotent": true,
         "contract": {
-          "input": "types://identity/key-commitment#PrefixCode",
+          "input": "types://identity/key-commitment#TransferabilityInput",
           "output": "types://identity/key-commitment#TransferabilityKind",
           "errors": [
             "errors://identity/key-commitment#NonTransferableRotationError",
@@ -35215,25 +35238,25 @@ const RDOD_DATA = {
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda prefix_code: prefix_code is not None"
+                "expression": "lambda input: input.prefix_code is not None and input.next_key_count >= 0"
               },
-              "description": "Prefix code must be provided"
+              "description": "TransferabilityInput must have a prefix code and a non-negative next key count"
             }
           ],
           "postconditions": [
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda prefix_code, result: result == (prefix_code in ('D', '1AAB', '1AAJ', '1AAD', 'E'))"
+                "expression": "lambda input, result: result == (input.next_key_count > 0)"
               },
-              "description": "Transferable prefix codes are D, 1AAB, 1AAJ, 1AAD, E"
+              "description": "AID is transferable iff next_key_count > 0 — the n field is the definitive signal"
             },
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda next_digests, result: result == (len(next_digests) > 0)"
+                "expression": "lambda input, result: input.prefix_code.value.endswith('N') implies (input.next_key_count == 0)"
               },
-              "description": "AID is transferable iff next_digests is non-empty"
+              "description": "Non-transferable prefix codes (B, 1AAA, 1AAC, 1AAI) must have next_key_count == 0"
             }
           ]
         },
@@ -35293,7 +35316,7 @@ const RDOD_DATA = {
         "description": "Rotation event has empty next key commitments — this is an abandonment, not a rotation",
         "cause": "The n field is empty and nt is '0' — this terminates the identifier permanently",
         "recovery": "abort",
-        "severity": "recoverable",
+        "severity": "fatal",
         "context": [
           {
             "field": "aid",
@@ -35743,6 +35766,82 @@ const RDOD_DATA = {
         ]
       },
       {
+        "name": "TransferabilityInput",
+        "description": "Input for determining transferability of an AID. Transferability is determined by the n field (next key digest count), not by the prefix code alone — but the prefix code provides a secondary structural check (non-transferable prefix codes must have empty n).",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "prefix_code",
+                "type": "PrefixCode",
+                "required": true,
+                "description": "CESR prefix code from the inception key — provides structural constraint (non-transferable codes must have empty n)"
+              },
+              {
+                "name": "next_key_count",
+                "type": "integer",
+                "required": true,
+                "description": "Number of next key digests in the n field — the definitive signal for transferability",
+                "constraints": {
+                  "min": 0
+                }
+              }
+            ],
+            "invariants": [
+              "Transferable iff next_key_count > 0",
+              "Non-transferable prefix codes (B, 1AAA, 1AAC, 1AAI) MUST have next_key_count == 0",
+              "Self-addressing prefix code (E) is transferable when next_key_count > 0"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "MatchedKeyTuple",
+        "description": "A single verified key-to-digest binding from a rotation event, recording whether a new signing key at a given index matches its pre-committed digest at a (possibly different) ondex position.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "index",
+                "type": "integer",
+                "required": true,
+                "description": "Position of the key in the current rotation event's signing key list (k field)"
+              },
+              {
+                "name": "ondex",
+                "type": "integer",
+                "required": true,
+                "description": "Position of the matching digest in the prior establishment event's next key digest list (n field)"
+              },
+              {
+                "name": "expected_digest",
+                "type": "string",
+                "required": true,
+                "description": "The pre-committed digest from the prior n field at the ondex position"
+              },
+              {
+                "name": "computed_digest",
+                "type": "string",
+                "required": true,
+                "description": "The digest computed from the new signing key at the index position"
+              },
+              {
+                "name": "matches",
+                "type": "boolean",
+                "required": true,
+                "description": "Whether expected_digest equals computed_digest"
+              }
+            ],
+            "invariants": [
+              "matches == (expected_digest == computed_digest)",
+              "Cross-position matching is valid: index != ondex occurs in partial and augmented rotations"
+            ]
+          }
+        ]
+      },
+      {
         "name": "BindingVerification",
         "description": "The result of checking new rotation keys against prior next key digest commitments using dual-indexed (index, ondex) matching. Cross-position matching IS valid via the ondex mechanism.",
         "variants": [
@@ -35757,20 +35856,20 @@ const RDOD_DATA = {
               },
               {
                 "name": "matched_tuples",
-                "type": "array[map]",
+                "type": "array[MatchedKeyTuple]",
                 "required": true,
-                "description": "List of verified (index, ondex, expected_digest, computed_digest) tuples. index = position in current signing key list, ondex = position in prior next-key digest list."
+                "description": "List of verified key-to-digest bindings. Each tuple records the index (current key position), ondex (prior next-key position), expected digest, computed digest, and match result."
               },
               {
                 "name": "mismatches",
-                "type": "array[map]",
+                "type": "array[MatchedKeyTuple]",
                 "required": false,
                 "description": "List of key positions where digest does not match (empty if bound=true)"
               }
             ],
             "invariants": [
               "If bound=false, rotation MUST be rejected",
-              "Each matched tuple contains: index (current key position), ondex (prior next-key position), expected_digest, computed_digest",
+              "Each matched tuple contains: index (current key position), ondex (prior next-key position), expected_digest, computed_digest, matches",
               "Cross-position matching is valid: a signature with index=2 and ondex=0 means key at position 2 in current list corresponds to position 0 in prior next-key digest list",
               "The ondex is essential for partial and augmented rotations where key positions shift"
             ]
@@ -36698,7 +36797,8 @@ const RDOD_DATA = {
             "uninitialized",
             "active",
             "est_only",
-            "non_transferable"
+            "non_transferable",
+            "abandoned"
           ],
           "transitions": [
             {
@@ -36718,6 +36818,12 @@ const RDOD_DATA = {
               "to": "non_transferable",
               "trigger": "non-transferable inception (icp with n=[]) processed",
               "guard": "event.t == 'icp' and event.sn == 0 and event.n == []"
+            },
+            {
+              "from": "uninitialized",
+              "to": "non_transferable",
+              "trigger": "non-transferable delegated inception (dip with n=[]) processed",
+              "guard": "event.t == 'dip' and event.sn == 0 and event.di is not None and event.n == []"
             },
             {
               "from": "uninitialized",
@@ -36757,9 +36863,9 @@ const RDOD_DATA = {
             },
             {
               "from": "active",
-              "to": "non_transferable",
-              "trigger": "rotation with empty next digests",
-              "guard": "event.t in ('rot', 'drt') and event.n == []"
+              "to": "abandoned",
+              "trigger": "rotation with empty next digests — controller chose to permanently retire this identifier",
+              "guard": "event.t in ('rot', 'drt') and event.n == [] and event.nt == '0'"
             },
             {
               "from": "est_only",
@@ -36775,15 +36881,17 @@ const RDOD_DATA = {
             },
             {
               "from": "est_only",
-              "to": "non_transferable",
-              "trigger": "rotation with empty next digests",
-              "guard": "event.t in ('rot', 'drt') and event.n == []"
+              "to": "abandoned",
+              "trigger": "rotation with empty next digests — controller chose to permanently retire this identifier",
+              "guard": "event.t in ('rot', 'drt') and event.n == [] and event.nt == '0'"
             }
           ],
           "invariants": [
             "In 'active' state: verfers, ndigers, tholder, ntholder, wits, toader MUST all be set and non-None",
-            "In 'non_transferable' state: no further rotations are possible (n == []); any rot/drt event MUST be rejected",
+            "In 'non_transferable' state: identifier was born non-transferable (n==[] at inception); no further rotations possible; any rot/drt event MUST be rejected",
+            "In 'abandoned' state: identifier was transferable but controller chose to permanently retire it via rotation with n==[] and nt=='0'; no further events of any type accepted",
             "In 'est_only' state: interaction events MUST be rejected with typed error",
+            "non_transferable vs abandoned: non_transferable was NEVER transferable (n==[] at inception); abandoned WAS transferable (n was non-empty at inception, emptied via rotation)",
             "sn MUST be monotonically increasing across all transitions: sn(e_{i+1}) == sn(e_i) + 1",
             "lastEst MUST be updated only on establishment event transitions",
             "Configuration traits only accumulate — transitions MUST NOT remove traits",
@@ -36791,7 +36899,8 @@ const RDOD_DATA = {
           ],
           "initial_state": "uninitialized",
           "terminal_states": [
-            "non_transferable"
+            "non_transferable",
+            "abandoned"
           ]
         },
         {
@@ -37482,6 +37591,7 @@ const RDOD_DATA = {
                     "PDE",
                     "LDE",
                     "MFE",
+                    "RPE",
                     "all"
                   ]
                 }
@@ -37494,6 +37604,7 @@ const RDOD_DATA = {
               "PDE: Partially-Delegated Escrow — waiting for delegator anchoring seal",
               "LDE: Likely-Duplicitous Escrow — conflicting event held as evidence",
               "MFE: Misfit Event Escrow — remote-sourced event for a locally-protected AID",
+              "RPE: Reply Processing Escrow — reply message whose endorser key state is not yet available",
               "'all' drains all queues in processing order: OOE → PSE → PWE → PDE"
             ]
           }
@@ -37968,8 +38079,8 @@ const RDOD_DATA = {
         "id": "port://identity/thresholds/inbound/witness-configuration",
         "type": "inbound",
         "name": "Witness Configuration Validation",
-        "semantics": "command",
-        "idempotent": false,
+        "semantics": "query",
+        "idempotent": true,
         "description": "Validates and constructs a witness configuration (witness list + TOAD). Concern separation note: this port owns ONLY witness threshold validation and configuration construction (uniqueness, TOAD bounds, non-transferable AID check). It does NOT own group coordination or multi-signature accumulation — those are handled by GroupCoordination, which is a separate operational concern for in-flight multi-signature events. Witness configuration is static per establishment event; group coordination is dynamic per signing round.\n",
         "contract": {
           "input": "types://identity/thresholds#WitnessConfiguration",
@@ -38599,7 +38710,7 @@ const RDOD_DATA = {
         "description": "Multi-sig group operation did not collect sufficient signatures within the escrow timeout",
         "cause": "Escrow timeout expired before all required group members signed the event — the group coordination protocol failed to reach the threshold",
         "recovery": "abort",
-        "severity": "recoverable",
+        "severity": "fatal",
         "context": [
           {
             "field": "prefix",
@@ -39461,7 +39572,7 @@ const RDOD_DATA = {
         "idempotent": false,
         "description": "Start or stop duplicity monitoring for a specific AID. The sources parameter specifies which witness AIDs to poll for KEL comparison. At least 2 sources from distinct operators must be provided for meaningful duplicity detection.\n",
         "contract": {
-          "input": "types://cesr/primitives#AID + sources:array[types://cesr/primitives#AID]",
+          "input": "types://integrity/detection#MonitoringRequest",
           "output": "types://integrity/detection#MonitorHandle",
           "errors": [
             "errors://integrity/detection#LikelyDuplicitousError",
@@ -39533,7 +39644,7 @@ const RDOD_DATA = {
         "name": "Likely Duplicitous Events Escrow",
         "semantics": "command",
         "idempotent": false,
-        "description": "Persistence port for the LDE (Likely Duplicitous Events) escrow queue. Stores events that triggered duplicity detection pending judge adjudication. Supports add, get, remove, and sweep/timeout (default 3600s per keripy).\n",
+        "description": "Persistence port for the LDE (Likely Duplicitous Events) escrow queue. Stores events that triggered duplicity detection pending judge adjudication. Unlike the append-only DEL, the LDE escrow is fully mutable — entries can be stored, retrieved, removed after adjudication, or swept on timeout.\nOperations:\n  - store(evidence): Persist a DuplicityEvidence entry keyed by (aid, sn).\n    Idempotent for the same (aid, sn, conflicting_event_said) triple.\n  - retrieve(aid, sn): Return all escrowed evidence entries matching\n    the given AID prefix and sequence number. Returns empty if none found.\n  - remove(aid, sn, conflicting_event_said): Delete a specific entry after\n    the judge has rendered a TrustDecision (promoted to DEL or discarded).\n  - sweep(max_age): Remove all entries older than max_age seconds.\n    Default timeout is 3600s. Emits DuplicityEscrowTimeoutError for each\n    swept entry.\n",
         "contract": {
           "input": "types://integrity/detection#DuplicityEvidence",
           "output": "void",
@@ -39545,8 +39656,11 @@ const RDOD_DATA = {
           "domain://externals/persistence"
         ],
         "invariants": [
+          "store is idempotent for the same (aid, sn, conflicting_event_said) triple",
+          "retrieve returns all entries matching (aid, sn); empty list if none",
+          "remove deletes exactly one entry identified by (aid, sn, conflicting_event_said)",
+          "sweep removes all entries older than max_age and emits DuplicityEscrowTimeoutError for each",
           "Entries are pruned after timeout (default 3600s, configurable)",
-          "Supports add, get by (prefix, sn), remove, and sweep operations",
           "Unlike the DEL, LDE escrow is mutable — entries can be promoted or pruned"
         ]
       }
@@ -39899,7 +40013,7 @@ const RDOD_DATA = {
         "description": "An event at a previously-seen (prefix, sn) arrived with the same SAID but from a different source",
         "cause": "The event is an idempotent duplicate (same SAID) — not duplicitous, but if the first-seen ordering differs across sources, it may indicate timing manipulation",
         "recovery": "abort",
-        "severity": "transient",
+        "severity": "recoverable",
         "context": [
           {
             "field": "prefix",
@@ -40048,6 +40162,32 @@ const RDOD_DATA = {
         ]
       },
       {
+        "name": "MonitoringRequest",
+        "description": "Request to start duplicity monitoring for a specific AID against a set of witness or watcher sources.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "target_aid",
+                "type": "types://cesr/primitives#AID",
+                "required": true,
+                "description": "The AID to monitor for duplicity"
+              },
+              {
+                "name": "sources",
+                "type": "array[types://cesr/primitives#AID]",
+                "required": true,
+                "description": "Witness or watcher AIDs to cross-check against"
+              }
+            ],
+            "invariants": [
+              "At least 2 sources from distinct operators must be provided for meaningful duplicity detection"
+            ]
+          }
+        ]
+      },
+      {
         "name": "DuplicityEvidence",
         "description": "Evidence of conflicting events for the same AID at the same sequence number, collected from multiple witness sources.",
         "variants": [
@@ -40079,6 +40219,18 @@ const RDOD_DATA = {
                 "description": "SAID of the conflicting (challenger) event"
               },
               {
+                "name": "first_event_bytes",
+                "type": "bytes",
+                "required": true,
+                "description": "Serialized event body of the first-seen (incumbent) event"
+              },
+              {
+                "name": "conflicting_event_bytes",
+                "type": "bytes",
+                "required": true,
+                "description": "Serialized event body of the conflicting (challenger) event"
+              },
+              {
                 "name": "first_source",
                 "type": "types://cesr/primitives#AID",
                 "required": true,
@@ -40094,6 +40246,8 @@ const RDOD_DATA = {
             "invariants": [
               "first_event_said != conflicting_event_said — identical SAIDs is not duplicity",
               "Both events must be at the same (aid, sn) — different sn is not duplicity",
+              "first_event_said must equal the SAID digest of first_event_bytes",
+              "conflicting_event_said must equal the SAID digest of conflicting_event_bytes",
               "Evidence is permanent — stored in the DEL, never deleted"
             ]
           }
@@ -47157,11 +47311,11 @@ const RDOD_DATA = {
         "id": "port://privacy/blinding/inbound/blinded-state",
         "type": "inbound",
         "name": "Shielded State",
-        "semantics": "command",
+        "semantics": "query",
         "idempotent": true,
         "description": "Derives the shielded state for a credential registry event — given a shared secret salt, sequence number, and registry SAID, computes the shielded attribute block and returns it with a derived BLID. Delegates from credential-lifecycle's shielded-state port; also invoked as a protocol step when a registry is shieldable.\n",
         "contract": {
-          "input": "Shared secret salt, sequence number, registry SAID",
+          "input": "types://privacy/blinding#BlindedStateInput",
           "output": "types://privacy/blinding#ShieldedAttributeBlock",
           "errors": []
         },
@@ -47178,8 +47332,8 @@ const RDOD_DATA = {
         "idempotent": true,
         "description": "Given a bup event's BLID and the shared secret salt, discovers the credential state by trying all state values in the finite state set against candidate ACDC SAIDs.\n",
         "contract": {
-          "input": "BLID, salt, event sequence number, candidate ACDC SAIDs",
-          "output": "Discovered state (credential SAID + state value) or not found",
+          "input": "types://privacy/blinding#StateDiscoveryInput",
+          "output": "types://privacy/blinding#StateDiscoveryResult",
           "errors": [
             "errors://privacy/blinding#StateDiscoveryError",
             "errors://privacy/blinding#ShieldingKeyMismatchError"
@@ -47214,8 +47368,8 @@ const RDOD_DATA = {
         "semantics": "query",
         "idempotent": true,
         "contract": {
-          "input": "Salt and sequence number",
-          "output": "UUID string",
+          "input": "types://privacy/blinding#UuidDerivationInput",
+          "output": "string",
           "errors": [
             "errors://privacy/blinding#InsufficientSaltEntropyError",
             "errors://privacy/blinding#UUIDDerivationError",
@@ -47612,7 +47766,7 @@ const RDOD_DATA = {
         "name": "StateDiscoveryError",
         "description": "State discovery exhausted all possible states without finding a BLID match",
         "cause": "No combination of (UUID, candidate ACDC SAID, possible state) produces a BLID matching the bup event's b field — the salt may be wrong or the ACDC SAID is unknown",
-        "recovery": "abort",
+        "recovery": "retry",
         "severity": "recoverable",
         "context": [
           {
@@ -47675,10 +47829,16 @@ const RDOD_DATA = {
                 "description": "UUID shielding factor — high entropy (>= 128 bits)"
               },
               {
-                "name": "attributes",
-                "type": "map",
+                "name": "td",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
-                "description": "The actual attribute data (hidden behind the SAID+UUID)"
+                "description": "Transaction ACDC SAID — the credential this state change references"
+              },
+              {
+                "name": "ts",
+                "type": "string",
+                "required": true,
+                "description": "Transaction state — the credential state value (e.g. 'issued', 'revoked')"
               }
             ],
             "invariants": [
@@ -47771,6 +47931,122 @@ const RDOD_DATA = {
               "Deterministic — same salt + path always produces same UUID",
               "Path segments include bulk copy index k and block position within the ACDC",
               "Issuee can regenerate any instance on demand from salt and index"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "BlindedStateInput",
+        "description": "Input for deriving the shielded state of a credential registry event.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "salt",
+                "type": "bytes",
+                "required": true,
+                "description": "Shared secret salt (post-argon2 master secret)"
+              },
+              {
+                "name": "sequence_number",
+                "type": "integer",
+                "required": true,
+                "description": "TEL event sequence number"
+              },
+              {
+                "name": "registry_said",
+                "type": "types://cesr/primitives#SAID",
+                "required": true,
+                "description": "Registry identifier"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "StateDiscoveryInput",
+        "description": "Input for discovering the credential state behind a shielded BLID.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "blid",
+                "type": "types://cesr/primitives#SAID",
+                "required": true,
+                "description": "The BLID to resolve"
+              },
+              {
+                "name": "salt",
+                "type": "bytes",
+                "required": true,
+                "description": "Shared secret salt"
+              },
+              {
+                "name": "sequence_number",
+                "type": "integer",
+                "required": true,
+                "description": "TEL event sequence number"
+              },
+              {
+                "name": "candidate_saids",
+                "type": "array[types://cesr/primitives#SAID]",
+                "required": true,
+                "description": "Possible ACDC SAIDs to try"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "StateDiscoveryResult",
+        "description": "Result of shielded state discovery — indicates whether a matching credential state was found.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "found",
+                "type": "boolean",
+                "required": true,
+                "description": "Whether a match was discovered"
+              },
+              {
+                "name": "acdc_said",
+                "type": "types://cesr/primitives#SAID",
+                "required": false,
+                "description": "The matching ACDC SAID if found"
+              },
+              {
+                "name": "state",
+                "type": "string",
+                "required": false,
+                "description": "The credential state value if found"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "UuidDerivationInput",
+        "description": "Input for deterministic UUID derivation from a shared secret salt and sequence number.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "salt",
+                "type": "bytes",
+                "required": true,
+                "description": "Post-argon2 master secret salt"
+              },
+              {
+                "name": "sequence_number",
+                "type": "integer",
+                "required": true,
+                "description": "Derivation index"
+              }
             ]
           }
         ]

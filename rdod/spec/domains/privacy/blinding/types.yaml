@@ -14,10 +14,14 @@ types:
             type: "string"
             required: true
             description: "UUID shielding factor — high entropy (>= 128 bits)"
-          - name: "attributes"
-            type: "map"
+          - name: "td"
+            type: "types://cesr/primitives#SAID"
             required: true
-            description: "The actual attribute data (hidden behind the SAID+UUID)"
+            description: "Transaction ACDC SAID — the credential this state change references"
+          - name: "ts"
+            type: "string"
+            required: true
+            description: "Transaction state — the credential state value (e.g. 'issued', 'revoked')"
         invariants:
           - "u field MUST have >= 128 bits of entropy"
           - "SAID(block) is a shielded commitment — cannot discover content without u"
@@ -78,3 +82,75 @@ types:
           - "Deterministic — same salt + path always produces same UUID"
           - "Path segments include bulk copy index k and block position within the ACDC"
           - "Issuee can regenerate any instance on demand from salt and index"
+
+  - name: "BlindedStateInput"
+    description: "Input for deriving the shielded state of a credential registry event."
+    variants:
+      - name: "default"
+        fields:
+          - name: "salt"
+            type: "bytes"
+            required: true
+            description: "Shared secret salt (post-argon2 master secret)"
+          - name: "sequence_number"
+            type: "integer"
+            required: true
+            description: "TEL event sequence number"
+          - name: "registry_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "Registry identifier"
+
+  - name: "StateDiscoveryInput"
+    description: "Input for discovering the credential state behind a shielded BLID."
+    variants:
+      - name: "default"
+        fields:
+          - name: "blid"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "The BLID to resolve"
+          - name: "salt"
+            type: "bytes"
+            required: true
+            description: "Shared secret salt"
+          - name: "sequence_number"
+            type: "integer"
+            required: true
+            description: "TEL event sequence number"
+          - name: "candidate_saids"
+            type: "array[types://cesr/primitives#SAID]"
+            required: true
+            description: "Possible ACDC SAIDs to try"
+
+  - name: "StateDiscoveryResult"
+    description: "Result of shielded state discovery — indicates whether a matching credential state was found."
+    variants:
+      - name: "default"
+        fields:
+          - name: "found"
+            type: "boolean"
+            required: true
+            description: "Whether a match was discovered"
+          - name: "acdc_said"
+            type: "types://cesr/primitives#SAID"
+            required: false
+            description: "The matching ACDC SAID if found"
+          - name: "state"
+            type: "string"
+            required: false
+            description: "The credential state value if found"
+
+  - name: "UuidDerivationInput"
+    description: "Input for deterministic UUID derivation from a shared secret salt and sequence number."
+    variants:
+      - name: "default"
+        fields:
+          - name: "salt"
+            type: "bytes"
+            required: true
+            description: "Post-argon2 master secret salt"
+          - name: "sequence_number"
+            type: "integer"
+            required: true
+            description: "Derivation index"

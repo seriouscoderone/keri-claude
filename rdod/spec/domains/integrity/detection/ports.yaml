@@ -13,9 +13,7 @@ ports:
       specifies which witness AIDs to poll for KEL comparison. At least 2 sources from
       distinct operators must be provided for meaningful duplicity detection.
     contract:
-      # L1-O25: Added sources parameter — monitoring requires specifying which witnesses to poll
-      # Schema requires string; encoding as composite: "aid:AID + sources:array[AID]"
-      input: "types://cesr/primitives#AID + sources:array[types://cesr/primitives#AID]"
+      input: "types://integrity/detection#MonitoringRequest"
       output: "types://integrity/detection#MonitorHandle"
       errors:
         - "errors://integrity/detection#LikelyDuplicitousError"
@@ -78,7 +76,19 @@ ports:
     description: >
       Persistence port for the LDE (Likely Duplicitous Events) escrow queue.
       Stores events that triggered duplicity detection pending judge adjudication.
-      Supports add, get, remove, and sweep/timeout (default 3600s per keripy).
+      Unlike the append-only DEL, the LDE escrow is fully mutable — entries can
+      be stored, retrieved, removed after adjudication, or swept on timeout.
+
+      Operations:
+        - store(evidence): Persist a DuplicityEvidence entry keyed by (aid, sn).
+          Idempotent for the same (aid, sn, conflicting_event_said) triple.
+        - retrieve(aid, sn): Return all escrowed evidence entries matching
+          the given AID prefix and sequence number. Returns empty if none found.
+        - remove(aid, sn, conflicting_event_said): Delete a specific entry after
+          the judge has rendered a TrustDecision (promoted to DEL or discarded).
+        - sweep(max_age): Remove all entries older than max_age seconds.
+          Default timeout is 3600s. Emits DuplicityEscrowTimeoutError for each
+          swept entry.
     contract:
       input: "types://integrity/detection#DuplicityEvidence"
       output: "void"
@@ -86,6 +96,9 @@ ports:
         - "errors://integrity/detection#DuplicityEscrowTimeoutError"
     refs: ["domain://externals/persistence"]
     invariants:
+      - "store is idempotent for the same (aid, sn, conflicting_event_said) triple"
+      - "retrieve returns all entries matching (aid, sn); empty list if none"
+      - "remove deletes exactly one entry identified by (aid, sn, conflicting_event_said)"
+      - "sweep removes all entries older than max_age and emits DuplicityEscrowTimeoutError for each"
       - "Entries are pruned after timeout (default 3600s, configurable)"
-      - "Supports add, get by (prefix, sn), remove, and sweep operations"
       - "Unlike the DEL, LDE escrow is mutable — entries can be promoted or pruned"

@@ -22,7 +22,7 @@ ports:
     semantics: query
     idempotent: true
     contract:
-      input: "types://delegation/recovery#DelegatingEventRef"
+      input: "types://delegation/recovery#SupersedingComparisonInput"
       output: "types://delegation/recovery#SupersedingOrder"
       errors: []
     refs: ["domain://delegation"]
@@ -42,8 +42,7 @@ ports:
     contract:
       input: "types://cesr/primitives#AID"
       output: "types://identity/state#KeyState"
-      errors:
-        - "errors://delegation/recovery#DelegatorRevocationError"
+      errors: []
     refs: ["domain://identity"]
     notes: >
       L1-O21: Added. Rule B1 requires comparing delegating_sn(candidate) vs delegating_sn(incumbent).

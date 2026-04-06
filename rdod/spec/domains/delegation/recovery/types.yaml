@@ -11,7 +11,7 @@ types:
             required: true
             description: "The rotation key event body (rot or drt)"
           - name: "delegator_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "AID of the delegator authorizing this rotation"
         invariants:
@@ -123,3 +123,17 @@ types:
           - "Used in Rule B1 — higher delegating event sn means the superseding rotation wins; comparison uses sn (sequence number), NOT fn (first-seen number)"
           - "Used in Rule B2 — within the same delegating event, later seal index wins; seal_index is the zero-based position in the anchor list"
           - "seal_index is 0 for the first seal, 1 for the second, etc.; ties are not possible within a single delegating event because each seal occupies a distinct array position"
+
+  - name: "SupersedingComparisonInput"
+    description: "Input pair for comparing two conflicting delegated events to determine superseding priority."
+    variants:
+      - name: "default"
+        fields:
+          - name: "candidate"
+            type: "types://delegation/recovery#DelegatingEventRef"
+            required: true
+            description: "The potentially superseding event's delegation reference"
+          - name: "incumbent"
+            type: "types://delegation/recovery#DelegatingEventRef"
+            required: true
+            description: "The currently accepted event's delegation reference"

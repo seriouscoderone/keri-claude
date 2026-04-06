@@ -98,7 +98,7 @@ errors:
   - name: "StateDiscoveryError"
     description: "State discovery exhausted all possible states without finding a BLID match"
     cause: "No combination of (UUID, candidate ACDC SAID, possible state) produces a BLID matching the bup event's b field — the salt may be wrong or the ACDC SAID is unknown"
-    recovery: "abort"
+    recovery: "retry"
     severity: "recoverable"
     context:
       - field: "regid"

@@ -365,17 +365,17 @@ contracts:
     preconditions:
       - formal:
           language: python
-          expression: "lambda prefix_code: prefix_code is not None"
-        description: "Prefix code must be provided"
+          expression: "lambda input: input.prefix_code is not None and input.next_key_count >= 0"
+        description: "TransferabilityInput must have a prefix code and a non-negative next key count"
     postconditions:
       - formal:
           language: python
-          expression: "lambda prefix_code, result: result == (prefix_code in ('D', '1AAB', '1AAJ', '1AAD', 'E'))"
-        description: "Transferable prefix codes are D, 1AAB, 1AAJ, 1AAD, E"
+          expression: "lambda input, result: result == (input.next_key_count > 0)"
+        description: "AID is transferable iff next_key_count > 0 — the n field is the definitive signal"
       - formal:
           language: python
-          expression: "lambda next_digests, result: result == (len(next_digests) > 0)"
-        description: "AID is transferable iff next_digests is non-empty"
+          expression: "lambda input, result: input.prefix_code.value.endswith('N') implies (input.next_key_count == 0)"
+        description: "Non-transferable prefix codes (B, 1AAA, 1AAC, 1AAI) must have next_key_count == 0"
 
   - port_ref: "port://identity/key-commitment/inbound/partial-rotation"
     preconditions:

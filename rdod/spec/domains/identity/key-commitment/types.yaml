@@ -189,6 +189,55 @@ types:
           - "Transferable AIDs have non-empty next key commitments at inception"
           - "NonTransferable AIDs have empty next key commitments — the public key IS the identifier"
 
+  - name: "TransferabilityInput"
+    description: "Input for determining transferability of an AID. Transferability is determined by the n field (next key digest count), not by the prefix code alone — but the prefix code provides a secondary structural check (non-transferable prefix codes must have empty n)."
+    variants:
+      - name: "default"
+        fields:
+          - name: "prefix_code"
+            type: "PrefixCode"
+            required: true
+            description: "CESR prefix code from the inception key — provides structural constraint (non-transferable codes must have empty n)"
+          - name: "next_key_count"
+            type: "integer"
+            required: true
+            description: "Number of next key digests in the n field — the definitive signal for transferability"
+            constraints:
+              min: 0
+        invariants:
+          - "Transferable iff next_key_count > 0"
+          - "Non-transferable prefix codes (B, 1AAA, 1AAC, 1AAI) MUST have next_key_count == 0"
+          - "Self-addressing prefix code (E) is transferable when next_key_count > 0"
+
+  - name: "MatchedKeyTuple"
+    description: "A single verified key-to-digest binding from a rotation event, recording whether a new signing key at a given index matches its pre-committed digest at a (possibly different) ondex position."
+    variants:
+      - name: "default"
+        fields:
+          - name: "index"
+            type: "integer"
+            required: true
+            description: "Position of the key in the current rotation event's signing key list (k field)"
+          - name: "ondex"
+            type: "integer"
+            required: true
+            description: "Position of the matching digest in the prior establishment event's next key digest list (n field)"
+          - name: "expected_digest"
+            type: "string"
+            required: true
+            description: "The pre-committed digest from the prior n field at the ondex position"
+          - name: "computed_digest"
+            type: "string"
+            required: true
+            description: "The digest computed from the new signing key at the index position"
+          - name: "matches"
+            type: "boolean"
+            required: true
+            description: "Whether expected_digest equals computed_digest"
+        invariants:
+          - "matches == (expected_digest == computed_digest)"
+          - "Cross-position matching is valid: index != ondex occurs in partial and augmented rotations"
+
   - name: "BindingVerification"
     description: "The result of checking new rotation keys against prior next key digest commitments using dual-indexed (index, ondex) matching. Cross-position matching IS valid via the ondex mechanism."
     variants:
@@ -199,16 +248,16 @@ types:
             required: true
             description: "True if enough keys match their pre-committed digests to satisfy the prior-next threshold"
           - name: "matched_tuples"
-            type: "array[map]"
+            type: "array[MatchedKeyTuple]"
             required: true
-            description: "List of verified (index, ondex, expected_digest, computed_digest) tuples. index = position in current signing key list, ondex = position in prior next-key digest list."
+            description: "List of verified key-to-digest bindings. Each tuple records the index (current key position), ondex (prior next-key position), expected digest, computed digest, and match result."
           - name: "mismatches"
-            type: "array[map]"
+            type: "array[MatchedKeyTuple]"
             required: false
             description: "List of key positions where digest does not match (empty if bound=true)"
         invariants:
           - "If bound=false, rotation MUST be rejected"
-          - "Each matched tuple contains: index (current key position), ondex (prior next-key position), expected_digest, computed_digest"
+          - "Each matched tuple contains: index (current key position), ondex (prior next-key position), expected_digest, computed_digest, matches"
           - "Cross-position matching is valid: a signature with index=2 and ondex=0 means key at position 2 in current list corresponds to position 0 in prior next-key digest list"
           - "The ondex is essential for partial and augmented rotations where key positions shift"
 

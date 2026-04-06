@@ -86,7 +86,7 @@ errors:
     description: "An event at a previously-seen (prefix, sn) arrived with the same SAID but from a different source"
     cause: "The event is an idempotent duplicate (same SAID) — not duplicitous, but if the first-seen ordering differs across sources, it may indicate timing manipulation"
     recovery: "abort"
-    severity: "transient"
+    severity: "recoverable"
     context:
       - field: "prefix"
         type: "string"
