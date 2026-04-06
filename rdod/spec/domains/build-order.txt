@@ -1,69 +1,76 @@
-Build Order (47 domains, 10 layers):
+Build Order (50 domains, 12 layers):
 
 Layer 0 (foundation — no dependencies):
   accountability/consensus
   accountability/dissemination
-  cesr/composition
   cesr/primitives
   cloud-agent-service/api
   cloud-agent-service/processing
   cloud-agent-service/provisioning
-  credential-lifecycle/status
   delegation/authorization
   delegation/lifecycle
-  delegation/recovery
-  identity/anchoring
-  identity/establishment
-  identity/key-commitment
-  identity/state
-  integrity/detection
-  integrity/recovery
+  externals/cryptographic-primitives
+  externals/persistence
+  externals/transport
   privacy/aggregation
-  privacy/blinding
   privacy/disclosure
   signify-client/key-management
   signify-client/resources
 
 Layer 1 (depends on layers 0–0):
-  cesr
+  delegation/recovery
+  identity/anchoring
+  identity/key-commitment
+  identity/state
   identity/thresholds
+  integrity/detection
+  privacy/blinding
 
 Layer 2 (depends on layers 0–1):
+  cesr/composition
+  credential-lifecycle/status
+  identity/establishment
+  integrity/recovery
+
+Layer 3 (depends on layers 0–2):
+  cesr
+
+Layer 4 (depends on layers 0–3):
   delegation
   keri-messaging
   watcher-service/api
 
-Layer 3 (depends on layers 0–2):
+Layer 5 (depends on layers 0–4):
   accountability/receipting
   credential-exchange/negotiation
   credential-lifecycle/verification
   integrity/evidence
 
-Layer 4 (depends on layers 0–3):
+Layer 6 (depends on layers 0–5):
   accountability
   credential-exchange/proof
-  integrity
   witness-service/api
 
-Layer 5 (depends on layers 0–4):
+Layer 7 (depends on layers 0–6):
   discovery
   identity
 
-Layer 6 (depends on layers 0–5):
+Layer 8 (depends on layers 0–7):
   credential-lifecycle/registry
+  integrity
   witness-service
 
-Layer 7 (depends on layers 0–6):
+Layer 9 (depends on layers 0–8):
   credential-exchange
   credential-lifecycle
   privacy
   watcher-service
 
-Layer 8 (depends on layers 0–7):
+Layer 10 (depends on layers 0–9):
   cloud-agent-service
   local-agent/api
 
-Layer 9 (services + applications):
+Layer 11 (services + applications):
   local-agent
   signify-client
 

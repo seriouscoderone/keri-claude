@@ -46,6 +46,19 @@ types:
         invariants:
           - "The delegated event has been accepted into the delegatee's identity history"
           - "The delegator's approval has been committed to the delegator's identity history"
+      - name: "pending_delegator"
+        fields:
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the delegated event awaiting delegator discovery"
+          - name: "delegator_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "AID of the delegator whose identity history is not yet available"
+        invariants:
+          - "The delegator's identity history has not been received — cannot search for an approval seal"
+          - "Maps to the Delegable Event Escrow queue — waiting for delegator discovery, not seal lookup"
       - name: "pending_approval"
         fields:
           - name: "event_said"
@@ -57,7 +70,8 @@ types:
             required: true
             description: "AID of the delegator whose approval is needed"
         invariants:
-          - "Witnesses have acknowledged the event but the delegator has not yet committed approval"
+          - "Delegator's identity history is available but no matching approval seal has been committed yet"
+          - "Maps to the Partially-Delegated Escrow (PDE) queue — waiting for seal, not delegator discovery"
       - name: "pending_witnesses"
         fields:
           - name: "event_said"

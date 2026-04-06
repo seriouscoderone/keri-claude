@@ -15,7 +15,7 @@ errors:
     description: "The delegator AID specified in the di field has no established key state"
     cause: "The delegator's KEL has not been received — cannot verify delegation authority"
     recovery: "escrow"
-    recovery_target: "PDE"
+    recovery_target: "Delegable"
     severity: "transient"
     context:
       - field: "delegator_aid"
@@ -24,6 +24,7 @@ errors:
       - field: "delegate_aid"
         type: "string"
         description: "The delegate AID attempting the operation"
+    related_port: "port://delegation/lifecycle/inbound/approve"
 
   - name: "DelegationSealMismatchError"
     description: "The delegator's seal does not match the delegated event"
@@ -37,6 +38,35 @@ errors:
       - field: "event_said"
         type: "string"
         description: "SAID of the delegated event"
+    related_port: "port://delegation/lifecycle/inbound/approve"
+
+  - name: "InvalidSignatureError"
+    description: "One or more signatures on the delegated event failed verification against the delegatee's current key state"
+    cause: "Step 1 of delegation validation — the controller signatures on the dip/drt event do not verify. This is terminal: invalid signatures cannot be fixed by waiting."
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "delegate_aid"
+        type: "string"
+        description: "The delegate AID whose event carries invalid signatures"
+      - field: "failing_signature_indices"
+        type: "array[integer]"
+        description: "Indices of the signatures that failed verification"
+    related_port: "port://delegation/lifecycle/inbound/approve"
+
+  - name: "InvalidDelegatorReferenceError"
+    description: "The delegator reference in the delegated event is missing or invalid"
+    cause: "Step 2 of delegation validation — dip events must have a di field with a valid CESR-qualified AID; drt events must inherit the delegator from the inception event"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "event_type"
+        type: "string"
+        description: "The event type (dip or drt)"
+      - field: "di_field"
+        type: "string"
+        description: "The di field value (empty if missing)"
+    related_port: "port://delegation/lifecycle/inbound/approve"
 
   - name: "DelegationNotPermittedError"
     description: "Delegator has the DND (Do Not Delegate) configuration trait — DND is an inception-only, immutable trait"
@@ -47,3 +77,4 @@ errors:
       - field: "delegator_aid"
         type: "string"
         description: "The AID that has DND set in its inception event"
+    related_port: "port://delegation/lifecycle/inbound/approve"

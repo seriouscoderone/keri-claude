@@ -225,8 +225,8 @@ contracts:
     postconditions:
       - formal:
           language: python
-          expression: "lambda result: result.is_ok() implies result.escrow_type in ('pde', 'delegable')"
-        description: "Escrowed events are placed in either PDE or delegable escrow"
+          expression: "lambda result: result.is_ok() implies result.variant in ('pending_delegator', 'pending_approval')"
+        description: "Escrowed events are either awaiting delegator discovery (Delegable) or awaiting approval seal (PDE)"
       - formal:
           language: python
           expression: "lambda delegator_aid, events: all(e.delegator_aid == delegator_aid for e in events)"
@@ -251,7 +251,7 @@ contracts:
 state_machines:
   - name: "delegation-validation-pipeline"
     term: "Delegation Validation"
-    states: ["received", "sig-checked", "di-verified", "seal-located", "approved", "escrowed-pde", "escrowed-delegable", "rejected"]
+    states: ["received", "sig-checked", "di-verified", "seal-located", "approved", "escrowed-pde", "escrowed-delegable", "rejected", "pruned"]
     transitions:
       - from: "received"
         to: "sig-checked"
@@ -290,13 +290,13 @@ state_machines:
         trigger: "Step 4 fails — seal digest does not match delegated event SAID"
         guard: "seal.d != event.said — DelegationSealMismatchError"
       - from: "escrowed-pde"
-        to: "seal-located"
-        trigger: "DelegatedEventPromoted — delegator's KEL advances and now contains matching seal"
-        guard: "New event in delegator's KEL contains matching seal"
+        to: "received"
+        trigger: "DelegatedEventPromoted — delegator's KEL advances; event re-enters full validation pipeline"
+        guard: "New event in delegator's KEL may contain matching seal; full re-validation required (signatures may need re-verification if keys rotated during escrow)"
       - from: "escrowed-delegable"
-        to: "di-verified"
-        trigger: "Delegator's KEL becomes available — retry validation from step 3"
-        guard: "Delegator's KEL has been fetched and processed"
+        to: "received"
+        trigger: "Delegator's KEL becomes available — full re-validation from step 1"
+        guard: "Delegator's KEL has been fetched and processed; event re-enters the full validation pipeline (signatures may need re-verification if keys rotated during escrow)"
       # H-O9: pruned is an explicit terminal state reached when escrow timeout expires
       - from: "escrowed-delegable"
         to: "pruned"
@@ -308,7 +308,7 @@ state_machines:
         guard: "current_time - escrow_time >= pde_timeout"
     invariants:
       - "Events must pass steps in order — no skipping from received to seal-located"
-      - "Escrowed events can be promoted back to the validation pipeline when new information arrives"
+      - "Escrowed events re-enter the FULL validation pipeline from step 1 when new information arrives — no validation step is skipped, because key state may change during escrow"
       - "Rejected events are terminal — they cannot re-enter the pipeline"
       - "Approved events have passed all four validation steps and are ready for KEL insertion"
       - "Pruned events are terminal — they are removed from the escrow queue and cannot re-enter the pipeline; pruning is not rejection (no protocol error), it is administrative cleanup after timeout"

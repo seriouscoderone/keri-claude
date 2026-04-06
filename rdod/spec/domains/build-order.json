@@ -1,6 +1,6 @@
 {
-  "total_domains": 47,
-  "total_layers": 10,
+  "total_domains": 50,
+  "total_layers": 12,
   "layers": [
     {
       "layer": 0,
@@ -8,23 +8,16 @@
       "domains": [
         "accountability/consensus",
         "accountability/dissemination",
-        "cesr/composition",
         "cesr/primitives",
         "cloud-agent-service/api",
         "cloud-agent-service/processing",
         "cloud-agent-service/provisioning",
-        "credential-lifecycle/status",
         "delegation/authorization",
         "delegation/lifecycle",
-        "delegation/recovery",
-        "identity/anchoring",
-        "identity/establishment",
-        "identity/key-commitment",
-        "identity/state",
-        "integrity/detection",
-        "integrity/recovery",
+        "externals/cryptographic-primitives",
+        "externals/persistence",
+        "externals/transport",
         "privacy/aggregation",
-        "privacy/blinding",
         "privacy/disclosure",
         "signify-client/key-management",
         "signify-client/resources"
@@ -34,13 +27,35 @@
       "layer": 1,
       "label": "depends on layers 0\u20130",
       "domains": [
-        "cesr",
-        "identity/thresholds"
+        "delegation/recovery",
+        "identity/establishment",
+        "identity/key-commitment",
+        "identity/state",
+        "identity/thresholds",
+        "integrity/detection",
+        "privacy/blinding"
       ]
     },
     {
       "layer": 2,
       "label": "depends on layers 0\u20131",
+      "domains": [
+        "cesr/composition",
+        "credential-lifecycle/status",
+        "identity/anchoring",
+        "integrity/recovery"
+      ]
+    },
+    {
+      "layer": 3,
+      "label": "depends on layers 0\u20132",
+      "domains": [
+        "cesr"
+      ]
+    },
+    {
+      "layer": 4,
+      "label": "depends on layers 0\u20133",
       "domains": [
         "delegation",
         "keri-messaging",
@@ -48,18 +63,18 @@
       ]
     },
     {
-      "layer": 3,
-      "label": "depends on layers 0\u20132",
+      "layer": 5,
+      "label": "depends on layers 0\u20134",
       "domains": [
         "accountability/receipting",
         "credential-exchange/negotiation",
-        "credential-lifecycle/tel-validation",
+        "credential-lifecycle/verification",
         "integrity/evidence"
       ]
     },
     {
-      "layer": 4,
-      "label": "depends on layers 0\u20133",
+      "layer": 6,
+      "label": "depends on layers 0\u20135",
       "domains": [
         "accountability",
         "credential-exchange/proof",
@@ -68,24 +83,24 @@
       ]
     },
     {
-      "layer": 5,
-      "label": "depends on layers 0\u20134",
+      "layer": 7,
+      "label": "depends on layers 0\u20136",
       "domains": [
         "discovery",
         "identity"
       ]
     },
     {
-      "layer": 6,
-      "label": "depends on layers 0\u20135",
+      "layer": 8,
+      "label": "depends on layers 0\u20137",
       "domains": [
         "credential-lifecycle/registry",
         "witness-service"
       ]
     },
     {
-      "layer": 7,
-      "label": "depends on layers 0\u20136",
+      "layer": 9,
+      "label": "depends on layers 0\u20138",
       "domains": [
         "credential-exchange",
         "credential-lifecycle",
@@ -94,15 +109,15 @@
       ]
     },
     {
-      "layer": 8,
-      "label": "depends on layers 0\u20137",
+      "layer": 10,
+      "label": "depends on layers 0\u20139",
       "domains": [
         "cloud-agent-service",
         "local-agent/api"
       ]
     },
     {
-      "layer": 9,
+      "layer": 11,
       "label": "services + applications",
       "domains": [
         "local-agent",

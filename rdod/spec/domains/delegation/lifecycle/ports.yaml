@@ -18,6 +18,8 @@ ports:
       input: "types://delegation/lifecycle#SignedEstablishmentEvent"
       output: "types://delegation/lifecycle#DelegationWriteOutcome"
       errors:
+        - "errors://delegation/lifecycle#InvalidSignatureError"
+        - "errors://delegation/lifecycle#InvalidDelegatorReferenceError"
         - "errors://delegation/lifecycle#DelegatorNotFoundError"
         - "errors://delegation/lifecycle#DelegationSealMismatchError"
         - "errors://delegation/lifecycle#DelegationNotPermittedError"
@@ -33,8 +35,7 @@ ports:
     contract:
       input: "types://delegation/lifecycle#SignedEstablishmentEvent"
       output: "types://delegation/lifecycle#DelegationWriteOutcome"
-      errors:
-        - "errors://delegation/lifecycle#DelegatorNotFoundError"
+      errors: []
     refs: ["domain://delegation"]
 
   # Outbound — persistence and service dependencies
