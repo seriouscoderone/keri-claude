@@ -45,19 +45,73 @@ ports:
     semantics: command
     idempotent: false
     description: >
-      Persistence for the delegation approval workflow — tracks pending approvals
-      (waiting for delegator), pending witnesses (waiting for receipts), and
-      pending publications.
+      Persistence for the delegation approval workflow. Tracks two escrow
+      categories: pending-approval entries (delegatee events awaiting the
+      delegator's commitment seal) and delegable entries (events the local
+      controller must approve as delegator). The repository exposes four
+      operations that together form a complete CRUD surface for delegation
+      escrow management.
     contract:
-      input: "types://delegation/lifecycle#SignedEstablishmentEvent"
-      output: "void"
-      errors: []
+      operations:
+        - name: store
+          description: >
+            Persist a delegation escrow entry. Accepts a signed establishment
+            event along with its identifier (AID), sequence number, SAID, and
+            timestamp. The entry is categorized as either pending-approval or
+            delegable based on the caller's role (delegatee vs delegator).
+            Storing an entry that already exists (same AID + sequence number +
+            SAID) is a no-op — the operation is idempotent for identical inputs.
+          input: "types://delegation/lifecycle#SignedEstablishmentEvent"
+          output: "void"
+          idempotent: true
+          errors: []
+
+        - name: retrieve
+          description: >
+            Retrieve escrowed entries for a given identifier or delegator.
+            Returns all pending entries matching the query — either all entries
+            for a specific delegatee AID (pending-approval lookup) or all
+            entries where a specific AID is the delegator (delegable lookup).
+            Returns an empty collection when no entries match.
+          input: "types://delegation/lifecycle#EscrowQuery"
+          output: "list<types://delegation/lifecycle#SignedEstablishmentEvent>"
+          idempotent: true
+          errors: []
+
+        - name: remove
+          description: >
+            Remove an escrow entry after it has been promoted (approved and
+            committed to the identity log) or pruned (expired or rejected).
+            Identified by AID, sequence number, and SAID. Removal is
+            idempotent — removing a non-existent entry is a no-op.
+          input: "types://delegation/lifecycle#EscrowEntryKey"
+          output: "void"
+          idempotent: true
+          errors: []
+
+        - name: iterate
+          description: >
+            Iterate over all escrowed entries for periodic sweep processing.
+            The sweep checks whether pending-approval entries have received
+            their delegator's commitment seal, and whether delegable entries
+            have been locally approved. Entries that have been satisfied are
+            promoted; entries past their time-to-live are pruned. Returns an
+            iterator over entries, optionally filtered by escrow category.
+          input: "types://delegation/lifecycle#SweepFilter"
+          output: "iterator<types://delegation/lifecycle#SignedEstablishmentEvent>"
+          idempotent: true
+          errors: []
     refs: ["domain://externals/persistence"]
     invariants:
-      - "Pending-approval events await delegator commitment confirmation"
-      - "Delegable events await local delegator approval before committing"
-      - "Removal is idempotent — removing a non-existent entry is a no-op"
+      - "After store, the entry is retrievable via retrieve for the same AID"
+      - "After remove, the entry is no longer returned by retrieve or iterate"
+      - "Pending-approval entries await delegator commitment confirmation"
+      - "Delegable entries await local delegator approval before committing"
+      - "Store is idempotent — storing an identical entry twice has no additional effect"
+      - "Remove is idempotent — removing a non-existent entry is a no-op"
+      - "Retrieve returns an empty collection (not an error) when no entries match"
       - "Approval records link delegator to delegatee via the seal SAID"
+      - "Iterate yields a consistent snapshot — concurrent modifications do not cause partial reads"
 
   - id: "port://delegation/lifecycle/outbound/identity-service"
     type: outbound

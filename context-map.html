@@ -579,11 +579,12 @@ const RDOD_DATA = {
         "id": "port://accountability/consensus/inbound/quorum-evaluation",
         "type": "inbound",
         "name": "Quorum Evaluation",
+        "description": "Pure computation: given a witness count and proposed TOAD, compute the BFT-safe ample threshold and evaluate whether the proposed TOAD satisfies the immune constraint. No identifier lookup — caller provides numeric inputs directly.\n",
         "semantics": "query",
         "idempotent": true,
         "contract": {
-          "input": "types://cesr/primitives#AID",
-          "output": "types://accountability/consensus#AlreadySeen",
+          "input": "types://accountability/consensus#QuorumRequest",
+          "output": "types://accountability/consensus#QuorumResult",
           "errors": [
             "errors://accountability/consensus#InsufficientWitnessesError",
             "errors://accountability/consensus#TOADExceedsWitnessCountError"
@@ -964,6 +965,73 @@ const RDOD_DATA = {
         ]
       },
       {
+        "name": "QuorumRequest",
+        "description": "Input for quorum evaluation — the numeric parameters needed to compute BFT thresholds and check immune constraints.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "witness_count",
+                "type": "integer",
+                "required": true,
+                "description": "Total number of designated witnesses for the identifier",
+                "constraints": {
+                  "min": 0
+                }
+              },
+              {
+                "name": "proposed_toad",
+                "type": "integer",
+                "required": true,
+                "description": "The proposed accountability threshold (TOAD) to evaluate",
+                "constraints": {
+                  "min": 0
+                }
+              }
+            ],
+            "invariants": [
+              "witness_count must be a non-negative integer",
+              "proposed_toad must be a non-negative integer"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "QuorumResult",
+        "description": "Outcome of quorum evaluation — whether the proposed TOAD satisfies BFT immunity, plus the computed ample threshold for reference.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "ample_threshold",
+                "type": "integer",
+                "required": true,
+                "description": "The BFT-safe minimum threshold computed from witness_count via ample(n)"
+              },
+              {
+                "name": "immune",
+                "type": "boolean",
+                "required": true,
+                "description": "Whether the proposed TOAD satisfies the immune constraint (TOAD > (N + F + 1) / 2 with F < TOAD)"
+              },
+              {
+                "name": "valid",
+                "type": "boolean",
+                "required": true,
+                "description": "Whether the proposed TOAD is structurally valid (0 < TOAD <= witness_count for witnessed identifiers, or TOAD == 0 for unwitnessed)"
+              }
+            ],
+            "invariants": [
+              "ample_threshold == 0 when witness_count == 0, else 1 <= ample_threshold <= witness_count",
+              "immune == true implies valid == true (an immune configuration is always structurally valid)",
+              "valid == false when proposed_toad > witness_count or when proposed_toad == 0 with witness_count > 0"
+            ]
+          }
+        ]
+      },
+      {
         "name": "AlreadySeen",
         "description": "Result when a witness or validator has already first-seen an event at the given sequence number.",
         "variants": [
@@ -1096,7 +1164,7 @@ const RDOD_DATA = {
       {
         "term": "Gossip Protocol",
         "synonyms": [],
-        "definition": "An alternative receipt dissemination protocol where witnesses forward receipts to each other, providing lower latency than round-robin but higher bandwidth usage.",
+        "definition": "A theoretical receipt dissemination protocol where witnesses forward receipts to each other, providing lower latency than round-robin but higher bandwidth usage. Note: keripy implements Broadcast (controller-to-witness parallel send) instead of true witness-to-witness gossip. The DisseminationStrategy type uses 'Broadcast' for keripy's actual pattern.",
         "invariants": [
           "Bandwidth scales with N * log(N) versus 2*N for round-robin",
           "May use a directed acyclic graph to determine what needs to be gossiped",
@@ -1199,7 +1267,7 @@ const RDOD_DATA = {
         "semantics": "command",
         "idempotent": false,
         "contract": {
-          "input": "types://accountability/dissemination#DisseminationStrategy",
+          "input": "types://accountability/dissemination#DisseminationRequest",
           "output": "types://accountability/dissemination#DisseminationReport",
           "errors": [
             "errors://accountability/dissemination#DisseminationTimeoutError",
@@ -1522,6 +1590,40 @@ const RDOD_DATA = {
         ]
       },
       {
+        "name": "DisseminationRequest",
+        "description": "Complete input for event propagation — bundles the serialized event, resolved witness endpoints, and the chosen dissemination strategy.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "event_bytes",
+                "type": "bytes",
+                "required": true,
+                "description": "The fully serialized and signed event to disseminate (CESR stream bytes)"
+              },
+              {
+                "name": "witness_endpoints",
+                "type": "array[types://discovery/endpoint#Endpoint]",
+                "required": true,
+                "description": "Resolved network endpoints for each witness — caller is responsible for OOBI resolution before calling"
+              },
+              {
+                "name": "strategy",
+                "type": "types://accountability/dissemination#DisseminationStrategy",
+                "required": true,
+                "description": "The dissemination strategy to use (RoundRobin or Broadcast)"
+              }
+            ],
+            "invariants": [
+              "event_bytes must be a valid CESR-encoded signed event",
+              "witness_endpoints must be non-empty (direct mode with no witnesses bypasses dissemination entirely)",
+              "Each endpoint must be reachable — unreachable endpoints produce WitnessUnreachableError"
+            ]
+          }
+        ]
+      },
+      {
         "name": "DisseminationStrategy",
         "description": "Strategy for propagating events to the witness pool.",
         "variants": [
@@ -1541,8 +1643,8 @@ const RDOD_DATA = {
               }
             ],
             "invariants": [
-              "RoundRobin: send to each witness in sequence, collecting and redistributing receipts (KERI spec's 2N exchange model)",
-              "Broadcast: send to all witnesses simultaneously (keripy's actual implementation pattern)",
+              "RoundRobin: controller sends to each witness in sequence, collecting and redistributing receipts at each step (KERI spec's 2N exchange model)",
+              "Broadcast: controller sends to all witnesses simultaneously, then collects receipts in parallel — distinct from the spec's Gossip Protocol (witness-to-witness forwarding), Broadcast is a controller-to-witness parallel send",
               "Direct mode (bt=0, b=[]) has no witnesses and bypasses dissemination entirely — it is NOT a strategy, it is the absence of one"
             ]
           }
@@ -10139,7 +10241,9 @@ const RDOD_DATA = {
           "output": "Routing result",
           "errors": []
         },
-        "refs": []
+        "refs": [
+          "domain://keri-messaging"
+        ]
       }
     ],
     "_verification": {
@@ -10475,10 +10579,10 @@ const RDOD_DATA = {
     "_types": [
       {
         "name": "BootRequest",
-        "description": "Agent provisioning request sent to the boot endpoint (POST /boot).",
+        "description": "Agent provisioning request sent to the boot endpoint (POST /boot). The key strategy is a discriminated union — exactly one variant is provided.",
         "variants": [
           {
-            "name": "default",
+            "name": "salty",
             "fields": [
               {
                 "name": "icp",
@@ -10493,20 +10597,55 @@ const RDOD_DATA = {
                 "description": "Controller signature over the inception event"
               },
               {
-                "name": "salty",
-                "type": "map",
-                "required": false,
-                "description": "Salty key parameters (if using salty key type)"
+                "name": "salt",
+                "type": "string",
+                "required": true,
+                "description": "CESR-qualified salt (Salter qb64) — the root secret for deterministic key derivation"
               },
               {
-                "name": "randy",
-                "type": "map",
-                "required": false,
-                "description": "Randy key parameters (if using randy key type)"
+                "name": "tier",
+                "type": "string",
+                "required": true,
+                "description": "Argon2 stretching tier: low, med, or high",
+                "constraints": {
+                  "enum": [
+                    "low",
+                    "med",
+                    "high"
+                  ]
+                }
+              },
+              {
+                "name": "stem",
+                "type": "string",
+                "required": true,
+                "description": "Derivation path stem for hierarchical key generation"
               }
             ],
             "invariants": [
-              "Exactly one of salty/randy should be present (determines key derivation type)",
+              "Deterministic key derivation — same salt + tier + stem produces same keys",
+              "icp must be a valid inception event with correct version string",
+              "sig must verify against the keys in the inception event"
+            ]
+          },
+          {
+            "name": "randy",
+            "fields": [
+              {
+                "name": "icp",
+                "type": "types://identity/establishment#InceptionEvent",
+                "required": true,
+                "description": "Agent inception event"
+              },
+              {
+                "name": "sig",
+                "type": "string",
+                "required": true,
+                "description": "Controller signature over the inception event"
+              }
+            ],
+            "invariants": [
+              "Random key generation — no derivation path, no recovery from lost keys",
               "icp must be a valid inception event with correct version string",
               "sig must verify against the keys in the inception event"
             ]
@@ -10543,7 +10682,7 @@ const RDOD_DATA = {
                 "name": "body",
                 "type": "map",
                 "required": false,
-                "description": "Request body (JSON)"
+                "description": "Request body (JSON) — schema varies by endpoint path. Typed per-endpoint request schemas are defined by the resource domain that owns each endpoint (identifiers → identity, credentials → credential-lifecycle, registries → credential-lifecycle/registry, exchanges → credential-exchange, etc.)"
               },
               {
                 "name": "auth",
@@ -11894,34 +12033,34 @@ const RDOD_DATA = {
             "name": "default",
             "fields": [
               {
-                "name": "deck",
-                "type": "string",
+                "name": "queue",
+                "type": "types://cloud-agent-service/processing#WorkQueueName",
                 "required": true,
                 "description": "Named work queue this item belongs to"
               },
               {
                 "name": "operation_type",
-                "type": "string",
+                "type": "types://cloud-agent-service/processing#OperationType",
                 "required": true,
-                "description": "Category of work to perform"
+                "description": "Category of work to perform — determines the payload schema"
               },
               {
                 "name": "payload",
                 "type": "map",
                 "required": true,
-                "description": "Operation-specific data"
+                "description": "Operation-specific data — schema determined by operation_type. Each OperationType variant defines its own payload structure: witness operations carry AID + sn + witness list; group operations carry event + partial signatures; anchor operations carry AID + seal list. Per-type payload schemas are specified when those operation categories are implemented."
               }
             ],
             "invariants": [
-              "deck determines processing priority and ordering",
-              "payload schema depends on operation_type"
+              "queue determines processing priority and ordering",
+              "payload schema is determined by operation_type — each type has a distinct schema"
             ]
           }
         ]
       },
       {
-        "name": "DeckName",
-        "description": "Named work queue for categorizing async processing tasks. Each deck represents a distinct processing concern in the cloud agent's cue processing loop.",
+        "name": "WorkQueueName",
+        "description": "Named work queue for categorizing async processing tasks. Each queue represents a distinct processing concern in the cloud agent's asynchronous processing loop.",
         "variants": [
           {
             "name": "default",
@@ -11942,11 +12081,11 @@ const RDOD_DATA = {
               }
             ],
             "invariants": [
-              "Each deck is processed independently",
-              "cues: general event processing cues from the event processor",
+              "Each work queue is processed independently",
+              "cues: general event processing from the event processor",
               "groups: multisig coordination — partial signature collection and threshold satisfaction",
               "anchors: delegation approval requests — seal confirmation from delegators",
-              "witners: witness receipt requests — collecting receipts to satisfy TOAD",
+              "witnesses: witness receipt requests — collecting receipts to satisfy TOAD",
               "queries: key state queries — resolving OOBI and key state lookups"
             ]
           }
@@ -12154,13 +12293,13 @@ const RDOD_DATA = {
                 "name": "result",
                 "type": "map",
                 "required": false,
-                "description": "Success payload — present only when done is true and no error occurred. Named 'result' to match the client-side OperationStatus (signify-client/resources) field naming."
+                "description": "Success payload — present only when done is true and no error occurred. Schema varies by operation_type: witness operations return receipt count; group operations return the assembled event SAID; credential operations return the credential SAID; OOBI operations return resolved key state. Per-type result schemas are specified when those operation categories are implemented."
               },
               {
                 "name": "error",
                 "type": "map",
                 "required": false,
-                "description": "Error payload — present only when done is true and the operation failed"
+                "description": "Error payload — present only when done is true and the operation failed. Contains code (string), message (string), and optional details (map) fields regardless of operation_type."
               }
             ],
             "invariants": [
@@ -24347,20 +24486,56 @@ const RDOD_DATA = {
         "name": "Delegation Repository",
         "semantics": "command",
         "idempotent": false,
-        "description": "Persistence for the delegation approval workflow — tracks pending approvals (waiting for delegator), pending witnesses (waiting for receipts), and pending publications.\n",
+        "description": "Persistence for the delegation approval workflow. Tracks two escrow categories: pending-approval entries (delegatee events awaiting the delegator's commitment seal) and delegable entries (events the local controller must approve as delegator). The repository exposes four operations that together form a complete CRUD surface for delegation escrow management.\n",
         "contract": {
-          "input": "types://delegation/lifecycle#SignedEstablishmentEvent",
-          "output": "void",
-          "errors": []
+          "operations": [
+            {
+              "name": "store",
+              "description": "Persist a delegation escrow entry. Accepts a signed establishment event along with its identifier (AID), sequence number, SAID, and timestamp. The entry is categorized as either pending-approval or delegable based on the caller's role (delegatee vs delegator). Storing an entry that already exists (same AID + sequence number + SAID) is a no-op — the operation is idempotent for identical inputs.\n",
+              "input": "types://delegation/lifecycle#SignedEstablishmentEvent",
+              "output": "void",
+              "idempotent": true,
+              "errors": []
+            },
+            {
+              "name": "retrieve",
+              "description": "Retrieve escrowed entries for a given identifier or delegator. Returns all pending entries matching the query — either all entries for a specific delegatee AID (pending-approval lookup) or all entries where a specific AID is the delegator (delegable lookup). Returns an empty collection when no entries match.\n",
+              "input": "types://delegation/lifecycle#EscrowQuery",
+              "output": "list<types://delegation/lifecycle#SignedEstablishmentEvent>",
+              "idempotent": true,
+              "errors": []
+            },
+            {
+              "name": "remove",
+              "description": "Remove an escrow entry after it has been promoted (approved and committed to the identity log) or pruned (expired or rejected). Identified by AID, sequence number, and SAID. Removal is idempotent — removing a non-existent entry is a no-op.\n",
+              "input": "types://delegation/lifecycle#EscrowEntryKey",
+              "output": "void",
+              "idempotent": true,
+              "errors": []
+            },
+            {
+              "name": "iterate",
+              "description": "Iterate over all escrowed entries for periodic sweep processing. The sweep checks whether pending-approval entries have received their delegator's commitment seal, and whether delegable entries have been locally approved. Entries that have been satisfied are promoted; entries past their time-to-live are pruned. Returns an iterator over entries, optionally filtered by escrow category.\n",
+              "input": "types://delegation/lifecycle#SweepFilter",
+              "output": "iterator<types://delegation/lifecycle#SignedEstablishmentEvent>",
+              "idempotent": true,
+              "errors": []
+            }
+          ]
         },
         "refs": [
           "domain://externals/persistence"
         ],
         "invariants": [
-          "Pending-approval events await delegator commitment confirmation",
-          "Delegable events await local delegator approval before committing",
-          "Removal is idempotent — removing a non-existent entry is a no-op",
-          "Approval records link delegator to delegatee via the seal SAID"
+          "After store, the entry is retrievable via retrieve for the same AID",
+          "After remove, the entry is no longer returned by retrieve or iterate",
+          "Pending-approval entries await delegator commitment confirmation",
+          "Delegable entries await local delegator approval before committing",
+          "Store is idempotent — storing an identical entry twice has no additional effect",
+          "Remove is idempotent — removing a non-existent entry is a no-op",
+          "Retrieve returns an empty collection (not an error) when no entries match",
+          "Approval records link delegator to delegatee via the seal SAID",
+          "Iterate yields a consistent snapshot — concurrent modifications do not cause partial reads"
         ]
       },
       {
@@ -24547,29 +24722,125 @@ const RDOD_DATA = {
         },
         {
           "port_ref": "port://delegation/lifecycle/outbound/delegation-repository",
-          "preconditions": [
+          "operations": [
             {
-              "formal": {
-                "language": "python",
-                "expression": "lambda aid, sn, said, event, dt: aid is not None and sn >= 0 and said is not None and event is not None"
-              },
-              "description": "All required fields must be non-null for escrow storage"
-            }
-          ],
-          "postconditions": [
-            {
-              "formal": {
-                "language": "python",
-                "expression": "lambda aid, sn, said: get_pde_iter(aid).contains(sn, said) after put_pde(aid, sn, said, event, dt)"
-              },
-              "description": "After put_pde, the entry is retrievable via get_pde_iter for the same AID"
+              "name": "store",
+              "preconditions": [
+                {
+                  "formal": {
+                    "language": "python",
+                    "expression": "lambda aid, sn, said, event, dt: aid is not None and sn >= 0 and said is not None and event is not None"
+                  },
+                  "description": "All required fields must be non-null for escrow storage"
+                },
+                {
+                  "formal": {
+                    "language": "python",
+                    "expression": "lambda event: event.type in ('dip', 'drt')"
+                  },
+                  "description": "Only delegated establishment events may be escrowed"
+                }
+              ],
+              "postconditions": [
+                {
+                  "formal": {
+                    "language": "python",
+                    "expression": "lambda aid, sn, said: retrieve(aid).contains(sn, said) after store(aid, sn, said, event, dt)"
+                  },
+                  "description": "After store, the entry is retrievable for the same AID"
+                },
+                {
+                  "formal": {
+                    "language": "python",
+                    "expression": "lambda aid, sn, said, event, dt: store(aid, sn, said, event, dt); store(aid, sn, said, event, dt); len(retrieve(aid).filter(sn, said)) == 1"
+                  },
+                  "description": "Storing the same entry twice does not create duplicates"
+                }
+              ]
             },
             {
-              "formal": {
-                "language": "python",
-                "expression": "lambda aid, sn, said: not get_pde_iter(aid).contains(sn, said) after rem_pde(aid, sn, said)"
-              },
-              "description": "After rem_pde, the entry is no longer retrievable"
+              "name": "retrieve",
+              "preconditions": [
+                {
+                  "formal": {
+                    "language": "python",
+                    "expression": "lambda aid: aid is not None"
+                  },
+                  "description": "Query requires a valid identifier"
+                }
+              ],
+              "postconditions": [
+                {
+                  "formal": {
+                    "language": "python",
+                    "expression": "lambda aid: all(e.aid == aid for e in retrieve(aid))"
+                  },
+                  "description": "All returned entries belong to the queried identifier"
+                },
+                {
+                  "formal": {
+                    "language": "python",
+                    "expression": "lambda aid: retrieve(aid) == [] when no entries stored for aid"
+                  },
+                  "description": "Returns empty collection (not error) when no entries match"
+                }
+              ]
+            },
+            {
+              "name": "remove",
+              "preconditions": [
+                {
+                  "formal": {
+                    "language": "python",
+                    "expression": "lambda aid, sn, said: aid is not None and sn >= 0 and said is not None"
+                  },
+                  "description": "Removal key must identify a specific entry"
+                }
+              ],
+              "postconditions": [
+                {
+                  "formal": {
+                    "language": "python",
+                    "expression": "lambda aid, sn, said: not retrieve(aid).contains(sn, said) after remove(aid, sn, said)"
+                  },
+                  "description": "After remove, the entry is no longer retrievable"
+                },
+                {
+                  "formal": {
+                    "language": "python",
+                    "expression": "lambda aid, sn, said: remove(aid, sn, said) is no-op when entry does not exist"
+                  },
+                  "description": "Removing a non-existent entry succeeds silently"
+                }
+              ]
+            },
+            {
+              "name": "iterate",
+              "preconditions": [
+                {
+                  "formal": {
+                    "language": "python",
+                    "expression": "lambda: True"
+                  },
+                  "description": "Iteration has no preconditions — an empty repository yields an empty iterator"
+                }
+              ],
+              "postconditions": [
+                {
+                  "formal": {
+                    "language": "python",
+                    "expression": "lambda entries: all(e.type in ('dip', 'drt') for e in iterate())"
+                  },
+                  "description": "All iterated entries are delegated establishment events"
+                },
+                {
+                  "formal": {
+                    "language": "python",
+                    "expression": "lambda: set(iterate()) == set(retrieve_all())"
+                  },
+                  "description": "Iterate yields every stored entry — no entries are skipped"
+                }
+              ]
             }
           ]
         }
@@ -25007,6 +25278,103 @@ const RDOD_DATA = {
             "invariants": [
               "Event must be an establishment type — never ixn",
               "Signatures must satisfy the signing threshold for the event to be promotable"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "EscrowQuery",
+        "description": "Query parameters for retrieving delegation escrow entries by identifier or delegator.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "types://cesr/primitives#AID",
+                "required": true,
+                "description": "The AID to query — either the delegatee AID (for pending-approval lookup) or the delegator AID (for delegable lookup)"
+              },
+              {
+                "name": "category",
+                "type": "string",
+                "required": false,
+                "description": "Optional filter by escrow category",
+                "constraints": {
+                  "enum": [
+                    "pending_approval",
+                    "delegable"
+                  ]
+                }
+              }
+            ],
+            "invariants": [
+              "When category is absent, returns all escrow entries for the AID regardless of category"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "EscrowEntryKey",
+        "description": "Composite key identifying a specific delegation escrow entry for removal.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "types://cesr/primitives#AID",
+                "required": true,
+                "description": "AID of the delegated identifier"
+              },
+              {
+                "name": "sn",
+                "type": "integer",
+                "required": true,
+                "description": "Sequence number of the escrowed event"
+              },
+              {
+                "name": "said",
+                "type": "types://cesr/primitives#SAID",
+                "required": true,
+                "description": "SAID of the escrowed event"
+              }
+            ],
+            "invariants": [
+              "The triple (aid, sn, said) uniquely identifies an escrow entry"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "SweepFilter",
+        "description": "Filter parameters for periodic escrow sweep iteration.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "category",
+                "type": "string",
+                "required": false,
+                "description": "Optional filter by escrow category — when absent, iterate all categories",
+                "constraints": {
+                  "enum": [
+                    "pending_approval",
+                    "delegable"
+                  ]
+                }
+              },
+              {
+                "name": "max_age_seconds",
+                "type": "integer",
+                "required": false,
+                "description": "Optional age threshold — only yield entries older than this value for pruning candidates"
+              }
+            ],
+            "invariants": [
+              "When both filters are absent, yields all escrowed entries",
+              "max_age_seconds enables the sweep to identify entries past their time-to-live"
             ]
           }
         ]
@@ -27847,8 +28215,8 @@ const RDOD_DATA = {
           "input": "private_key (bytes) + message (bytes) | public_key (bytes) + signature (bytes) + message (bytes)",
           "output": "signature (bytes) | boolean",
           "errors": [
-            "SigningError",
-            "VerificationError"
+            "errors://externals/cryptographic-primitives#SigningError",
+            "errors://externals/cryptographic-primitives#VerificationError"
           ]
         },
         "refs": [],
@@ -27885,7 +28253,7 @@ const RDOD_DATA = {
           "input": "algorithm (string) | salt (bytes) + path (string)",
           "output": "(public_key, private_key) bytes",
           "errors": [
-            "KeyDerivationError"
+            "errors://externals/cryptographic-primitives#KeyDerivationError"
           ]
         },
         "refs": [],
@@ -27894,6 +28262,58 @@ const RDOD_DATA = {
           "derive_key from salt + path is deterministic (same salt + path = same key)",
           "argon2 key stretching parameters are determined by KeyTier (low/med/high)"
         ]
+      }
+    ],
+    "_errors": [
+      {
+        "name": "SigningError",
+        "description": "The signing operation failed — the private key could not produce a valid signature",
+        "cause": "Invalid or corrupted private key material, unsupported algorithm, or the cryptographic library rejected the input",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "algorithm",
+            "type": "string",
+            "description": "The signing algorithm that was attempted (e.g. Ed25519, ECDSA secp256k1)"
+          }
+        ],
+        "related_port": "port://externals/cryptographic-primitives/inbound/sign-verify"
+      },
+      {
+        "name": "VerificationError",
+        "description": "The signature verification operation failed unexpectedly — distinct from a signature that simply does not verify",
+        "cause": "Malformed public key, corrupted signature bytes, or the cryptographic library encountered an internal error. Note: a valid verification that returns false is NOT an error — this error covers library-level failures.",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "algorithm",
+            "type": "string",
+            "description": "The verification algorithm that was attempted"
+          }
+        ],
+        "related_port": "port://externals/cryptographic-primitives/inbound/sign-verify"
+      },
+      {
+        "name": "KeyDerivationError",
+        "description": "Key generation or derivation failed — could not produce a valid keypair",
+        "cause": "Invalid salt, unsupported algorithm, invalid derivation path, or insufficient entropy for random generation",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "algorithm",
+            "type": "string",
+            "description": "The key algorithm that was attempted"
+          },
+          {
+            "field": "derivation_type",
+            "type": "string",
+            "description": "Whether this was random generation or deterministic derivation"
+          }
+        ],
+        "related_port": "port://externals/cryptographic-primitives/inbound/key-generation"
       }
     ]
   },
@@ -27968,8 +28388,8 @@ const RDOD_DATA = {
           "input": "key (bytes) + value (bytes)",
           "output": "value (bytes) or void",
           "errors": [
-            "StorageError",
-            "KeyNotFoundError"
+            "errors://externals/persistence#StorageError",
+            "errors://externals/persistence#KeyNotFoundError"
           ]
         },
         "refs": [],
@@ -27978,6 +28398,43 @@ const RDOD_DATA = {
           "Ordered iteration follows lexicographic key ordering",
           "Append-only semantics are enforced by the Repository, not the persistence layer"
         ]
+      }
+    ],
+    "_errors": [
+      {
+        "name": "StorageError",
+        "description": "A persistence operation failed — the storage backend could not complete the request",
+        "cause": "Disk full, database corruption, network failure (for remote storage like DynamoDB), lock contention, or permission denied",
+        "recovery": "retry",
+        "severity": "transient",
+        "context": [
+          {
+            "field": "operation",
+            "type": "string",
+            "description": "The operation that failed (put, get, delete, iterate)"
+          },
+          {
+            "field": "key",
+            "type": "string",
+            "description": "The key involved in the failed operation (if applicable)"
+          }
+        ],
+        "related_port": "port://externals/persistence/inbound/key-value"
+      },
+      {
+        "name": "KeyNotFoundError",
+        "description": "The requested key does not exist in the storage backend",
+        "cause": "A get operation was performed for a key that has not been written or has been deleted",
+        "recovery": "abort",
+        "severity": "recoverable",
+        "context": [
+          {
+            "field": "key",
+            "type": "string",
+            "description": "The key that was not found"
+          }
+        ],
+        "related_port": "port://externals/persistence/inbound/key-value"
       }
     ]
   },
@@ -28055,9 +28512,9 @@ const RDOD_DATA = {
           "input": "Endpoint + bytes",
           "output": "void",
           "errors": [
-            "ConnectionRefusedError",
-            "TimeoutError",
-            "EndpointUnreachableError"
+            "errors://externals/transport#ConnectionRefusedError",
+            "errors://externals/transport#TimeoutError",
+            "errors://externals/transport#EndpointUnreachableError"
           ]
         },
         "refs": []
@@ -28073,10 +28530,77 @@ const RDOD_DATA = {
           "input": "Listen address (string)",
           "output": "AsyncStream of bytes",
           "errors": [
-            "BindError"
+            "errors://externals/transport#BindError"
           ]
         },
         "refs": []
+      }
+    ],
+    "_errors": [
+      {
+        "name": "ConnectionRefusedError",
+        "description": "The remote endpoint actively refused the connection",
+        "cause": "The target host is reachable but no service is listening on the specified port, or the service rejected the connection",
+        "recovery": "retry",
+        "severity": "transient",
+        "context": [
+          {
+            "field": "endpoint",
+            "type": "string",
+            "description": "The endpoint URL that refused the connection"
+          }
+        ],
+        "related_port": "port://externals/transport/inbound/send"
+      },
+      {
+        "name": "TimeoutError",
+        "description": "The transport operation did not complete within the allowed time",
+        "cause": "Network congestion, unresponsive remote host, or firewall silently dropping packets",
+        "recovery": "retry",
+        "severity": "transient",
+        "context": [
+          {
+            "field": "endpoint",
+            "type": "string",
+            "description": "The endpoint that timed out"
+          },
+          {
+            "field": "timeout_ms",
+            "type": "integer",
+            "description": "The timeout duration in milliseconds"
+          }
+        ],
+        "related_port": "port://externals/transport/inbound/send"
+      },
+      {
+        "name": "EndpointUnreachableError",
+        "description": "The remote endpoint could not be reached — DNS resolution failed or no route to host",
+        "cause": "Invalid hostname, DNS failure, or network routing issue",
+        "recovery": "retry",
+        "severity": "transient",
+        "context": [
+          {
+            "field": "endpoint",
+            "type": "string",
+            "description": "The unreachable endpoint URL"
+          }
+        ],
+        "related_port": "port://externals/transport/inbound/send"
+      },
+      {
+        "name": "BindError",
+        "description": "Could not bind to the specified listen address for receiving messages",
+        "cause": "Address already in use, insufficient permissions, or invalid address format",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "listen_address",
+            "type": "string",
+            "description": "The address that could not be bound"
+          }
+        ],
+        "related_port": "port://externals/transport/inbound/receive"
       }
     ]
   },
@@ -47515,6 +48039,26 @@ const RDOD_DATA = {
         "refs": [
           "domain://privacy"
         ]
+      },
+      {
+        "id": "port://privacy/disclosure/inbound/advance-disclosure",
+        "type": "inbound",
+        "name": "Advance Disclosure Level",
+        "semantics": "command",
+        "idempotent": true,
+        "description": "Advance a block's disclosure level along the graduated disclosure FSM (compact → partial → full). The caller provides the current block, the target mode, and chain-link confidentiality terms if applicable. The service validates the transition is monotonic (cannot retract) and that chain-link terms are agreed when required. Returns the block at the new disclosure level. Idempotent: requesting the current level returns the block unchanged.\n",
+        "contract": {
+          "input": "types://privacy/disclosure#DisclosureRequest",
+          "output": "types://privacy/disclosure#DisclosureMode",
+          "errors": [
+            "errors://privacy/disclosure#InvalidDisclosureProgressionError",
+            "errors://privacy/disclosure#PublicBlockPartialDisclosureError",
+            "errors://privacy/disclosure#ChainLinkTermsRequiredError"
+          ]
+        },
+        "refs": [
+          "domain://privacy"
+        ]
       }
     ],
     "_verification": {
@@ -47702,6 +48246,21 @@ const RDOD_DATA = {
             "description": "SAD path to the public block"
           }
         ]
+      },
+      {
+        "name": "ChainLinkTermsRequiredError",
+        "description": "Full disclosure requires chain-link confidentiality terms to be agreed but they have not been",
+        "cause": "The partial-to-full disclosure transition is gated by chain-link confidentiality — the disclosee must agree to contractual terms before receiving the full content",
+        "recovery": "abort",
+        "severity": "recoverable",
+        "context": [
+          {
+            "field": "block_said",
+            "type": "string",
+            "description": "SAID of the block that requires terms agreement"
+          }
+        ],
+        "related_port": "port://privacy/disclosure/inbound/advance-disclosure"
       }
     ],
     "_types": [
@@ -51346,6 +51905,11 @@ const RDOD_DATA = {
             "errors://signify-client/resources#ResourceNotFoundError",
             "errors://signify-client/resources#OperationTimeoutError",
             "errors://signify-client/resources#AgentConnectionError"
+          ],
+          "invariants": [
+            "All eight resource categories (identifiers, credentials, registries, exchanges, groups, notifications, OOBIs, end-roles) flow through this port",
+            "Every request carries KRAM-authenticated SignifyAuth regardless of resource category",
+            "Mutating operations (create, rotate, issue, revoke) return OperationStatus for async polling; read operations (list, get) return results directly"
           ]
         },
         "refs": [
@@ -54006,7 +54570,7 @@ const RDOD_DATA = {
     ]
   }
 };
-const RDOD_SCENARIOS = [{"name": "SingleSigInception_happy", "protocol": "protocols://identity#SingleSigInception", "description": "Create a single-signature identifier with 3 witnesses and TOAD=2. Verify all domains reach correct end state.", "setup": {"description": "One Ed25519 signing key, one Blake3-256 next key digest, 3 non-transferable witness AIDs, TOAD=2, no configuration traits", "preconditions": [{"domain": "domain://identity/state", "condition": "No KeyState exists for the new AID prefix"}, {"domain": "domain://accountability", "condition": "No witness receipts exist for the new AID"}, {"domain": "domain://discovery", "condition": "No OOBI endpoints registered for the new AID"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "KeyState exists with sn=0, transferable=true, 1 signing key, 1 next digest, 3 witnesses, toad=2", "verifiable_by": "get_key_state(aid) returns valid KeyState; aid in kevers"}, {"domain": "domain://identity/establishment", "assertion": "Inception event (icp) logged to KEL with first-seen ordinal assigned; SAID of event equals AID prefix (self-certifying)", "verifiable_by": "get_event(aid, sn=0) returns event with t='icp' and d==i"}, {"domain": "domain://accountability/receipting", "assertion": "At least 2 witness receipts exist for the inception event (satisfies TOAD=2)", "verifiable_by": "get_receipts(aid, sn=0).count >= 2"}, {"domain": "domain://discovery", "assertion": "OOBI is resolvable at each witness URL, returning KEL replay + end-role replies", "verifiable_by": "HTTP GET /oobi/{aid}/witness returns 200 with CESR body"}], "failure_scenarios": [{"name": "insufficient_witnesses", "inject_failure_at": "step 3 (collect_witness_receipts) — only 1 of 3 witnesses responds", "expected_state": [{"domain": "domain://identity/establishment", "assertion": "Event held in Partially-Witnessed Escrow (PWE), NOT accepted to KEL"}, {"domain": "domain://identity/state", "assertion": "No KeyState exists — event not yet accepted"}]}, {"name": "invalid_signature", "inject_failure_at": "step 2 (validate_and_accept) — controller signature doesn't verify", "expected_state": [{"domain": "domain://identity/establishment", "assertion": "Event rejected immediately — not escrowed, not accepted"}]}], "reference_implementation": {"source": "keripy tests/app/test_habbing.py::test_habery, test_hab_rotate_with_witness", "notes": "Asserts: hab.pre in hby.habs, hab.pre in hby.kevers, hab.pre in hby.prefixes"}}, {"name": "KeyRotation_happy", "protocol": "protocols://identity#KeyRotation", "description": "Rotate keys for an existing transferable identifier. Verify pre-rotation binding and state update.", "setup": {"description": "Existing identifier at sn=0 with pre-committed next key digests", "preconditions": [{"domain": "domain://identity/state", "condition": "KeyState exists at sn=0 with non-empty next_key_digests"}, {"domain": "domain://identity/key-commitment", "condition": "New signing keys produce digests matching prior next commitments"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "KeyState updated: sn=1, new signing keys active, new next digests committed, prior keys no longer valid for new events", "verifiable_by": "get_key_state(aid).sn == 1; signing_keys == new_keys"}, {"domain": "domain://identity/establishment", "assertion": "Rotation event (rot) logged to KEL; p field matches prior event's SAID", "verifiable_by": "get_event(aid, sn=1).t == 'rot'; event.p == get_event(aid, sn=0).d"}, {"domain": "domain://accountability/receipting", "assertion": "Witness receipts collected for the rotation event", "verifiable_by": "get_receipts(aid, sn=1).count >= toad"}], "failure_scenarios": [{"name": "pre_rotation_binding_failure", "inject_failure_at": "step 2 (verify_pre_rotation_binding) — new key digests don't match", "expected_state": [{"domain": "domain://identity/state", "assertion": "KeyState unchanged at sn=0 — rotation rejected"}, {"domain": "domain://identity/key-commitment", "assertion": "PreRotationBindingError raised with mismatch details"}]}], "reference_implementation": {"source": "keripy tests/app/test_habbing.py::test_hab_rotate_with_witness", "notes": "Asserts kever state after rotation, verifies new keys and next digests"}}, {"name": "DelegatedInception_happy", "protocol": "protocols://identity#DelegatedInception", "description": "Create a delegated identifier requiring delegator approval. Verify two-party KEL coordination.", "setup": {"description": "Delegate keys ready, delegator AID exists with established key state", "preconditions": [{"domain": "domain://identity/state", "condition": "Delegator has established KeyState"}, {"domain": "domain://delegation", "condition": "Delegator has not committed any approval seal for this delegate"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "Delegated AID exists with sn=0, delegator field set, transferable=true", "verifiable_by": "get_key_state(delegate_aid).delegator == delegator_aid"}, {"domain": "domain://identity/establishment", "assertion": "Delegated inception event (dip) logged with di field matching delegator", "verifiable_by": "get_event(delegate_aid, sn=0).t == 'dip'; event.di == delegator_aid"}, {"domain": "domain://delegation/authorization", "assertion": "Delegator's KEL contains an interaction event with seal committing to the dip SAID", "verifiable_by": "delegator KEL has ixn with seal.d == delegate_dip.d"}, {"domain": "domain://accountability/receipting", "assertion": "Both delegate's dip and delegator's ixn have witness receipts", "verifiable_by": "receipts exist for both events"}], "failure_scenarios": [{"name": "delegator_timeout", "inject_failure_at": "step 3 (await_delegator_seal) — delegator never commits approval", "expected_state": [{"domain": "domain://identity/establishment", "assertion": "Event held in Partially-Delegated Escrow (PDE)"}, {"domain": "domain://identity/state", "assertion": "No KeyState for delegate — not yet accepted"}]}], "reference_implementation": {"source": "keripy tests/core/test_eventing.py::test_kever (delegation sections)", "notes": "Tests dip event with di field, delegator seal verification"}}, {"name": "MultisigInception_happy", "protocol": "protocols://identity/thresholds#MultisigInception", "description": "Create a multi-signature identifier with 3 members and threshold 2-of-3.", "setup": {"description": "3 member AIDs each with established key state, signing threshold '2', 3 witnesses", "preconditions": [{"domain": "domain://identity/state", "condition": "All 3 member AIDs have established KeyState"}, {"domain": "domain://identity/thresholds", "condition": "No group coordination in progress for these members"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "Group AID exists with sn=0, 3 signing keys, threshold='2', transferable=true", "verifiable_by": "get_key_state(group_aid); len(signing_keys)==3; threshold=='2'"}, {"domain": "domain://identity/thresholds", "assertion": "Counselor reports coordination complete for the group inception", "verifiable_by": "counselor.complete(prefixer, number, diger) == True"}, {"domain": "domain://accountability/receipting", "assertion": "Witness receipts collected for the group inception event", "verifiable_by": "get_receipts(group_aid, sn=0).count >= toad"}], "failure_scenarios": [{"name": "coordination_timeout", "inject_failure_at": "step 3 (accumulate_signatures) — only 1 of 3 members signs before timeout", "expected_state": [{"domain": "domain://identity/thresholds", "assertion": "Partially-Signed Escrow (PSE) contains 1 signature; threshold not satisfied"}, {"domain": "domain://identity/state", "assertion": "No group AID created"}]}], "reference_implementation": {"source": "keripy tests/app/test_grouping.py::test_multisig_incept", "notes": "Asserts counselor.complete(), kever.sn, verfers match expected keys"}}, {"name": "MultisigRotation_happy", "protocol": "protocols://identity/thresholds#MultisigRotation", "description": "Rotate keys for an existing multi-sig identifier. All members must coordinate.", "setup": {"description": "Group AID at sn=0, all members have new keys matching prior next commitments", "preconditions": [{"domain": "domain://identity/state", "condition": "Group AID exists at sn=0 with pre-committed next key digests"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "Group AID at sn=1 with new keys active", "verifiable_by": "ghab.kever.sn == 1; verfers == new_keys; ndigers == new_next_digests"}, {"domain": "domain://identity/thresholds", "assertion": "Counselor reports rotation coordination complete", "verifiable_by": "counselor.complete(prefixer, number, diger) == True"}], "reference_implementation": {"source": "keripy tests/app/test_grouping.py::test_multisig_rotate", "notes": "Asserts ghab.kever.sn == 1, verfers match nkeys, ndigers match ndigs"}}, {"name": "CredentialIssuance_happy", "protocol": "protocols://credential-lifecycle#CredentialIssuance", "description": "Issue a credential — create ACDC, record in TEL, authorize via issuer's identity history.", "setup": {"description": "Issuer AID with established key state, registry created, JSON schema available", "preconditions": [{"domain": "domain://identity/state", "condition": "Issuer has established KeyState"}, {"domain": "domain://credential-lifecycle/registry", "condition": "Registry exists (rip event accepted)"}, {"domain": "domain://credential-lifecycle/status", "condition": "No credential exists with this SAID"}]}, "end_state_assertions": [{"domain": "domain://credential-lifecycle/status", "assertion": "Credential in Issued state; TEL issuance event recorded", "verifiable_by": "reger.saved.get(keys=(creder.said,)) is not None"}, {"domain": "domain://identity/anchoring", "assertion": "Issuer's KEL contains an ixn with seal authorizing the TEL event SAID", "verifiable_by": "issuer KEL has ixn with seal referencing TEL event"}, {"domain": "domain://credential-lifecycle/verification", "assertion": "ACDC → TEL → KEL chain is verifiable", "verifiable_by": "verify_chain(acdc_said) returns True"}], "failure_scenarios": [{"name": "missing_registry", "inject_failure_at": "step 1 (verify_registry_exists) — registry not found", "expected_state": [{"domain": "domain://credential-lifecycle/status", "assertion": "MissingRegistryError raised; no credential created"}]}], "reference_implementation": {"source": "keripy tests/vc/test_protocoling.py::test_ipex (issuance section)", "notes": "Asserts creder.said, issuer.issue(), authorization seal, reger.saved verification"}}, {"name": "CredentialRevocation_happy", "protocol": "protocols://credential-lifecycle#CredentialRevocation", "description": "Revoke a previously issued credential.", "setup": {"description": "Credential exists in Issued state", "preconditions": [{"domain": "domain://credential-lifecycle/status", "condition": "Credential is in Issued state"}]}, "end_state_assertions": [{"domain": "domain://credential-lifecycle/status", "assertion": "Credential in Revoked state (terminal); TEL revocation event recorded", "verifiable_by": "credential state == Revoked; upd/bup event with ts='revoked' in TEL"}, {"domain": "domain://identity/anchoring", "assertion": "Issuer's KEL contains ixn authorizing the revocation TEL event", "verifiable_by": "issuer KEL has ixn with revocation seal"}], "reference_implementation": {"source": "keripy tests/vdr/test_eventing.py", "notes": "Tests TEL state transitions including revocation"}}, {"name": "DirectGrant_happy", "protocol": "protocols://credential-exchange/negotiation#DirectGrant", "description": "Direct credential grant — holder sends grant, verifier admits.", "setup": {"description": "Credential issued and verified, recipient AID exists", "preconditions": [{"domain": "domain://credential-lifecycle/status", "condition": "Credential in Issued state with valid TEL→KEL chain"}, {"domain": "domain://identity/state", "condition": "Both grantor and recipient have established KeyState"}]}, "end_state_assertions": [{"domain": "domain://credential-exchange/negotiation", "assertion": "IPEX thread in Admitted state; grant and admit messages recorded", "verifiable_by": "grant exn exists with route=/ipex/grant; admit exn references grant.said"}, {"domain": "domain://credential-exchange/proof", "assertion": "Grant bundle verified: ACDC + TEL event + KEL seal all present and valid", "verifiable_by": "verify_credential_artifacts(grant) == True"}, {"domain": "domain://credential-lifecycle", "assertion": "Recipient's credential store has the ACDC", "verifiable_by": "recipient reger.saved.get(keys=(creder.said,)) is not None"}], "failure_scenarios": [{"name": "chain_verification_failure", "inject_failure_at": "step 2 (verify_credential_chain) — KEL authorization missing", "expected_state": [{"domain": "domain://credential-exchange/negotiation", "assertion": "Grant escrowed awaiting issuer's KEL events"}, {"domain": "domain://credential-lifecycle", "assertion": "Credential NOT in recipient's store"}]}], "reference_implementation": {"source": "keripy tests/vc/test_protocoling.py::test_ipex (grant/admit section)", "notes": "Asserts grant0.raw, ipexhan.verify(serder=grant0), admit message construction"}}, {"name": "NegotiatedIssuance_happy", "protocol": "protocols://credential-exchange/negotiation#NegotiatedIssuance", "description": "Full IPEX negotiation — apply, offer, agree, grant, admit.", "setup": {"description": "Prospective holder and issuer both have established AIDs, schema available", "preconditions": [{"domain": "domain://identity/state", "condition": "Both parties have established KeyState"}]}, "end_state_assertions": [{"domain": "domain://credential-exchange/negotiation", "assertion": "IPEX thread completed: 5 messages (apply→offer→agree→grant→admit) with SAID chain", "verifiable_by": "admit.p == grant.d; grant.p == agree.d; agree.p == offer.d; offer.p == apply.d"}, {"domain": "domain://credential-lifecycle/status", "assertion": "New credential issued in TEL with Issued state", "verifiable_by": "credential state == Issued"}, {"domain": "domain://credential-lifecycle", "assertion": "Both issuer and holder have the credential in their stores", "verifiable_by": "reger.saved for both parties"}], "failure_scenarios": [{"name": "spurn_at_offer", "inject_failure_at": "step 3 (agree) — holder spurns the offer instead of agreeing", "expected_state": [{"domain": "domain://credential-exchange/negotiation", "assertion": "IPEX thread in Spurned state (terminal); no credential issued"}, {"domain": "domain://credential-lifecycle/status", "assertion": "No credential created"}]}], "reference_implementation": {"source": "keripy tests/vc/test_protocoling.py::test_ipex", "notes": "Full apply→offer→grant→admit flow with SAID verification at each step"}}, {"name": "OOBIResolution_happy", "protocol": "protocols://discovery#OOBIResolution", "description": "Resolve an OOBI URL to establish key state for a remote identifier.", "setup": {"description": "Remote AID exists with witnesses; resolver has OOBI URL", "preconditions": [{"domain": "domain://identity/state", "condition": "Resolver does NOT have KeyState for the remote AID"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "Remote AID's KeyState now available locally", "verifiable_by": "get_key_state(remote_aid) returns valid state"}, {"domain": "domain://identity/establishment", "assertion": "Remote AID's KEL events validated and stored locally", "verifiable_by": "get_event(remote_aid, sn=0) returns inception event"}, {"domain": "domain://discovery", "assertion": "OOBI marked as resolved; endpoint mappings stored", "verifiable_by": "obr.state == Result.resolved"}], "failure_scenarios": [{"name": "invalid_kel", "inject_failure_at": "step 2 (validate_kel_replay) — KEL events don't verify", "expected_state": [{"domain": "domain://identity/state", "assertion": "No KeyState created — entire OOBI rejected"}, {"domain": "domain://discovery", "assertion": "OOBI marked as failed"}]}], "reference_implementation": {"source": "keripy tests/app/test_oobiing.py", "notes": "Asserts obr.state == Result.resolved, kever existence after resolution"}}, {"name": "EndpointDiscoveryRegistration_happy", "protocol": "protocols://discovery#EndpointDiscoveryRegistration", "description": "Controller publishes a service endpoint, making it discoverable via OOBI.", "setup": {"description": "Controller AID exists, witness/agent AID exists, endpoint URL known", "preconditions": [{"domain": "domain://identity/state", "condition": "Controller has established KeyState"}, {"domain": "domain://discovery", "condition": "No endpoint registered for this AID/role/eid combination"}]}, "end_state_assertions": [{"domain": "domain://identity/anchoring", "assertion": "Controller's KEL contains endpoint authorization seal", "verifiable_by": "controller KEL has ixn with end-role seal"}, {"domain": "domain://discovery", "assertion": "Endpoint mapping stored: (cid, role, eid) → allowed, verifiable via OOBI", "verifiable_by": "resolve_oobi returns end-role reply for this AID/role/eid"}], "reference_implementation": {"source": "keria tests/app/test_aiding.py::test_endrole_ends", "notes": "Tests end-role creation and resolution via KERIA API"}}, {"name": "AgentProvisioning_happy", "protocol": "protocols://cloud-agent-service#AgentProvisioning", "description": "Provision a new cloud agent for a controller via Signify boot.", "setup": {"description": "Signify client has generated edge keys and inception event", "preconditions": [{"domain": "domain://cloud-agent-service/provisioning", "condition": "No agent exists for this controller AID"}]}, "end_state_assertions": [{"domain": "domain://cloud-agent-service/provisioning", "assertion": "Agent instance created with dedicated databases; controller→agent mapping stored", "verifiable_by": "agency.get(controller_aid) returns Agent; agent.active == True"}, {"domain": "domain://identity/establishment", "assertion": "Agent's own AID established with key state", "verifiable_by": "agent AID has KeyState at sn=0"}, {"domain": "domain://cloud-agent-service/api", "assertion": "Admin API accepts authenticated requests from the controller's Signify client", "verifiable_by": "POST /agent with signed headers returns 200"}], "reference_implementation": {"source": "keria tests/app/test_agenting.py", "notes": "Tests boot flow, agent creation, identifier management via API"}}, {"name": "DuplicityCheck_detected", "protocol": "protocols://integrity#DuplicityCheck", "description": "Watcher detects duplicity by cross-checking witness KEL copies.", "setup": {"description": "AID with 3 witnesses; witness A has event X at sn=5, witness B has event Y at sn=5 (different SAIDs)", "preconditions": [{"domain": "domain://integrity/evidence", "condition": "No duplicity evidence exists for this AID"}]}, "end_state_assertions": [{"domain": "domain://integrity/detection", "assertion": "Duplicity detected: two events at same (prefix, sn) with different SAIDs", "verifiable_by": "fork found at sn=5 with said_a != said_b"}, {"domain": "domain://integrity/evidence", "assertion": "DuplicityEvidence entry stored permanently in DEL; both events preserved with signatures", "verifiable_by": "DEL entry exists with both event bodies and valid signatures"}], "failure_scenarios": [{"name": "no_duplicity", "inject_failure_at": "step 3 (compare_events_by_sn) — all witnesses agree", "expected_state": [{"domain": "domain://integrity/evidence", "assertion": "No DEL entry created — this is the normal, healthy outcome"}]}], "reference_implementation": {"source": "keripy tests/core/test_eventing.py (duplicity sections)", "notes": "Tests escrowLDEvent, duplicitous event detection"}}, {"name": "SupersedingRecovery_happy", "protocol": "protocols://integrity#SupersedingRecovery", "description": "Honest controller recovers from duplicity using pre-rotated keys.", "setup": {"description": "Duplicity detected at fork_point_sn; controller has pre-rotated keys from before the fork", "preconditions": [{"domain": "domain://integrity/evidence", "condition": "DuplicityEvidence exists in DEL for this AID"}, {"domain": "domain://identity/key-commitment", "condition": "Pre-rotation commitments from last establishment event before fork are available"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "KeyState updated with recovery rotation — new keys from pre-rotation, forked branch invalidated", "verifiable_by": "kever at recovery_sn has new keys; events from fork branch are disputed"}, {"domain": "domain://integrity/recovery", "assertion": "KEL reconciled — recovery branch is the new trunk; forked events preserved but disputed", "verifiable_by": "superseded events queryable by fn but not in active KEL sequence"}, {"domain": "domain://integrity/evidence", "assertion": "DEL evidence preserved — recovery doesn't delete duplicity proof", "verifiable_by": "DEL entries still exist after recovery"}], "failure_scenarios": [{"name": "recovery_keys_dont_match", "inject_failure_at": "step 3 (verify_recovery_keys) — keys don't match pre-commitments", "expected_state": [{"domain": "domain://identity/state", "assertion": "KeyState unchanged — recovery rotation rejected"}, {"domain": "domain://identity/key-commitment", "assertion": "PreRotationBindingError raised"}]}], "reference_implementation": {"source": "keripy tests/core/test_eventing.py (superseding recovery sections)", "notes": "Tests superseding rotation with pre-rotated key validation"}}, {"name": "EscrowCascade_full_pipeline", "protocol": "protocols://identity#DelegatedInception", "description": "A delegated inception event arrives out of order, with partial signatures, before the delegator's seal. It cascades through OOE → PSE → PWE → PDE → accepted. Tests the full escrow reprocessing pipeline across 4 domains.", "setup": {"description": "Multi-sig delegated inception: 2-of-3 threshold, 2 witnesses TOAD=1, delegator is a separate AID. Event arrives at a validator before the prior event (out-of-order).", "preconditions": [{"domain": "domain://identity/state", "condition": "Validator has the delegator's KEL but the delegate's prefix is unknown"}]}, "cascade_steps": [{"step": 1, "escrow": "Out-of-Order Escrow (OOE)", "owning_domain": "domain://identity", "trigger": "Event sn > expected (or prefix unknown and not inception) — but this IS an inception for a new prefix, so OOE only applies if prior context is missing", "resolution": "For inception of unknown prefix: OOE is skipped (inception doesn't need a prior event). Event proceeds directly to validation.", "timeout": "1200s", "notes": "OOE is processed first in the sweep order to release sequence-gapped events"}, {"step": 2, "escrow": "Partially-Signed Escrow (PSE)", "owning_domain": "domain://identity/thresholds", "trigger": "Event arrives with 1 of 3 required signatures (threshold is 2-of-3)", "resolution": "Second signature arrives via exn multisig coordination → accumulated → threshold satisfied → event exits PSE", "reprocessing_trigger": "Domain Event Bus: SignatureAccumulated notification for this event's SAID", "timeout": "3600s", "notes": "PSE is processed after OOE. Signatures accumulate across multiple deliveries."}, {"step": 3, "escrow": "Partially-Witnessed Escrow (PWE)", "owning_domain": "domain://accountability", "trigger": "Signatures satisfy threshold, but only 0 of 1 required witness receipts collected (TOAD=1)", "resolution": "Witness receipts arrive via receipt dissemination → count reaches TOAD → event exits PWE", "reprocessing_trigger": "Domain Event Bus: WitnessReceiptCollected notification for this event's AID+sn", "timeout": "3600s", "notes": "PWE is processed after PSE. Events that pass signing may still lack witness accountability."}, {"step": 4, "escrow": "Partially-Delegated Escrow (PDE)", "owning_domain": "domain://delegation", "trigger": "Signatures and witnesses satisfied, but delegator's approval seal not yet found in delegator's KEL", "resolution": "Delegator creates an ixn with a seal referencing the delegate's dip SAID → seal discovered in delegator's KEL → event exits PDE", "reprocessing_trigger": "Domain Event Bus: KeyEventAccepted for the delegator's AID (new event in delegator's KEL may contain the seal)", "timeout": "86400s (24 hours)", "notes": "PDE is processed last. Delegation may require human approval by the delegator."}, {"step": 5, "outcome": "Accepted to KEL", "owning_domain": "domain://identity", "trigger": "All blocking conditions resolved: signatures ≥ threshold, receipts ≥ TOAD, delegation seal verified", "post_acceptance": ["Key state created for the new delegated AID", "Event logged to KEL with first-seen number assigned", "Domain Event Bus: KeyEventAccepted published (may trigger other escrow reprocessing)"]}], "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "Delegated AID has established key state with correct signing keys, next commitments, and witness set"}, {"domain": "domain://accountability/receipting", "assertion": "Witness receipts stored for the delegation inception event"}, {"domain": "domain://delegation/authorization", "assertion": "Two-way binding verified: delegate's di field references delegator, delegator's KEL contains matching seal"}, {"domain": "domain://identity", "assertion": "All escrow queues (OOE, PSE, PWE, PDE) are empty for this event — it has been fully promoted"}], "ordering_invariants": ["Escrow sweep order MUST be OOE → PSE → PWE → PDE — resolving one type may cascade events into the next", "Each escrow reprocessing re-enters the event at the validation step, not at the escrow check — the event is fully re-validated", "An event can visit multiple escrow types (PSE then PWE then PDE) but is in exactly one at a time", "Timeout at any escrow stage prunes the event permanently — it does not cascade to the next escrow", "KeyEventAccepted notifications from accepting OTHER events may trigger reprocessing of escrowed events for related AIDs"], "failure_scenarios": [{"name": "timeout_in_pde", "inject_failure_at": "step 4 — delegator never approves within 86400s", "expected_state": [{"domain": "domain://identity", "assertion": "Event pruned from PDE — no AID created"}, {"domain": "domain://delegation", "assertion": "No delegation binding exists"}]}, {"name": "key_state_change_during_escrow", "inject_failure_at": "step 2 — delegator rotates keys while signatures are accumulating in PSE", "expected_state": [{"domain": "domain://identity/thresholds", "assertion": "Accumulated signatures invalidated — must re-sign with new key state"}]}, {"name": "cascade_pse_to_pwe", "inject_failure_at": "step 2 resolves (signatures pass) but step 3 blocks (no witness receipts)", "expected_state": [{"domain": "domain://identity", "assertion": "Event moves from PSE to PWE — cascade in action"}, {"domain": "domain://accountability", "assertion": "Event appears in PWE, not PSE"}]}]}];
+const RDOD_SCENARIOS = [{"name": "SingleSigInception_happy", "protocol": "protocols://identity#SingleSigInception", "description": "Create a single-signature identifier with 3 witnesses and TOAD=2. Verify all domains reach correct end state.", "setup": {"description": "One Ed25519 signing key, one Blake3-256 next key digest, 3 non-transferable witness AIDs, TOAD=2, no configuration traits", "preconditions": [{"domain": "domain://identity/state", "condition": "No KeyState exists for the new AID prefix"}, {"domain": "domain://accountability", "condition": "No witness receipts exist for the new AID"}, {"domain": "domain://discovery", "condition": "No OOBI endpoints registered for the new AID"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "KeyState exists with sn=0, transferable=true, 1 signing key, 1 next digest, 3 witnesses, toad=2", "verifiable_by": "get_key_state(aid) returns valid KeyState; aid in kevers"}, {"domain": "domain://identity/establishment", "assertion": "Inception event (icp) logged to KEL with first-seen ordinal assigned; SAID of event equals AID prefix (self-certifying)", "verifiable_by": "get_event(aid, sn=0) returns event with t='icp' and d==i"}, {"domain": "domain://accountability/receipting", "assertion": "At least 2 witness receipts exist for the inception event (satisfies TOAD=2)", "verifiable_by": "get_receipts(aid, sn=0).count >= 2"}, {"domain": "domain://discovery", "assertion": "OOBI is resolvable at each witness URL, returning KEL replay + end-role replies", "verifiable_by": "HTTP GET /oobi/{aid}/witness returns 200 with CESR body"}], "failure_scenarios": [{"name": "insufficient_witnesses", "inject_failure_at": "step 3 (collect_witness_receipts) — only 1 of 3 witnesses responds", "expected_state": [{"domain": "domain://identity/establishment", "assertion": "Event held in Partially-Witnessed Escrow (PWE), NOT accepted to KEL"}, {"domain": "domain://identity/state", "assertion": "No KeyState exists — event not yet accepted"}]}, {"name": "invalid_signature", "inject_failure_at": "step 2 (validate_and_accept) — controller signature doesn't verify", "expected_state": [{"domain": "domain://identity/establishment", "assertion": "Event rejected immediately — not escrowed, not accepted"}]}], "reference_implementation": {"source": "keripy tests/app/test_habbing.py::test_habery, test_hab_rotate_with_witness", "notes": "Asserts: hab.pre in hby.habs, hab.pre in hby.kevers, hab.pre in hby.prefixes"}}, {"name": "KeyRotation_happy", "protocol": "protocols://identity#KeyRotation", "description": "Rotate keys for an existing transferable identifier. Verify pre-rotation binding and state update.", "setup": {"description": "Existing identifier at sn=0 with pre-committed next key digests", "preconditions": [{"domain": "domain://identity/state", "condition": "KeyState exists at sn=0 with non-empty next_key_digests"}, {"domain": "domain://identity/key-commitment", "condition": "New signing keys produce digests matching prior next commitments"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "KeyState updated: sn=1, new signing keys active, new next digests committed, prior keys no longer valid for new events", "verifiable_by": "get_key_state(aid).sn == 1; signing_keys == new_keys"}, {"domain": "domain://identity/establishment", "assertion": "Rotation event (rot) logged to KEL; p field matches prior event's SAID", "verifiable_by": "get_event(aid, sn=1).t == 'rot'; event.p == get_event(aid, sn=0).d"}, {"domain": "domain://accountability/receipting", "assertion": "Witness receipts collected for the rotation event", "verifiable_by": "get_receipts(aid, sn=1).count >= toad"}], "failure_scenarios": [{"name": "pre_rotation_binding_failure", "inject_failure_at": "step 2 (verify_pre_rotation_binding) — new key digests don't match", "expected_state": [{"domain": "domain://identity/state", "assertion": "KeyState unchanged at sn=0 — rotation rejected"}, {"domain": "domain://identity/key-commitment", "assertion": "PreRotationBindingError raised with mismatch details"}]}], "reference_implementation": {"source": "keripy tests/app/test_habbing.py::test_hab_rotate_with_witness", "notes": "Asserts kever state after rotation, verifies new keys and next digests"}}, {"name": "DelegatedInception_happy", "protocol": "protocols://identity#DelegatedInception", "description": "Create a delegated identifier requiring delegator approval. Verify two-party KEL coordination.", "setup": {"description": "Delegate keys ready, delegator AID exists with established key state", "preconditions": [{"domain": "domain://identity/state", "condition": "Delegator has established KeyState"}, {"domain": "domain://delegation", "condition": "Delegator has not committed any approval seal for this delegate"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "Delegated AID exists with sn=0, delegator field set, transferable=true", "verifiable_by": "get_key_state(delegate_aid).delegator == delegator_aid"}, {"domain": "domain://identity/establishment", "assertion": "Delegated inception event (dip) logged with di field matching delegator", "verifiable_by": "get_event(delegate_aid, sn=0).t == 'dip'; event.di == delegator_aid"}, {"domain": "domain://delegation/authorization", "assertion": "Delegator's KEL contains an interaction event with seal committing to the dip SAID", "verifiable_by": "delegator KEL has ixn with seal.d == delegate_dip.d"}, {"domain": "domain://accountability/receipting", "assertion": "Both delegate's dip and delegator's ixn have witness receipts", "verifiable_by": "receipts exist for both events"}], "failure_scenarios": [{"name": "delegator_timeout", "inject_failure_at": "step 3 (await_delegator_seal) — delegator never commits approval", "expected_state": [{"domain": "domain://identity/establishment", "assertion": "Event held in Partially-Delegated Escrow (PDE)"}, {"domain": "domain://identity/state", "assertion": "No KeyState for delegate — not yet accepted"}]}], "reference_implementation": {"source": "keripy tests/core/test_eventing.py::test_kever (delegation sections)", "notes": "Tests dip event with di field, delegator seal verification"}}, {"name": "MultisigInception_happy", "protocol": "protocols://identity/thresholds#MultisigInception", "description": "Create a multi-signature identifier with 3 members and threshold 2-of-3.", "setup": {"description": "3 member AIDs each with established key state, signing threshold '2', 3 witnesses", "preconditions": [{"domain": "domain://identity/state", "condition": "All 3 member AIDs have established KeyState"}, {"domain": "domain://identity/thresholds", "condition": "No group coordination in progress for these members"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "Group AID exists with sn=0, 3 signing keys, threshold='2', transferable=true", "verifiable_by": "get_key_state(group_aid); len(signing_keys)==3; threshold=='2'"}, {"domain": "domain://identity/thresholds", "assertion": "Counselor reports coordination complete for the group inception", "verifiable_by": "counselor.complete(prefixer, number, diger) == True"}, {"domain": "domain://accountability/receipting", "assertion": "Witness receipts collected for the group inception event", "verifiable_by": "get_receipts(group_aid, sn=0).count >= toad"}], "failure_scenarios": [{"name": "coordination_timeout", "inject_failure_at": "step 3 (accumulate_signatures) — only 1 of 3 members signs before timeout", "expected_state": [{"domain": "domain://identity/thresholds", "assertion": "Partially-Signed Escrow (PSE) contains 1 signature; threshold not satisfied"}, {"domain": "domain://identity/state", "assertion": "No group AID created"}]}], "reference_implementation": {"source": "keripy tests/app/test_grouping.py::test_multisig_incept", "notes": "Asserts counselor.complete(), kever.sn, verfers match expected keys"}}, {"name": "MultisigRotation_happy", "protocol": "protocols://identity/thresholds#MultisigRotation", "description": "Rotate keys for an existing multi-sig identifier. All members must coordinate.", "setup": {"description": "Group AID at sn=0, all members have new keys matching prior next commitments", "preconditions": [{"domain": "domain://identity/state", "condition": "Group AID exists at sn=0 with pre-committed next key digests"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "Group AID at sn=1 with new keys active", "verifiable_by": "ghab.kever.sn == 1; verfers == new_keys; ndigers == new_next_digests"}, {"domain": "domain://identity/thresholds", "assertion": "Counselor reports rotation coordination complete", "verifiable_by": "counselor.complete(prefixer, number, diger) == True"}], "reference_implementation": {"source": "keripy tests/app/test_grouping.py::test_multisig_rotate", "notes": "Asserts ghab.kever.sn == 1, verfers match nkeys, ndigers match ndigs"}}, {"name": "CredentialIssuance_happy", "protocol": "protocols://credential-lifecycle#CredentialIssuance", "description": "Issue a credential — create ACDC, record in TEL, authorize via issuer's identity history.", "setup": {"description": "Issuer AID with established key state, registry created, JSON schema available", "preconditions": [{"domain": "domain://identity/state", "condition": "Issuer has established KeyState"}, {"domain": "domain://credential-lifecycle/registry", "condition": "Registry exists (rip event accepted)"}, {"domain": "domain://credential-lifecycle/status", "condition": "No credential exists with this SAID"}]}, "end_state_assertions": [{"domain": "domain://credential-lifecycle/status", "assertion": "Credential in Issued state; TEL issuance event recorded", "verifiable_by": "reger.saved.get(keys=(creder.said,)) is not None"}, {"domain": "domain://identity/anchoring", "assertion": "Issuer's KEL contains an ixn with seal authorizing the TEL event SAID", "verifiable_by": "issuer KEL has ixn with seal referencing TEL event"}, {"domain": "domain://credential-lifecycle/verification", "assertion": "ACDC → TEL → KEL chain is verifiable", "verifiable_by": "verify_chain(acdc_said) returns True"}], "failure_scenarios": [{"name": "missing_registry", "inject_failure_at": "step 1 (verify_registry_exists) — registry not found", "expected_state": [{"domain": "domain://credential-lifecycle/status", "assertion": "MissingRegistryError raised; no credential created"}]}], "reference_implementation": {"source": "keripy tests/vc/test_protocoling.py::test_ipex (issuance section)", "notes": "Asserts creder.said, issuer.issue(), authorization seal, reger.saved verification"}}, {"name": "CredentialRevocation_happy", "protocol": "protocols://credential-lifecycle#CredentialRevocation", "description": "Revoke a previously issued credential.", "setup": {"description": "Credential exists in Issued state", "preconditions": [{"domain": "domain://credential-lifecycle/status", "condition": "Credential is in Issued state"}]}, "end_state_assertions": [{"domain": "domain://credential-lifecycle/status", "assertion": "Credential in Revoked state (terminal); TEL revocation event recorded", "verifiable_by": "credential state == Revoked; upd/bup event with ts='revoked' in TEL"}, {"domain": "domain://identity/anchoring", "assertion": "Issuer's KEL contains ixn authorizing the revocation TEL event", "verifiable_by": "issuer KEL has ixn with revocation seal"}], "reference_implementation": {"source": "keripy tests/vdr/test_eventing.py", "notes": "Tests TEL state transitions including revocation"}}, {"name": "DirectGrant_happy", "protocol": "protocols://credential-exchange/negotiation#DirectGrant", "description": "Direct credential grant — holder sends grant, verifier admits.", "setup": {"description": "Credential issued and verified, recipient AID exists", "preconditions": [{"domain": "domain://credential-lifecycle/status", "condition": "Credential in Issued state with valid TEL→KEL chain"}, {"domain": "domain://identity/state", "condition": "Both grantor and recipient have established KeyState"}]}, "end_state_assertions": [{"domain": "domain://credential-exchange/negotiation", "assertion": "IPEX thread in Admitted state; grant and admit messages recorded", "verifiable_by": "grant exn exists with route=/ipex/grant; admit exn references grant.said"}, {"domain": "domain://credential-exchange/proof", "assertion": "Grant bundle verified: ACDC + TEL event + KEL seal all present and valid", "verifiable_by": "verify_credential_artifacts(grant) == True"}, {"domain": "domain://credential-lifecycle", "assertion": "Recipient's credential store has the ACDC", "verifiable_by": "recipient reger.saved.get(keys=(creder.said,)) is not None"}], "failure_scenarios": [{"name": "chain_verification_failure", "inject_failure_at": "step 2 (verify_credential_chain) — KEL authorization missing", "expected_state": [{"domain": "domain://credential-exchange/negotiation", "assertion": "Grant escrowed awaiting issuer's KEL events"}, {"domain": "domain://credential-lifecycle", "assertion": "Credential NOT in recipient's store"}]}], "reference_implementation": {"source": "keripy tests/vc/test_protocoling.py::test_ipex (grant/admit section)", "notes": "Asserts grant0.raw, ipexhan.verify(serder=grant0), admit message construction"}}, {"name": "NegotiatedIssuance_happy", "protocol": "protocols://credential-exchange/negotiation#NegotiatedIssuance", "description": "Full IPEX negotiation — apply, offer, agree, grant, admit.", "setup": {"description": "Prospective holder and issuer both have established AIDs, schema available", "preconditions": [{"domain": "domain://identity/state", "condition": "Both parties have established KeyState"}]}, "end_state_assertions": [{"domain": "domain://credential-exchange/negotiation", "assertion": "IPEX thread completed: 5 messages (apply→offer→agree→grant→admit) with SAID chain", "verifiable_by": "admit.p == grant.d; grant.p == agree.d; agree.p == offer.d; offer.p == apply.d"}, {"domain": "domain://credential-lifecycle/status", "assertion": "New credential issued in TEL with Issued state", "verifiable_by": "credential state == Issued"}, {"domain": "domain://credential-lifecycle", "assertion": "Both issuer and holder have the credential in their stores", "verifiable_by": "reger.saved for both parties"}], "failure_scenarios": [{"name": "spurn_at_offer", "inject_failure_at": "step 3 (agree) — holder spurns the offer instead of agreeing", "expected_state": [{"domain": "domain://credential-exchange/negotiation", "assertion": "IPEX thread in Spurned state (terminal); no credential issued"}, {"domain": "domain://credential-lifecycle/status", "assertion": "No credential created"}]}], "reference_implementation": {"source": "keripy tests/vc/test_protocoling.py::test_ipex", "notes": "Full apply→offer→grant→admit flow with SAID verification at each step"}}, {"name": "OOBIResolution_happy", "protocol": "protocols://discovery#OOBIResolution", "description": "Resolve an OOBI URL to establish key state for a remote identifier.", "setup": {"description": "Remote AID exists with witnesses; resolver has OOBI URL", "preconditions": [{"domain": "domain://identity/state", "condition": "Resolver does NOT have KeyState for the remote AID"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "Remote AID's KeyState now available locally", "verifiable_by": "get_key_state(remote_aid) returns valid state"}, {"domain": "domain://identity/establishment", "assertion": "Remote AID's KEL events validated and stored locally", "verifiable_by": "get_event(remote_aid, sn=0) returns inception event"}, {"domain": "domain://discovery", "assertion": "OOBI marked as resolved; endpoint mappings stored", "verifiable_by": "obr.state == Result.resolved"}], "failure_scenarios": [{"name": "invalid_kel", "inject_failure_at": "step 2 (validate_kel_replay) — KEL events don't verify", "expected_state": [{"domain": "domain://identity/state", "assertion": "No KeyState created — entire OOBI rejected"}, {"domain": "domain://discovery", "assertion": "OOBI marked as failed"}]}], "reference_implementation": {"source": "keripy tests/app/test_oobiing.py", "notes": "Asserts obr.state == Result.resolved, kever existence after resolution"}}, {"name": "EndpointDiscoveryRegistration_happy", "protocol": "protocols://discovery#EndpointDiscoveryRegistration", "description": "Controller publishes a service endpoint, making it discoverable via OOBI.", "setup": {"description": "Controller AID exists, witness/agent AID exists, endpoint URL known", "preconditions": [{"domain": "domain://identity/state", "condition": "Controller has established KeyState"}, {"domain": "domain://discovery", "condition": "No endpoint registered for this AID/role/eid combination"}]}, "end_state_assertions": [{"domain": "domain://identity/anchoring", "assertion": "Controller's KEL contains endpoint authorization seal", "verifiable_by": "controller KEL has ixn with end-role seal"}, {"domain": "domain://discovery", "assertion": "Endpoint mapping stored: (cid, role, eid) → allowed, verifiable via OOBI", "verifiable_by": "resolve_oobi returns end-role reply for this AID/role/eid"}], "reference_implementation": {"source": "keria tests/app/test_aiding.py::test_endrole_ends", "notes": "Tests end-role creation and resolution via KERIA API"}}, {"name": "AgentProvisioning_happy", "protocol": "protocols://cloud-agent-service#AgentProvisioning", "description": "Provision a new cloud agent for a controller via Signify boot.", "setup": {"description": "Signify client has generated edge keys and inception event", "preconditions": [{"domain": "domain://cloud-agent-service/provisioning", "condition": "No agent exists for this controller AID"}]}, "end_state_assertions": [{"domain": "domain://cloud-agent-service/provisioning", "assertion": "Agent instance created with dedicated databases; controller→agent mapping stored", "verifiable_by": "agency.get(controller_aid) returns Agent; agent.active == True"}, {"domain": "domain://identity/establishment", "assertion": "Agent's own AID established with key state", "verifiable_by": "agent AID has KeyState at sn=0"}, {"domain": "domain://cloud-agent-service/api", "assertion": "Admin API accepts authenticated requests from the controller's Signify client", "verifiable_by": "POST /agent with signed headers returns 200"}], "reference_implementation": {"source": "keria tests/app/test_agenting.py", "notes": "Tests boot flow, agent creation, identifier management via API"}}, {"name": "DuplicityCheck_detected", "protocol": "protocols://integrity#DuplicityCheck", "description": "Watcher detects duplicity by cross-checking witness KEL copies.", "setup": {"description": "AID with 3 witnesses; witness A has event X at sn=5, witness B has event Y at sn=5 (different SAIDs)", "preconditions": [{"domain": "domain://integrity/evidence", "condition": "No duplicity evidence exists for this AID"}]}, "end_state_assertions": [{"domain": "domain://integrity/detection", "assertion": "Duplicity detected: two events at same (prefix, sn) with different SAIDs", "verifiable_by": "fork found at sn=5 with said_a != said_b"}, {"domain": "domain://integrity/evidence", "assertion": "DuplicityEvidence entry stored permanently in DEL; both events preserved with signatures", "verifiable_by": "DEL entry exists with both event bodies and valid signatures"}], "failure_scenarios": [{"name": "no_duplicity", "inject_failure_at": "step 3 (compare_events_by_sn) — all witnesses agree", "expected_state": [{"domain": "domain://integrity/evidence", "assertion": "No DEL entry created — this is the normal, healthy outcome"}]}], "reference_implementation": {"source": "keripy tests/core/test_eventing.py (duplicity sections)", "notes": "Tests escrowLDEvent, duplicitous event detection"}}, {"name": "SupersedingRecovery_happy", "protocol": "protocols://integrity#SupersedingRecovery", "description": "Honest controller recovers from duplicity using pre-rotated keys.", "setup": {"description": "Duplicity detected at fork_point_sn; controller has pre-rotated keys from before the fork", "preconditions": [{"domain": "domain://integrity/evidence", "condition": "DuplicityEvidence exists in DEL for this AID"}, {"domain": "domain://identity/key-commitment", "condition": "Pre-rotation commitments from last establishment event before fork are available"}]}, "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "KeyState updated with recovery rotation — new keys from pre-rotation, forked branch invalidated", "verifiable_by": "kever at recovery_sn has new keys; events from fork branch are disputed"}, {"domain": "domain://integrity/recovery", "assertion": "KEL reconciled — recovery branch is the new trunk; forked events preserved but disputed", "verifiable_by": "superseded events queryable by fn but not in active KEL sequence"}, {"domain": "domain://integrity/evidence", "assertion": "DEL evidence preserved — recovery doesn't delete duplicity proof", "verifiable_by": "DEL entries still exist after recovery"}], "failure_scenarios": [{"name": "recovery_keys_dont_match", "inject_failure_at": "step 3 (verify_recovery_keys) — keys don't match pre-commitments", "expected_state": [{"domain": "domain://identity/state", "assertion": "KeyState unchanged — recovery rotation rejected"}, {"domain": "domain://identity/key-commitment", "assertion": "PreRotationBindingError raised"}]}], "reference_implementation": {"source": "keripy tests/core/test_eventing.py (superseding recovery sections)", "notes": "Tests superseding rotation with pre-rotated key validation"}}, {"name": "EscrowCascade_full_pipeline", "protocol": "protocols://identity#DelegatedInception", "description": "A delegated inception event arrives out of order, with partial signatures, before the delegator's seal. It cascades through OOE → PSE → PWE → PDE → accepted. Tests the full escrow reprocessing pipeline across 4 domains.", "setup": {"description": "Multi-sig delegated inception: 2-of-3 threshold, 2 witnesses TOAD=1, delegator is a separate AID. Event arrives at a validator before the prior event (out-of-order).", "preconditions": [{"domain": "domain://identity/state", "condition": "Validator has the delegator's KEL but the delegate's prefix is unknown"}]}, "cascade_steps": [{"step": 1, "escrow": "Out-of-Order Escrow (OOE)", "owning_domain": "domain://identity", "trigger": "Event sn > expected (or prefix unknown and not inception) — but this IS an inception for a new prefix, so OOE only applies if prior context is missing", "resolution": "For inception of unknown prefix: OOE is skipped (inception doesn't need a prior event). Event proceeds directly to validation.", "timeout": "1200s", "notes": "OOE is processed first in the sweep order to release sequence-gapped events"}, {"step": 2, "escrow": "Partially-Signed Escrow (PSE)", "owning_domain": "domain://identity/thresholds", "trigger": "Event arrives with 1 of 3 required signatures (threshold is 2-of-3)", "resolution": "Second signature arrives via exn multisig coordination → accumulated → threshold satisfied → event exits PSE", "reprocessing_trigger": "Domain Event Bus: SignatureAccumulated notification for this event's SAID", "timeout": "3600s", "notes": "PSE is processed after OOE. Signatures accumulate across multiple deliveries."}, {"step": 3, "escrow": "Partially-Witnessed Escrow (PWE)", "owning_domain": "domain://accountability", "trigger": "Signatures satisfy threshold, but only 0 of 1 required witness receipts collected (TOAD=1)", "resolution": "Witness receipts arrive via receipt dissemination → count reaches TOAD → event exits PWE", "reprocessing_trigger": "Domain Event Bus: WitnessReceiptCollected notification for this event's AID+sn", "timeout": "3600s", "notes": "PWE is processed after PSE. Events that pass signing may still lack witness accountability."}, {"step": 4, "escrow": "Partially-Delegated Escrow (PDE)", "owning_domain": "domain://delegation", "trigger": "Signatures and witnesses satisfied, but delegator's approval seal not yet found in delegator's KEL", "resolution": "Delegator creates an ixn with a seal referencing the delegate's dip SAID → seal discovered in delegator's KEL → event exits PDE", "reprocessing_trigger": "Domain Event Bus: KeyEventAccepted for the delegator's AID (new event in delegator's KEL may contain the seal)", "timeout": "86400s (24 hours)", "notes": "PDE is processed last. Delegation may require human approval by the delegator."}, {"step": 5, "outcome": "Accepted to KEL", "owning_domain": "domain://identity", "trigger": "All blocking conditions resolved: signatures ≥ threshold, receipts ≥ TOAD, delegation seal verified", "post_acceptance": ["Key state created for the new delegated AID", "Event logged to KEL with first-seen number assigned", "Domain Event Bus: KeyEventAccepted published (may trigger other escrow reprocessing)"]}], "end_state_assertions": [{"domain": "domain://identity/state", "assertion": "Delegated AID has established key state with correct signing keys, next commitments, and witness set"}, {"domain": "domain://accountability/receipting", "assertion": "Witness receipts stored for the delegation inception event"}, {"domain": "domain://delegation/authorization", "assertion": "Two-way binding verified: delegate's di field references delegator, delegator's KEL contains matching seal"}, {"domain": "domain://identity", "assertion": "All escrow queues (OOE, PSE, PWE, PDE) are empty for this event — it has been fully promoted"}], "ordering_invariants": ["Escrow sweep order MUST be OOE → PSE → PWE → PDE — resolving one type may cascade events into the next", "Each escrow reprocessing re-enters the event at the validation step, not at the escrow check — the event is fully re-validated", "An event can visit multiple escrow types (PSE then PWE then PDE) but is in exactly one at a time", "Timeout at any escrow stage prunes the event permanently — it does not cascade to the next escrow", "KeyEventAccepted notifications from accepting OTHER events may trigger reprocessing of escrowed events for related AIDs"], "failure_scenarios": [{"name": "timeout_in_pde", "inject_failure_at": "step 4 — delegator never approves within 86400s", "expected_state": [{"domain": "domain://identity", "assertion": "Event pruned from PDE — no AID created"}, {"domain": "domain://delegation", "assertion": "No delegation binding exists"}]}, {"name": "key_state_change_during_escrow", "inject_failure_at": "step 2 — delegator rotates keys while signatures are accumulating in PSE", "expected_state": [{"domain": "domain://identity/thresholds", "assertion": "Accumulated signatures invalidated — must re-sign with new key state"}]}, {"name": "cascade_pse_to_pwe", "inject_failure_at": "step 2 resolves (signatures pass) but step 3 blocks (no witness receipts)", "expected_state": [{"domain": "domain://identity", "assertion": "Event moves from PSE to PWE — cascade in action"}, {"domain": "domain://accountability", "assertion": "Event appears in PWE, not PSE"}]}]}, {"name": "GraduatedDisclosure_happy", "protocol": "protocols://privacy/disclosure#GraduatedDisclosure", "description": "Graduated disclosure of a credential section: compact → partial → full with chain-link confidentiality gating.", "setup": {"description": "ACDC credential with private attributes (has u field), chain-link confidentiality terms defined in schema", "preconditions": [{"domain": "domain://credential-lifecycle/status", "condition": "Credential is in Issued state"}, {"domain": "domain://privacy/disclosure", "condition": "Block is in compact form (only SAID visible)"}]}, "end_state_assertions": [{"domain": "domain://privacy/disclosure", "assertion": "Block progresses through compact → partial → full; each transition is monotonic", "verifiable_by": "classify_mode(block) returns 'full' at end"}, {"domain": "domain://privacy/aggregation", "assertion": "AGID of the compact form matches AGID recomputed from expanded form", "verifiable_by": "agid(compact_saids) == agid(expanded_saids)"}], "failure_scenarios": [{"name": "chain_link_terms_not_agreed", "inject_failure_at": "partial → full transition — terms_agreed is false", "expected_state": [{"domain": "domain://privacy/disclosure", "assertion": "ChainLinkTermsRequiredError raised; block remains at partial"}]}], "reference_implementation": {"source": "ACDC spec section 12 (Graduated Disclosure)", "notes": "Tests monotonic progression and chain-link confidentiality gating"}}, {"name": "SelectiveDisclosure_happy", "protocol": "protocols://privacy/aggregation#SelectiveDisclosure", "description": "Selective disclosure of individual attributes against aggregate commitment (AGID).", "setup": {"description": "ACDC credential using the A (aggregate) field with multiple attribute blocks", "preconditions": [{"domain": "domain://credential-lifecycle/status", "condition": "Credential is in Issued state with A field (aggregate section)"}, {"domain": "domain://privacy/aggregation", "condition": "AGID has been computed from the attribute block SAIDs"}]}, "end_state_assertions": [{"domain": "domain://privacy/aggregation", "assertion": "Individual attribute disclosed with valid inclusion proof against AGID", "verifiable_by": "verify_inclusion(attribute_said, agid) returns True"}, {"domain": "domain://privacy/disclosure", "assertion": "Selective property is true; disclosure mode is independent of the core FSM", "verifiable_by": "classify_mode returns core mode; selective is an orthogonal property"}], "failure_scenarios": [{"name": "invalid_inclusion_proof", "inject_failure_at": "inclusion proof verification — attribute SAID not in aggregate", "expected_state": [{"domain": "domain://privacy/aggregation", "assertion": "InclusionProofError raised; attribute not accepted as valid disclosure"}]}], "reference_implementation": {"source": "ACDC spec section 10 (Selective Disclosure)", "notes": "Tests AGID computation, per-attribute inclusion proofs, and selective property orthogonality"}}];
 const RDOD_SCHEMA = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://github.com/seriouscoderone/rdod/rdod-data.schema.json", "title": "RDOD Context Map Data", "description": "Schema for the JSON object that powers the RDOD/ddd-spec context map HTML viewer. The object is keyed by domain ID, with each value being an enriched domain record combining data from domain.yaml, ubiquitous-language.yaml, and ports.yaml.", "type": "object", "additionalProperties": {"$ref": "#/$defs/domain"}, "$defs": {"domain": {"type": "object", "required": ["id", "domain_clients"], "properties": {"template_version": {"type": "string", "description": "Template format version (e.g., '1.0')"}, "id": {"type": "string", "description": "Globally unique, URI-friendly domain identifier (e.g., 'video-editing', 'keri/event-log/escrow')"}, "name": {"type": "string", "description": "Human-readable domain name"}, "description": {"type": "string", "description": "What problem space this domain covers"}, "version": {"type": "string", "description": "Semver version of this domain spec (e.g., '1.0.0', '0.0.0-stub')"}, "tier": {"type": "string", "description": "Architectural tier: kernel | domain | external | service | application", "enum": ["kernel", "domain", "external", "service", "application"]}, "published_language": {"type": "array", "description": "Terms this domain authoritatively owns and exports for other domains to consume", "items": {"type": "object", "properties": {"term": {"type": "string"}, "description": {"type": "string"}}}}, "ubiquitous_language": {"type": "array", "description": "Core terms for this domain", "items": {"$ref": "#/$defs/term"}}, "domain_clients": {"type": "array", "description": "Upstream domains that depend on this domain", "items": {"oneOf": [{"type": "string"}, {"$ref": "#/$defs/clientRef"}]}}, "subdomains": {"type": "array", "description": "Downstream domains this domain drives and composes", "items": {"oneOf": [{"type": "string"}, {"$ref": "#/$defs/subdomainRef"}]}}, "kernels": {"type": "array", "description": "External libraries adopted natively (no wrapping)", "items": {"oneOf": [{"type": "string"}, {"$ref": "#/$defs/kernelRef"}]}}, "adjacents": {"type": "array", "description": "Lateral peer domains — neither side controls the other", "items": {"oneOf": [{"type": "string"}, {"$ref": "#/$defs/adjacentRef"}]}}, "externals": {"type": "array", "description": "Infrastructure/IO concerns encapsulated behind interfaces", "items": {"oneOf": [{"type": "string"}, {"$ref": "#/$defs/externalRef"}]}}, "issues": {"type": "array", "description": "Architectural violations or design concerns", "items": {"$ref": "#/$defs/issue"}}, "code_locations": {"type": "array", "description": "Where this domain lives in the codebase (RDOD)", "items": {"oneOf": [{"type": "string"}, {"$ref": "#/$defs/codeLocation"}]}}, "implementation_guidance": {"$ref": "#/$defs/implementationGuidance", "description": "Hints for future implementors (ddd-spec)"}, "source_material": {"type": "array", "description": "Provenance tracking — where this domain's spec came from (ddd-spec)", "items": {"$ref": "#/$defs/sourceMaterial"}}, "tags": {"type": "array", "items": {"type": "string"}}, "_ports": {"type": "array", "description": "Enriched from ports.yaml — inbound and outbound interfaces", "items": {"$ref": "#/$defs/port"}}, "_imports": {"type": "array", "description": "Enriched from ubiquitous-language.yaml — terms imported from other domains", "items": {"type": "object", "properties": {"term": {"type": "string"}, "from": {"type": "string", "description": "domain://<owner-domain-id>"}, "usage": {"type": "string"}}}}, "_events": {"type": "array", "description": "Enriched from ubiquitous-language.yaml — domain events", "items": {"$ref": "#/$defs/event"}}, "_rules": {"type": "array", "description": "Enriched from ubiquitous-language.yaml — cross-term business rules", "items": {"type": "string"}}, "_verification": {"type": "object", "description": "Enriched from verification.yaml — formalized invariants, contracts, state machines", "properties": {"properties": {"type": "array", "items": {"type": "object"}}, "contracts": {"type": "array", "items": {"type": "object"}}, "state_machines": {"type": "array", "items": {"type": "object"}}}}, "_errors": {"type": "array", "description": "Enriched from errors.yaml — error taxonomy", "items": {"$ref": "#/$defs/domainError"}}, "_types": {"type": "array", "description": "Enriched from types.yaml — formal data structure definitions", "items": {"$ref": "#/$defs/domainType"}}, "_protocols": {"type": "array", "description": "Enriched from protocols.yaml — cross-domain orchestration sequences", "items": {"$ref": "#/$defs/protocol"}}, "_source": {"type": "string", "description": "File path of the source domain.yaml (debugging)"}}}, "term": {"type": "object", "properties": {"term": {"type": "string", "description": "The term name"}, "definition": {"type": "string", "description": "Precise meaning in this domain"}, "invariants": {"type": "array", "description": "Rules that must always hold for this term. Items can be plain strings or structured objects with formal expressions.", "items": {"oneOf": [{"type": "string"}, {"$ref": "#/$defs/formalInvariant"}]}}, "pattern": {"type": "string", "description": "Name of a pattern term this is an instance of"}, "specializes": {"type": "string", "description": "domain://<parent-domain-id> — this term narrows a parent domain's term"}, "synonyms": {"type": "array", "items": {"type": "string"}}, "examples": {"type": "array", "items": {"type": "string"}}, "related_terms": {"type": "array", "items": {"type": "string"}}}}, "formalInvariant": {"type": "object", "description": "An invariant with an optional machine-executable formal expression", "properties": {"text": {"type": "string", "description": "Natural language invariant"}, "formal": {"type": "object", "properties": {"language": {"type": "string", "description": "python | typescript | z3 | dafny"}, "expression": {"type": "string", "description": "Machine-executable expression"}}}, "technique": {"type": "string", "description": "Verification technique", "enum": ["property-based", "smt", "symbolic"]}}}, "clientRef": {"type": "object", "properties": {"ref": {"type": "string", "description": "domain://<client-id>"}, "relationship": {"type": "string"}, "via_port": {"type": "string", "description": "port://<this-domain>/inbound/<port-name>"}}}, "subdomainRef": {"type": "object", "properties": {"ref": {"type": "string", "description": "domain://<subdomain-id>"}, "relationship": {"type": "string"}, "via_port": {"type": "string", "description": "port://<subdomain-id>/inbound/<port-name>"}}}, "kernelRef": {"type": "object", "properties": {"ref": {"type": "string", "description": "kernel://<id>"}, "source": {"type": "string", "description": "Package source (e.g., npm:pkg@ver, cargo:crate, pip:pkg)"}, "relationship": {"type": "string", "description": "Why adopted natively"}}}, "adjacentRef": {"type": "object", "properties": {"ref": {"type": "string", "description": "domain://<adjacent-id>"}, "relationship": {"type": "string", "description": "Context-map pattern (Partnership, ACL, Conformist, etc.)"}, "via_port": {"type": "string"}, "is_cross_cutting": {"type": "boolean", "default": false}, "pattern": {"type": "string", "description": "Context-map pattern name"}}}, "externalRef": {"type": "object", "properties": {"name": {"type": "string", "description": "Concern name (e.g., 'File Persistence')"}, "abstraction": {"type": "string", "description": "Repository | Service | Adapter"}, "ref": {"type": "string", "description": "port://<this-domain>/outbound/<port-name>"}, "implementation_notes": {"type": "string"}}}, "issue": {"type": "object", "properties": {"ref": {"type": "string", "description": "What is being called out (e.g., kernel://color-library)"}, "category": {"type": "string", "description": "Issue category", "enum": ["kernel-pollution", "missing-port", "language-inconsistency", "wrong-classification", "inverted-dependency", "hierarchy-imbalance", "modeling-gap"]}, "severity": {"type": "string", "enum": ["low", "medium", "high", "critical"]}, "description": {"type": "string"}, "evidence": {"type": "string", "description": "Concrete proof — file path, method name, snippet (RDOD)"}, "rationale": {"type": "string", "description": "Why this is a concern — reasoning (ddd-spec)"}, "recommendation": {"type": "string", "description": "Recommended action (replace, wrap-with-acl, add-port, refactor-port, reclassify, split-subdomain, merge-hierarchy, introduce-concept:<name>)"}}}, "codeLocation": {"type": "object", "properties": {"path": {"type": "string"}, "type": {"type": "string", "description": "module | package | service | app | middleware"}}}, "implementationGuidance": {"type": "object", "properties": {"suggested_type": {"type": "string", "description": "module | package | service | app | middleware"}, "language_affinity": {"type": "string", "description": "Target language (e.g., 'any', 'typescript', 'rust')"}, "notes": {"type": "string"}}}, "sourceMaterial": {"type": "object", "properties": {"type": {"type": "string", "description": "user-input | document | domain-expert | llm-inferred"}, "reference": {"type": "string", "description": "Description or document name"}}}, "port": {"type": "object", "properties": {"id": {"type": "string", "description": "port://<domain-id>/<direction>/<name>"}, "type": {"type": "string", "enum": ["inbound", "outbound"]}, "name": {"type": "string"}, "semantics": {"type": "string", "description": "command | query | event", "enum": ["command", "query", "event"]}, "idempotent": {"type": "boolean", "description": "Whether calling this port multiple times with the same input produces the same result"}, "contract": {"type": "object", "description": "Typed contract: input, output, and error references", "properties": {"input": {"type": "string", "description": "types:// or kernel://id#Type reference for input"}, "output": {"type": "string", "description": "types:// or kernel://id#Type reference for output"}, "errors": {"type": "array", "items": {"type": "string"}, "description": "errors:// references for possible failures"}}}, "refs": {"type": "array", "items": {"type": "string"}, "description": "Who uses this port (domain:// refs for inbound; domain:// refs or empty for outbound externals)"}}}, "event": {"type": "object", "properties": {"name": {"type": "string"}, "payload": {"type": "string", "description": "Field: type descriptions"}, "triggers": {"type": "string", "description": "What causes this event"}}}, "domainError": {"type": "object", "description": "An error this domain can produce", "properties": {"name": {"type": "string"}, "description": {"type": "string"}, "cause": {"type": "string", "description": "Specific condition that triggers this error"}, "recovery": {"type": "string", "description": "retry | escrow | escalate | abort"}, "severity": {"type": "string", "enum": ["fatal", "recoverable", "transient"]}, "context": {"type": "array", "items": {"type": "object", "properties": {"field": {"type": "string"}, "type": {"type": "string"}, "description": {"type": "string"}}}}, "related_port": {"type": "string", "description": "port:// ref to the operation that produces this error"}}}, "domainType": {"type": "object", "description": "A formal data structure definition", "properties": {"name": {"type": "string"}, "description": {"type": "string"}, "variants": {"type": "array", "items": {"type": "object", "properties": {"name": {"type": "string"}, "fields": {"type": "array", "items": {"type": "object", "properties": {"name": {"type": "string"}, "type": {"type": "string"}, "required": {"type": "boolean"}, "constraints": {"type": "object"}, "description": {"type": "string"}}}}, "invariants": {"type": "array", "items": {"type": "string"}}}}}, "default_variant": {"type": "string"}, "construction_defaults": {"type": "object"}, "encoding": {"type": "array", "items": {"type": "object", "properties": {"format": {"type": "string"}, "notes": {"type": "string"}}}}}}, "protocol": {"type": "object", "description": "A cross-domain orchestration sequence", "properties": {"name": {"type": "string"}, "description": {"type": "string"}, "participants": {"type": "array", "items": {"type": "object", "properties": {"domain": {"type": "string"}, "role": {"type": "string"}}}}, "trigger": {"type": "string"}, "steps": {"type": "array", "items": {"type": "object", "properties": {"seq": {"type": "integer"}, "domain": {"type": "string"}, "action": {"type": "string"}, "port": {"type": "string"}, "input": {"type": "string"}, "output": {"type": "string"}, "depends_on": {"type": "array", "items": {"type": "integer"}}, "on_failure": {"type": "array", "items": {"type": "object", "properties": {"error": {"type": "string"}, "action": {"type": "string"}, "compensation": {"type": "string"}}}}}}}, "timeout": {"type": "string"}, "compensation": {"type": "string"}, "terminal_states": {"type": "object", "properties": {"success": {"type": "string"}, "failure": {"type": "string"}}}}}}};
 
 // ── Schema Validation ────────────────────────────────────────────────────────

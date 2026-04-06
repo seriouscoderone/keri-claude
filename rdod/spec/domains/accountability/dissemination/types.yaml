@@ -22,6 +22,28 @@ types:
           - "receipts_collected <= witnesses_contacted"
           - "Event is considered accountable when receipts_collected >= TOAD"
 
+  - name: "DisseminationRequest"
+    description: "Complete input for event propagation — bundles the serialized event, resolved witness endpoints, and the chosen dissemination strategy."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event_bytes"
+            type: "bytes"
+            required: true
+            description: "The fully serialized and signed event to disseminate (CESR stream bytes)"
+          - name: "witness_endpoints"
+            type: "array[types://discovery/endpoint#Endpoint]"
+            required: true
+            description: "Resolved network endpoints for each witness — caller is responsible for OOBI resolution before calling"
+          - name: "strategy"
+            type: "types://accountability/dissemination#DisseminationStrategy"
+            required: true
+            description: "The dissemination strategy to use (RoundRobin or Broadcast)"
+        invariants:
+          - "event_bytes must be a valid CESR-encoded signed event"
+          - "witness_endpoints must be non-empty (direct mode with no witnesses bypasses dissemination entirely)"
+          - "Each endpoint must be reachable — unreachable endpoints produce WitnessUnreachableError"
+
   - name: "DisseminationStrategy"
     description: "Strategy for propagating events to the witness pool."
     variants:
@@ -33,8 +55,8 @@ types:
             constraints:
               enum: ["RoundRobin", "Broadcast"]
         invariants:
-          - "RoundRobin: send to each witness in sequence, collecting and redistributing receipts (KERI spec's 2N exchange model)"
-          - "Broadcast: send to all witnesses simultaneously (keripy's actual implementation pattern)"
+          - "RoundRobin: controller sends to each witness in sequence, collecting and redistributing receipts at each step (KERI spec's 2N exchange model)"
+          - "Broadcast: controller sends to all witnesses simultaneously, then collects receipts in parallel — distinct from the spec's Gossip Protocol (witness-to-witness forwarding), Broadcast is a controller-to-witness parallel send"
           - "Direct mode (bt=0, b=[]) has no witnesses and bypasses dissemination entirely — it is NOT a strategy, it is the absence of one"
 
   - name: "WitnessConfig"

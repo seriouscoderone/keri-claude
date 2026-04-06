@@ -38,6 +38,25 @@ ports:
     refs: ["domain://signify-client", "domain://cloud-agent-service"]
 
   # === PORT 3902: MESSAGE ROUTER ===
+  # [H-O11] DEFERRED — input/output/errors are untyped placeholders.
+  # When specified, this port contract SHOULD contain:
+  #   input:  A typed CESR-encoded KERI protocol message from the keri-messaging
+  #           domain (e.g., multisig coordination exchanges, credential revocation
+  #           notices, delegation approval requests). The type should reference
+  #           keri-messaging primitives, not raw bytes.
+  #   output: A routing disposition value type with variants:
+  #           - delivered (message routed to target agent mailbox)
+  #           - queued   (target agent offline; message held for later delivery)
+  #           - rejected (message refused due to policy or validation failure)
+  #   errors:
+  #     - UnknownTargetAidError    — no agent provisioned for the target AID
+  #     - MalformedCesrError       — input fails CESR stream parsing
+  #     - InvalidAuthenticationError — Signify-Auth header missing or invalid
+  #
+  # This port receives external KERI protocol messages (port 3902) and routes
+  # them to the appropriate agent's mailbox. Unlike the Admin API (port 3901),
+  # callers are external participants (other controllers, witnesses, watchers),
+  # not the agent's own Signify client.
   - id: "port://cloud-agent-service/api/inbound/message-router"
     type: inbound
     name: "Message Router"
@@ -47,6 +66,6 @@ ports:
       input: "CESR-encoded KERI protocol message"
       output: "Routing result"
       errors: []
-    refs: []
+    refs: ["domain://keri-messaging"]
 
   # Outbound HTTP server defined at parent: port://cloud-agent-service/outbound/http-server

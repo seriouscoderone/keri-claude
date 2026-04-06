@@ -515,3 +515,59 @@ scenarios:
             assertion: "Event moves from PSE to PWE — cascade in action"
           - domain: "domain://accountability"
             assertion: "Event appears in PWE, not PSE"
+
+  # ── Privacy ──────────────────────────────────────────────────────────────
+
+  - name: "GraduatedDisclosure_happy"
+    protocol: "protocols://privacy/disclosure#GraduatedDisclosure"
+    description: "Graduated disclosure of a credential section: compact → partial → full with chain-link confidentiality gating."
+    setup:
+      description: "ACDC credential with private attributes (has u field), chain-link confidentiality terms defined in schema"
+      preconditions:
+        - domain: "domain://credential-lifecycle/status"
+          condition: "Credential is in Issued state"
+        - domain: "domain://privacy/disclosure"
+          condition: "Block is in compact form (only SAID visible)"
+    end_state_assertions:
+      - domain: "domain://privacy/disclosure"
+        assertion: "Block progresses through compact → partial → full; each transition is monotonic"
+        verifiable_by: "classify_mode(block) returns 'full' at end"
+      - domain: "domain://privacy/aggregation"
+        assertion: "AGID of the compact form matches AGID recomputed from expanded form"
+        verifiable_by: "agid(compact_saids) == agid(expanded_saids)"
+    failure_scenarios:
+      - name: "chain_link_terms_not_agreed"
+        inject_failure_at: "partial → full transition — terms_agreed is false"
+        expected_state:
+          - domain: "domain://privacy/disclosure"
+            assertion: "ChainLinkTermsRequiredError raised; block remains at partial"
+    reference_implementation:
+      source: "ACDC spec section 12 (Graduated Disclosure)"
+      notes: "Tests monotonic progression and chain-link confidentiality gating"
+
+  - name: "SelectiveDisclosure_happy"
+    protocol: "protocols://privacy/aggregation#SelectiveDisclosure"
+    description: "Selective disclosure of individual attributes against aggregate commitment (AGID)."
+    setup:
+      description: "ACDC credential using the A (aggregate) field with multiple attribute blocks"
+      preconditions:
+        - domain: "domain://credential-lifecycle/status"
+          condition: "Credential is in Issued state with A field (aggregate section)"
+        - domain: "domain://privacy/aggregation"
+          condition: "AGID has been computed from the attribute block SAIDs"
+    end_state_assertions:
+      - domain: "domain://privacy/aggregation"
+        assertion: "Individual attribute disclosed with valid inclusion proof against AGID"
+        verifiable_by: "verify_inclusion(attribute_said, agid) returns True"
+      - domain: "domain://privacy/disclosure"
+        assertion: "Selective property is true; disclosure mode is independent of the core FSM"
+        verifiable_by: "classify_mode returns core mode; selective is an orthogonal property"
+    failure_scenarios:
+      - name: "invalid_inclusion_proof"
+        inject_failure_at: "inclusion proof verification — attribute SAID not in aggregate"
+        expected_state:
+          - domain: "domain://privacy/aggregation"
+            assertion: "InclusionProofError raised; attribute not accepted as valid disclosure"
+    reference_implementation:
+      source: "ACDC spec section 10 (Selective Disclosure)"
+      notes: "Tests AGID computation, per-attribute inclusion proofs, and selective property orthogonality"

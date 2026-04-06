@@ -1,0 +1,27 @@
+domain_ref: "externals/persistence"
+
+errors:
+  - name: "StorageError"
+    description: "A persistence operation failed — the storage backend could not complete the request"
+    cause: "Disk full, database corruption, network failure (for remote storage like DynamoDB), lock contention, or permission denied"
+    recovery: "retry"
+    severity: "transient"
+    context:
+      - field: "operation"
+        type: "string"
+        description: "The operation that failed (put, get, delete, iterate)"
+      - field: "key"
+        type: "string"
+        description: "The key involved in the failed operation (if applicable)"
+    related_port: "port://externals/persistence/inbound/key-value"
+
+  - name: "KeyNotFoundError"
+    description: "The requested key does not exist in the storage backend"
+    cause: "A get operation was performed for a key that has not been written or has been deleted"
+    recovery: "abort"
+    severity: "recoverable"
+    context:
+      - field: "key"
+        type: "string"
+        description: "The key that was not found"
+    related_port: "port://externals/persistence/inbound/key-value"

@@ -1,0 +1,49 @@
+domain_ref: "externals/transport"
+
+errors:
+  - name: "ConnectionRefusedError"
+    description: "The remote endpoint actively refused the connection"
+    cause: "The target host is reachable but no service is listening on the specified port, or the service rejected the connection"
+    recovery: "retry"
+    severity: "transient"
+    context:
+      - field: "endpoint"
+        type: "string"
+        description: "The endpoint URL that refused the connection"
+    related_port: "port://externals/transport/inbound/send"
+
+  - name: "TimeoutError"
+    description: "The transport operation did not complete within the allowed time"
+    cause: "Network congestion, unresponsive remote host, or firewall silently dropping packets"
+    recovery: "retry"
+    severity: "transient"
+    context:
+      - field: "endpoint"
+        type: "string"
+        description: "The endpoint that timed out"
+      - field: "timeout_ms"
+        type: "integer"
+        description: "The timeout duration in milliseconds"
+    related_port: "port://externals/transport/inbound/send"
+
+  - name: "EndpointUnreachableError"
+    description: "The remote endpoint could not be reached — DNS resolution failed or no route to host"
+    cause: "Invalid hostname, DNS failure, or network routing issue"
+    recovery: "retry"
+    severity: "transient"
+    context:
+      - field: "endpoint"
+        type: "string"
+        description: "The unreachable endpoint URL"
+    related_port: "port://externals/transport/inbound/send"
+
+  - name: "BindError"
+    description: "Could not bind to the specified listen address for receiving messages"
+    cause: "Address already in use, insufficient permissions, or invalid address format"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "listen_address"
+        type: "string"
+        description: "The address that could not be bound"
+    related_port: "port://externals/transport/inbound/receive"

@@ -19,3 +19,25 @@ ports:
         - "errors://privacy/disclosure#InvalidDisclosureProgressionError"
         - "errors://privacy/disclosure#PublicBlockPartialDisclosureError"
     refs: ["domain://privacy"]
+
+  - id: "port://privacy/disclosure/inbound/advance-disclosure"
+    type: inbound
+    name: "Advance Disclosure Level"
+    semantics: command
+    idempotent: true
+    description: >
+      Advance a block's disclosure level along the graduated disclosure FSM
+      (compact → partial → full). The caller provides the current block, the
+      target mode, and chain-link confidentiality terms if applicable. The
+      service validates the transition is monotonic (cannot retract) and that
+      chain-link terms are agreed when required. Returns the block at the
+      new disclosure level. Idempotent: requesting the current level returns
+      the block unchanged.
+    contract:
+      input: "types://privacy/disclosure#DisclosureRequest"
+      output: "types://privacy/disclosure#DisclosureMode"
+      errors:
+        - "errors://privacy/disclosure#InvalidDisclosureProgressionError"
+        - "errors://privacy/disclosure#PublicBlockPartialDisclosureError"
+        - "errors://privacy/disclosure#ChainLinkTermsRequiredError"
+    refs: ["domain://privacy"]

@@ -2,9 +2,9 @@ domain_ref: "cloud-agent-service/api"
 
 types:
   - name: "BootRequest"
-    description: "Agent provisioning request sent to the boot endpoint (POST /boot)."
+    description: "Agent provisioning request sent to the boot endpoint (POST /boot). The key strategy is a discriminated union — exactly one variant is provided."
     variants:
-      - name: "default"
+      - name: "salty"
         fields:
           - name: "icp"
             type: "types://identity/establishment#InceptionEvent"
@@ -14,16 +14,36 @@ types:
             type: "string"
             required: true
             description: "Controller signature over the inception event"
-          - name: "salty"
-            type: "map"
-            required: false
-            description: "Salty key parameters (if using salty key type)"
-          - name: "randy"
-            type: "map"
-            required: false
-            description: "Randy key parameters (if using randy key type)"
+          - name: "salt"
+            type: "string"
+            required: true
+            description: "CESR-qualified salt (Salter qb64) — the root secret for deterministic key derivation"
+          - name: "tier"
+            type: "string"
+            required: true
+            description: "Argon2 stretching tier: low, med, or high"
+            constraints:
+              enum: ["low", "med", "high"]
+          - name: "stem"
+            type: "string"
+            required: true
+            description: "Derivation path stem for hierarchical key generation"
         invariants:
-          - "Exactly one of salty/randy should be present (determines key derivation type)"
+          - "Deterministic key derivation — same salt + tier + stem produces same keys"
+          - "icp must be a valid inception event with correct version string"
+          - "sig must verify against the keys in the inception event"
+      - name: "randy"
+        fields:
+          - name: "icp"
+            type: "types://identity/establishment#InceptionEvent"
+            required: true
+            description: "Agent inception event"
+          - name: "sig"
+            type: "string"
+            required: true
+            description: "Controller signature over the inception event"
+        invariants:
+          - "Random key generation — no derivation path, no recovery from lost keys"
           - "icp must be a valid inception event with correct version string"
           - "sig must verify against the keys in the inception event"
 
@@ -44,7 +64,7 @@ types:
           - name: "body"
             type: "map"
             required: false
-            description: "Request body (JSON)"
+            description: "Request body (JSON) — schema varies by endpoint path. Typed per-endpoint request schemas are defined by the resource domain that owns each endpoint (identifiers → identity, credentials → credential-lifecycle, registries → credential-lifecycle/registry, exchanges → credential-exchange, etc.)"
           - name: "auth"
             type: "types://signify-client/key-management#SignifyAuth"
             required: true

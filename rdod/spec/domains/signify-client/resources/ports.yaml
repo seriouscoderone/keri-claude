@@ -2,7 +2,35 @@
 domain_ref: "signify-client/resources"
 
 ports:
-  # Inbound — what the parent signify-client domain calls
+  # Inbound — what the parent signify-client domain calls.
+  #
+  # This port serves as the unified resource facade for the Signify client SDK.
+  # Rather than exposing a separate port per REST endpoint (which would create
+  # 10+ thin ports with identical auth mechanics), it groups operations by
+  # resource concern. All operations share KRAM-authenticated SignifyAuth input
+  # and return OperationStatus for long-running workflows.
+  #
+  # Resource operation categories:
+  #   1. Identifiers   — create, rotate, interact, list, get
+  #   2. Credentials    — issue, present, revoke, list, get
+  #   3. Registries     — create credential registries (TEL anchoring)
+  #   4. Exchanges      — send/receive IPEX grant, admit, offer, agree
+  #   5. Groups         — multisig coordination (join, accept rotation)
+  #   6. Notifications  — list, mark-read, delete agent notifications
+  #   7. OOBIs          — resolve out-of-band introductions
+  #   8. End-Roles      — authorize endpoint roles (witness, agent, watcher)
+  #
+  # Typing gaps (categories lacking typed request/response structures):
+  #   - Credentials:    no CredentialIssuanceRequest or CredentialResult type
+  #   - Registries:     no RegistryCreationRequest type
+  #   - Exchanges:      no ExchangeMessage or ExchangeResult type
+  #   - Groups:         no GroupCoordinationRequest type
+  #   - Notifications:  no NotificationRecord type
+  #   - OOBIs:          no OobiResolutionRequest or OobiResolutionResult type
+  #   - End-Roles:      input type exists (EndpointRole) but no authorization
+  #                     request wrapper or result type
+  #   Only Identifiers has partial coverage via upstream IdentityService types.
+  #
   - id: "port://signify-client/resources/inbound/resource-ops"
     type: inbound
     name: "Resource Operations"
@@ -15,6 +43,10 @@ ports:
         - "errors://signify-client/resources#ResourceNotFoundError"
         - "errors://signify-client/resources#OperationTimeoutError"
         - "errors://signify-client/resources#AgentConnectionError"
+      invariants:
+        - "All eight resource categories (identifiers, credentials, registries, exchanges, groups, notifications, OOBIs, end-roles) flow through this port"
+        - "Every request carries KRAM-authenticated SignifyAuth regardless of resource category"
+        - "Mutating operations (create, rotate, issue, revoke) return OperationStatus for async polling; read operations (list, get) return results directly"
     refs: ["domain://signify-client"]
 
   # Outbound — communication with cloud agent via KRAM-authenticated REST

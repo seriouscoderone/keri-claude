@@ -15,8 +15,8 @@ ports:
       input: "key (bytes) + value (bytes)"
       output: "value (bytes) or void"
       errors:
-        - "StorageError"
-        - "KeyNotFoundError"
+        - "errors://externals/persistence#StorageError"
+        - "errors://externals/persistence#KeyNotFoundError"
     refs: []
     invariants:
       - "Writes are durable — acknowledged writes survive process restart"

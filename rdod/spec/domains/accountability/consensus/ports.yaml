@@ -6,11 +6,15 @@ ports:
   - id: "port://accountability/consensus/inbound/quorum-evaluation"
     type: inbound
     name: "Quorum Evaluation"
+    description: >
+      Pure computation: given a witness count and proposed TOAD, compute the BFT-safe ample
+      threshold and evaluate whether the proposed TOAD satisfies the immune constraint.
+      No identifier lookup — caller provides numeric inputs directly.
     semantics: query
     idempotent: true
     contract:
-      input: "types://cesr/primitives#AID"
-      output: "types://accountability/consensus#AlreadySeen"
+      input: "types://accountability/consensus#QuorumRequest"
+      output: "types://accountability/consensus#QuorumResult"
       errors:
         - "errors://accountability/consensus#InsufficientWitnessesError"
         - "errors://accountability/consensus#TOADExceedsWitnessCountError"

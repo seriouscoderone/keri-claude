@@ -6,24 +6,24 @@ types:
     variants:
       - name: "default"
         fields:
-          - name: "deck"
-            type: "string"
+          - name: "queue"
+            type: "types://cloud-agent-service/processing#WorkQueueName"
             required: true
             description: "Named work queue this item belongs to"
           - name: "operation_type"
-            type: "string"
+            type: "types://cloud-agent-service/processing#OperationType"
             required: true
-            description: "Category of work to perform"
+            description: "Category of work to perform — determines the payload schema"
           - name: "payload"
             type: "map"
             required: true
-            description: "Operation-specific data"
+            description: "Operation-specific data — schema determined by operation_type. Each OperationType variant defines its own payload structure: witness operations carry AID + sn + witness list; group operations carry event + partial signatures; anchor operations carry AID + seal list. Per-type payload schemas are specified when those operation categories are implemented."
         invariants:
-          - "deck determines processing priority and ordering"
-          - "payload schema depends on operation_type"
+          - "queue determines processing priority and ordering"
+          - "payload schema is determined by operation_type — each type has a distinct schema"
 
-  - name: "DeckName"
-    description: "Named work queue for categorizing async processing tasks. Each deck represents a distinct processing concern in the cloud agent's cue processing loop."
+  - name: "WorkQueueName"
+    description: "Named work queue for categorizing async processing tasks. Each queue represents a distinct processing concern in the cloud agent's asynchronous processing loop."
     variants:
       - name: "default"
         fields:
@@ -33,11 +33,11 @@ types:
             constraints:
               enum: ["cues", "groups", "anchors", "witnesses", "queries"]
         invariants:
-          - "Each deck is processed independently"
-          - "cues: general event processing cues from the event processor"
+          - "Each work queue is processed independently"
+          - "cues: general event processing from the event processor"
           - "groups: multisig coordination — partial signature collection and threshold satisfaction"
           - "anchors: delegation approval requests — seal confirmation from delegators"
-          - "witners: witness receipt requests — collecting receipts to satisfy TOAD"
+          - "witnesses: witness receipt requests — collecting receipts to satisfy TOAD"
           - "queries: key state queries — resolving OOBI and key state lookups"
 
   - name: "SignedEventMessage"
@@ -160,11 +160,11 @@ types:
           - name: "result"
             type: "map"
             required: false
-            description: "Success payload — present only when done is true and no error occurred. Named 'result' to match the client-side OperationStatus (signify-client/resources) field naming."
+            description: "Success payload — present only when done is true and no error occurred. Schema varies by operation_type: witness operations return receipt count; group operations return the assembled event SAID; credential operations return the credential SAID; OOBI operations return resolved key state. Per-type result schemas are specified when those operation categories are implemented."
           - name: "error"
             type: "map"
             required: false
-            description: "Error payload — present only when done is true and the operation failed"
+            description: "Error payload — present only when done is true and the operation failed. Contains code (string), message (string), and optional details (map) fields regardless of operation_type."
         invariants:
           - "name follows the {type}.{qualifier} convention (e.g., witness.EDP1..., credential.ESAID...)"
           - "done=false implies both result and error are absent"

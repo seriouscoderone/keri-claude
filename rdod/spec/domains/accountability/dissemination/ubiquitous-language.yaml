@@ -16,7 +16,7 @@ terms:
 
   - term: "Gossip Protocol"
     synonyms: []
-    definition: "An alternative receipt dissemination protocol where witnesses forward receipts to each other, providing lower latency than round-robin but higher bandwidth usage."
+    definition: "A theoretical receipt dissemination protocol where witnesses forward receipts to each other, providing lower latency than round-robin but higher bandwidth usage. Note: keripy implements Broadcast (controller-to-witness parallel send) instead of true witness-to-witness gossip. The DisseminationStrategy type uses 'Broadcast' for keripy's actual pattern."
     invariants:
       - "Bandwidth scales with N * log(N) versus 2*N for round-robin"
       - "May use a directed acyclic graph to determine what needs to be gossiped"

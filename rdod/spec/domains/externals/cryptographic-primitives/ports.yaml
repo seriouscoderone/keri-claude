@@ -10,8 +10,8 @@ ports:
       input: "private_key (bytes) + message (bytes) | public_key (bytes) + signature (bytes) + message (bytes)"
       output: "signature (bytes) | boolean"
       errors:
-        - "SigningError"
-        - "VerificationError"
+        - "errors://externals/cryptographic-primitives#SigningError"
+        - "errors://externals/cryptographic-primitives#VerificationError"
     refs: []
     invariants:
       - "sign(private_key, message) produces a deterministic signature for Ed25519"
@@ -41,7 +41,7 @@ ports:
       input: "algorithm (string) | salt (bytes) + path (string)"
       output: "(public_key, private_key) bytes"
       errors:
-        - "KeyDerivationError"
+        - "errors://externals/cryptographic-primitives#KeyDerivationError"
     refs: []
     invariants:
       - "generate_keypair produces a fresh random keypair"

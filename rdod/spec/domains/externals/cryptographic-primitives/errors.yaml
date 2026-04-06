@@ -1,0 +1,38 @@
+domain_ref: "externals/cryptographic-primitives"
+
+errors:
+  - name: "SigningError"
+    description: "The signing operation failed — the private key could not produce a valid signature"
+    cause: "Invalid or corrupted private key material, unsupported algorithm, or the cryptographic library rejected the input"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "algorithm"
+        type: "string"
+        description: "The signing algorithm that was attempted (e.g. Ed25519, ECDSA secp256k1)"
+    related_port: "port://externals/cryptographic-primitives/inbound/sign-verify"
+
+  - name: "VerificationError"
+    description: "The signature verification operation failed unexpectedly — distinct from a signature that simply does not verify"
+    cause: "Malformed public key, corrupted signature bytes, or the cryptographic library encountered an internal error. Note: a valid verification that returns false is NOT an error — this error covers library-level failures."
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "algorithm"
+        type: "string"
+        description: "The verification algorithm that was attempted"
+    related_port: "port://externals/cryptographic-primitives/inbound/sign-verify"
+
+  - name: "KeyDerivationError"
+    description: "Key generation or derivation failed — could not produce a valid keypair"
+    cause: "Invalid salt, unsupported algorithm, invalid derivation path, or insufficient entropy for random generation"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "algorithm"
+        type: "string"
+        description: "The key algorithm that was attempted"
+      - field: "derivation_type"
+        type: "string"
+        description: "Whether this was random generation or deterministic derivation"
+    related_port: "port://externals/cryptographic-primitives/inbound/key-generation"

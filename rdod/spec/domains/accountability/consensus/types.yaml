@@ -32,6 +32,49 @@ types:
           - "A receipt is immutable once issued — first seen, always seen, never unseen"
           - "Duplicate receipts (same witness, same event SAID) are absorbed idempotently"
 
+  - name: "QuorumRequest"
+    description: "Input for quorum evaluation — the numeric parameters needed to compute BFT thresholds and check immune constraints."
+    variants:
+      - name: "default"
+        fields:
+          - name: "witness_count"
+            type: "integer"
+            required: true
+            description: "Total number of designated witnesses for the identifier"
+            constraints:
+              min: 0
+          - name: "proposed_toad"
+            type: "integer"
+            required: true
+            description: "The proposed accountability threshold (TOAD) to evaluate"
+            constraints:
+              min: 0
+        invariants:
+          - "witness_count must be a non-negative integer"
+          - "proposed_toad must be a non-negative integer"
+
+  - name: "QuorumResult"
+    description: "Outcome of quorum evaluation — whether the proposed TOAD satisfies BFT immunity, plus the computed ample threshold for reference."
+    variants:
+      - name: "default"
+        fields:
+          - name: "ample_threshold"
+            type: "integer"
+            required: true
+            description: "The BFT-safe minimum threshold computed from witness_count via ample(n)"
+          - name: "immune"
+            type: "boolean"
+            required: true
+            description: "Whether the proposed TOAD satisfies the immune constraint (TOAD > (N + F + 1) / 2 with F < TOAD)"
+          - name: "valid"
+            type: "boolean"
+            required: true
+            description: "Whether the proposed TOAD is structurally valid (0 < TOAD <= witness_count for witnessed identifiers, or TOAD == 0 for unwitnessed)"
+        invariants:
+          - "ample_threshold == 0 when witness_count == 0, else 1 <= ample_threshold <= witness_count"
+          - "immune == true implies valid == true (an immune configuration is always structurally valid)"
+          - "valid == false when proposed_toad > witness_count or when proposed_toad == 0 with witness_count > 0"
+
   - name: "AlreadySeen"
     description: "Result when a witness or validator has already first-seen an event at the given sequence number."
     variants:

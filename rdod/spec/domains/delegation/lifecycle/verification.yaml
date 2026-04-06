@@ -233,20 +233,74 @@ contracts:
         description: "get_escrowed_for_delegator returns only events for the specified delegator"
 
   - port_ref: "port://delegation/lifecycle/outbound/delegation-repository"
-    preconditions:
-      - formal:
-          language: python
-          expression: "lambda aid, sn, said, event, dt: aid is not None and sn >= 0 and said is not None and event is not None"
-        description: "All required fields must be non-null for escrow storage"
-    postconditions:
-      - formal:
-          language: python
-          expression: "lambda aid, sn, said: get_pde_iter(aid).contains(sn, said) after put_pde(aid, sn, said, event, dt)"
-        description: "After put_pde, the entry is retrievable via get_pde_iter for the same AID"
-      - formal:
-          language: python
-          expression: "lambda aid, sn, said: not get_pde_iter(aid).contains(sn, said) after rem_pde(aid, sn, said)"
-        description: "After rem_pde, the entry is no longer retrievable"
+    operations:
+      - name: store
+        preconditions:
+          - formal:
+              language: python
+              expression: "lambda aid, sn, said, event, dt: aid is not None and sn >= 0 and said is not None and event is not None"
+            description: "All required fields must be non-null for escrow storage"
+          - formal:
+              language: python
+              expression: "lambda event: event.type in ('dip', 'drt')"
+            description: "Only delegated establishment events may be escrowed"
+        postconditions:
+          - formal:
+              language: python
+              expression: "lambda aid, sn, said: retrieve(aid).contains(sn, said) after store(aid, sn, said, event, dt)"
+            description: "After store, the entry is retrievable for the same AID"
+          - formal:
+              language: python
+              expression: "lambda aid, sn, said, event, dt: store(aid, sn, said, event, dt); store(aid, sn, said, event, dt); len(retrieve(aid).filter(sn, said)) == 1"
+            description: "Storing the same entry twice does not create duplicates"
+
+      - name: retrieve
+        preconditions:
+          - formal:
+              language: python
+              expression: "lambda aid: aid is not None"
+            description: "Query requires a valid identifier"
+        postconditions:
+          - formal:
+              language: python
+              expression: "lambda aid: all(e.aid == aid for e in retrieve(aid))"
+            description: "All returned entries belong to the queried identifier"
+          - formal:
+              language: python
+              expression: "lambda aid: retrieve(aid) == [] when no entries stored for aid"
+            description: "Returns empty collection (not error) when no entries match"
+
+      - name: remove
+        preconditions:
+          - formal:
+              language: python
+              expression: "lambda aid, sn, said: aid is not None and sn >= 0 and said is not None"
+            description: "Removal key must identify a specific entry"
+        postconditions:
+          - formal:
+              language: python
+              expression: "lambda aid, sn, said: not retrieve(aid).contains(sn, said) after remove(aid, sn, said)"
+            description: "After remove, the entry is no longer retrievable"
+          - formal:
+              language: python
+              expression: "lambda aid, sn, said: remove(aid, sn, said) is no-op when entry does not exist"
+            description: "Removing a non-existent entry succeeds silently"
+
+      - name: iterate
+        preconditions:
+          - formal:
+              language: python
+              expression: "lambda: True"
+            description: "Iteration has no preconditions — an empty repository yields an empty iterator"
+        postconditions:
+          - formal:
+              language: python
+              expression: "lambda entries: all(e.type in ('dip', 'drt') for e in iterate())"
+            description: "All iterated entries are delegated establishment events"
+          - formal:
+              language: python
+              expression: "lambda: set(iterate()) == set(retrieve_all())"
+            description: "Iterate yields every stored entry — no entries are skipped"
 
 state_machines:
   - name: "delegation-validation-pipeline"

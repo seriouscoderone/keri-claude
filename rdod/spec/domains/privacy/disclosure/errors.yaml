@@ -23,3 +23,14 @@ errors:
       - field: "block_path"
         type: "string"
         description: "SAD path to the public block"
+
+  - name: "ChainLinkTermsRequiredError"
+    description: "Full disclosure requires chain-link confidentiality terms to be agreed but they have not been"
+    cause: "The partial-to-full disclosure transition is gated by chain-link confidentiality — the disclosee must agree to contractual terms before receiving the full content"
+    recovery: "abort"
+    severity: "recoverable"
+    context:
+      - field: "block_said"
+        type: "string"
+        description: "SAID of the block that requires terms agreement"
+    related_port: "port://privacy/disclosure/inbound/advance-disclosure"

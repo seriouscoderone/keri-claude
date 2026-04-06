@@ -115,3 +115,60 @@ types:
         invariants:
           - "Event must be an establishment type — never ixn"
           - "Signatures must satisfy the signing threshold for the event to be promotable"
+
+  - name: "EscrowQuery"
+    description: "Query parameters for retrieving delegation escrow entries by identifier or delegator."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID to query — either the delegatee AID (for pending-approval lookup) or the delegator AID (for delegable lookup)"
+          - name: "category"
+            type: "string"
+            required: false
+            description: "Optional filter by escrow category"
+            constraints:
+              enum: ["pending_approval", "delegable"]
+        invariants:
+          - "When category is absent, returns all escrow entries for the AID regardless of category"
+
+  - name: "EscrowEntryKey"
+    description: "Composite key identifying a specific delegation escrow entry for removal."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "AID of the delegated identifier"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the escrowed event"
+          - name: "said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the escrowed event"
+        invariants:
+          - "The triple (aid, sn, said) uniquely identifies an escrow entry"
+
+  - name: "SweepFilter"
+    description: "Filter parameters for periodic escrow sweep iteration."
+    variants:
+      - name: "default"
+        fields:
+          - name: "category"
+            type: "string"
+            required: false
+            description: "Optional filter by escrow category — when absent, iterate all categories"
+            constraints:
+              enum: ["pending_approval", "delegable"]
+          - name: "max_age_seconds"
+            type: "integer"
+            required: false
+            description: "Optional age threshold — only yield entries older than this value for pruning candidates"
+        invariants:
+          - "When both filters are absent, yields all escrowed entries"
+          - "max_age_seconds enables the sweep to identify entries past their time-to-live"

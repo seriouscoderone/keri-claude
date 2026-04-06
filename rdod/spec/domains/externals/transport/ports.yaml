@@ -14,9 +14,9 @@ ports:
       input: "Endpoint + bytes"
       output: "void"
       errors:
-        - "ConnectionRefusedError"
-        - "TimeoutError"
-        - "EndpointUnreachableError"
+        - "errors://externals/transport#ConnectionRefusedError"
+        - "errors://externals/transport#TimeoutError"
+        - "errors://externals/transport#EndpointUnreachableError"
     refs: []
 
   - id: "port://externals/transport/inbound/receive"
@@ -31,5 +31,5 @@ ports:
       input: "Listen address (string)"
       output: "AsyncStream of bytes"
       errors:
-        - "BindError"
+        - "errors://externals/transport#BindError"
     refs: []
