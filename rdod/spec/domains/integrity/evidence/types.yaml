@@ -7,7 +7,7 @@ types:
       - name: "default"
         fields:
           - name: "aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "The AID with the forked KEL"
           - name: "sn"
@@ -15,11 +15,11 @@ types:
             required: true
             description: "The sequence number where divergent events were found"
           - name: "first_seen_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the event first seen at this sn"
           - name: "conflicting_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the second, conflicting event at the same sn"
         invariants:
@@ -61,9 +61,9 @@ types:
           - "Both events must be validly signed against key state at that sn for the claim to be valid"
           - "first_source != conflicting_source — evidence from the same source has lower evidentiary value"
 
-  # L5-O8: LDEEntry — the type for an entry in the Likely Duplicitous Escrow (.ldes)
+  # L5-O8: LDEEntry — the type for an entry in the Likely Duplicitous Escrow
   - name: "LDEEntry"
-    description: "An entry in the Likely Duplicitous Escrow (LDE, stored in .ldes). Represents a suspected fork that has not yet been confirmed as duplicity or resolved. Distinct from a DEL entry (confirmed, permanent evidence)."
+    description: "An entry in the Likely Duplicitous Escrow (LDE). Represents a suspected fork that has not yet been confirmed as duplicity or resolved. Distinct from a DEL entry (confirmed, permanent evidence)."
     variants:
       - name: "default"
         fields:
@@ -84,39 +84,95 @@ types:
             required: true
             description: "SAID of the conflicting event at this sn"
           - name: "escrowed_at"
-            type: "string"
+            type: "types://cesr/primitives#DateTime"
             required: true
-            description: "ISO 8601 datetime when the entry was added to the LDE"
+            description: "Datetime when the entry was added to the LDE"
           - name: "status"
             type: "string"
             required: true
             description: "Always 'suspected' for LDE entries"
             constraints:
               enum: ["suspected"]
-          - name: "db"
-            type: "string"
-            required: true
-            description: "The backing database — always '.ldes' for LDE entries"
-            constraints:
-              enum: [".ldes"]
         invariants:
-          - "status is always 'suspected' — confirmed entries are in the DEL (.dels), never in .ldes"
+          - "status is always 'suspected' — confirmed entries are in the DEL, never in the LDE"
           - "Entry is mutable — can be promoted to DEL (on confirmation) or pruned (on timeout)"
           - "Pruning occurs at escrowed_at + 3600 seconds (configurable); pruning is administrative, not resolution"
-          - "An entry in .ldes and an entry in .dels MUST NOT coexist for the same (aid, sn, said) pair"
+          - "An LDE entry and a DEL entry MUST NOT coexist for the same (aid, sn, said) pair"
 
   - name: "NotificationType"
     description: "Kinds of evidence notifications emitted by the evidence subdomain."
     variants:
       - name: "DuplicityDetected"
-        fields: []
+        fields:
+          - name: "kin"
+            type: "string"
+            required: true
+            description: "Notification kind — always 'duplicity' for this variant"
+            constraints:
+              enum: ["duplicity"]
+          - name: "prefix"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID where duplicity was detected"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "The sequence number where the fork was found"
+          - name: "said_a"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the first-seen event at this sn"
+          - name: "said_b"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the conflicting event at this sn"
         invariants:
           - "Emitted when a ForkDetected is first recorded"
       - name: "EscrowTimeout"
-        fields: []
+        fields:
+          - name: "kin"
+            type: "string"
+            required: true
+            description: "Notification kind — always 'escrowTimeout' for this variant"
+            constraints:
+              enum: ["escrowTimeout"]
+          - name: "prefix"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID whose escrowed evidence timed out"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "The sequence number of the timed-out entry"
+          - name: "age_seconds"
+            type: "integer"
+            required: true
+            description: "How long the entry was held before timeout"
         invariants:
           - "Emitted when escrowed evidence exceeds its time-to-live"
       - name: "EvidencePromoted"
-        fields: []
+        fields:
+          - name: "kin"
+            type: "string"
+            required: true
+            description: "Notification kind — always 'evidencePromoted' for this variant"
+            constraints:
+              enum: ["evidencePromoted"]
+          - name: "prefix"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID whose evidence was promoted"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "The sequence number of the promoted entry"
+          - name: "said_a"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the first-seen event"
+          - name: "said_b"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the conflicting event"
         invariants:
           - "Emitted when escrowed evidence is promoted to confirmed duplicity"

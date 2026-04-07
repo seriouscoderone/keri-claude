@@ -11,9 +11,9 @@ types:
             required: true
             description: "The TEL event being verified"
           - name: "kel_seal"
-            type: "types://cesr/primitives#SealEvent"
+            type: "types://cesr/primitives#Seal"
             required: true
-            description: "Seal referencing the issuer's KEL anchor"
+            description: "Seal referencing the issuer's KEL anchor — uses the Seal union since the variant may be SealEvent, SealSource, etc. depending on context"
           - name: "registry_state"
             type: "types://credential-lifecycle/registry#RegistryStateSnapshot"
             required: true
@@ -28,11 +28,11 @@ types:
       - name: "default"
         fields:
           - name: "event_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the validated TEL event"
           - name: "registry_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "REGID of the registry the event belongs to"
           - name: "sn"
@@ -46,11 +46,11 @@ types:
       - name: "default"
         fields:
           - name: "event_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the escrowed TEL event"
           - name: "escrow_type"
-            type: "string"
+            type: "types://credential-lifecycle/verification#EscrowType"
             required: true
             description: "Category of missing dependency that caused escrow"
           - name: "reason"
@@ -64,7 +64,7 @@ types:
       - name: "default"
         fields:
           - name: "event_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the reprocessed TEL event"
           - name: "outcome"
@@ -111,11 +111,11 @@ types:
             required: true
             description: "Type of notification — determines which escrow queue to drain"
           - name: "event_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the event that triggered this notification"
           - name: "registry_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "REGID of the affected registry"
 
@@ -225,6 +225,6 @@ types:
             required: true
             description: "Category of escrow to query"
           - name: "registry_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "REGID to filter escrowed events by"

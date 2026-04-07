@@ -16,16 +16,16 @@ errors:
     description: "Two events at the same (prefix, sn) have identical SAIDs — this is a duplicate, not duplicity"
     cause: "The events are the same event resubmitted, not a fork. Duplicates are normal (late-arriving signatures); duplicity requires different SAIDs."
     recovery: "abort"
-    severity: "recoverable"
+    severity: "fatal"
     context:
       - field: "prefix"
-        type: "string"
+        type: "types://cesr/primitives#AID"
         description: "The AID"
       - field: "sn"
         type: "integer"
         description: "The sequence number"
       - field: "said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "The shared SAID (proves same event)"
     related_port: "port://integrity/evidence/inbound/evidence-management"
 
@@ -36,7 +36,7 @@ errors:
     severity: "fatal"
     context:
       - field: "prefix"
-        type: "string"
+        type: "types://cesr/primitives#AID"
         description: "The AID"
       - field: "sn"
         type: "integer"
@@ -48,12 +48,12 @@ errors:
 
   - name: "DELAppendError"
     description: "Failed to append evidence to the Duplicitous Event Log"
-    cause: "Storage failure when attempting to permanently record duplicity evidence in the DEL store (.dels)"
+    cause: "Storage failure when attempting to permanently record duplicity evidence in the DEL store"
     recovery: "retry"
     severity: "transient"
     context:
       - field: "prefix"
-        type: "string"
+        type: "types://cesr/primitives#AID"
         description: "The AID whose DEL failed to update"
     related_port: "port://integrity/evidence/outbound/escrow-storage"
 
@@ -64,7 +64,7 @@ errors:
     severity: "fatal"
     context:
       - field: "prefix"
-        type: "string"
+        type: "types://cesr/primitives#AID"
         description: "The AID"
       - field: "sn"
         type: "integer"
@@ -76,12 +76,16 @@ errors:
 
   - name: "LDETimeoutError"
     description: "Likely Duplicitous Escrow entry exceeded the 3600-second timeout"
-    cause: "A suspected duplicity entry in the LDE (.ldes) was not confirmed or resolved within the TTL and has been pruned"
-    recovery: "abort"
+    cause: "A suspected duplicity entry in the LDE was not confirmed or resolved within the TTL and has been pruned"
+    recovery: "ignore"
     severity: "recoverable"
+    notes: >
+      Timeout is a normal lifecycle event — the suspected fork was not confirmed within
+      the allowed window. This is administrative cleanup, not a protocol error. The entry
+      is pruned and no further action is required.
     context:
       - field: "prefix"
-        type: "string"
+        type: "types://cesr/primitives#AID"
         description: "The AID"
       - field: "sn"
         type: "integer"
@@ -93,18 +97,22 @@ errors:
 
   - name: "DuplicateEscrowError"
     description: "Event is already present in the Likely Duplicitous Escrow"
-    cause: "The same conflicting event (same SAID) has already been escrowed in the LDE (.ldes) for this (prefix, sn) — duplicate submission"
-    recovery: "abort"
+    cause: "The same conflicting event (same SAID) has already been escrowed in the LDE for this (prefix, sn) — duplicate submission"
+    recovery: "ignore"
     severity: "recoverable"
+    notes: >
+      Duplicate submission of the same suspected fork is idempotent, not an error.
+      Race conditions in distributed systems make duplicates normal — the LDE already
+      contains the evidence, so the duplicate is safely ignored.
     context:
       - field: "prefix"
-        type: "string"
+        type: "types://cesr/primitives#AID"
         description: "The AID"
       - field: "sn"
         type: "integer"
         description: "The sequence number"
       - field: "event_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "The SAID of the already-escrowed event"
     related_port: "port://integrity/evidence/inbound/evidence-management"
     # L5-O10: These errors handle edge cases at the evidence-management boundary:

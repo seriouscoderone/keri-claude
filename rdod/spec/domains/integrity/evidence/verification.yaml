@@ -73,7 +73,7 @@ properties:
     strategy: "key_event_strategy() x2"
     notes: "Fork detection is order-independent — symmetry is a required property."
 
-  - invariant: "LDE timeout: escrowed events MUST be pruned after exactly 3600 seconds; at 3599 seconds the entry is still active; at 3600 seconds the entry MUST be pruned"
+  - invariant: "LDE timeout: escrowed events MUST be pruned after strictly exceeding 3600 seconds; at 3600 seconds the entry is still active; at 3601 seconds the entry MUST be pruned"
     term: "Likely Duplicitous Escrow"
     technique: smt
     formal:
@@ -84,19 +84,19 @@ properties:
         pruned = Bool('pruned')
         s = Solver()
         s.add(timeout == 3600)
-        s.add(pruned == (age >= timeout))
-        # Boundary: 3599 must NOT be pruned
-        s.add(age == 3599, pruned)
+        s.add(pruned == (age > timeout))
+        # Boundary: 3600 must NOT be pruned (strictly greater, not >=)
+        s.add(age == 3600, pruned)
         assert s.check() == unsat
-        # Boundary: 3600 must be pruned
+        # Boundary: 3601 must be pruned
         s2 = Solver()
         s2.add(timeout == 3600)
-        s2.add(pruned == (age >= timeout))
-        s2.add(age == 3600, Not(pruned))
+        s2.add(pruned == (age > timeout))
+        s2.add(age == 3601, Not(pruned))
         assert s2.check() == unsat
-    notes: "Exact timeout boundary at 3600s. Off-by-one in either direction is caught by SMT."
+    notes: "Strictly greater than boundary at 3600s. The oracle confirmed: age > timeout, not age >= timeout. At exactly 3600s the entry is still active."
 
-  - invariant: "LDE entries MUST have status 'suspected' and be stored in the .ldes database; they are distinguished from DEL entries (status 'confirmed', stored in .dels); an entry MUST NOT appear in both .ldes and .dels simultaneously"
+  - invariant: "LDE entries MUST have status 'suspected'; they are distinguished from DEL entries (status 'confirmed'); an entry MUST NOT appear in both the LDE and the DEL simultaneously — the store identity is implicit from the type"
     term: "Likely Duplicitous Escrow"
     technique: property-based
     formal:
@@ -105,9 +105,9 @@ properties:
         @given(lde_entry=lde_entry_strategy())
         def test_lde_status_and_storage(lde_entry):
             assert lde_entry.status == 'suspected', "LDE entries must be 'suspected'"
-            assert lde_entry.db == '.ldes', "LDE entries must be in .ldes database"
+            # Store identity is implicit from the LDEEntry type — no explicit db field needed
     strategy: "lde_entry_strategy()"
-    notes: "LDE is for suspected evidence; DEL is for confirmed evidence. Mutually exclusive stores."
+    notes: "LDE is for suspected evidence; DEL is for confirmed evidence. Mutually exclusive stores. Store identity is implicit from the type (LDEEntry vs DEL entry)."
 
   - invariant: "DEL entries MUST be permanent: no entry in the DEL is ever removed, pruned, or timed out regardless of elapsed time; DEL entries persist for the lifetime of the system as forensic evidence"
     term: "Duplicitous Event Log"
@@ -233,7 +233,7 @@ state_machines:
       - from: "suspected"
         to: "expired"
         trigger: "EvidenceExpired — escrow timeout exceeded"
-        guard: "current_time - escrow_time > 3600"
+        guard: "current_time - escrow_time > 3600 (strictly greater than — at exactly 3600s the entry is still active)"
     invariants:
       - "Once confirmed, evidence is permanent — there is no transition out of confirmed"
       - "Expiration only applies to suspected (LDE) entries, never to confirmed (DEL) entries"

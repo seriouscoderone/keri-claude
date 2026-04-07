@@ -7,7 +7,7 @@ types:
       - name: "apply"
         fields:
           - name: "schema_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the desired credential schema"
           - name: "attributes"
@@ -21,9 +21,9 @@ types:
       - name: "offer"
         fields:
           - name: "credential_preview"
-            type: "map"
+            type: "types://credential-exchange/negotiation#OfferPayload"
             required: true
-            description: "Preview of the credential being offered (may be metadata ACDC for chain-link confidentiality)"
+            description: "Typed offer payload — schema SAID, credential preview, and optional chain-link terms"
         invariants:
           - "Route: /ipex/offer"
           - "Sent by discloser (issuer)"
@@ -61,7 +61,7 @@ types:
       - name: "admit"
         fields:
           - name: "grant_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the grant message being admitted"
         invariants:
@@ -72,7 +72,7 @@ types:
       - name: "spurn"
         fields:
           - name: "spurned_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the message being rejected"
           - name: "reason"
@@ -196,7 +196,7 @@ types:
       - name: "default"
         fields:
           - name: "thread_id"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the initial message (apply or grant for direct)"
           - name: "state"
@@ -206,17 +206,17 @@ types:
             constraints:
               enum: ["Idle", "Applied", "Offered", "Agreed", "Granted", "Admitted", "Spurned"]
           - name: "discloser_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "AID of the credential holder/issuer (sends offer, grant)"
           - name: "disclosee_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "AID of the credential requester/verifier (sends apply, agree, admit)"
           - name: "messages"
-            type: "array[map]"
+            type: "array[types://credential-exchange/negotiation#IPEXMessage]"
             required: true
-            description: "Ordered message chain with SAIDs and types"
+            description: "Ordered message chain — each entry is a typed IPEX message with SAID and variant"
           - name: "grant_bundle"
             type: "types://credential-exchange/negotiation#GrantBundle"
             required: false
@@ -260,7 +260,7 @@ types:
             constraints:
               enum: ["/ipex/admit"]
           - name: "grant_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the grant message being admitted"
         invariants:
@@ -279,7 +279,7 @@ types:
             constraints:
               enum: ["/ipex/agree"]
           - name: "offer_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the offer message being agreed to"
         invariants:
@@ -298,7 +298,7 @@ types:
             constraints:
               enum: ["/ipex/spurn"]
           - name: "rejected_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the message being rejected"
           - name: "reason"
@@ -315,7 +315,7 @@ types:
       - name: "default"
         fields:
           - name: "sender_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "AID of the party constructing the message"
           - name: "route"
@@ -329,7 +329,7 @@ types:
             required: true
             description: "Route-specific payload fields (schema_said for apply, acdc+tel+seal for grant, etc.)"
           - name: "prior_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: false
             description: "SAID of the prior message in the thread (absent for initial apply or direct grant)"
         invariants:

@@ -13,9 +13,8 @@ ports:
       event identified by event_said. The signing keys are the witness's keys used to verify
       the receipt signature.
     contract:
-      # L5-O2: Added event_said to input — receipt-lifecycle must know which event is being receipted
-      # Schema requires string; encoding as composite
-      input: "types://cesr/primitives#SAID + signing_keys:types://accountability/receipting#SigningKeys"
+      # L5-FIX: Replaced compound type ref with proper ReceiptInput type
+      input: "types://accountability/receipting#ReceiptInput"
       output: "types://accountability/consensus#Receipt"
       errors:
         - "errors://accountability/receipting#UnverifiedReceiptError"
@@ -24,6 +23,8 @@ ports:
         - "errors://accountability/receipting#StaleReceiptError"
         - "errors://accountability/receipting#UnknownWitnessError"
         - "errors://accountability/receipting#EscrowTimeoutError"
+    invariants:
+      - "Receipt validation MUST resolve the witness set at the receipted event's sequence number (historical), not the current witness set — receipts from witnesses later pruned by rotation are valid for events at prior sequence numbers."
     refs: ["domain://accountability"]
     notes: >
       L5-O2: event_said added to input. A receipt is always bound to a specific event;

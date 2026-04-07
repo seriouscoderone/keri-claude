@@ -45,7 +45,7 @@ ports:
     semantics: command
     idempotent: false
     description: >
-      Persistence port covering both LDE (.ldes) and DEL (.dels) operations.
+      Persistence port covering both LDE and DEL operations.
       Supports write (add to LDE, append to DEL), read/query (get by AID/sn,
       list all for AID), remove (from LDE — idempotent), and sweep/prune
       (remove expired LDE entries). DEL is append-only and never pruned.
@@ -91,8 +91,8 @@ ports:
     invariants:
       # L5-O11: Promotion criterion — second independent source must verify
       - "Promotion MUST require signature verification of the conflicting event by at least one source independent of the first-seen source"
-      - "Promotion moves the entry from .ldes to .dels — the .ldes entry is removed and the .dels entry is appended"
-      - "Promotion is irreversible — once in .dels, the evidence is permanent"
+      - "Promotion moves the entry from the LDE to the DEL — the LDE entry is removed and the DEL entry is appended"
+      - "Promotion is irreversible — once in the DEL, the evidence is permanent"
       - "If the second source's signature verification fails, promotion MUST NOT occur — the LDE entry remains suspected"
     notes: >
       L5-O11: Promotion criterion. The LDE→DEL promotion requires a second independent source
