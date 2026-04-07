@@ -21,7 +21,7 @@ ports:
     semantics: query
     idempotent: true
     contract:
-      input: "Raw CESR stream bytes"
+      input: "Raw CESR stream bytes (an unframed byte sequence in either T-domain or B-domain; the parser determines framing from the first tritet of each frame)"
       output: "types://cesr/composition#FrameType"
       errors:
         - "errors://cesr/composition#ColdStartError"

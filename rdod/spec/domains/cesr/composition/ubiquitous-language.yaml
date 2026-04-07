@@ -285,6 +285,8 @@ terms:
       - "Genus-specific nested groups: TransIdxSigGroups (-X, Vec<(Prefixer,Seqner,Saider,ControllerIdxSigs)>), TransLastIdxSigGroups (-Y, Vec<(Prefixer,ControllerIdxSigs)>)"
       - "Genus-specific container: PathedMaterialQuadlets (-Z, raw bytes)"
       - "Genus-specific seal couples: RegistrarBackerSealCouples (-V, Vec<(Prefixer,Saider)>)"
+      - "Genus-specific shielded state: ShieldedStateCouples (-a, Vec<(Saider, Salter, Diger, Diger, Prefixer)>) — quintuple [d, u, td, ts, BLID] for shielded state"
+      - "Genus-specific bound shielded state: ShieldedStateDiscCouples (-b, Vec<(Saider, Salter, Diger, Diger, Seqner, Saider)>) — sextuple [d, u, td, ts, bn, bd] for bound shielded state"
     examples:
       - "-K## + Siger Siger Siger → ControllerIdxSigs with 3 controller signatures"
       - "-N## + (Prefixer Seqner Saider Siger) × N → TransReceiptQuadruples with N receipts"
@@ -451,5 +453,5 @@ rules:
   - "Parser dispatch is two-stage: ColdCode selects frame type, then counter.code() selects group parser"
   - "All parsers return (remaining_bytes, parsed_value) — enabling incremental stream processing"
   - "Group serialization is the exact inverse of parsing — qb64 round-trip must produce identical bytes"
-  - "AttachedMaterialQuadlets is the only group that can contain heterogeneous nested groups"
+  - "AttachedMaterialQuadlets (-C) is the only group that can contain heterogeneous nested groups (any mix of group types). PathedMaterial (-P) nests a single CESRGroup per path element (homogeneous nesting) — each path selects exactly one typed group, unlike -C which can contain any mix of group types."
   - "PathedMaterialQuadlets is opaque — the stream parser preserves but does not interpret its contents"

@@ -100,15 +100,15 @@ types:
           - "last_sn matches the sn of the most recently applied TelEvent"
           - "A cache miss is never an error — reconstruct from TEL and cache the result"
 
-  - name: "StateQueryInput"
-    description: "Parameters for authorizing a credential lifecycle state change within a registry. The service derives current state internally from the TEL (CQRS pattern) — the caller provides the TEL event to authorize, not a snapshot."
+  - name: "StateChangeAuthorization"
+    description: "Parameters for authorizing a credential lifecycle state change within a registry. The service derives current state internally from the TEL (CQRS pattern) — the caller provides the TEL event to authorize, not a snapshot. Formerly 'StateQueryInput' — renamed because this is a command input for authorizing state changes, not a query."
     variants:
       - name: "default"
         fields:
           - name: "registry_said"
             type: "string"
             required: true
-            description: "REGID of the registry to query"
+            description: "REGID of the registry where the state change is authorized"
           - name: "tel_event"
             type: "types://credential-lifecycle/status#TelEventUnion"
             required: true
@@ -116,9 +116,10 @@ types:
         invariants:
           - "Registry must exist and be resolvable by REGID"
           - "Service derives current state internally — caller does not provide a snapshot"
+          - "This is a command input (authorizing a state change), not a query input"
 
   - name: "StateReconstructionInput"
-    description: "Parameters for reconstructing the current state of a registry or credential from its TEL event history."
+    description: "Parameters for reconstructing the current state of a registry or credential from its TEL event history. If credential_said is provided, returns a single snapshot for that credential; if absent, returns snapshots for all credentials in the registry."
     variants:
       - name: "default"
         fields:
@@ -126,6 +127,10 @@ types:
             type: "string"
             required: true
             description: "REGID of the registry whose state is being reconstructed"
+          - name: "credential_said"
+            type: "types://cesr/primitives#SAID"
+            required: false
+            description: "Optional — SAID of a specific credential to reconstruct state for. When provided, the result contains exactly one snapshot for this credential. When absent, all credentials in the registry are reconstructed."
           - name: "events"
             type: "array[types://credential-lifecycle/status#TelEventId]"
             required: true
@@ -133,6 +138,8 @@ types:
         invariants:
           - "Events must be in ascending sequence number order"
           - "First event must be a registry inception (rip) if reconstructing registry state"
+          - "If credential_said is provided, only events for that credential are replayed; result is a single-element array"
+          - "If credential_said is absent, all TEL events are replayed; result contains one snapshot per credential"
 
   - name: "TelEventVerifier"
     description: "Verifier instance bound to a specific registry, tracking expected sequence number for state transitions."
@@ -232,8 +239,8 @@ types:
             required: true
             description: "Sequence number of the event that caused the state change"
 
-  - name: "Creder"
-    description: "ACDC credential facade — extends the generic SAD serializer (Sadder from cesr/composition) with ACDC-specific field accessors: issuer AID, schema SAID, subject, status, edges, rules. Provides the credential-domain view of a self-addressing data structure."
+  - name: "CredentialRecord"
+    description: "ACDC credential facade — extends the generic SAD serializer (Sadder from cesr/composition) with ACDC-specific field accessors: issuer AID, schema SAID, subject, status, edges, rules. Provides the credential-domain view of a self-addressing data structure. Formerly 'Creder' (keripy class name) — renamed to adopter-centric DDD vocabulary."
     variants:
       - name: "default"
         fields:
@@ -279,9 +286,9 @@ types:
                 vcp — legacy registry inception (replaced by rip)
                 vrt — legacy registry rotation (no v2 equivalent; v2 registries are immutable)
                 iss — legacy non-backer issuance (replaced by upd with ts='issued')
-                bis — legacy backer issuance (replaced by bup with ts='issued')
+                bis — legacy backer issuance (replaced by bup with BLID)
                 rev — legacy non-backer revocation (replaced by upd with ts='revoked')
-                brv — legacy backer revocation (replaced by bup with ts='revoked')
+                brv — legacy backer revocation (replaced by bup with BLID)
           - name: "registry_id"
             type: "string"
             required: true
@@ -315,17 +322,23 @@ types:
           - name: "transaction_acdc_said"
             type: "types://cesr/primitives#SAID"
             required: false
-            description: "SAID of the credential this event applies to (upd/bup events; ta field)"
+            description: "SAID of the credential this event applies to (upd events only; ta field). NOT present in bup events."
           - name: "transaction_state"
             type: "string"
             required: false
-            description: "Target credential state after this event (upd/bup events; ts field)"
+            description: "Target credential state after this event (upd events only; ts field). NOT present in bup events."
             constraints:
               enum: ["issued", "revoked"]
+          - name: "blid"
+            type: "types://cesr/primitives#SAID"
+            required: false
+            description: "Blinded attribute block digest (bup events only; b field). The shielded state is NOT visible in the event body — state discovery requires the shared secret salt via the privacy/blinding domain. NOT present in upd events."
         invariants:
           - "TEL events form an append-only log per registry, anchored to the issuer's KEL via seals"
           - "sequence_number must equal prior event's sequence_number + 1"
           - "prior_event_said must match the SAID of the immediately preceding event in the TEL"
+          - "bup events carry blid (b field) — they do NOT carry transaction_acdc_said (ta) or transaction_state (ts)"
+          - "upd events carry transaction_acdc_said (ta) and transaction_state (ts) — they do NOT carry blid (b)"
           - "Legacy v1 ilks (vcp, vrt, iss, bis, rev, brv) are deprecated — implementations MUST still accept them for migration compatibility but SHOULD NOT generate new events using them"
 
   # Aliases and consolidation note

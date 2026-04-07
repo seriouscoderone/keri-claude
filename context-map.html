@@ -3427,7 +3427,7 @@ const RDOD_DATA = {
       "Parser dispatch is two-stage: ColdCode selects frame type, then counter.code() selects group parser",
       "All parsers return (remaining_bytes, parsed_value) — enabling incremental stream processing",
       "Group serialization is the exact inverse of parsing — qb64 round-trip must produce identical bytes",
-      "AttachedMaterialQuadlets is the only group that can contain heterogeneous nested groups",
+      "AttachedMaterialQuadlets (-C) is the only group that can contain heterogeneous nested groups (any mix of group types). PathedMaterial (-P) nests a single CESRGroup per path element (homogeneous nesting) — each path selects exactly one typed group, unlike -C which can contain any mix of group types.",
       "PathedMaterialQuadlets is opaque — the stream parser preserves but does not interpret its contents"
     ],
     "_imports": [],
@@ -3917,7 +3917,9 @@ const RDOD_DATA = {
           "Genus-specific couple groups: FirstSeenReplayCouples (-O, Vec<(Seqner,Dater)>), SealSourceCouples (-S, Vec<(Seqner,Saider)>)",
           "Genus-specific nested groups: TransIdxSigGroups (-X, Vec<(Prefixer,Seqner,Saider,ControllerIdxSigs)>), TransLastIdxSigGroups (-Y, Vec<(Prefixer,ControllerIdxSigs)>)",
           "Genus-specific container: PathedMaterialQuadlets (-Z, raw bytes)",
-          "Genus-specific seal couples: RegistrarBackerSealCouples (-V, Vec<(Prefixer,Saider)>)"
+          "Genus-specific seal couples: RegistrarBackerSealCouples (-V, Vec<(Prefixer,Saider)>)",
+          "Genus-specific shielded state: ShieldedStateCouples (-a, Vec<(Saider, Salter, Diger, Diger, Prefixer)>) — quintuple [d, u, td, ts, BLID] for shielded state",
+          "Genus-specific bound shielded state: ShieldedStateDiscCouples (-b, Vec<(Saider, Salter, Diger, Diger, Seqner, Saider)>) — sextuple [d, u, td, ts, bn, bd] for bound shielded state"
         ],
         "examples": [
           "-K## + Siger Siger Siger → ControllerIdxSigs with 3 controller signatures",
@@ -4140,7 +4142,7 @@ const RDOD_DATA = {
         "semantics": "query",
         "idempotent": true,
         "contract": {
-          "input": "Raw CESR stream bytes",
+          "input": "Raw CESR stream bytes (an unframed byte sequence in either T-domain or B-domain; the parser determines framing from the first tritet of each frame)",
           "output": "types://cesr/composition#FrameType",
           "errors": [
             "errors://cesr/composition#ColdStartError",
@@ -19409,7 +19411,7 @@ const RDOD_DATA = {
       },
       {
         "name": "ShieldableUpdateEvent",
-        "description": "A shieldable update event (bup) for registries that support shielding. Carries a shielded attribute block with BLID for decorrelation. Used for both issuance and revocation — the transaction state (ts) field determines the state transition.",
+        "description": "A shieldable update event (bup) for registries that support shielding. Carries a BLID (blinded attribute block digest) for decorrelation. The shielded state is NOT visible in the event body — state discovery requires the shared secret salt via the privacy/blinding domain.",
         "variants": [
           {
             "name": "default",
@@ -19462,31 +19464,19 @@ const RDOD_DATA = {
                 "description": "Datetime — ISO 8601 timestamp"
               },
               {
-                "name": "ta",
-                "type": "string",
+                "name": "b",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
-                "description": "Transaction ACDC SAID — the credential this event applies to"
-              },
-              {
-                "name": "ts",
-                "type": "string",
-                "required": true,
-                "description": "Transaction state — the target state after this update",
-                "constraints": {
-                  "enum": [
-                    "issued",
-                    "revoked"
-                  ]
-                }
+                "description": "BLID — blinded attribute block digest. The shielded state is NOT visible in the event body; state discovery requires the shared secret salt via the privacy/blinding domain"
               }
             ],
             "invariants": [
-              "Field order: [v, t, d, rd, n, p, dt, ta, ts]",
+              "Field order: [v, t, d, rd, n, p, dt, b]",
+              "bup does NOT carry ta or ts fields — those belong to upd (non-shieldable) events only",
               "Each bup event carries a fresh BLID with new UUID for decorrelation",
               "An observer cannot distinguish state-changing updates from no-op decorrelation updates",
-              "ts determines the credential state transition — not the event type",
               "Must be authorized in the issuer's KEL via a seal",
-              "Builder: UpdateEvent.builder().shieldable().registry(regid).credential(said).state('issued').build()"
+              "Builder: UpdateEvent.builder().shieldable().registry(regid).blid(blid).build()"
             ]
           }
         ]
@@ -20935,8 +20925,8 @@ const RDOD_DATA = {
         ]
       },
       {
-        "name": "StateQueryInput",
-        "description": "Parameters for authorizing a credential lifecycle state change within a registry. The service derives current state internally from the TEL (CQRS pattern) — the caller provides the TEL event to authorize, not a snapshot.",
+        "name": "StateChangeAuthorization",
+        "description": "Parameters for authorizing a credential lifecycle state change within a registry. The service derives current state internally from the TEL (CQRS pattern) — the caller provides the TEL event to authorize, not a snapshot. Formerly 'StateQueryInput' — renamed because this is a command input for authorizing state changes, not a query.",
         "variants": [
           {
             "name": "default",
@@ -20945,7 +20935,7 @@ const RDOD_DATA = {
                 "name": "registry_said",
                 "type": "string",
                 "required": true,
-                "description": "REGID of the registry to query"
+                "description": "REGID of the registry where the state change is authorized"
               },
               {
                 "name": "tel_event",
@@ -20956,14 +20946,15 @@ const RDOD_DATA = {
             ],
             "invariants": [
               "Registry must exist and be resolvable by REGID",
-              "Service derives current state internally — caller does not provide a snapshot"
+              "Service derives current state internally — caller does not provide a snapshot",
+              "This is a command input (authorizing a state change), not a query input"
             ]
           }
         ]
       },
       {
         "name": "StateReconstructionInput",
-        "description": "Parameters for reconstructing the current state of a registry or credential from its TEL event history.",
+        "description": "Parameters for reconstructing the current state of a registry or credential from its TEL event history. If credential_said is provided, returns a single snapshot for that credential; if absent, returns snapshots for all credentials in the registry.",
         "variants": [
           {
             "name": "default",
@@ -20975,6 +20966,12 @@ const RDOD_DATA = {
                 "description": "REGID of the registry whose state is being reconstructed"
               },
               {
+                "name": "credential_said",
+                "type": "types://cesr/primitives#SAID",
+                "required": false,
+                "description": "Optional — SAID of a specific credential to reconstruct state for. When provided, the result contains exactly one snapshot for this credential. When absent, all credentials in the registry are reconstructed."
+              },
+              {
                 "name": "events",
                 "type": "array[types://credential-lifecycle/status#TelEventId]",
                 "required": true,
@@ -20983,7 +20980,9 @@ const RDOD_DATA = {
             ],
             "invariants": [
               "Events must be in ascending sequence number order",
-              "First event must be a registry inception (rip) if reconstructing registry state"
+              "First event must be a registry inception (rip) if reconstructing registry state",
+              "If credential_said is provided, only events for that credential are replayed; result is a single-element array",
+              "If credential_said is absent, all TEL events are replayed; result contains one snapshot per credential"
             ]
           }
         ]
@@ -21150,8 +21149,8 @@ const RDOD_DATA = {
         ]
       },
       {
-        "name": "Creder",
-        "description": "ACDC credential facade — extends the generic SAD serializer (Sadder from cesr/composition) with ACDC-specific field accessors: issuer AID, schema SAID, subject, status, edges, rules. Provides the credential-domain view of a self-addressing data structure.",
+        "name": "CredentialRecord",
+        "description": "ACDC credential facade — extends the generic SAD serializer (Sadder from cesr/composition) with ACDC-specific field accessors: issuer AID, schema SAID, subject, status, edges, rules. Provides the credential-domain view of a self-addressing data structure. Formerly 'Creder' (keripy class name) — renamed to adopter-centric DDD vocabulary.",
         "variants": [
           {
             "name": "default",
@@ -21220,7 +21219,7 @@ const RDOD_DATA = {
                     "brv"
                   ]
                 },
-                "notes": "Normative v2 ilks: rip, upd, bup.\nDEPRECATED legacy v1 ilks (retained for migration compatibility only):\n  vcp — legacy registry inception (replaced by rip)\n  vrt — legacy registry rotation (no v2 equivalent; v2 registries are immutable)\n  iss — legacy non-backer issuance (replaced by upd with ts='issued')\n  bis — legacy backer issuance (replaced by bup with ts='issued')\n  rev — legacy non-backer revocation (replaced by upd with ts='revoked')\n  brv — legacy backer revocation (replaced by bup with ts='revoked')\n"
+                "notes": "Normative v2 ilks: rip, upd, bup.\nDEPRECATED legacy v1 ilks (retained for migration compatibility only):\n  vcp — legacy registry inception (replaced by rip)\n  vrt — legacy registry rotation (no v2 equivalent; v2 registries are immutable)\n  iss — legacy non-backer issuance (replaced by upd with ts='issued')\n  bis — legacy backer issuance (replaced by bup with BLID)\n  rev — legacy non-backer revocation (replaced by upd with ts='revoked')\n  brv — legacy backer revocation (replaced by bup with BLID)\n"
               },
               {
                 "name": "registry_id",
@@ -21271,25 +21270,33 @@ const RDOD_DATA = {
                 "name": "transaction_acdc_said",
                 "type": "types://cesr/primitives#SAID",
                 "required": false,
-                "description": "SAID of the credential this event applies to (upd/bup events; ta field)"
+                "description": "SAID of the credential this event applies to (upd events only; ta field). NOT present in bup events."
               },
               {
                 "name": "transaction_state",
                 "type": "string",
                 "required": false,
-                "description": "Target credential state after this event (upd/bup events; ts field)",
+                "description": "Target credential state after this event (upd events only; ts field). NOT present in bup events.",
                 "constraints": {
                   "enum": [
                     "issued",
                     "revoked"
                   ]
                 }
+              },
+              {
+                "name": "blid",
+                "type": "types://cesr/primitives#SAID",
+                "required": false,
+                "description": "Blinded attribute block digest (bup events only; b field). The shielded state is NOT visible in the event body — state discovery requires the shared secret salt via the privacy/blinding domain. NOT present in upd events."
               }
             ],
             "invariants": [
               "TEL events form an append-only log per registry, anchored to the issuer's KEL via seals",
               "sequence_number must equal prior event's sequence_number + 1",
               "prior_event_said must match the SAID of the immediately preceding event in the TEL",
+              "bup events carry blid (b field) — they do NOT carry transaction_acdc_said (ta) or transaction_state (ts)",
+              "upd events carry transaction_acdc_said (ta) and transaction_state (ts) — they do NOT carry blid (b)",
               "Legacy v1 ilks (vcp, vrt, iss, bis, rev, brv) are deprecated — implementations MUST still accept them for migration compatibility but SHOULD NOT generate new events using them"
             ]
           }
@@ -32192,7 +32199,10 @@ const RDOD_DATA = {
             "errors://identity/establishment#MissingWitnessSignatureError",
             "errors://identity/establishment#LikelyDuplicitousError",
             "errors://identity/establishment#MisfitEventSourceError",
-            "errors://identity/establishment#ValidationError"
+            "errors://identity/establishment#ValidationError",
+            "errors://identity/establishment#AbandonedIdentifierError",
+            "errors://identity/establishment#EstablishmentOnlyViolationError",
+            "errors://identity/establishment#NoValidSignaturesError"
           ]
         },
         "refs": [
@@ -32555,7 +32565,7 @@ const RDOD_DATA = {
           "technique": "property-based",
           "formal": {
             "language": "python",
-            "expression": "@given(icp=inception_event_strategy())\ndef test_inception_field_order(icp):\n    keys = list(icp.ked.keys())\n    expected = ['v', 't', 'd', 'i', 's', 'kt', 'k', 'nt', 'n', 'bt', 'b', 'c', 'a']\n    assert keys == expected\n"
+            "expression": "@given(icp=inception_event_strategy())\ndef test_inception_field_order(icp):\n    keys = list(icp.event_fields.keys())\n    expected = ['v', 't', 'd', 'i', 's', 'kt', 'k', 'nt', 'n', 'bt', 'b', 'c', 'a']\n    assert keys == expected\n"
           },
           "strategy": "inception_event_strategy()",
           "notes": "Normative field order for icp."
@@ -32566,7 +32576,7 @@ const RDOD_DATA = {
           "technique": "property-based",
           "formal": {
             "language": "python",
-            "expression": "@given(rot=rotation_event_strategy())\ndef test_rotation_field_order(rot):\n    keys = list(rot.ked.keys())\n    expected = ['v', 't', 'd', 'i', 's', 'p', 'kt', 'k', 'nt', 'n', 'bt', 'br', 'ba', 'c', 'a']\n    assert keys == expected\n"
+            "expression": "@given(rot=rotation_event_strategy())\ndef test_rotation_field_order(rot):\n    keys = list(rot.event_fields.keys())\n    expected = ['v', 't', 'd', 'i', 's', 'p', 'kt', 'k', 'nt', 'n', 'bt', 'br', 'ba', 'c', 'a']\n    assert keys == expected\n"
           },
           "strategy": "rotation_event_strategy()",
           "notes": "Normative field order for rot."
@@ -32577,7 +32587,7 @@ const RDOD_DATA = {
           "technique": "property-based",
           "formal": {
             "language": "python",
-            "expression": "@given(ixn=interaction_event_strategy())\ndef test_interaction_field_order(ixn):\n    keys = list(ixn.ked.keys())\n    expected = ['v', 't', 'd', 'i', 's', 'p', 'a']\n    assert keys == expected\n"
+            "expression": "@given(ixn=interaction_event_strategy())\ndef test_interaction_field_order(ixn):\n    keys = list(ixn.event_fields.keys())\n    expected = ['v', 't', 'd', 'i', 's', 'p', 'a']\n    assert keys == expected\n"
           },
           "strategy": "interaction_event_strategy()",
           "notes": "Normative field order for ixn."
@@ -32588,7 +32598,7 @@ const RDOD_DATA = {
           "technique": "property-based",
           "formal": {
             "language": "python",
-            "expression": "@given(event=key_event_strategy())\ndef test_reorder_changes_said(event):\n    original_said = event.said\n    reordered = reorder_fields(event.ked)\n    assume(list(reordered.keys()) != list(event.ked.keys()))\n    reordered_said = compute_said_from_ked(reordered)\n    assert reordered_said != original_said\n"
+            "expression": "@given(event=key_event_strategy())\ndef test_reorder_changes_said(event):\n    original_said = event.said\n    reordered = reorder_fields(event.event_fields)\n    assume(list(reordered.keys()) != list(event.event_fields.keys()))\n    reordered_said = compute_said_from_fields(reordered)\n    assert reordered_said != original_said\n"
           },
           "strategy": "key_event_strategy()",
           "notes": "Byte-level serialization means order matters for SAID."
@@ -32972,12 +32982,6 @@ const RDOD_DATA = {
             {
               "from": "delegation_checked",
               "to": "escrowed_pde",
-              "trigger": "delegator seal not found",
-              "guard": "not delegation_seal_found(event)"
-            },
-            {
-              "from": "delegation_checked",
-              "to": "escrowed_pde",
               "trigger": "delegator seal not found (remote validator role)",
               "guard": "not delegation_seal_found(event) and role == 'remote_validator'"
             },
@@ -33330,6 +33334,86 @@ const RDOD_DATA = {
             "field": "said",
             "type": "string",
             "description": "The SAID of the invalid event (if computable)"
+          }
+        ],
+        "related_port": "port://identity/establishment/inbound/validate-event"
+      },
+      {
+        "name": "AbandonedIdentifierError",
+        "description": "Event received for an identifier that has been permanently abandoned",
+        "cause": "An event arrived targeting an AID whose most recent establishment event is an abandonment rotation (n=[], nt='0'). No further events are valid for this AID.",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "prefix",
+            "type": "string",
+            "description": "The abandoned AID prefix"
+          },
+          {
+            "field": "received_sn",
+            "type": "integer",
+            "description": "Sequence number of the rejected event"
+          },
+          {
+            "field": "abandonment_sn",
+            "type": "integer",
+            "description": "Sequence number of the abandonment rotation that sealed this AID"
+          },
+          {
+            "field": "said",
+            "type": "string",
+            "description": "The SAID of the rejected event"
+          }
+        ],
+        "related_port": "port://identity/establishment/inbound/validate-event"
+      },
+      {
+        "name": "EstablishmentOnlyViolationError",
+        "description": "Interaction event received for an identifier with the Establishment Only configuration trait",
+        "cause": "An interaction event (ixn) was submitted for an AID that has the EO (Establishment Only) configuration trait set at inception. EO identifiers only permit establishment events (icp, rot, dip, drt).",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "prefix",
+            "type": "string",
+            "description": "The AID prefix with EO trait"
+          },
+          {
+            "field": "said",
+            "type": "string",
+            "description": "The SAID of the rejected interaction event"
+          },
+          {
+            "field": "config_traits",
+            "type": "array[string]",
+            "description": "The configuration traits of the identifier (includes 'EO')"
+          }
+        ],
+        "related_port": "port://identity/establishment/inbound/validate-event"
+      },
+      {
+        "name": "NoValidSignaturesError",
+        "description": "Event has zero verifiable controller signatures",
+        "cause": "All attached controller signatures failed cryptographic verification, or no signatures were attached. Distinct from MissingSignatureError which is transient (some valid signatures exist but below threshold).",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "prefix",
+            "type": "string",
+            "description": "The AID prefix"
+          },
+          {
+            "field": "said",
+            "type": "string",
+            "description": "The SAID of the event with no valid signatures"
+          },
+          {
+            "field": "attached_count",
+            "type": "integer",
+            "description": "Number of signatures that were attached (all failed verification)"
           }
         ],
         "related_port": "port://identity/establishment/inbound/validate-event"
@@ -33703,7 +33787,7 @@ const RDOD_DATA = {
             "witnesses_to_remove: each AID MUST currently be in the witness set",
             "witnesses_to_add: each AID MUST NOT already be in the witness set after removals",
             "If delegator is present: ilk = 'drt'; requires delegator seal in delegator's KEL",
-            "Field canonical ordering: v, t, d, i, s, p, kt, k, nt, n, bt, br, ba, a (plus any delegated fields)"
+            "Field canonical ordering: v, t, d, i, s, p, kt, k, nt, n, bt, br, ba, c, a (plus di for delegated)"
           ]
         },
         "variants": [
@@ -33797,6 +33881,12 @@ const RDOD_DATA = {
                 "description": "Witnesses to add"
               },
               {
+                "name": "c",
+                "type": "array[string]",
+                "required": true,
+                "description": "Configuration traits — set at inception only; present in rotation wire format but has no effect (always empty array for rotations)"
+              },
+              {
                 "name": "a",
                 "type": "array[map]",
                 "required": true,
@@ -33814,7 +33904,7 @@ const RDOD_DATA = {
               {
                 "format": "json",
                 "description": "Single-key rotation with new next commitment",
-                "value": "{\"v\":\"KERI10JSON000160_\",\"t\":\"rot\",\"d\":\"EFl8nvRCbN2xQJI75nBXp-gaXuHJw8zheVjwMN_rB-pb\",\"i\":\"DFs8BBx86uytIM0D2BhsE5rrqVIT8ef8mflpNceHo4XH\",\"s\":\"1\",\"p\":\"EJQUyxnzIAtmZPoq9f4fExeGN0qfJmaFnUEKTwIiTBPj\",\"kt\":\"1\",\"k\":[\"DB4GWvru73jWZKpNgMQp8ayDRin0NG0Ymn_RXQP_v-PQ\"],\"nt\":\"1\",\"n\":[\"EIsKL3B6Zz5ICGxCQp-SoLXjwOrdlSbLJrEn21c2zVaU\"],\"bt\":\"0\",\"br\":[],\"ba\":[],\"a\":[]}\n",
+                "value": "{\"v\":\"KERI10JSON000160_\",\"t\":\"rot\",\"d\":\"EFl8nvRCbN2xQJI75nBXp-gaXuHJw8zheVjwMN_rB-pb\",\"i\":\"DFs8BBx86uytIM0D2BhsE5rrqVIT8ef8mflpNceHo4XH\",\"s\":\"1\",\"p\":\"EJQUyxnzIAtmZPoq9f4fExeGN0qfJmaFnUEKTwIiTBPj\",\"kt\":\"1\",\"k\":[\"DB4GWvru73jWZKpNgMQp8ayDRin0NG0Ymn_RXQP_v-PQ\"],\"nt\":\"1\",\"n\":[\"EIsKL3B6Zz5ICGxCQp-SoLXjwOrdlSbLJrEn21c2zVaU\"],\"bt\":\"0\",\"br\":[],\"ba\":[],\"c\":[],\"a\":[]}\n",
                 "notes": "p links to prior event SAID. New k must match prior n digests. From keripy test_eventing.py"
               }
             ]
@@ -33904,6 +33994,12 @@ const RDOD_DATA = {
                 "type": "array[string]",
                 "required": true,
                 "description": "Witnesses to add"
+              },
+              {
+                "name": "c",
+                "type": "array[string]",
+                "required": true,
+                "description": "Configuration traits — set at inception only; present in rotation wire format but has no effect (always empty array for rotations)"
               },
               {
                 "name": "a",
@@ -34194,7 +34290,7 @@ const RDOD_DATA = {
                 "name": "escrow_type",
                 "type": "string",
                 "required": true,
-                "description": "Which escrow queue: OOE, PSE, PWE, PDE, Delegable, LDE, Misfit",
+                "description": "Which escrow queue: OOE, PSE, PWE, PDE, Delegable, LDE, MFE",
                 "constraints": {
                   "enum": [
                     "OOE",
@@ -34203,7 +34299,7 @@ const RDOD_DATA = {
                     "PDE",
                     "Delegable",
                     "LDE",
-                    "Misfit"
+                    "MFE"
                   ]
                 }
               },
@@ -34278,10 +34374,10 @@ const RDOD_DATA = {
             "name": "default",
             "fields": [
               {
-                "name": "ked",
+                "name": "event_fields",
                 "type": "map",
                 "required": true,
-                "description": "Key Event Dict — the raw ordered field map"
+                "description": "The ordered field map of the key event body"
               },
               {
                 "name": "said",
@@ -34340,6 +34436,7 @@ const RDOD_DATA = {
                     "PSE",
                     "PWE",
                     "PDE",
+                    "Delegable",
                     "LDE",
                     "MFE"
                   ]
@@ -42697,6 +42794,17 @@ const RDOD_DATA = {
           "notes": "Superseded events: off the trunk, queryable by fn, MUST NOT be deleted. Permanent forensic evidence of recovery."
         },
         {
+          "invariant": "A superseding rotation's prior event reference (p field) MUST reference the SAID of the event at sn-1 on the trunk, NOT the SAID of the superseded event. Both the superseded and superseding events share the same parent — they diverge from the same point in the identity log.",
+          "term": "Superseding Recovery",
+          "technique": "property-based",
+          "formal": {
+            "language": "python",
+            "expression": "@given(recovery=superseding_recovery_strategy())\ndef test_superseding_rotation_prior_event_reference(recovery):\n    trunk = get_trunk(recovery.kel_dag)\n    parent_event = trunk.event_at_sn(recovery.sn - 1)\n    # Superseding rotation's p field references the parent on the trunk\n    assert recovery.superseding_event.prior_event_said == parent_event.said, (\n        f\"Superseding rotation's prior event reference MUST be the SAID of \"\n        f\"the event at sn-1 on the trunk ({parent_event.said}), \"\n        f\"not the SAID of the superseded event ({recovery.superseded_event.said})\"\n    )\n    # Superseded event also references the same parent\n    assert recovery.superseded_event.prior_event_said == parent_event.said, (\n        f\"Both superseded and superseding events MUST share the same parent \"\n        f\"at sn-1 ({parent_event.said})\"\n    )\n"
+          },
+          "strategy": "superseding_recovery_strategy()",
+          "notes": "The p field anchors both competing events to the same parent. The fork is at sn, not sn-1."
+        },
+        {
           "invariant": "After superseding recovery, the superseded event MUST be moved off the trunk to a disputed branch; the superseding event MUST take its place on the trunk; the superseded event MUST still exist in storage (not deleted)",
           "term": "Superseding Recovery",
           "technique": "property-based",
@@ -42753,6 +42861,13 @@ const RDOD_DATA = {
                 "expression": "lambda aid, kel_dag: aid is not None and kel_dag.has_events_for(aid)"
               },
               "description": "AID must be valid and the KEL DAG must contain events for it"
+            },
+            {
+              "formal": {
+                "language": "python",
+                "expression": "lambda aid, kel_dag: any(len(kel_dag.events_at_sn(aid, sn)) >= 2 and len(set(e.said for e in kel_dag.events_at_sn(aid, sn))) >= 2 for sn in kel_dag.sn_range(aid))"
+              },
+              "description": "At least two events with different SAIDs must exist at some sn for this AID — reconciliation requires a genuine fork to resolve"
             }
           ],
           "postconditions": [
@@ -42781,6 +42896,7 @@ const RDOD_DATA = {
             "intact",
             "compromised",
             "fork-detected",
+            "conflict-detected",
             "recovery-applied",
             "reconciled",
             "irreconcilable"
@@ -42803,6 +42919,24 @@ const RDOD_DATA = {
               "to": "recovery-applied",
               "trigger": "SupersedingRecoveryApplied — rotation supersedes compromised event",
               "guard": "Superseding rules (A0, B1-B3, C) are satisfied for the candidate rotation"
+            },
+            {
+              "from": "fork-detected",
+              "to": "conflict-detected",
+              "trigger": "CompetingRecoveryDetected — two valid recovery rotations at same sn",
+              "guard": "Two valid competing recovery rotations exist at the same sn for this AID"
+            },
+            {
+              "from": "conflict-detected",
+              "to": "reconciled",
+              "trigger": "JudgeAdjudicated — judge adjudicates in favor of one branch",
+              "guard": "Judge adjudicates in favor of one branch using superseding rules (B1-B3, C)"
+            },
+            {
+              "from": "conflict-detected",
+              "to": "irreconcilable",
+              "trigger": "NoValidResolution — no superseding rule can resolve the conflict",
+              "guard": "No valid resolution possible (e.g., two non-delegated rotations per rule A1)"
             },
             {
               "from": "recovery-applied",

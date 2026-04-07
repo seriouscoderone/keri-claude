@@ -408,7 +408,7 @@ properties:
       expression: |
         @given(icp=inception_event_strategy())
         def test_inception_field_order(icp):
-            keys = list(icp.ked.keys())
+            keys = list(icp.event_fields.keys())
             expected = ['v', 't', 'd', 'i', 's', 'kt', 'k', 'nt', 'n', 'bt', 'b', 'c', 'a']
             assert keys == expected
     strategy: "inception_event_strategy()"
@@ -422,7 +422,7 @@ properties:
       expression: |
         @given(rot=rotation_event_strategy())
         def test_rotation_field_order(rot):
-            keys = list(rot.ked.keys())
+            keys = list(rot.event_fields.keys())
             expected = ['v', 't', 'd', 'i', 's', 'p', 'kt', 'k', 'nt', 'n', 'bt', 'br', 'ba', 'c', 'a']
             assert keys == expected
     strategy: "rotation_event_strategy()"
@@ -436,7 +436,7 @@ properties:
       expression: |
         @given(ixn=interaction_event_strategy())
         def test_interaction_field_order(ixn):
-            keys = list(ixn.ked.keys())
+            keys = list(ixn.event_fields.keys())
             expected = ['v', 't', 'd', 'i', 's', 'p', 'a']
             assert keys == expected
     strategy: "interaction_event_strategy()"
@@ -452,9 +452,9 @@ properties:
         @given(event=key_event_strategy())
         def test_reorder_changes_said(event):
             original_said = event.said
-            reordered = reorder_fields(event.ked)
-            assume(list(reordered.keys()) != list(event.ked.keys()))
-            reordered_said = compute_said_from_ked(reordered)
+            reordered = reorder_fields(event.event_fields)
+            assume(list(reordered.keys()) != list(event.event_fields.keys()))
+            reordered_said = compute_said_from_fields(reordered)
             assert reordered_said != original_said
     strategy: "key_event_strategy()"
     notes: "Byte-level serialization means order matters for SAID."
@@ -798,10 +798,6 @@ state_machines:
         to: "accepted"
         trigger: "witness threshold satisfied and event is non-delegated"
         guard: "toader.satisfy(witness_indices) and event.t not in ('dip', 'drt')"
-      - from: "delegation_checked"
-        to: "escrowed_pde"
-        trigger: "delegator seal not found"
-        guard: "not delegation_seal_found(event)"
       - from: "delegation_checked"
         to: "escrowed_pde"
         trigger: "delegator seal not found (remote validator role)"

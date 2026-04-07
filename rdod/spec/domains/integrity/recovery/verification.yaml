@@ -184,6 +184,30 @@ properties:
     strategy: "kel_dag_with_branches_strategy() containing at least one disputed branch"
     notes: "Superseded events: off the trunk, queryable by fn, MUST NOT be deleted. Permanent forensic evidence of recovery."
 
+  - invariant: "A superseding rotation's prior event reference (p field) MUST reference the SAID of the event at sn-1 on the trunk, NOT the SAID of the superseded event. Both the superseded and superseding events share the same parent — they diverge from the same point in the identity log."
+    term: "Superseding Recovery"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(recovery=superseding_recovery_strategy())
+        def test_superseding_rotation_prior_event_reference(recovery):
+            trunk = get_trunk(recovery.kel_dag)
+            parent_event = trunk.event_at_sn(recovery.sn - 1)
+            # Superseding rotation's p field references the parent on the trunk
+            assert recovery.superseding_event.prior_event_said == parent_event.said, (
+                f"Superseding rotation's prior event reference MUST be the SAID of "
+                f"the event at sn-1 on the trunk ({parent_event.said}), "
+                f"not the SAID of the superseded event ({recovery.superseded_event.said})"
+            )
+            # Superseded event also references the same parent
+            assert recovery.superseded_event.prior_event_said == parent_event.said, (
+                f"Both superseded and superseding events MUST share the same parent "
+                f"at sn-1 ({parent_event.said})"
+            )
+    strategy: "superseding_recovery_strategy()"
+    notes: "The p field anchors both competing events to the same parent. The fork is at sn, not sn-1."
+
   - invariant: "After superseding recovery, the superseded event MUST be moved off the trunk to a disputed branch; the superseding event MUST take its place on the trunk; the superseded event MUST still exist in storage (not deleted)"
     term: "Superseding Recovery"
     technique: property-based
@@ -236,6 +260,10 @@ contracts:
           language: python
           expression: "lambda aid, kel_dag: aid is not None and kel_dag.has_events_for(aid)"
         description: "AID must be valid and the KEL DAG must contain events for it"
+      - formal:
+          language: python
+          expression: "lambda aid, kel_dag: any(len(kel_dag.events_at_sn(aid, sn)) >= 2 and len(set(e.said for e in kel_dag.events_at_sn(aid, sn))) >= 2 for sn in kel_dag.sn_range(aid))"
+        description: "At least two events with different SAIDs must exist at some sn for this AID — reconciliation requires a genuine fork to resolve"
     postconditions:
       - formal:
           language: python
@@ -249,7 +277,7 @@ contracts:
 state_machines:
   - name: "superseding-recovery"
     term: "Superseding Recovery"
-    states: ["intact", "compromised", "fork-detected", "recovery-applied", "reconciled", "irreconcilable"]
+    states: ["intact", "compromised", "fork-detected", "conflict-detected", "recovery-applied", "reconciled", "irreconcilable"]
     transitions:
       - from: "intact"
         to: "compromised"
@@ -263,6 +291,18 @@ state_machines:
         to: "recovery-applied"
         trigger: "SupersedingRecoveryApplied — rotation supersedes compromised event"
         guard: "Superseding rules (A0, B1-B3, C) are satisfied for the candidate rotation"
+      - from: "fork-detected"
+        to: "conflict-detected"
+        trigger: "CompetingRecoveryDetected — two valid recovery rotations at same sn"
+        guard: "Two valid competing recovery rotations exist at the same sn for this AID"
+      - from: "conflict-detected"
+        to: "reconciled"
+        trigger: "JudgeAdjudicated — judge adjudicates in favor of one branch"
+        guard: "Judge adjudicates in favor of one branch using superseding rules (B1-B3, C)"
+      - from: "conflict-detected"
+        to: "irreconcilable"
+        trigger: "NoValidResolution — no superseding rule can resolve the conflict"
+        guard: "No valid resolution possible (e.g., two non-delegated rotations per rule A1)"
       - from: "recovery-applied"
         to: "reconciled"
         trigger: "TrunkReconciled — validators determine the new trunk"

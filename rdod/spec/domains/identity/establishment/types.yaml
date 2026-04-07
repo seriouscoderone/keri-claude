@@ -221,7 +221,7 @@ types:
         - "witnesses_to_remove: each AID MUST currently be in the witness set"
         - "witnesses_to_add: each AID MUST NOT already be in the witness set after removals"
         - "If delegator is present: ilk = 'drt'; requires delegator seal in delegator's KEL"
-        - "Field canonical ordering: v, t, d, i, s, p, kt, k, nt, n, bt, br, ba, a (plus any delegated fields)"
+        - "Field canonical ordering: v, t, d, i, s, p, kt, k, nt, n, bt, br, ba, c, a (plus di for delegated)"
     variants:
       - name: "non-delegated"
         fields:
@@ -281,6 +281,10 @@ types:
             type: "array[string]"
             required: true
             description: "Witnesses to add"
+          - name: "c"
+            type: "array[string]"
+            required: true
+            description: "Configuration traits — set at inception only; present in rotation wire format but has no effect (always empty array for rotations)"
           - name: "a"
             type: "array[map]"
             required: true
@@ -295,7 +299,7 @@ types:
           - format: "json"
             description: "Single-key rotation with new next commitment"
             value: |
-              {"v":"KERI10JSON000160_","t":"rot","d":"EFl8nvRCbN2xQJI75nBXp-gaXuHJw8zheVjwMN_rB-pb","i":"DFs8BBx86uytIM0D2BhsE5rrqVIT8ef8mflpNceHo4XH","s":"1","p":"EJQUyxnzIAtmZPoq9f4fExeGN0qfJmaFnUEKTwIiTBPj","kt":"1","k":["DB4GWvru73jWZKpNgMQp8ayDRin0NG0Ymn_RXQP_v-PQ"],"nt":"1","n":["EIsKL3B6Zz5ICGxCQp-SoLXjwOrdlSbLJrEn21c2zVaU"],"bt":"0","br":[],"ba":[],"a":[]}
+              {"v":"KERI10JSON000160_","t":"rot","d":"EFl8nvRCbN2xQJI75nBXp-gaXuHJw8zheVjwMN_rB-pb","i":"DFs8BBx86uytIM0D2BhsE5rrqVIT8ef8mflpNceHo4XH","s":"1","p":"EJQUyxnzIAtmZPoq9f4fExeGN0qfJmaFnUEKTwIiTBPj","kt":"1","k":["DB4GWvru73jWZKpNgMQp8ayDRin0NG0Ymn_RXQP_v-PQ"],"nt":"1","n":["EIsKL3B6Zz5ICGxCQp-SoLXjwOrdlSbLJrEn21c2zVaU"],"bt":"0","br":[],"ba":[],"c":[],"a":[]}
             notes: "p links to prior event SAID. New k must match prior n digests. From keripy test_eventing.py"
       - name: "delegated"
         fields:
@@ -353,6 +357,10 @@ types:
             type: "array[string]"
             required: true
             description: "Witnesses to add"
+          - name: "c"
+            type: "array[string]"
+            required: true
+            description: "Configuration traits — set at inception only; present in rotation wire format but has no effect (always empty array for rotations)"
           - name: "a"
             type: "array[map]"
             required: true
@@ -534,9 +542,9 @@ types:
           - name: "escrow_type"
             type: "string"
             required: true
-            description: "Which escrow queue: OOE, PSE, PWE, PDE, Delegable, LDE, Misfit"
+            description: "Which escrow queue: OOE, PSE, PWE, PDE, Delegable, LDE, MFE"
             constraints:
-              enum: ["OOE", "PSE", "PWE", "PDE", "Delegable", "LDE", "Misfit"]
+              enum: ["OOE", "PSE", "PWE", "PDE", "Delegable", "LDE", "MFE"]
           - name: "reason"
             type: "string"
             required: true
@@ -581,10 +589,10 @@ types:
     variants:
       - name: "default"
         fields:
-          - name: "ked"
+          - name: "event_fields"
             type: "map"
             required: true
-            description: "Key Event Dict — the raw ordered field map"
+            description: "The ordered field map of the key event body"
           - name: "said"
             type: "types://cesr/primitives#SAID"
             required: true
@@ -620,7 +628,7 @@ types:
             required: true
             description: "Escrow queue identifier"
             constraints:
-              enum: ["OOE", "PSE", "PWE", "PDE", "LDE", "MFE"]
+              enum: ["OOE", "PSE", "PWE", "PDE", "Delegable", "LDE", "MFE"]
           - name: "expected_sn"
             type: "integer"
             required: true

@@ -45,7 +45,7 @@ types:
           - "n is the sequence number field (not s as in legacy vcp events)"
 
   - name: "ShieldableUpdateEvent"
-    description: "A shieldable update event (bup) for registries that support shielding. Carries a shielded attribute block with BLID for decorrelation. Used for both issuance and revocation — the transaction state (ts) field determines the state transition."
+    description: "A shieldable update event (bup) for registries that support shielding. Carries a BLID (blinded attribute block digest) for decorrelation. The shielded state is NOT visible in the event body — state discovery requires the shared secret salt via the privacy/blinding domain."
     variants:
       - name: "default"
         fields:
@@ -79,23 +79,17 @@ types:
             type: "string"
             required: true
             description: "Datetime — ISO 8601 timestamp"
-          - name: "ta"
-            type: "string"
+          - name: "b"
+            type: "types://cesr/primitives#SAID"
             required: true
-            description: "Transaction ACDC SAID — the credential this event applies to"
-          - name: "ts"
-            type: "string"
-            required: true
-            description: "Transaction state — the target state after this update"
-            constraints:
-              enum: ["issued", "revoked"]
+            description: "BLID — blinded attribute block digest. The shielded state is NOT visible in the event body; state discovery requires the shared secret salt via the privacy/blinding domain"
         invariants:
-          - "Field order: [v, t, d, rd, n, p, dt, ta, ts]"
+          - "Field order: [v, t, d, rd, n, p, dt, b]"
+          - "bup does NOT carry ta or ts fields — those belong to upd (non-shieldable) events only"
           - "Each bup event carries a fresh BLID with new UUID for decorrelation"
           - "An observer cannot distinguish state-changing updates from no-op decorrelation updates"
-          - "ts determines the credential state transition — not the event type"
           - "Must be authorized in the issuer's KEL via a seal"
-          - "Builder: UpdateEvent.builder().shieldable().registry(regid).credential(said).state('issued').build()"
+          - "Builder: UpdateEvent.builder().shieldable().registry(regid).blid(blid).build()"
 
   - name: "NonShieldableUpdateEvent"
     description: "A non-shieldable update event (upd) for registries without shielding. Used for both issuance and revocation — the transaction state (ts) field determines the state transition."
