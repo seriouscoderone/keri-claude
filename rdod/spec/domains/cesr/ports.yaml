@@ -9,7 +9,7 @@ ports:
     semantics: query
     idempotent: true
     contract:
-      input: "Primitive bytes and code table identifier"
+      input: "types://cesr#EncodingRequest"
       output: "types://cesr/primitives#Primitive"
       errors:
         - "errors://cesr#EncodingError"
@@ -24,7 +24,7 @@ ports:
     semantics: query
     idempotent: true
     contract:
-      input: "CESR type code string"
+      input: "types://cesr#CodeLookupRequest"
       output: "types://cesr#CodeEntry"
       errors:
         - "errors://cesr#UnknownCodeError"

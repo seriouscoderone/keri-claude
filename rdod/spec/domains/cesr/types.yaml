@@ -58,13 +58,79 @@ types:
           - "CBOR: RFC 8949 binary encoding"
           - "MGPK: MessagePack binary encoding"
           - "CESR: native CESR event encoding (no external serialization)"
-          - "HIDDEN CONTRACT (L3-O4): SerializationKind.CESR is NOT a wire-serialization format. It is an in-memory indicator used by Sadder/Serder to signal that the raw bytes are already CESR-encoded (e.g., when reading from a CESR native stream). When kind=CESR, sizeify() and saidify() use the raw bytes directly without re-encoding. Callers MUST treat CESR differently from JSON/CBOR/MGPK: there is no 'CESR serializer' — the bytes ARE the wire format already."
+          - "HIDDEN CONTRACT (L3-O4): SerializationKind.CESR is NOT a wire-serialization format. It is an in-memory indicator used by SAD containers (types://cesr/composition#Sadder) to signal that the raw bytes are already CESR-encoded (e.g., when reading from a CESR native stream). When kind=CESR, sizeify() and saidify() use the raw bytes directly without re-encoding. Callers MUST treat CESR differently from JSON/CBOR/MGPK: there is no 'CESR serializer' — the bytes ARE the wire format already."
 
   # VersionString is defined in cesr/composition/types.yaml (message-framing metadata).
   # Reference it here for discoverability — the canonical definition lives at:
   #   types://cesr/composition#VersionString
   # Fields: protocol (PPPP), major (M), minor (mm), cesr_major (G), cesr_minor (gg), kind (KKKK), size (BBBB)
   # Construction: versify() → sizeify() → saidify(). Never hand-craft the string.
+
+  - name: "EncodingRequest"
+    description: "Input to the Primitive Encoding port — either raw material with a code (for encoding) or a qualified string/bytes (for decoding/domain conversion)."
+    variants:
+      - name: "encode"
+        fields:
+          - name: "code"
+            type: "string"
+            required: true
+            description: "CESR type code from the master code table"
+          - name: "raw"
+            type: "bytes"
+            required: true
+            description: "Raw cryptographic material or data value"
+        invariants:
+          - "code must exist in the active genus code table"
+          - "len(raw) must match the expected raw size for the code"
+      - name: "decode_text"
+        fields:
+          - name: "qb64"
+            type: "string"
+            required: true
+            description: "Qualified Base64 string to decode"
+        invariants:
+          - "qb64 length must be a multiple of 4 characters"
+          - "First character(s) must be a valid code table selector or letter"
+      - name: "decode_binary"
+        fields:
+          - name: "qb2"
+            type: "bytes"
+            required: true
+            description: "Qualified binary bytes to decode"
+        invariants:
+          - "qb2 length must be a multiple of 3 bytes"
+      - name: "convert"
+        fields:
+          - name: "primitive"
+            type: "types://cesr/primitives#Primitive"
+            required: true
+            description: "An existing primitive to convert between domains"
+          - name: "target_domain"
+            type: "string"
+            required: true
+            description: "Target domain: T (text), B (binary), or R (raw)"
+            constraints:
+              enum: ["T", "B", "R"]
+
+  - name: "CodeLookupRequest"
+    description: "Input to the Code Table Lookup port — a type code string to resolve against the active genus."
+    variants:
+      - name: "default"
+        fields:
+          - name: "code"
+            type: "string"
+            required: true
+            description: "CESR type code string (1-4 characters)"
+            constraints:
+              min_length: 1
+              max_length: 4
+          - name: "genus"
+            type: "string"
+            required: false
+            description: "Protocol genus to look up against. Defaults to the KERI/ACDC genus (AAA) if not specified."
+        invariants:
+          - "If genus is absent, the default KERI/ACDC genus (AAA) is used"
+          - "Code must consist of valid Base64url characters"
 
   - name: "FixedFieldBlock"
     description: "A CESR data structure whose fields follow a fixed positional order with virtual (mnemonic-only, never serialized) labels, in contrast to labeled SAD field maps. Used for Shielded Attribute Blocks and Bound Shielded Attribute Blocks."

@@ -551,8 +551,8 @@ properties:
     notes: "Validates the structured format of v2.XX version strings."
 
   # --- SecurityLevel ---
-  - invariant: "All ACDC cryptographic operations MUST have approximately 128 bits of cryptographic strength"
-    term: "SecurityLevel"
+  - invariant: "All security-critical CESR primitives (digests, salts, UUIDs, signing keys) MUST have at least 128 bits of cryptographic strength"
+    term: "Cryptographic Agility"
     technique: "property-based"
     formal:
       language: "python"
@@ -564,8 +564,8 @@ properties:
             # Must be >= 128 bits (16 bytes) for security-critical operations
             if is_security_critical(primitive.code):
                 assert sizage.raw_size * 8 >= 128
-    strategy: "cesr_primitive() filtered to security-critical codes (digests, UUIDs, salts)"
-    notes: "Cross-cutting 128-bit minimum from ACDC spec. Applies to digests, UUIDs, salts, and signing keys. Finding: ACDC-Z1-002."
+    strategy: "cesr_primitive() filtered to security-critical codes (digests, UUIDs, salts, signing keys)"
+    notes: "Cross-cutting 128-bit minimum from CESR compact code table policy (first-needed first-entered, 128-bit baseline). Applies to digests, UUIDs, salts, and signing keys. Also referenced by ACDC spec (ACDC-Z1-002)."
 
   # --- Code Prefix Position (Enrichment CESR-INV-007) ---
   - invariant: "The type code portion MUST begin at position 0 of the qb64 string and occupy positions [0, hs). The type prefix is always the leading characters — no preamble or separator precedes it."
@@ -770,12 +770,14 @@ contracts:
     preconditions:
       - formal:
           language: "python"
-          expression: "lambda code, raw: code in CODE_TABLE and len(raw) == CODE_TABLE[code].raw_size"
-        description: "Code must be a valid code table entry and raw size must match"
-      - formal:
-          language: "python"
-          expression: "lambda qualified: len(qualified) >= 1 and qualified[0] in VALID_FIRST_CHARS"
-        description: "Qualified input must start with a valid code table selector or letter"
+          expression: |
+            lambda req: (
+                (req.variant == 'encode' and req.code in CODE_TABLE and len(req.raw) == CODE_TABLE[req.code].raw_size) or
+                (req.variant == 'decode_text' and len(req.qb64) >= 1 and req.qb64[0] in VALID_FIRST_CHARS and len(req.qb64) % 4 == 0) or
+                (req.variant == 'decode_binary' and len(req.qb2) >= 1 and len(req.qb2) % 3 == 0) or
+                (req.variant == 'convert' and req.target_domain in ('T', 'B', 'R'))
+            )
+        description: "Request must be a valid EncodingRequest variant: encode requires valid code+raw, decode requires aligned input, convert requires valid target domain"
     postconditions:
       - formal:
           language: "python"
@@ -783,29 +785,29 @@ contracts:
         description: "Encoded primitive satisfies 24-bit alignment in both domains"
       - formal:
           language: "python"
-          expression: "lambda code, raw, result: dequalify(result.qb64) == (code, raw)"
+          expression: "lambda req, result: req.variant != 'encode' or dequalify(result.qb64) == (req.code, req.raw)"
         description: "Encoding is reversible -- decode yields original (code, raw)"
 
   - port_ref: "port://cesr/inbound/code-lookup"
     preconditions:
       - formal:
           language: "python"
-          expression: "lambda code: isinstance(code, str) and len(code) >= 1"
+          expression: "lambda req: isinstance(req.code, str) and len(req.code) >= 1"
         description: "Code must be a non-empty string"
     postconditions:
       - formal:
           language: "python"
           expression: |
-            lambda code, entry: (
-                entry.hs + entry.ss == len(code) and
+            lambda req, entry: (
+                entry.hs + entry.ss == len(req.code) and
                 entry.ls >= 0 and entry.ls <= 2 and
                 (entry.fs == 0xFFFFFFFF or entry.fs > 0)
             )
         description: "Returned entry has consistent sizage fields"
       - formal:
           language: "python"
-          expression: "lambda code, entry: entry is None if code not in CODE_TABLE else entry is not None"
-        description: "Lookup returns None for unknown codes, entry for known codes"
+          expression: "lambda req, entry: entry is not None"
+        description: "Successful lookup always returns a valid entry. Unknown codes raise UnknownCodeError (not None)."
 
 # State machines — none for cesr root domain (stateless encoding)
 state_machines: []

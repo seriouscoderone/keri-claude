@@ -5737,7 +5737,7 @@ const RDOD_DATA = {
     "subdomains": [
       {
         "ref": "domain://cesr/primitives",
-        "relationship": "CESR drives primitive qualification — encoding raw cryptographic material and data values with type codes. cesr/primitives is adopted as a kernel by downstream domains that import its types (Matter, Verfer, Diger, etc.) directly rather than through port contracts.\n",
+        "relationship": "CESR drives primitive qualification — encoding raw cryptographic material and data values with type codes. cesr/primitives is adopted as a kernel by downstream domains that import its types (Primitive, VerificationKey, Digest, IndexedSignature, etc.) directly rather than through port contracts.\n",
         "via_port": "port://cesr/primitives/inbound/qualification"
       },
       {
@@ -6394,7 +6394,7 @@ const RDOD_DATA = {
         "semantics": "query",
         "idempotent": true,
         "contract": {
-          "input": "Primitive bytes and code table identifier",
+          "input": "types://cesr#EncodingRequest",
           "output": "types://cesr/primitives#Primitive",
           "errors": [
             "errors://cesr#EncodingError",
@@ -6415,7 +6415,7 @@ const RDOD_DATA = {
         "semantics": "query",
         "idempotent": true,
         "contract": {
-          "input": "CESR type code string",
+          "input": "types://cesr#CodeLookupRequest",
           "output": "types://cesr#CodeEntry",
           "errors": [
             "errors://cesr#UnknownCodeError"
@@ -6775,15 +6775,15 @@ const RDOD_DATA = {
           "notes": "Validates the structured format of v2.XX version strings."
         },
         {
-          "invariant": "All ACDC cryptographic operations MUST have approximately 128 bits of cryptographic strength",
-          "term": "SecurityLevel",
+          "invariant": "All security-critical CESR primitives (digests, salts, UUIDs, signing keys) MUST have at least 128 bits of cryptographic strength",
+          "term": "Cryptographic Agility",
           "technique": "property-based",
           "formal": {
             "language": "python",
             "expression": "@given(cesr_primitive())\ndef test_security_level(primitive):\n    sizage = lookup_sizage(primitive.code)\n    # Raw size in bytes * 8 = bits of entropy\n    # Must be >= 128 bits (16 bytes) for security-critical operations\n    if is_security_critical(primitive.code):\n        assert sizage.raw_size * 8 >= 128\n"
           },
-          "strategy": "cesr_primitive() filtered to security-critical codes (digests, UUIDs, salts)",
-          "notes": "Cross-cutting 128-bit minimum from ACDC spec. Applies to digests, UUIDs, salts, and signing keys. Finding: ACDC-Z1-002."
+          "strategy": "cesr_primitive() filtered to security-critical codes (digests, UUIDs, salts, signing keys)",
+          "notes": "Cross-cutting 128-bit minimum from CESR compact code table policy (first-needed first-entered, 128-bit baseline). Applies to digests, UUIDs, salts, and signing keys. Also referenced by ACDC spec (ACDC-Z1-002)."
         },
         {
           "invariant": "The type code portion MUST begin at position 0 of the qb64 string and occupy positions [0, hs). The type prefix is always the leading characters — no preamble or separator precedes it.",
@@ -6880,16 +6880,9 @@ const RDOD_DATA = {
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda code, raw: code in CODE_TABLE and len(raw) == CODE_TABLE[code].raw_size"
+                "expression": "lambda req: (\n    (req.variant == 'encode' and req.code in CODE_TABLE and len(req.raw) == CODE_TABLE[req.code].raw_size) or\n    (req.variant == 'decode_text' and len(req.qb64) >= 1 and req.qb64[0] in VALID_FIRST_CHARS and len(req.qb64) % 4 == 0) or\n    (req.variant == 'decode_binary' and len(req.qb2) >= 1 and len(req.qb2) % 3 == 0) or\n    (req.variant == 'convert' and req.target_domain in ('T', 'B', 'R'))\n)\n"
               },
-              "description": "Code must be a valid code table entry and raw size must match"
-            },
-            {
-              "formal": {
-                "language": "python",
-                "expression": "lambda qualified: len(qualified) >= 1 and qualified[0] in VALID_FIRST_CHARS"
-              },
-              "description": "Qualified input must start with a valid code table selector or letter"
+              "description": "Request must be a valid EncodingRequest variant: encode requires valid code+raw, decode requires aligned input, convert requires valid target domain"
             }
           ],
           "postconditions": [
@@ -6903,7 +6896,7 @@ const RDOD_DATA = {
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda code, raw, result: dequalify(result.qb64) == (code, raw)"
+                "expression": "lambda req, result: req.variant != 'encode' or dequalify(result.qb64) == (req.code, req.raw)"
               },
               "description": "Encoding is reversible -- decode yields original (code, raw)"
             }
@@ -6915,7 +6908,7 @@ const RDOD_DATA = {
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda code: isinstance(code, str) and len(code) >= 1"
+                "expression": "lambda req: isinstance(req.code, str) and len(req.code) >= 1"
               },
               "description": "Code must be a non-empty string"
             }
@@ -6924,16 +6917,16 @@ const RDOD_DATA = {
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda code, entry: (\n    entry.hs + entry.ss == len(code) and\n    entry.ls >= 0 and entry.ls <= 2 and\n    (entry.fs == 0xFFFFFFFF or entry.fs > 0)\n)\n"
+                "expression": "lambda req, entry: (\n    entry.hs + entry.ss == len(req.code) and\n    entry.ls >= 0 and entry.ls <= 2 and\n    (entry.fs == 0xFFFFFFFF or entry.fs > 0)\n)\n"
               },
               "description": "Returned entry has consistent sizage fields"
             },
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda code, entry: entry is None if code not in CODE_TABLE else entry is not None"
+                "expression": "lambda req, entry: entry is not None"
               },
-              "description": "Lookup returns None for unknown codes, entry for known codes"
+              "description": "Successful lookup always returns a valid entry. Unknown codes raise UnknownCodeError (not None)."
             }
           ]
         }
@@ -7152,7 +7145,118 @@ const RDOD_DATA = {
               "CBOR: RFC 8949 binary encoding",
               "MGPK: MessagePack binary encoding",
               "CESR: native CESR event encoding (no external serialization)",
-              "HIDDEN CONTRACT (L3-O4): SerializationKind.CESR is NOT a wire-serialization format. It is an in-memory indicator used by Sadder/Serder to signal that the raw bytes are already CESR-encoded (e.g., when reading from a CESR native stream). When kind=CESR, sizeify() and saidify() use the raw bytes directly without re-encoding. Callers MUST treat CESR differently from JSON/CBOR/MGPK: there is no 'CESR serializer' — the bytes ARE the wire format already."
+              "HIDDEN CONTRACT (L3-O4): SerializationKind.CESR is NOT a wire-serialization format. It is an in-memory indicator used by SAD containers (types://cesr/composition#Sadder) to signal that the raw bytes are already CESR-encoded (e.g., when reading from a CESR native stream). When kind=CESR, sizeify() and saidify() use the raw bytes directly without re-encoding. Callers MUST treat CESR differently from JSON/CBOR/MGPK: there is no 'CESR serializer' — the bytes ARE the wire format already."
+            ]
+          }
+        ]
+      },
+      {
+        "name": "EncodingRequest",
+        "description": "Input to the Primitive Encoding port — either raw material with a code (for encoding) or a qualified string/bytes (for decoding/domain conversion).",
+        "variants": [
+          {
+            "name": "encode",
+            "fields": [
+              {
+                "name": "code",
+                "type": "string",
+                "required": true,
+                "description": "CESR type code from the master code table"
+              },
+              {
+                "name": "raw",
+                "type": "bytes",
+                "required": true,
+                "description": "Raw cryptographic material or data value"
+              }
+            ],
+            "invariants": [
+              "code must exist in the active genus code table",
+              "len(raw) must match the expected raw size for the code"
+            ]
+          },
+          {
+            "name": "decode_text",
+            "fields": [
+              {
+                "name": "qb64",
+                "type": "string",
+                "required": true,
+                "description": "Qualified Base64 string to decode"
+              }
+            ],
+            "invariants": [
+              "qb64 length must be a multiple of 4 characters",
+              "First character(s) must be a valid code table selector or letter"
+            ]
+          },
+          {
+            "name": "decode_binary",
+            "fields": [
+              {
+                "name": "qb2",
+                "type": "bytes",
+                "required": true,
+                "description": "Qualified binary bytes to decode"
+              }
+            ],
+            "invariants": [
+              "qb2 length must be a multiple of 3 bytes"
+            ]
+          },
+          {
+            "name": "convert",
+            "fields": [
+              {
+                "name": "primitive",
+                "type": "types://cesr/primitives#Primitive",
+                "required": true,
+                "description": "An existing primitive to convert between domains"
+              },
+              {
+                "name": "target_domain",
+                "type": "string",
+                "required": true,
+                "description": "Target domain: T (text), B (binary), or R (raw)",
+                "constraints": {
+                  "enum": [
+                    "T",
+                    "B",
+                    "R"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "CodeLookupRequest",
+        "description": "Input to the Code Table Lookup port — a type code string to resolve against the active genus.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "code",
+                "type": "string",
+                "required": true,
+                "description": "CESR type code string (1-4 characters)",
+                "constraints": {
+                  "min_length": 1,
+                  "max_length": 4
+                }
+              },
+              {
+                "name": "genus",
+                "type": "string",
+                "required": false,
+                "description": "Protocol genus to look up against. Defaults to the KERI/ACDC genus (AAA) if not specified."
+              }
+            ],
+            "invariants": [
+              "If genus is absent, the default KERI/ACDC genus (AAA) is used",
+              "Code must consist of valid Base64url characters"
             ]
           }
         ]
