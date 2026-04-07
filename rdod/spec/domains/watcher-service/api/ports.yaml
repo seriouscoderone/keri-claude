@@ -7,6 +7,10 @@ ports:
     name: "KEL State Query"
     semantics: query
     idempotent: true
+    description: >
+      Returns the watcher's cross-checked view of the current key state for a monitored AID.
+      The watcher collects KEL copies from multiple witnesses and adjudicates the authoritative
+      key state. Only returns state for AIDs on the watcher's watch list.
     contract:
       input: "types://cesr/primitives#AID"
       output: "types://identity/state#KeyState"
@@ -19,11 +23,13 @@ ports:
     name: "Duplicity Query"
     semantics: query
     idempotent: true
+    description: >
+      Returns the duplicity status for a monitored AID. If conflicting events were detected
+      at any (prefix, sn) pair, returns the evidence. Duplicity is permanent once detected.
     contract:
       input: "types://cesr/primitives#AID"
       output: "types://watcher-service/api#DuplicityStatus"
-      errors:
-        - "errors://watcher-service/api#UnknownAIDError"
+      errors: []
     refs: ["domain://cloud-agent-service", "domain://local-agent"]
 
   - id: "port://watcher-service/api/inbound/oobi-resolution"
@@ -31,12 +37,59 @@ ports:
     name: "OOBI Resolution"
     semantics: query
     idempotent: true
+    description: >
+      Serves the watcher's OOBI (Out-of-Band Introduction) at the well-known URI path.
+      Enables bootstrap discovery of the watcher by returning a CESR-encoded reply message
+      containing the watcher's endpoint information and role binding.
     contract:
-      input: "types://cesr/primitives#AID"
-      output: "CESR reply messages for watcher OOBI discovery"
+      input: "types://watcher-service/api#OOBIResolutionRequest"
+      output: "types://keri-messaging#ReplyMessage"
       errors:
         - "errors://watcher-service/api#MalformedRequestError"
-    refs: []
+    refs: ["domain://discovery"]
+
+  - id: "port://watcher-service/api/inbound/watch-list-management"
+    type: inbound
+    name: "Watch List Management"
+    semantics: command
+    idempotent: false
+    description: >
+      Adds or removes AIDs from the watcher's monitored set. When an AID is added, the watcher
+      begins polling its witnesses for KEL copies. When removed, the watcher stops monitoring
+      but retains any existing duplicity evidence. This is the adopter's interface for configuring
+      which identifiers the watcher guards.
+    contract:
+      input: "types://watcher-service/api#WatchListCommand"
+      output: "types://watcher-service/api#WatchListStatus"
+      errors:
+        - "errors://watcher-service/api#AIDAlreadyWatchedError"
+        - "errors://watcher-service/api#AIDNotWatchedError"
+    refs: ["domain://cloud-agent-service", "domain://local-agent"]
+    invariants:
+      - "Adding an AID starts witness polling for that AID's KEL copies"
+      - "Removing an AID stops polling but retains existing duplicity evidence"
+      - "The watch list is persistent across watcher restarts"
+
+  - id: "port://watcher-service/api/inbound/kel-submission"
+    type: inbound
+    name: "KEL Submission"
+    semantics: command
+    idempotent: true
+    description: >
+      Accepts KEL event messages pushed to the watcher by witnesses or controllers. This is
+      the push-based complement to the pull-based witness polling. Witnesses may proactively
+      send new events to watchers, and controllers may submit their own events. The watcher
+      validates and stores the events, then cross-checks for duplicity.
+    contract:
+      input: "types://keri-messaging#KeyEventMessage"
+      output: "types://watcher-service/api#KELSubmissionResult"
+      errors:
+        - "errors://watcher-service/api#KELSubmissionValidationError"
+    refs: ["domain://witness-service/api"]
+    invariants:
+      - "Submitted events are validated before storage (signature, SAID, sequence order)"
+      - "Valid events trigger a duplicity cross-check against existing stored copies"
+      - "Idempotent: submitting the same valid event twice has no additional effect"
 
   - id: "port://watcher-service/api/outbound/http-server"
     type: outbound
@@ -45,7 +98,7 @@ ports:
     idempotent: false
     contract:
       input: "types://watcher-service/api#WatcherConfiguration"
-      output: "Running HTTP server handle"
+      output: "types://watcher-service/api#ServerHandle"
       errors: []
     refs: ["domain://externals/transport"]
 

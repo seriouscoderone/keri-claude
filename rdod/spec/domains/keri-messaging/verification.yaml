@@ -297,7 +297,98 @@ properties:
     strategy: "cesr_native_keri_message_strategy() — generates KERI messages in CESR native format"
     notes: "Spec L5540-5960. Finding: KERI-INV-012."
 
-contracts: []
+contracts:
+  - port_ref: "port://keri-messaging/inbound/message-parsing"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda field_map: (
+                field_map is not None
+                and 'v' in field_map.fields
+                and 't' in field_map.fields
+                and 'd' in field_map.fields
+                and list(field_map.fields.keys())[0] == 'v'
+            )
+        description: "Input must be a non-null field map with v as the first field, and t and d present"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda result: (
+                result.ilk in ('icp','rot','ixn','dip','drt','rct','vrc','qry','rpy','pro','bar','exn','xip','rip','bup','upd')
+                and result.said == compute_said(result.body)
+            )
+        description: "Parsed message has a recognized ilk and its SAID verifies against the body"
+
+  - port_ref: "port://keri-messaging/inbound/message-construction"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda request: (
+                request.message_type is not None
+                and request.sender_aid is not None
+                and len(request.sender_aid) > 0
+            )
+        description: "Construction request must specify a message type and a valid sender AID"
+      - formal:
+          language: python
+          expression: |
+            lambda request: (
+                request.message_type.value not in ('qry', 'rpy', 'exn', 'xip')
+                or (request.route is not None and len(request.route) > 0)
+            )
+        description: "Routed message types (qry, rpy, exn, xip) require a non-empty route"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda result: (
+                result.body is not None
+                and result.body.said == compute_said(result.body)
+                and list(result.body.fields.keys())[0] == 'v'
+            )
+        description: "Constructed message has a valid SAID and canonical field ordering"
+
+  - port_ref: "port://keri-messaging/inbound/kram-validate"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda message: (
+                message.body.ilk not in ('icp', 'rot', 'ixn', 'dip', 'drt')
+                and len(message.signatures) >= 1
+            )
+        description: "KRAM validation applies only to non-KEL messages and requires at least one signature"
+    postconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda result: (
+                result.authenticated implies (
+                    result.signature_verified
+                    and result.timeliness_ok
+                    and not result.is_replay
+                )
+            )
+        description: "Authenticated result means all three KRAM checks passed"
+
+  - port_ref: "port://keri-messaging/inbound/route-dispatch"
+    preconditions:
+      - formal:
+          language: python
+          expression: |
+            lambda message: (
+                message.body is not None
+                and 'r' in message.body.fields
+            )
+        description: "Message must have been KRAM-validated and must contain a route field"
+    postconditions:
+      - formal:
+          language: python
+          expression: "lambda: True  # void output — side effect is dispatch to handler"
+        description: "Message dispatched to the handler for its route prefix"
 
 state_machines: []
 

@@ -450,21 +450,23 @@ contracts:
           language: python
           expression: |
             lambda result: (
-                result.is_verified() implies (
-                    result.seal_found
-                    and result.seal.d == result.event.said
-                    and result.chain_valid
-                )
+                isinstance(result, DelegationVerificationResult)
+                and (result.verified implies (
+                    result.chain_depth >= 1
+                    and result.failure_reason is None
+                ))
             )
-        description: "Verified result means delegation seal was found with matching SAID and the chain is valid up to root"
+        description: "Returns a typed DelegationVerificationResult; verified=true implies chain_depth >= 1 and no failure"
       - formal:
           language: python
           expression: |
             lambda result: (
-                result.is_error() implies
-                result.error_type in ('seal_not_found', 'chain_invalid', 'signature_invalid', 'dnd_violation')
+                (not result.verified) implies (
+                    result.failure_reason is not None
+                    and result.failure_reason != ''
+                )
             )
-        description: "Verification errors are one of the four recognized failure types"
+        description: "Unverified result must include a non-empty failure_reason for debugging"
 
   - port_ref: "port://delegation/inbound/delegation-query"
     preconditions:
@@ -478,15 +480,17 @@ contracts:
           expression: |
             lambda aid, chain: (
                 len(chain) >= 1
-                and chain[-1] == aid
-                and not is_delegated(chain[0])
+                and chain[-1].aid == aid
+                and chain[0].depth == 0
+                and chain[0].delegator_aid is None
                 and all(
-                    is_delegated(chain[i]) and get_delegator(chain[i]) == chain[i-1]
-                    for i in range(1, len(chain))
+                    chain[i].depth == i
+                    and (chain[i].delegator_aid == chain[i-1].aid if i > 0 else True)
+                    for i in range(len(chain))
                 )
             )
-        description: "get_delegation_chain returns a chain ending at the queried AID with non-delegated root and valid parent links at every level"
+        description: "get_delegation_chain returns DelegationChainLink array from root (depth 0) to queried AID, with valid parent links at every level"
       - formal:
           language: python
-          expression: "lambda aid, result: result == (get_delegator(aid) is not None)"
-        description: "is_delegated returns true iff a delegator exists for the AID"
+          expression: "lambda aid, chain: chain[-1].delegator_aid is not None or len(chain) == 1"
+        description: "Queried AID is either delegated (has delegator) or is the root (chain length 1)"

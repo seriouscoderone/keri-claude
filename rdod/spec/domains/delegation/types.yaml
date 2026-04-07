@@ -7,11 +7,11 @@ types:
       - name: "default"
         fields:
           - name: "delegator_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "AID of the delegator authorizing this new identifier"
           - name: "keys"
-            type: "array[PublicKey]"
+            type: "array[types://cesr/primitives#PublicKey]"
             required: true
             description: "Initial signing public keys for the delegated identifier"
             constraints:
@@ -21,11 +21,11 @@ types:
             required: true
             description: "Signing threshold expression"
           - name: "next_keys"
-            type: "array[Digest]"
+            type: "array[types://cesr/primitives#Digest]"
             required: true
             description: "Pre-rotation digest commitments for next signing keys"
           - name: "witnesses"
-            type: "array[AID]"
+            type: "array[types://cesr/primitives#AID]"
             required: true
             description: "Designated witness AIDs"
           - name: "toad"
@@ -49,7 +49,7 @@ types:
             required: true
             description: "The dip key event body"
           - name: "delegator_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "AID of the delegator (matches the di field in the event)"
         invariants:
@@ -67,7 +67,7 @@ types:
             required: true
             description: "The drt key event body"
           - name: "delegator_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "AID of the delegator (established at inception via di field)"
         invariants:
@@ -121,7 +121,7 @@ types:
       - name: "default"
         fields:
           - name: "delegator_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "AID of the delegator whose KEL contains this event"
           - name: "event_type"
@@ -151,7 +151,7 @@ types:
             required: true
             description: "The delegated inception event (dip)"
           - name: "delegator_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "AID of the delegator (di field)"
         invariants:
@@ -165,7 +165,7 @@ types:
             required: true
             description: "The delegated rotation event (drt)"
           - name: "delegator_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "AID of the delegator (inherited from inception)"
         invariants:
@@ -197,17 +197,71 @@ types:
           - "Like a standard Rotation but requires delegation approval"
           - "Delegator cannot change after inception"
 
+  - name: "DelegationVerificationResult"
+    description: "Typed result of delegation verification, replacing the prior bare boolean output. Provides verification status, the superseding rule applied (if any), chain depth, and failure reason for auditing."
+    variants:
+      - name: "default"
+        fields:
+          - name: "verified"
+            type: "boolean"
+            required: true
+            description: "Whether the delegation was successfully verified"
+          - name: "rule_applied"
+            type: "string"
+            required: false
+            description: "The superseding rule applied during verification (e.g., 'B1', 'B2', 'B3', 'C'), null if no superseding rule was invoked"
+            constraints:
+              enum: ["B1", "B2", "B3", "C", null]
+          - name: "chain_depth"
+            type: "integer"
+            required: true
+            description: "Depth of the delegation chain from root (0 = non-delegated, 1 = direct delegate, etc.)"
+            constraints:
+              min: 0
+          - name: "failure_reason"
+            type: "string"
+            required: false
+            description: "Human-readable reason for verification failure, null on success"
+        invariants:
+          - "If verified is true, failure_reason MUST be null"
+          - "If verified is false, failure_reason MUST be non-null"
+          - "chain_depth >= 1 for any delegated identifier"
+
+  - name: "DelegationChainLink"
+    description: "One link in a delegation chain, providing the AID, its delegator, and its depth. Replaces the prior bare AID array output with structured chain traversal data."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The identifier at this chain level"
+          - name: "delegator_aid"
+            type: "types://cesr/primitives#AID"
+            required: false
+            description: "The delegator of this identifier, null for the root (non-delegated) AID"
+          - name: "depth"
+            type: "integer"
+            required: true
+            description: "Depth in the delegation chain (0 = root, 1 = first delegate, etc.)"
+            constraints:
+              min: 0
+        invariants:
+          - "If depth == 0, delegator_aid MUST be null (root is non-delegated)"
+          - "If depth > 0, delegator_aid MUST be non-null"
+          - "The chain array MUST be ordered from root (depth 0) to the queried AID (max depth)"
+
   - name: "CustodialRotation"
     description: "Controlled delegation of signing authority through rotation, where a custodian manages signing keys while the Controller retains rotation authority via pre-committed next keys."
     variants:
       - name: "default"
         fields:
           - name: "custodian_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "AID of the custodian managing the signing keys"
           - name: "controller_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "AID of the Controller retaining rotation authority"
         invariants:

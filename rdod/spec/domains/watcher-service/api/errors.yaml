@@ -8,11 +8,12 @@ errors:
     severity: "transient"
     context:
       - field: "witness_aid"
-        type: "string"
+        type: "types://cesr/primitives#AID"
         description: "The unreachable witness"
       - field: "witness_url"
         type: "string"
         description: "The endpoint URL that failed"
+    related_port: "port://watcher-service/api/outbound/witness-query"
 
   - name: "UnknownAIDError"
     description: "Queried AID is not being watched by this watcher"
@@ -21,8 +22,9 @@ errors:
     severity: "fatal"
     context:
       - field: "aid"
-        type: "string"
+        type: "types://cesr/primitives#AID"
         description: "The unknown AID"
+    related_port: "port://watcher-service/api/inbound/kel-query"
 
   - name: "MalformedRequestError"
     description: "Inbound request is not valid CESR or has missing required fields"
@@ -33,3 +35,40 @@ errors:
       - field: "reason"
         type: "string"
         description: "Parse or validation failure"
+    related_port: "port://watcher-service/api/inbound/oobi-resolution"
+
+  - name: "AIDAlreadyWatchedError"
+    description: "The AID is already on this watcher's watch list"
+    cause: "A watch list add request was submitted for an AID the watcher already monitors"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "aid"
+        type: "types://cesr/primitives#AID"
+        description: "The AID already being watched"
+    related_port: "port://watcher-service/api/inbound/watch-list-management"
+
+  - name: "AIDNotWatchedError"
+    description: "The AID is not on this watcher's watch list and cannot be removed"
+    cause: "A watch list remove request was submitted for an AID the watcher does not monitor"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "aid"
+        type: "types://cesr/primitives#AID"
+        description: "The AID not being watched"
+    related_port: "port://watcher-service/api/inbound/watch-list-management"
+
+  - name: "KELSubmissionValidationError"
+    description: "Submitted KEL events failed validation at the watcher's event processor"
+    cause: "The submitted key event message has invalid signatures, invalid SAID, out-of-order sequence number, or other structural violation"
+    recovery: "abort"
+    severity: "fatal"
+    context:
+      - field: "aid"
+        type: "types://cesr/primitives#AID"
+        description: "The AID whose KEL events failed validation"
+      - field: "reason"
+        type: "string"
+        description: "Why the submitted events were rejected"
+    related_port: "port://watcher-service/api/inbound/kel-submission"

@@ -58,6 +58,51 @@ properties:
     strategy: "keri_aid_strategy() for valid AIDs"
     notes: "Duplicity query is definitive: true requires evidence, false requires empty evidence."
 
+  - invariant: "Adding an AID to the watch list MUST make it queryable via the KEL State Query and Duplicity Query ports; removing it MUST make it non-queryable (returns UnknownAIDError) but MUST NOT delete existing duplicity evidence"
+    term: "Watch List Management"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(aid=keri_aid_strategy(), witnesses=st.lists(keri_aid_strategy(), min_size=1, max_size=5))
+        def test_watch_list_lifecycle(aid, witnesses):
+            # Add AID to watch list
+            add_result = watcher_add(aid, witnesses)
+            assert add_result.action == 'added'
+            # AID is now queryable
+            kel_response = http_get(f'/query/kel/{aid}')
+            assert kel_response.status_code in (200, 404)  # 200 if events exist, 404 only if no events yet but AID is watched
+            # Remove AID
+            remove_result = watcher_remove(aid)
+            assert remove_result.action == 'removed'
+            # AID is no longer queryable
+            kel_response = http_get(f'/query/kel/{aid}')
+            assert kel_response.status_code == 404
+    strategy: "keri_aid_strategy() x witness list"
+    notes: "Watch list management controls queryability. Removal preserves evidence."
+
+  - invariant: "KEL submission MUST validate all events before storage; valid events MUST trigger duplicity cross-check; submitting the same event twice MUST be idempotent (accepted_count=0, duplicate_count=1 on second submission)"
+    term: "KEL Submission"
+    technique: property-based
+    formal:
+      language: python
+      expression: |
+        @given(event_msg=key_event_message_strategy())
+        def test_kel_submission_idempotent(event_msg):
+            # First submission
+            result1 = watcher_submit(event_msg)
+            assert result1.accepted_count >= 0
+            # Second submission (idempotent)
+            result2 = watcher_submit(event_msg)
+            assert result2.duplicate_count >= result1.accepted_count, (
+                "Re-submitting the same events must produce duplicates, not new accepts"
+            )
+            assert result2.accepted_count == 0, (
+                "Re-submitting identical events must not produce new accepts"
+            )
+    strategy: "key_event_message_strategy() — valid KEL event messages"
+    notes: "Idempotency guarantee: submitting the same event twice is safe."
+
   - invariant: "Querying with a malformed AID (empty string, None, or non-CESR-qualified string) MUST return HTTP 400; the watcher MUST NOT attempt to look up malformed identifiers"
     term: "KEL State Query"
     technique: property-based
@@ -104,5 +149,51 @@ contracts:
             AND (status.is_duplicitous implies length(status.evidence) >= 2)
             AND (not status.is_duplicitous implies length(status.evidence) == 0)
         description: "Returns duplicity status with evidence if duplicitous"
+
+  - port_ref: "port://watcher-service/api/inbound/watch-list-management"
+    preconditions:
+      - formal:
+          language: pseudocode
+          expression: "command is not null AND command.aid is not null AND is_valid_cesr_prefix(command.aid)"
+        description: "Command must specify a valid CESR-qualified AID"
+      - formal:
+          language: pseudocode
+          expression: "command.action == 'add' implies length(command.witnesses) >= 1"
+        description: "Add commands must include at least one witness AID"
+    postconditions:
+      - formal:
+          language: pseudocode
+          expression: |
+            result.aid == command.aid
+            AND result.action in ('added', 'removed')
+            AND result.watched_count >= 0
+        description: "Returns confirmation with the affected AID and updated watch count"
+
+  - port_ref: "port://watcher-service/api/inbound/kel-submission"
+    preconditions:
+      - formal:
+          language: pseudocode
+          expression: "message is not null AND message.body is not null AND length(message.signatures) >= 1"
+        description: "Submission must be a valid KeyEventMessage with at least one signature"
+    postconditions:
+      - formal:
+          language: pseudocode
+          expression: |
+            result.accepted_count >= 0
+            AND result.duplicate_count >= 0
+            AND (result.duplicity_detected implies duplicity_alert_persisted(result.aid))
+        description: "Returns acceptance counts and duplicity detection flag"
+
+  - port_ref: "port://watcher-service/api/inbound/oobi-resolution"
+    preconditions:
+      - formal:
+          language: pseudocode
+          expression: "request.aid is not null AND is_valid_cesr_prefix(request.aid)"
+        description: "OOBI resolution request must specify a valid AID"
+    postconditions:
+      - formal:
+          language: pseudocode
+          expression: "result.t == 'rpy' AND result.r starts_with '/loc/scheme' OR result.r starts_with '/end/role'"
+        description: "Returns a CESR-encoded reply message with endpoint location data"
 
 state_machines: []

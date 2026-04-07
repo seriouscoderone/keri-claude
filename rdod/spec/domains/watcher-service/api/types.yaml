@@ -7,13 +7,16 @@ types:
       - name: "default"
         fields:
           - name: "watcher_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "This watcher's AID"
           - name: "listen_port"
             type: "integer"
             required: true
             description: "HTTP port"
+            constraints:
+              min: 1
+              max: 65535
           - name: "check_interval_seconds"
             type: "integer"
             required: false
@@ -21,7 +24,7 @@ types:
             constraints:
               min: 60
           - name: "monitored_prefixes"
-            type: "array[string]"
+            type: "array[types://cesr/primitives#AID]"
             required: true
             description: "List of AIDs this watcher monitors for duplicity"
 
@@ -43,5 +46,121 @@ types:
             required: true
             description: "SAIDs of conflicting events (empty if not duplicitous)"
         invariants:
-          - "If is_duplicitous is false, evidence is empty"
-          - "If is_duplicitous is true, evidence contains at least two conflicting SAIDs"
+          - "If is_duplicitous is false, evidence MUST be empty"
+          - "If is_duplicitous is true, evidence MUST contain at least two conflicting SAIDs"
+
+  - name: "OOBIResolutionRequest"
+    description: "Structured request for OOBI resolution at the well-known endpoint. Parsed from the URI path /.well-known/keri/oobi/{aid}/{role}/{eid}."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID being discovered"
+          - name: "role"
+            type: "string"
+            required: true
+            description: "The role of the endpoint (e.g., 'watcher', 'witness', 'controller')"
+          - name: "endpoint_aid"
+            type: "types://cesr/primitives#AID"
+            required: false
+            description: "Optional endpoint AID for role-specific resolution"
+        invariants:
+          - "aid must be a valid CESR-qualified identifier"
+          - "role must be a recognized KERI endpoint role"
+
+  - name: "WatchListCommand"
+    description: "Command to add or remove an AID from the watcher's monitored set."
+    variants:
+      - name: "add"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID to begin monitoring"
+          - name: "witnesses"
+            type: "array[types://cesr/primitives#AID]"
+            required: true
+            description: "Known witness AIDs for this identifier — the watcher will poll these witnesses"
+            constraints:
+              min_length: 1
+        invariants:
+          - "The AID must not already be on the watch list"
+          - "At least one witness must be provided for polling"
+      - name: "remove"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID to stop monitoring"
+        invariants:
+          - "The AID must currently be on the watch list"
+          - "Removal stops polling but does NOT delete existing duplicity evidence"
+
+  - name: "WatchListStatus"
+    description: "Confirmation of a watch list management operation."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID affected by the operation"
+          - name: "action"
+            type: "string"
+            required: true
+            description: "The action performed"
+            constraints:
+              enum: ["added", "removed"]
+          - name: "watched_count"
+            type: "integer"
+            required: true
+            description: "Total number of AIDs currently on the watch list"
+            constraints:
+              min: 0
+
+  - name: "KELSubmissionResult"
+    description: "Result of submitting KEL events to the watcher."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID whose events were submitted"
+          - name: "accepted_count"
+            type: "integer"
+            required: true
+            description: "Number of new events accepted and stored"
+            constraints:
+              min: 0
+          - name: "duplicate_count"
+            type: "integer"
+            required: true
+            description: "Number of events already stored (idempotent duplicates)"
+            constraints:
+              min: 0
+          - name: "duplicity_detected"
+            type: "boolean"
+            required: true
+            description: "Whether the submission triggered a new duplicity detection"
+        invariants:
+          - "accepted_count + duplicate_count equals total events in the submission"
+          - "If duplicity_detected is true, a DuplicityAlert has been persisted"
+
+  - name: "ServerHandle"
+    description: "Opaque handle to a running HTTP server instance."
+    variants:
+      - name: "default"
+        fields:
+          - name: "bound_address"
+            type: "string"
+            required: true
+            description: "The address and port the server is listening on (e.g., '0.0.0.0:5644')"
+          - name: "watcher_aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The AID of the running watcher"
+        invariants:
+          - "Server is actively accepting connections"

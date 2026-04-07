@@ -35,6 +35,31 @@ terms:
       - "GET /.well-known/keri/oobi/BWat.../watcher/BWat... — resolves watcher OOBI"
     related_terms: ["KEL State Query", "Duplicity Query"]
 
+  - term: "Watch List Management"
+    synonyms: ["Watch List Add", "Watch List Remove"]
+    definition: "The API for configuring which AIDs a watcher monitors. Adding an AID starts witness polling and duplicity checking for that identifier. Removing stops polling but preserves existing evidence."
+    invariants:
+      - "Only AIDs on the watch list are monitored for duplicity"
+      - "Adding requires at least one witness AID for KEL polling"
+      - "Removal preserves duplicity evidence — evidence is immutable"
+      - "The watch list is persistent across watcher restarts"
+    examples:
+      - "POST /watch — add AID with witnesses to begin monitoring"
+      - "DELETE /watch/{aid} — stop monitoring but retain evidence"
+    related_terms: ["KEL State Query", "Duplicity Query"]
+
+  - term: "KEL Submission"
+    synonyms: ["Event Push", "Witness Push"]
+    definition: "The push-based API for witnesses and controllers to deliver KEL events to the watcher. Complements the pull-based witness polling. The watcher validates submitted events and cross-checks them against existing stored copies for duplicity detection."
+    invariants:
+      - "Submitted events are validated before storage"
+      - "Valid events trigger duplicity cross-check against existing copies"
+      - "Idempotent — submitting the same event twice has no additional effect"
+      - "Only accepts events for AIDs on the watch list"
+    examples:
+      - "POST /submit — deliver key event message with signatures"
+    related_terms: ["KEL State Query", "Watch List Management"]
+
 events:
   - name: "KELQueryServed"
     payload: "aid: AID, requester: AID, key_state_sn: int"
@@ -44,7 +69,16 @@ events:
     payload: "aid: AID, requester: AID, is_duplicitous: bool"
     triggers: "Validator queries the watcher API for duplicity status"
 
+  - name: "WatchListUpdated"
+    payload: "aid: AID, action: string, watched_count: int"
+    triggers: "AID is added to or removed from the watch list"
+
+  - name: "KELEventsReceived"
+    payload: "aid: AID, accepted_count: int, duplicity_detected: bool"
+    triggers: "KEL events submitted via the push API are validated and stored"
+
 rules:
   - "All responses are CESR-encoded and signed by the watcher's AID"
   - "Duplicity alerts persist permanently — once reported, always reported"
   - "OOBI resolution is unauthenticated — discovery is open"
+  - "Only AIDs on the watch list can be queried or have events submitted"

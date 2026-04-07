@@ -23,12 +23,7 @@ ports:
     idempotent: true
     contract:
       input: "types://identity/establishment#KeyEvent"
-      # L4-O2: boolean is too coarse — needs typed result with verification detail
-      # NOTE: A future revision SHOULD change this to a typed DelegationVerificationResult
-      # containing at minimum: {verified: boolean, rule_applied: SupersedingRule | null,
-      # chain_depth: integer, failure_reason: string | null}. Boolean loses the context
-      # needed for auditing and debugging. Current boolean output is a placeholder.
-      output: "boolean"
+      output: "types://delegation#DelegationVerificationResult"
       errors:
         - "errors://delegation/authorization#MissingDelegatorSealError"
         - "errors://delegation#DelegationChainError"
@@ -41,11 +36,6 @@ ports:
     idempotent: true
     contract:
       input: "types://cesr/primitives#AID"
-      # L4-O3: array[string] is too loose — should be DelegationChainRef
-      # NOTE: A future revision SHOULD change the output to array[DelegationChainRef]
-      # where DelegationChainRef = {aid: AID, delegator_aid: AID | null, depth: integer}.
-      # This makes the chain structure explicit and queryable. Current array[string] (AID strings)
-      # is a placeholder that loses the parent-link information needed for chain traversal.
-      output: "array[types://cesr/primitives#AID]"
+      output: "array[types://delegation#DelegationChainLink]"
       errors: []
     refs: ["domain://identity"]

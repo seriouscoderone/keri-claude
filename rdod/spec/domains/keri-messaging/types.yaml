@@ -492,7 +492,27 @@ types:
     description: "The serialized wire-format representation of a Key Event, composed of the event body (KERI Field Map) plus attached signatures, witness receipts, and other CESR-encoded cryptographic qualifications. A Key Event Message is what is transmitted; the Key Event within it is what is validated and stored."
     variants:
       - name: "default"
+        fields:
+          - name: "body"
+            type: "types://keri-messaging#FieldMap"
+            required: true
+            description: "The key event body as an ordered field map"
+          - name: "signatures"
+            type: "array[types://cesr/primitives#Signature]"
+            required: true
+            description: "Attached signature groups (indexed controller signatures)"
+            constraints:
+              min_length: 1
+          - name: "witness_receipts"
+            type: "array[types://cesr/primitives#Signature]"
+            required: false
+            description: "Attached witness receipt signatures (non-transferable)"
+          - name: "delegation_seal_couple"
+            type: "types://delegation/authorization#DelegationSealSource"
+            required: false
+            description: "Source seal couple for delegated events (Seqner + Diger CESR attachment)"
         invariants:
           - "Contains exactly one Key Event body"
-          - "Includes attached signature groups (indexed or non-indexed)"
+          - "Includes at least one attached signature group (indexed or non-indexed)"
           - "May include attached receipt groups"
+          - "May include delegation source seal couple for dip/drt events"

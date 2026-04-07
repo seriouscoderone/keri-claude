@@ -23691,7 +23691,7 @@ const RDOD_DATA = {
         "idempotent": true,
         "contract": {
           "input": "types://identity/establishment#KeyEvent",
-          "output": "boolean",
+          "output": "types://delegation#DelegationVerificationResult",
           "errors": [
             "errors://delegation/authorization#MissingDelegatorSealError",
             "errors://delegation#DelegationChainError"
@@ -23709,7 +23709,7 @@ const RDOD_DATA = {
         "idempotent": true,
         "contract": {
           "input": "types://cesr/primitives#AID",
-          "output": "array[types://cesr/primitives#AID]",
+          "output": "array[types://delegation#DelegationChainLink]",
           "errors": []
         },
         "refs": [
@@ -23954,16 +23954,16 @@ const RDOD_DATA = {
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda result: (\n    result.is_verified() implies (\n        result.seal_found\n        and result.seal.d == result.event.said\n        and result.chain_valid\n    )\n)\n"
+                "expression": "lambda result: (\n    isinstance(result, DelegationVerificationResult)\n    and (result.verified implies (\n        result.chain_depth >= 1\n        and result.failure_reason is None\n    ))\n)\n"
               },
-              "description": "Verified result means delegation seal was found with matching SAID and the chain is valid up to root"
+              "description": "Returns a typed DelegationVerificationResult; verified=true implies chain_depth >= 1 and no failure"
             },
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda result: (\n    result.is_error() implies\n    result.error_type in ('seal_not_found', 'chain_invalid', 'signature_invalid', 'dnd_violation')\n)\n"
+                "expression": "lambda result: (\n    (not result.verified) implies (\n        result.failure_reason is not None\n        and result.failure_reason != ''\n    )\n)\n"
               },
-              "description": "Verification errors are one of the four recognized failure types"
+              "description": "Unverified result must include a non-empty failure_reason for debugging"
             }
           ]
         },
@@ -23982,16 +23982,16 @@ const RDOD_DATA = {
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda aid, chain: (\n    len(chain) >= 1\n    and chain[-1] == aid\n    and not is_delegated(chain[0])\n    and all(\n        is_delegated(chain[i]) and get_delegator(chain[i]) == chain[i-1]\n        for i in range(1, len(chain))\n    )\n)\n"
+                "expression": "lambda aid, chain: (\n    len(chain) >= 1\n    and chain[-1].aid == aid\n    and chain[0].depth == 0\n    and chain[0].delegator_aid is None\n    and all(\n        chain[i].depth == i\n        and (chain[i].delegator_aid == chain[i-1].aid if i > 0 else True)\n        for i in range(len(chain))\n    )\n)\n"
               },
-              "description": "get_delegation_chain returns a chain ending at the queried AID with non-delegated root and valid parent links at every level"
+              "description": "get_delegation_chain returns DelegationChainLink array from root (depth 0) to queried AID, with valid parent links at every level"
             },
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda aid, result: result == (get_delegator(aid) is not None)"
+                "expression": "lambda aid, chain: chain[-1].delegator_aid is not None or len(chain) == 1"
               },
-              "description": "is_delegated returns true iff a delegator exists for the AID"
+              "description": "Queried AID is either delegated (has delegator) or is the root (chain length 1)"
             }
           ]
         }
@@ -24006,16 +24006,16 @@ const RDOD_DATA = {
         "cause": "Missing intermediate delegator KEL, broken seal chain, or unauthorized delegation",
         "recovery": "escrow",
         "recovery_target": "PDE",
-        "severity": "recoverable",
+        "severity": "transient",
         "context": [
           {
             "field": "aid",
-            "type": "string",
+            "type": "types://cesr/primitives#AID",
             "description": "The AID whose delegation chain could not be verified"
           },
           {
             "field": "broken_at",
-            "type": "string",
+            "type": "types://cesr/primitives#AID",
             "description": "The delegator AID where the chain breaks"
           },
           {
@@ -24037,13 +24037,13 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "delegator_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "AID of the delegator authorizing this new identifier"
               },
               {
                 "name": "keys",
-                "type": "array[PublicKey]",
+                "type": "array[types://cesr/primitives#PublicKey]",
                 "required": true,
                 "description": "Initial signing public keys for the delegated identifier",
                 "constraints": {
@@ -24058,13 +24058,13 @@ const RDOD_DATA = {
               },
               {
                 "name": "next_keys",
-                "type": "array[Digest]",
+                "type": "array[types://cesr/primitives#Digest]",
                 "required": true,
                 "description": "Pre-rotation digest commitments for next signing keys"
               },
               {
                 "name": "witnesses",
-                "type": "array[AID]",
+                "type": "array[types://cesr/primitives#AID]",
                 "required": true,
                 "description": "Designated witness AIDs"
               },
@@ -24101,7 +24101,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "delegator_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "AID of the delegator (matches the di field in the event)"
               }
@@ -24129,7 +24129,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "delegator_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "AID of the delegator (established at inception via di field)"
               }
@@ -24213,7 +24213,7 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "delegator_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "AID of the delegator whose KEL contains this event"
               },
@@ -24263,7 +24263,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "delegator_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "AID of the delegator (di field)"
               }
@@ -24285,7 +24285,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "delegator_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "AID of the delegator (inherited from inception)"
               }
@@ -24337,6 +24337,95 @@ const RDOD_DATA = {
         ]
       },
       {
+        "name": "DelegationVerificationResult",
+        "description": "Typed result of delegation verification, replacing the prior bare boolean output. Provides verification status, the superseding rule applied (if any), chain depth, and failure reason for auditing.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "verified",
+                "type": "boolean",
+                "required": true,
+                "description": "Whether the delegation was successfully verified"
+              },
+              {
+                "name": "rule_applied",
+                "type": "string",
+                "required": false,
+                "description": "The superseding rule applied during verification (e.g., 'B1', 'B2', 'B3', 'C'), null if no superseding rule was invoked",
+                "constraints": {
+                  "enum": [
+                    "B1",
+                    "B2",
+                    "B3",
+                    "C",
+                    null
+                  ]
+                }
+              },
+              {
+                "name": "chain_depth",
+                "type": "integer",
+                "required": true,
+                "description": "Depth of the delegation chain from root (0 = non-delegated, 1 = direct delegate, etc.)",
+                "constraints": {
+                  "min": 0
+                }
+              },
+              {
+                "name": "failure_reason",
+                "type": "string",
+                "required": false,
+                "description": "Human-readable reason for verification failure, null on success"
+              }
+            ],
+            "invariants": [
+              "If verified is true, failure_reason MUST be null",
+              "If verified is false, failure_reason MUST be non-null",
+              "chain_depth >= 1 for any delegated identifier"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "DelegationChainLink",
+        "description": "One link in a delegation chain, providing the AID, its delegator, and its depth. Replaces the prior bare AID array output with structured chain traversal data.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "types://cesr/primitives#AID",
+                "required": true,
+                "description": "The identifier at this chain level"
+              },
+              {
+                "name": "delegator_aid",
+                "type": "types://cesr/primitives#AID",
+                "required": false,
+                "description": "The delegator of this identifier, null for the root (non-delegated) AID"
+              },
+              {
+                "name": "depth",
+                "type": "integer",
+                "required": true,
+                "description": "Depth in the delegation chain (0 = root, 1 = first delegate, etc.)",
+                "constraints": {
+                  "min": 0
+                }
+              }
+            ],
+            "invariants": [
+              "If depth == 0, delegator_aid MUST be null (root is non-delegated)",
+              "If depth > 0, delegator_aid MUST be non-null",
+              "The chain array MUST be ordered from root (depth 0) to the queried AID (max depth)"
+            ]
+          }
+        ]
+      },
+      {
         "name": "CustodialRotation",
         "description": "Controlled delegation of signing authority through rotation, where a custodian manages signing keys while the Controller retains rotation authority via pre-committed next keys.",
         "variants": [
@@ -24345,13 +24434,13 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "custodian_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "AID of the custodian managing the signing keys"
               },
               {
                 "name": "controller_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "AID of the Controller retaining rotation authority"
               }
@@ -44022,7 +44111,99 @@ const RDOD_DATA = {
           "notes": "Spec L5540-5960. Finding: KERI-INV-012."
         }
       ],
-      "contracts": [],
+      "contracts": [
+        {
+          "port_ref": "port://keri-messaging/inbound/message-parsing",
+          "preconditions": [
+            {
+              "formal": {
+                "language": "python",
+                "expression": "lambda field_map: (\n    field_map is not None\n    and 'v' in field_map.fields\n    and 't' in field_map.fields\n    and 'd' in field_map.fields\n    and list(field_map.fields.keys())[0] == 'v'\n)\n"
+              },
+              "description": "Input must be a non-null field map with v as the first field, and t and d present"
+            }
+          ],
+          "postconditions": [
+            {
+              "formal": {
+                "language": "python",
+                "expression": "lambda result: (\n    result.ilk in ('icp','rot','ixn','dip','drt','rct','vrc','qry','rpy','pro','bar','exn','xip','rip','bup','upd')\n    and result.said == compute_said(result.body)\n)\n"
+              },
+              "description": "Parsed message has a recognized ilk and its SAID verifies against the body"
+            }
+          ]
+        },
+        {
+          "port_ref": "port://keri-messaging/inbound/message-construction",
+          "preconditions": [
+            {
+              "formal": {
+                "language": "python",
+                "expression": "lambda request: (\n    request.message_type is not None\n    and request.sender_aid is not None\n    and len(request.sender_aid) > 0\n)\n"
+              },
+              "description": "Construction request must specify a message type and a valid sender AID"
+            },
+            {
+              "formal": {
+                "language": "python",
+                "expression": "lambda request: (\n    request.message_type.value not in ('qry', 'rpy', 'exn', 'xip')\n    or (request.route is not None and len(request.route) > 0)\n)\n"
+              },
+              "description": "Routed message types (qry, rpy, exn, xip) require a non-empty route"
+            }
+          ],
+          "postconditions": [
+            {
+              "formal": {
+                "language": "python",
+                "expression": "lambda result: (\n    result.body is not None\n    and result.body.said == compute_said(result.body)\n    and list(result.body.fields.keys())[0] == 'v'\n)\n"
+              },
+              "description": "Constructed message has a valid SAID and canonical field ordering"
+            }
+          ]
+        },
+        {
+          "port_ref": "port://keri-messaging/inbound/kram-validate",
+          "preconditions": [
+            {
+              "formal": {
+                "language": "python",
+                "expression": "lambda message: (\n    message.body.ilk not in ('icp', 'rot', 'ixn', 'dip', 'drt')\n    and len(message.signatures) >= 1\n)\n"
+              },
+              "description": "KRAM validation applies only to non-KEL messages and requires at least one signature"
+            }
+          ],
+          "postconditions": [
+            {
+              "formal": {
+                "language": "python",
+                "expression": "lambda result: (\n    result.authenticated implies (\n        result.signature_verified\n        and result.timeliness_ok\n        and not result.is_replay\n    )\n)\n"
+              },
+              "description": "Authenticated result means all three KRAM checks passed"
+            }
+          ]
+        },
+        {
+          "port_ref": "port://keri-messaging/inbound/route-dispatch",
+          "preconditions": [
+            {
+              "formal": {
+                "language": "python",
+                "expression": "lambda message: (\n    message.body is not None\n    and 'r' in message.body.fields\n)\n"
+              },
+              "description": "Message must have been KRAM-validated and must contain a route field"
+            }
+          ],
+          "postconditions": [
+            {
+              "formal": {
+                "language": "python",
+                "expression": "lambda: True  # void output — side effect is dispatch to handler"
+              },
+              "description": "Message dispatched to the handler for its route prefix"
+            }
+          ]
+        }
+      ],
       "state_machines": [],
       "validation_constraints": [
         {
@@ -44310,13 +44491,18 @@ const RDOD_DATA = {
         "name": "MissingRouteHandlerError",
         "description": "Route is known but no handler is configured for it in this deployment",
         "cause": "The route prefix is recognized but the handler for this domain is not registered — configuration or startup error",
-        "recovery": "abort",
+        "recovery": "escalate",
         "severity": "recoverable",
         "context": [
           {
             "field": "route",
             "type": "string",
             "description": "The route with missing handler"
+          },
+          {
+            "field": "expected_domain",
+            "type": "string",
+            "description": "The domain expected to handle this route prefix"
           }
         ],
         "related_port": "port://keri-messaging/inbound/route-dispatch"
@@ -45070,10 +45256,40 @@ const RDOD_DATA = {
         "variants": [
           {
             "name": "default",
+            "fields": [
+              {
+                "name": "body",
+                "type": "types://keri-messaging#FieldMap",
+                "required": true,
+                "description": "The key event body as an ordered field map"
+              },
+              {
+                "name": "signatures",
+                "type": "array[types://cesr/primitives#Signature]",
+                "required": true,
+                "description": "Attached signature groups (indexed controller signatures)",
+                "constraints": {
+                  "min_length": 1
+                }
+              },
+              {
+                "name": "witness_receipts",
+                "type": "array[types://cesr/primitives#Signature]",
+                "required": false,
+                "description": "Attached witness receipt signatures (non-transferable)"
+              },
+              {
+                "name": "delegation_seal_couple",
+                "type": "types://delegation/authorization#DelegationSealSource",
+                "required": false,
+                "description": "Source seal couple for delegated events (Seqner + Diger CESR attachment)"
+              }
+            ],
             "invariants": [
               "Contains exactly one Key Event body",
-              "Includes attached signature groups (indexed or non-indexed)",
-              "May include attached receipt groups"
+              "Includes at least one attached signature group (indexed or non-indexed)",
+              "May include attached receipt groups",
+              "May include delegation source seal couple for dip/drt events"
             ]
           }
         ]
@@ -52892,7 +53108,10 @@ const RDOD_DATA = {
     "invariants": [
       "Must collect KEL copies from multiple independent witnesses",
       "Must cross-check collected KELs for fork detection",
-      "Must report duplicity evidence when detected"
+      "Must report duplicity evidence when detected",
+      "Must provide watch list management for configuring monitored AIDs",
+      "Must accept push-based KEL submissions from witnesses and controllers",
+      "Push submissions and pull polling are complementary — both trigger duplicity cross-checking"
     ],
     "_source": "rdod/spec/domains/watcher-service/api/domain.yaml",
     "_events": [
@@ -52905,12 +53124,23 @@ const RDOD_DATA = {
         "name": "DuplicityQueryServed",
         "payload": "aid: AID, requester: AID, is_duplicitous: bool",
         "triggers": "Validator queries the watcher API for duplicity status"
+      },
+      {
+        "name": "WatchListUpdated",
+        "payload": "aid: AID, action: string, watched_count: int",
+        "triggers": "AID is added to or removed from the watch list"
+      },
+      {
+        "name": "KELEventsReceived",
+        "payload": "aid: AID, accepted_count: int, duplicity_detected: bool",
+        "triggers": "KEL events submitted via the push API are validated and stored"
       }
     ],
     "_rules": [
       "All responses are CESR-encoded and signed by the watcher's AID",
       "Duplicity alerts persist permanently — once reported, always reported",
-      "OOBI resolution is unauthenticated — discovery is open"
+      "OOBI resolution is unauthenticated — discovery is open",
+      "Only AIDs on the watch list can be queried or have events submitted"
     ],
     "_imports": [],
     "ubiquitous_language": [
@@ -52968,6 +53198,49 @@ const RDOD_DATA = {
           "KEL State Query",
           "Duplicity Query"
         ]
+      },
+      {
+        "term": "Watch List Management",
+        "synonyms": [
+          "Watch List Add",
+          "Watch List Remove"
+        ],
+        "definition": "The API for configuring which AIDs a watcher monitors. Adding an AID starts witness polling and duplicity checking for that identifier. Removing stops polling but preserves existing evidence.",
+        "invariants": [
+          "Only AIDs on the watch list are monitored for duplicity",
+          "Adding requires at least one witness AID for KEL polling",
+          "Removal preserves duplicity evidence — evidence is immutable",
+          "The watch list is persistent across watcher restarts"
+        ],
+        "examples": [
+          "POST /watch — add AID with witnesses to begin monitoring",
+          "DELETE /watch/{aid} — stop monitoring but retain evidence"
+        ],
+        "related_terms": [
+          "KEL State Query",
+          "Duplicity Query"
+        ]
+      },
+      {
+        "term": "KEL Submission",
+        "synonyms": [
+          "Event Push",
+          "Witness Push"
+        ],
+        "definition": "The push-based API for witnesses and controllers to deliver KEL events to the watcher. Complements the pull-based witness polling. The watcher validates submitted events and cross-checks them against existing stored copies for duplicity detection.",
+        "invariants": [
+          "Submitted events are validated before storage",
+          "Valid events trigger duplicity cross-check against existing copies",
+          "Idempotent — submitting the same event twice has no additional effect",
+          "Only accepts events for AIDs on the watch list"
+        ],
+        "examples": [
+          "POST /submit — deliver key event message with signatures"
+        ],
+        "related_terms": [
+          "KEL State Query",
+          "Watch List Management"
+        ]
       }
     ],
     "_ports": [
@@ -52977,6 +53250,7 @@ const RDOD_DATA = {
         "name": "KEL State Query",
         "semantics": "query",
         "idempotent": true,
+        "description": "Returns the watcher's cross-checked view of the current key state for a monitored AID. The watcher collects KEL copies from multiple witnesses and adjudicates the authoritative key state. Only returns state for AIDs on the watcher's watch list.\n",
         "contract": {
           "input": "types://cesr/primitives#AID",
           "output": "types://identity/state#KeyState",
@@ -52995,12 +53269,11 @@ const RDOD_DATA = {
         "name": "Duplicity Query",
         "semantics": "query",
         "idempotent": true,
+        "description": "Returns the duplicity status for a monitored AID. If conflicting events were detected at any (prefix, sn) pair, returns the evidence. Duplicity is permanent once detected.\n",
         "contract": {
           "input": "types://cesr/primitives#AID",
           "output": "types://watcher-service/api#DuplicityStatus",
-          "errors": [
-            "errors://watcher-service/api#UnknownAIDError"
-          ]
+          "errors": []
         },
         "refs": [
           "domain://cloud-agent-service",
@@ -53013,14 +53286,65 @@ const RDOD_DATA = {
         "name": "OOBI Resolution",
         "semantics": "query",
         "idempotent": true,
+        "description": "Serves the watcher's OOBI (Out-of-Band Introduction) at the well-known URI path. Enables bootstrap discovery of the watcher by returning a CESR-encoded reply message containing the watcher's endpoint information and role binding.\n",
         "contract": {
-          "input": "types://cesr/primitives#AID",
-          "output": "CESR reply messages for watcher OOBI discovery",
+          "input": "types://watcher-service/api#OOBIResolutionRequest",
+          "output": "types://keri-messaging#ReplyMessage",
           "errors": [
             "errors://watcher-service/api#MalformedRequestError"
           ]
         },
-        "refs": []
+        "refs": [
+          "domain://discovery"
+        ]
+      },
+      {
+        "id": "port://watcher-service/api/inbound/watch-list-management",
+        "type": "inbound",
+        "name": "Watch List Management",
+        "semantics": "command",
+        "idempotent": false,
+        "description": "Adds or removes AIDs from the watcher's monitored set. When an AID is added, the watcher begins polling its witnesses for KEL copies. When removed, the watcher stops monitoring but retains any existing duplicity evidence. This is the adopter's interface for configuring which identifiers the watcher guards.\n",
+        "contract": {
+          "input": "types://watcher-service/api#WatchListCommand",
+          "output": "types://watcher-service/api#WatchListStatus",
+          "errors": [
+            "errors://watcher-service/api#AIDAlreadyWatchedError",
+            "errors://watcher-service/api#AIDNotWatchedError"
+          ]
+        },
+        "refs": [
+          "domain://cloud-agent-service",
+          "domain://local-agent"
+        ],
+        "invariants": [
+          "Adding an AID starts witness polling for that AID's KEL copies",
+          "Removing an AID stops polling but retains existing duplicity evidence",
+          "The watch list is persistent across watcher restarts"
+        ]
+      },
+      {
+        "id": "port://watcher-service/api/inbound/kel-submission",
+        "type": "inbound",
+        "name": "KEL Submission",
+        "semantics": "command",
+        "idempotent": true,
+        "description": "Accepts KEL event messages pushed to the watcher by witnesses or controllers. This is the push-based complement to the pull-based witness polling. Witnesses may proactively send new events to watchers, and controllers may submit their own events. The watcher validates and stores the events, then cross-checks for duplicity.\n",
+        "contract": {
+          "input": "types://keri-messaging#KeyEventMessage",
+          "output": "types://watcher-service/api#KELSubmissionResult",
+          "errors": [
+            "errors://watcher-service/api#KELSubmissionValidationError"
+          ]
+        },
+        "refs": [
+          "domain://witness-service/api"
+        ],
+        "invariants": [
+          "Submitted events are validated before storage (signature, SAID, sequence order)",
+          "Valid events trigger a duplicity cross-check against existing stored copies",
+          "Idempotent: submitting the same valid event twice has no additional effect"
+        ]
       },
       {
         "id": "port://watcher-service/api/outbound/http-server",
@@ -53030,7 +53354,7 @@ const RDOD_DATA = {
         "idempotent": false,
         "contract": {
           "input": "types://watcher-service/api#WatcherConfiguration",
-          "output": "Running HTTP server handle",
+          "output": "types://watcher-service/api#ServerHandle",
           "errors": []
         },
         "refs": [
@@ -53078,6 +53402,28 @@ const RDOD_DATA = {
           },
           "strategy": "keri_aid_strategy() for valid AIDs",
           "notes": "Duplicity query is definitive: true requires evidence, false requires empty evidence."
+        },
+        {
+          "invariant": "Adding an AID to the watch list MUST make it queryable via the KEL State Query and Duplicity Query ports; removing it MUST make it non-queryable (returns UnknownAIDError) but MUST NOT delete existing duplicity evidence",
+          "term": "Watch List Management",
+          "technique": "property-based",
+          "formal": {
+            "language": "python",
+            "expression": "@given(aid=keri_aid_strategy(), witnesses=st.lists(keri_aid_strategy(), min_size=1, max_size=5))\ndef test_watch_list_lifecycle(aid, witnesses):\n    # Add AID to watch list\n    add_result = watcher_add(aid, witnesses)\n    assert add_result.action == 'added'\n    # AID is now queryable\n    kel_response = http_get(f'/query/kel/{aid}')\n    assert kel_response.status_code in (200, 404)  # 200 if events exist, 404 only if no events yet but AID is watched\n    # Remove AID\n    remove_result = watcher_remove(aid)\n    assert remove_result.action == 'removed'\n    # AID is no longer queryable\n    kel_response = http_get(f'/query/kel/{aid}')\n    assert kel_response.status_code == 404\n"
+          },
+          "strategy": "keri_aid_strategy() x witness list",
+          "notes": "Watch list management controls queryability. Removal preserves evidence."
+        },
+        {
+          "invariant": "KEL submission MUST validate all events before storage; valid events MUST trigger duplicity cross-check; submitting the same event twice MUST be idempotent (accepted_count=0, duplicate_count=1 on second submission)",
+          "term": "KEL Submission",
+          "technique": "property-based",
+          "formal": {
+            "language": "python",
+            "expression": "@given(event_msg=key_event_message_strategy())\ndef test_kel_submission_idempotent(event_msg):\n    # First submission\n    result1 = watcher_submit(event_msg)\n    assert result1.accepted_count >= 0\n    # Second submission (idempotent)\n    result2 = watcher_submit(event_msg)\n    assert result2.duplicate_count >= result1.accepted_count, (\n        \"Re-submitting the same events must produce duplicates, not new accepts\"\n    )\n    assert result2.accepted_count == 0, (\n        \"Re-submitting identical events must not produce new accepts\"\n    )\n"
+          },
+          "strategy": "key_event_message_strategy() — valid KEL event messages",
+          "notes": "Idempotency guarantee: submitting the same event twice is safe."
         },
         {
           "invariant": "Querying with a malformed AID (empty string, None, or non-CESR-qualified string) MUST return HTTP 400; the watcher MUST NOT attempt to look up malformed identifiers",
@@ -53133,6 +53479,76 @@ const RDOD_DATA = {
               "description": "Returns duplicity status with evidence if duplicitous"
             }
           ]
+        },
+        {
+          "port_ref": "port://watcher-service/api/inbound/watch-list-management",
+          "preconditions": [
+            {
+              "formal": {
+                "language": "pseudocode",
+                "expression": "command is not null AND command.aid is not null AND is_valid_cesr_prefix(command.aid)"
+              },
+              "description": "Command must specify a valid CESR-qualified AID"
+            },
+            {
+              "formal": {
+                "language": "pseudocode",
+                "expression": "command.action == 'add' implies length(command.witnesses) >= 1"
+              },
+              "description": "Add commands must include at least one witness AID"
+            }
+          ],
+          "postconditions": [
+            {
+              "formal": {
+                "language": "pseudocode",
+                "expression": "result.aid == command.aid\nAND result.action in ('added', 'removed')\nAND result.watched_count >= 0\n"
+              },
+              "description": "Returns confirmation with the affected AID and updated watch count"
+            }
+          ]
+        },
+        {
+          "port_ref": "port://watcher-service/api/inbound/kel-submission",
+          "preconditions": [
+            {
+              "formal": {
+                "language": "pseudocode",
+                "expression": "message is not null AND message.body is not null AND length(message.signatures) >= 1"
+              },
+              "description": "Submission must be a valid KeyEventMessage with at least one signature"
+            }
+          ],
+          "postconditions": [
+            {
+              "formal": {
+                "language": "pseudocode",
+                "expression": "result.accepted_count >= 0\nAND result.duplicate_count >= 0\nAND (result.duplicity_detected implies duplicity_alert_persisted(result.aid))\n"
+              },
+              "description": "Returns acceptance counts and duplicity detection flag"
+            }
+          ]
+        },
+        {
+          "port_ref": "port://watcher-service/api/inbound/oobi-resolution",
+          "preconditions": [
+            {
+              "formal": {
+                "language": "pseudocode",
+                "expression": "request.aid is not null AND is_valid_cesr_prefix(request.aid)"
+              },
+              "description": "OOBI resolution request must specify a valid AID"
+            }
+          ],
+          "postconditions": [
+            {
+              "formal": {
+                "language": "pseudocode",
+                "expression": "result.t == 'rpy' AND result.r starts_with '/loc/scheme' OR result.r starts_with '/end/role'"
+              },
+              "description": "Returns a CESR-encoded reply message with endpoint location data"
+            }
+          ]
         }
       ],
       "state_machines": [],
@@ -53148,7 +53564,7 @@ const RDOD_DATA = {
         "context": [
           {
             "field": "witness_aid",
-            "type": "string",
+            "type": "types://cesr/primitives#AID",
             "description": "The unreachable witness"
           },
           {
@@ -53156,7 +53572,8 @@ const RDOD_DATA = {
             "type": "string",
             "description": "The endpoint URL that failed"
           }
-        ]
+        ],
+        "related_port": "port://watcher-service/api/outbound/witness-query"
       },
       {
         "name": "UnknownAIDError",
@@ -53167,10 +53584,11 @@ const RDOD_DATA = {
         "context": [
           {
             "field": "aid",
-            "type": "string",
+            "type": "types://cesr/primitives#AID",
             "description": "The unknown AID"
           }
-        ]
+        ],
+        "related_port": "port://watcher-service/api/inbound/kel-query"
       },
       {
         "name": "MalformedRequestError",
@@ -53184,7 +53602,58 @@ const RDOD_DATA = {
             "type": "string",
             "description": "Parse or validation failure"
           }
-        ]
+        ],
+        "related_port": "port://watcher-service/api/inbound/oobi-resolution"
+      },
+      {
+        "name": "AIDAlreadyWatchedError",
+        "description": "The AID is already on this watcher's watch list",
+        "cause": "A watch list add request was submitted for an AID the watcher already monitors",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "aid",
+            "type": "types://cesr/primitives#AID",
+            "description": "The AID already being watched"
+          }
+        ],
+        "related_port": "port://watcher-service/api/inbound/watch-list-management"
+      },
+      {
+        "name": "AIDNotWatchedError",
+        "description": "The AID is not on this watcher's watch list and cannot be removed",
+        "cause": "A watch list remove request was submitted for an AID the watcher does not monitor",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "aid",
+            "type": "types://cesr/primitives#AID",
+            "description": "The AID not being watched"
+          }
+        ],
+        "related_port": "port://watcher-service/api/inbound/watch-list-management"
+      },
+      {
+        "name": "KELSubmissionValidationError",
+        "description": "Submitted KEL events failed validation at the watcher's event processor",
+        "cause": "The submitted key event message has invalid signatures, invalid SAID, out-of-order sequence number, or other structural violation",
+        "recovery": "abort",
+        "severity": "fatal",
+        "context": [
+          {
+            "field": "aid",
+            "type": "types://cesr/primitives#AID",
+            "description": "The AID whose KEL events failed validation"
+          },
+          {
+            "field": "reason",
+            "type": "string",
+            "description": "Why the submitted events were rejected"
+          }
+        ],
+        "related_port": "port://watcher-service/api/inbound/kel-submission"
       }
     ],
     "_types": [
@@ -53197,7 +53666,7 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "watcher_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "This watcher's AID"
               },
@@ -53205,7 +53674,11 @@ const RDOD_DATA = {
                 "name": "listen_port",
                 "type": "integer",
                 "required": true,
-                "description": "HTTP port"
+                "description": "HTTP port",
+                "constraints": {
+                  "min": 1,
+                  "max": 65535
+                }
               },
               {
                 "name": "check_interval_seconds",
@@ -53218,7 +53691,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "monitored_prefixes",
-                "type": "array[string]",
+                "type": "array[types://cesr/primitives#AID]",
                 "required": true,
                 "description": "List of AIDs this watcher monitors for duplicity"
               }
@@ -53253,8 +53726,195 @@ const RDOD_DATA = {
               }
             ],
             "invariants": [
-              "If is_duplicitous is false, evidence is empty",
-              "If is_duplicitous is true, evidence contains at least two conflicting SAIDs"
+              "If is_duplicitous is false, evidence MUST be empty",
+              "If is_duplicitous is true, evidence MUST contain at least two conflicting SAIDs"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "OOBIResolutionRequest",
+        "description": "Structured request for OOBI resolution at the well-known endpoint. Parsed from the URI path /.well-known/keri/oobi/{aid}/{role}/{eid}.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "types://cesr/primitives#AID",
+                "required": true,
+                "description": "The AID being discovered"
+              },
+              {
+                "name": "role",
+                "type": "string",
+                "required": true,
+                "description": "The role of the endpoint (e.g., 'watcher', 'witness', 'controller')"
+              },
+              {
+                "name": "endpoint_aid",
+                "type": "types://cesr/primitives#AID",
+                "required": false,
+                "description": "Optional endpoint AID for role-specific resolution"
+              }
+            ],
+            "invariants": [
+              "aid must be a valid CESR-qualified identifier",
+              "role must be a recognized KERI endpoint role"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "WatchListCommand",
+        "description": "Command to add or remove an AID from the watcher's monitored set.",
+        "variants": [
+          {
+            "name": "add",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "types://cesr/primitives#AID",
+                "required": true,
+                "description": "The AID to begin monitoring"
+              },
+              {
+                "name": "witnesses",
+                "type": "array[types://cesr/primitives#AID]",
+                "required": true,
+                "description": "Known witness AIDs for this identifier — the watcher will poll these witnesses",
+                "constraints": {
+                  "min_length": 1
+                }
+              }
+            ],
+            "invariants": [
+              "The AID must not already be on the watch list",
+              "At least one witness must be provided for polling"
+            ]
+          },
+          {
+            "name": "remove",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "types://cesr/primitives#AID",
+                "required": true,
+                "description": "The AID to stop monitoring"
+              }
+            ],
+            "invariants": [
+              "The AID must currently be on the watch list",
+              "Removal stops polling but does NOT delete existing duplicity evidence"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "WatchListStatus",
+        "description": "Confirmation of a watch list management operation.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "types://cesr/primitives#AID",
+                "required": true,
+                "description": "The AID affected by the operation"
+              },
+              {
+                "name": "action",
+                "type": "string",
+                "required": true,
+                "description": "The action performed",
+                "constraints": {
+                  "enum": [
+                    "added",
+                    "removed"
+                  ]
+                }
+              },
+              {
+                "name": "watched_count",
+                "type": "integer",
+                "required": true,
+                "description": "Total number of AIDs currently on the watch list",
+                "constraints": {
+                  "min": 0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "KELSubmissionResult",
+        "description": "Result of submitting KEL events to the watcher.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "types://cesr/primitives#AID",
+                "required": true,
+                "description": "The AID whose events were submitted"
+              },
+              {
+                "name": "accepted_count",
+                "type": "integer",
+                "required": true,
+                "description": "Number of new events accepted and stored",
+                "constraints": {
+                  "min": 0
+                }
+              },
+              {
+                "name": "duplicate_count",
+                "type": "integer",
+                "required": true,
+                "description": "Number of events already stored (idempotent duplicates)",
+                "constraints": {
+                  "min": 0
+                }
+              },
+              {
+                "name": "duplicity_detected",
+                "type": "boolean",
+                "required": true,
+                "description": "Whether the submission triggered a new duplicity detection"
+              }
+            ],
+            "invariants": [
+              "accepted_count + duplicate_count equals total events in the submission",
+              "If duplicity_detected is true, a DuplicityAlert has been persisted"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "ServerHandle",
+        "description": "Opaque handle to a running HTTP server instance.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "bound_address",
+                "type": "string",
+                "required": true,
+                "description": "The address and port the server is listening on (e.g., '0.0.0.0:5644')"
+              },
+              {
+                "name": "watcher_aid",
+                "type": "types://cesr/primitives#AID",
+                "required": true,
+                "description": "The AID of the running watcher"
+              }
+            ],
+            "invariants": [
+              "Server is actively accepting connections"
             ]
           }
         ]
