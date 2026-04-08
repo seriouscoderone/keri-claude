@@ -171,7 +171,7 @@ properties:
       expression: |
         @given(endpoint_authorization())
         def test_endpoint_auth_structure(auth):
-            assert auth.role in ('witness', 'controller', 'agent', 'watcher', 'mailbox')
+            assert auth.role in ('controller', 'witness', 'registrar', 'gateway', 'watcher', 'judge', 'juror', 'peer', 'mailbox', 'agent', 'indexer')
             assert auth.endpoint.startswith('http://') or auth.endpoint.startswith('https://')
             # endpoint_aid is optional
             if auth.endpoint_aid is not None:
@@ -252,7 +252,7 @@ properties:
     formal:
       language: "python"
       expression: |
-        @given(st.sampled_from(['witness', 'controller', 'agent', 'watcher', 'mailbox']))
+        @given(st.sampled_from(['controller', 'witness', 'registrar', 'gateway', 'watcher', 'judge', 'juror', 'peer', 'mailbox', 'agent', 'indexer']))
         def test_role_operations(role):
             allowed_ops = get_allowed_operations(role)
             assert len(allowed_ops) > 0
@@ -365,7 +365,7 @@ contracts:
             lambda aid, role=None: (
                 isinstance(aid, str) and
                 len(aid) >= 44 and
-                (role is None or role in ('witness', 'controller', 'agent', 'watcher', 'mailbox'))
+                (role is None or role in ('controller', 'witness', 'registrar', 'gateway', 'watcher', 'judge', 'juror', 'peer', 'mailbox', 'agent', 'indexer'))
             )
         description: "AID is a valid CESR-qualified identifier, role is optional but must be valid"
     postconditions:

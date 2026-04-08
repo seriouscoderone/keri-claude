@@ -21,7 +21,7 @@ types:
             required: true
             description: "The role of the endpoint provider"
             constraints:
-              enum: ["witness", "watcher", "agent", "controller", "mailbox"]
+              enum: ["controller", "witness", "registrar", "gateway", "watcher", "judge", "juror", "peer", "mailbox", "agent", "indexer"]
           - name: "eid"
             type: "types://cesr/primitives#AID"
             required: false
@@ -30,7 +30,7 @@ types:
           - "URL pattern: /oobi/{cid}/{role} or /oobi/{cid}/{role}/{eid}"
           - "Returns signed reply messages (end-role + loc-scheme) plus KEL replay for the cid"
           - "If eid is specified, only returns data for that specific provider"
-          - "keripy regex: OOBI_RE = /oobi/(?P<cid>[^/]+)/(?P<role>[^/]+)(?:/(?P<eid>[^/]+))?"
+          - "This is an extensible set — implementations MAY add custom roles beyond the normative core."
       - name: "data"
         fields:
           - name: "url"
@@ -46,7 +46,6 @@ types:
           - "Returns the content identified by the SAID (e.g., JSON Schema for ACDC)"
           - "Verification: compute SAID of returned content, compare to the requested SAID"
           - "Content is immutable — SAIDs are content-addressed, so the data never changes"
-          - "keripy regex: DOOBI_RE = /oobi/(?P<said>[^/]+)"
       - name: "well-known"
         fields:
           - name: "url"
@@ -63,7 +62,6 @@ types:
           - "URL pattern: /.well-known/keri/oobi/{cid}"
           - "Follows RFC 8615 well-known URI convention"
           - "May return a redirect to the actual OOBI endpoint or serve KEL directly"
-          - "keripy regex: WOOBI_RE = /.well-known/keri/oobi/(?P<cid>[^/]+)"
       - name: "blind"
         fields:
           - name: "url"
@@ -86,6 +84,10 @@ types:
     encoding:
       - format: "url"
         notes: "OOBIs are primarily exchanged as URLs — in QR codes, messages, emails, or any text channel. The URL IS the OOBI."
+    notes: |
+      OOBI resolution response uses application/json+cesr content type — JSON-serialized
+      KERI events with CESR-encoded signature attachments. KEL replay is interleaved with
+      end-role and loc-scheme reply messages in a single CESR stream.
 
   - name: "EndRole"
     description: "An authorized endpoint for an AID — declares that a specific service (witness, watcher, agent) serves this identifier at a given URL."
@@ -101,12 +103,13 @@ types:
             required: true
             description: "Service role"
             constraints:
-              enum: ["witness", "watcher", "agent", "controller", "mailbox"]
+              enum: ["controller", "witness", "registrar", "gateway", "watcher", "judge", "juror", "peer", "mailbox", "agent", "indexer"]
           - name: "eid"
             type: "types://cesr/primitives#AID"
             required: true
             description: "Endpoint AID — the service's identifier"
         invariants:
+          - "This is an extensible set — implementations MAY add custom roles beyond the normative core."
           - "Authorization via signed reply message (route=/end/role/add)"
           - "Revocation via signed reply message (route=/end/role/cut)"
           - "Subject to BADA acceptance policy — newer datetime replaces older"
@@ -152,7 +155,7 @@ types:
             required: true
             description: "Service role — determines what protocol the endpoint speaks"
             constraints:
-              enum: ["witness", "watcher", "agent", "controller", "mailbox"]
+              enum: ["controller", "witness", "registrar", "gateway", "watcher", "judge", "juror", "peer", "mailbox", "agent", "indexer"]
         invariants:
           - "Resolved from end-role + loc-scheme reply messages"
           - "URL is verified via BADA acceptance policy"
@@ -200,7 +203,7 @@ types:
             required: true
             description: "Service role"
             constraints:
-              enum: ["witness", "watcher", "agent", "controller", "mailbox"]
+              enum: ["controller", "witness", "registrar", "gateway", "watcher", "judge", "juror", "peer", "mailbox", "agent", "indexer"]
           - name: "eid"
             type: "types://cesr/primitives#AID"
             required: true
@@ -210,6 +213,7 @@ types:
             required: true
             description: "ISO 8601 datetime — BADA uses this for staleness comparison"
         invariants:
+          - "This is an extensible set — implementations MAY add custom roles beyond the normative core."
           - "Must be signed by the controller AID (cid) whose endpoint this authorizes"
           - "BADA: accepted if dt >= last accepted dt for this (cid, role, eid) triple"
       - name: "loc-scheme"

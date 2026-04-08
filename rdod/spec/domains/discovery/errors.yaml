@@ -2,9 +2,8 @@
 domain_ref: "discovery"
 
 # Error catalog for the Discovery domain.
-# Maps to exception classes in keripy/src/keri/kering.py and raise sites in
-# keripy/src/keri/app/oobiing.py (Oobiery, OobiDoer) and
-# keripy/src/keri/core/routing.py (Router.processReply).
+# Maps to error conditions raised by the OOBI resolution service and the
+# reply processing service during endpoint discovery and BADA acceptance.
 #
 # Severity levels:
 #   transient  — condition may self-resolve (escrow and retry)
@@ -49,7 +48,7 @@ errors:
 
   - name: "ConfigurationError"
     description: "OOBI resolution infrastructure is not configured to handle this type"
-    cause: "The Oobiery instance was not configured to handle rpy introductions — missing introduction handler configuration"
+    cause: "The OOBI resolution service was not configured to handle rpy introductions — missing introduction handler configuration"
     recovery: "abort"
     severity: "fatal"
     context:
@@ -63,9 +62,9 @@ errors:
 
   - name: "StaleReplyError"
     description: "Reply data rejected by Best Available Data Accepted (BADA) policy"
-    cause: "The rpy message's datetime or sequence number is not newer than the currently accepted data for this route — BADA RUN logic rejects stale updates"
-    recovery: "abort"
-    severity: "recoverable"
+    cause: "The rpy message's datetime or sequence number is not newer than the currently accepted data for this route — BADA RUN logic rejects stale updates. The currently cached data is still valid."
+    recovery: "ignore"
+    severity: "transient"
     context:
       - field: "route"
         type: "string"
@@ -114,7 +113,7 @@ errors:
 
   - name: "MissingRouteHandlerError"
     description: "No handler registered for the reply route"
-    cause: "The rpy message route does not match any registered resource handler in the Router"
+    cause: "The rpy message route does not match any registered resource handler in the reply processing service"
     recovery: "abort"
     severity: "fatal"
     context:
@@ -125,9 +124,9 @@ errors:
 
   - name: "StaleKSNError"
     description: "Key State Notification rejected by BADA monotonic-sn policy"
-    cause: "The KSN's sn is <= the currently stored sn for the AID — BADA requires sn to be monotonically increasing"
-    recovery: "abort"
-    severity: "recoverable"
+    cause: "The KSN's sn is <= the currently stored sn for the AID — BADA requires sn to be monotonically increasing. The currently cached key state is still valid."
+    recovery: "ignore"
+    severity: "transient"
     context:
       - field: "aid"
         type: "string"
@@ -195,9 +194,9 @@ errors:
 
   - name: "StaleReReplyError"
     description: "Re-resolution reply rejected by BADA — endpoint data is not newer than cached"
-    cause: "The fresh reply messages returned during re-resolution are not newer (by datetime) than the currently cached endpoint data"
-    recovery: "abort"
-    severity: "recoverable"
+    cause: "The fresh reply messages returned during re-resolution are not newer (by datetime) than the currently cached endpoint data. The currently cached endpoints remain valid."
+    recovery: "ignore"
+    severity: "transient"
     context:
       - field: "route"
         type: "string"

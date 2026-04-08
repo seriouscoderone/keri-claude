@@ -149,7 +149,7 @@ properties:
     notes: "Exactly four outcomes: ACCEPTED (to KEL), SAME-ESCROW (stay), CASCADE (different escrow), PRUNED (discarded)."
 
   # Escrow Cascade invariants
-  - invariant: "Escrow processing order MUST be: OOE first (resolves sequence gaps), then PSE (resolves signature deficiency), then PWE (resolves witness deficiency), then PDE (resolves delegation deficiency). This order matters because: OOE resolution may produce events that satisfy PSE conditions; PSE resolution may produce fully-signed events that enter PWE; PWE resolution may produce fully-witnessed events that enter PDE."
+  - invariant: "Escrow processing order MUST follow the oracle-confirmed 9-step sweep: OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF. Delegable and MFE are NOT in the standard sweep. OOE first resolves sequence gaps; receipt escrows (UWE, URE, VRE) resolve receipt verification; PDE resolves delegation before witness/signature checks; PWE before PSE because witness receipt arrival may trigger signature re-evaluation; LDE prunes timed-out duplicity evidence; QNF resolves query-not-found last."
     term: "Escrow Cascade"
     technique: property-based
     formal:
@@ -159,24 +159,33 @@ properties:
         def test_escrow_processing_order(data):
             processor = EventProcessor()
             order = processor.get_escrow_processing_order()
-            assert order.index('OOE') < order.index('PSE'), (
-                "OOE MUST be processed before PSE — OOE resolution may produce "
-                "events that satisfy PSE conditions"
+            # Verify the complete oracle-confirmed 9-step order
+            expected = ['OOE', 'UWE', 'URE', 'VRE', 'PDE', 'PWE', 'PSE', 'LDE', 'QNF']
+            assert order == expected, (
+                f"Complete escrow processing order MUST be {expected}, got {order}"
             )
-            assert order.index('PSE') < order.index('PWE'), (
-                "PSE MUST be processed before PWE — PSE resolution may produce "
-                "fully-signed events that enter PWE"
+            # Verify Delegable and MFE are excluded from sweep
+            assert 'Delegable' not in order, (
+                "Delegable MUST NOT be in standard sweep — resolves via delegator commit"
             )
-            assert order.index('PWE') < order.index('PDE'), (
-                "PWE MUST be processed before PDE — PWE resolution may produce "
-                "fully-witnessed events that enter PDE"
+            assert 'MFE' not in order, (
+                "MFE MUST NOT be in standard sweep — resolves via source-promotion"
             )
-            # Verify the complete order
-            assert order == ['OOE', 'PSE', 'PWE', 'PDE'], (
-                f"Complete escrow processing order MUST be [OOE, PSE, PWE, PDE], got {order}"
+            # Key ordering constraints
+            assert order.index('OOE') < order.index('UWE'), (
+                "OOE MUST be processed before receipt escrows"
             )
-    strategy: "Fixed order verification"
-    notes: "OOE -> PSE -> PWE -> PDE. Each stage may produce events that satisfy the next stage's conditions."
+            assert order.index('VRE') < order.index('PDE'), (
+                "Receipt escrows MUST be processed before PDE"
+            )
+            assert order.index('PDE') < order.index('PWE'), (
+                "PDE MUST be processed before PWE — delegation approval may unblock witness checks"
+            )
+            assert order.index('PWE') < order.index('PSE'), (
+                "PWE MUST be processed before PSE — witness receipt arrival may trigger signature re-evaluation"
+            )
+    strategy: "Fixed order verification — oracle-confirmed 9-step sweep"
+    notes: "OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF. Delegable and MFE are external-trigger escrows excluded from the sweep."
 
   # Out-of-Order Escrow invariants
   - invariant: "Triggered when sn > expected_sn for a known prefix, or when the prefix is unknown and the event is not an inception"
@@ -194,7 +203,7 @@ properties:
     strategy: "st.integers for expected and event sn"
     notes: "sn > expected = OOE."
 
-  - invariant: "Default timeout: 1200 seconds (keripy TimeoutOOE)"
+  - invariant: "Default timeout: 1200 seconds (20 minutes)"
     term: "Out-of-Order Escrow"
     technique: smt
     formal:
@@ -206,10 +215,10 @@ properties:
         s.add(timeout == 1200)
         s.add(timeout > 0)
         assert s.check() == sat
-    notes: "Default OOE timeout is 1200s (20 minutes)."
+    notes: "Default OOE timeout is 1200s (20 minutes). Implementation reference: keripy TimeoutOOE."
 
   # Escrow Timeout invariants
-  - invariant: "Escrow timeout semantics: an escrowed item with age A and configured timeout T is active when A < T and MUST be pruned when A >= T. Timeout is checked during each processing cycle. Pruned items are permanently discarded — they cannot re-enter any escrow. Default timeouts: OOE=1200s, PSE=3600s, PWE=3600s, PDE=86400s, LDE=3600s. Reconciliation note (L67-O33): The LDE and PDE timeouts have different semantics — PDE has 86400s (24 hours) because delegation approval may require human action; LDE has 3600s (1 hour) because it holds forensic evidence. Implementations MAY configure LDE to retain events longer (forensic evidence value), but the default is 3600s. keripy TimeoutLDE=3600, TimeoutPDE=86400."
+  - invariant: "Escrow timeout semantics: an escrowed item with age A and configured timeout T is active when A < T and MUST be pruned when A >= T. Timeout is checked during each processing cycle. Pruned items are permanently discarded — they cannot re-enter any escrow. Default timeouts: OOE=1200s, PSE=3600s, PWE=3600s, PDE=86400s, LDE=3600s. Reconciliation note (L67-O33): The LDE and PDE timeouts have different semantics — PDE has 86400s (24 hours) because delegation approval may require human action; LDE has 3600s (1 hour) because it holds forensic evidence. Implementations MAY configure LDE to retain events longer (forensic evidence value), but the default is 3600s."
     term: "Escrow Timeout"
     technique: property-based
     formal:
@@ -252,7 +261,7 @@ properties:
     notes: "Active when A < T, pruned when A >= T. Pruned = permanent discard. Defaults: OOE=1200s, PSE=3600s, PWE=3600s, PDE=86400s, LDE=3600s. PDE is 24h because delegation may require human intervention. LDE is 1h by default but may be extended for forensic value."
 
   # Misfit Event Escrow invariants
-  - invariant: "Events are not automatically reprocessed -- they must be re-submitted from a local source"
+  - invariant: "MFE has no periodic sweep — misfit events are resolved only when the same event arrives from a local (authorized) source, not by timer-based reprocessing. This is a source-promotion escrow, distinct from time-based retry escrows. MFE is NOT included in the standard 9-step escrow sweep order."
     term: "Misfit Event Escrow"
     technique: property-based
     formal:
@@ -263,10 +272,18 @@ properties:
             processor = EventProcessor()
             processor.escrow_misfit(misfit)
             resolved = processor.process_escrows()
-            # Misfit events are never in the resolved list
-            assert misfit.said not in [r.said for r in resolved]
+            # Misfit events are never in the resolved list from sweep
+            assert misfit.said not in [r.said for r in resolved], (
+                "MFE events MUST NOT be resolved by periodic sweep — "
+                "only by source-promotion from a local channel"
+            )
+            # Verify MFE is not in the sweep order
+            sweep_order = processor.get_escrow_processing_order()
+            assert 'MFE' not in sweep_order, (
+                "MFE MUST NOT appear in the standard escrow sweep order"
+            )
     strategy: "misfit_event_strategy()"
-    notes: "Misfits require manual re-submission."
+    notes: "MFE is a source-promotion escrow: resolved when the same event SAID arrives from a local source, not by timer or sweep. Distinct from all other escrows which use time-based retry."
 
   - invariant: "The four-way binding between AID, current controlling keypairs (Key State), the Controller entity, and the KEL MUST be cryptographically consistent. The AID is derived from or anchored to the initial keypair (SCID property). The Key State tracks current authoritative keypairs. The KEL provides verifiable history. The Controller holds the private keys."
     term: "Controller"
@@ -444,21 +461,50 @@ state_machines:
 # into the next type. These dependencies define the required processing sequence.
 validation_constraints:
   - id: "E1_ooe_first"
-    constraint: "Out-of-Order Escrow (OOE) processed first — releases sequence-gapped events that may then need signature/witness/delegation checking"
+    constraint: "Out-of-Order Escrow (OOE) processed first — releases sequence-gapped events that may feed all downstream queues"
     depends_on: []
     on_failure: null
 
-  - id: "E2_pse_second"
-    constraint: "Partially-Signed Escrow (PSE) processed after OOE — events released from OOE may accumulate new signatures here"
+  - id: "E2_uwe_second"
+    constraint: "Unverified Witness Receipt Escrow (UWE) processed after OOE — resolve witness receipt verification before event-level threshold checks"
     depends_on: ["E1_ooe_first"]
     on_failure: null
 
-  - id: "E3_pwe_third"
-    constraint: "Partially-Witnessed Escrow (PWE) processed after PSE — events that pass signing threshold may still need witness receipts"
-    depends_on: ["E2_pse_second"]
+  - id: "E3_ure_third"
+    constraint: "Unverified Non-Transferable Receipt Escrow (URE) processed after UWE — resolve non-transferable receipt signer verification"
+    depends_on: ["E2_uwe_second"]
     on_failure: null
 
-  - id: "E4_pde_fourth"
-    constraint: "Partially-Delegated Escrow (PDE) processed after PWE — delegated events need signatures AND witnesses before delegation check"
-    depends_on: ["E3_pwe_third"]
+  - id: "E4_vre_fourth"
+    constraint: "Unverified Transferable Receipt Escrow (VRE) processed after URE — resolve transferable receipt signer verification"
+    depends_on: ["E3_ure_third"]
     on_failure: null
+
+  - id: "E5_pde_fifth"
+    constraint: "Partially-Delegated Escrow (PDE) processed after receipt escrows — delegation approval may unblock witness and signature checks downstream"
+    depends_on: ["E4_vre_fourth"]
+    on_failure: null
+
+  - id: "E6_pwe_sixth"
+    constraint: "Partially-Witnessed Escrow (PWE) processed after PDE — witness receipt arrival may trigger signature re-evaluation"
+    depends_on: ["E5_pde_fifth"]
+    on_failure: null
+
+  - id: "E7_pse_seventh"
+    constraint: "Partially-Signed Escrow (PSE) processed after PWE — events released from witness checks may accumulate signatures here"
+    depends_on: ["E6_pwe_sixth"]
+    on_failure: null
+
+  - id: "E8_lde_eighth"
+    constraint: "Likely-Duplicitous Escrow (LDE) processed near end — prune timed-out duplicity evidence; never auto-resolved"
+    depends_on: ["E7_pse_seventh"]
+    on_failure: null
+
+  - id: "E9_qnf_ninth"
+    constraint: "Query-Not-Found Escrow (QNF) processed last — final sweep target for queries whose responses have not yet arrived"
+    depends_on: ["E8_lde_eighth"]
+    on_failure: null
+
+  # Delegable and MFE are NOT in the standard sweep
+  # - Delegable resolves when the delegator commits the approval seal (external trigger)
+  # - MFE resolves only via source-promotion (same event re-submitted from local source)

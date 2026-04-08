@@ -300,16 +300,20 @@ types:
             required: true
             description: "Escrow queue name"
             constraints:
-              enum: ["OOE", "PSE", "PWE", "PDE", "LDE", "MFE", "RPE", "all"]
+              enum: ["OOE", "UWE", "URE", "VRE", "PSE", "PWE", "PDE", "Delegable", "LDE", "MFE", "all"]
         invariants:
           - "OOE: Out-of-Order Escrow — waiting for missing prior events"
+          - "UWE: Unverified Witness Receipt Escrow — witness receipt whose event has not yet been accepted"
+          - "URE: Unverified Non-Transferable Receipt Escrow — receipt whose signing key state is not yet verified"
+          - "VRE: Unverified Transferable Receipt Escrow — transferable receipt whose signing key state is not yet verified"
           - "PSE: Partially-Signed Escrow — waiting for additional controller signatures"
           - "PWE: Partially-Witnessed Escrow — waiting for witness receipts to reach TOAD"
           - "PDE: Partially-Delegated Escrow — waiting for delegator anchoring seal"
+          - "Delegable: Delegable Event Escrow — delegated event received before delegator has committed approval seal; distinct from PDE"
           - "LDE: Likely-Duplicitous Escrow — conflicting event held as evidence"
-          - "MFE: Misfit Event Escrow — remote-sourced event for a locally-protected AID"
-          - "RPE: Reply Processing Escrow — reply message whose endorser key state is not yet available"
-          - "'all' drains all queues in processing order: OOE → PSE → PWE → PDE"
+          - "MFE: Misfit Event Escrow — remote-sourced event for a locally-protected AID; source-promotion escrow, not time-based"
+          - "'all' drains all queues in processing order: OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF"
+          - "RPE (Reply Processing Escrow) belongs to domain://discovery, not identity — it handles reply messages whose endorser key state is not yet available"
 
   - name: "EscrowReprocessResult"
     description: "Result of draining an escrow queue — events that were pending may now be accepted, remain escrowed, or be rejected."

@@ -167,14 +167,17 @@ terms:
 
   - term: "Escrow Cascade"
     synonyms: ["Escrow State Machine"]
-    definition: "The flow of events between escrow queues based on what validation step fails. Events progress through escrows as their blocking conditions resolve, potentially visiting multiple escrow types before final acceptance."
+    definition: "The flow of events between escrow queues based on what validation step fails. Events progress through escrows as their blocking conditions resolve, potentially visiting multiple escrow types before final acceptance. The cascade follows the oracle-confirmed 9-step sweep order: OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF."
     invariants:
-      - "Out-of-Order -> accepted (when prior event arrives)"
-      - "Partially-Signed -> accepted OR -> Partially-Witnessed (if sigs pass but witness threshold fails) OR -> Partially-Delegated (if sigs pass but delegation missing)"
-      - "Partially-Witnessed -> accepted (when witness receipts arrive)"
+      - "Out-of-Order -> accepted (when prior event arrives) OR -> another escrow (if next validation step fails)"
+      - "Unverified Receipt escrows (UWE, URE, VRE) -> accepted (when receipt's event or signer key state becomes available)"
       - "Partially-Delegated -> accepted (when delegator's approval event arrives) OR -> Partially-Witnessed (if delegation resolves but witnesses still insufficient)"
+      - "Partially-Witnessed -> accepted (when witness receipts arrive) OR -> Partially-Signed (if witness receipts arrive but controller signatures still insufficient)"
+      - "Partially-Signed -> accepted (when sufficient signatures arrive) OR -> Partially-Witnessed (if sigs pass but witness threshold fails) OR -> Partially-Delegated (if sigs pass but delegation missing)"
       - "Likely Duplicitous -> permanent storage (forensic evidence, never auto-resolved)"
-      - "Escrow processing order matters: OOE first, then receipt escrows, then PSE, then PWE, then PDE"
+      - "Misfit -> accepted only via source-promotion (same event re-submitted from local source); NOT part of standard sweep"
+      - "Delegable -> resolved when delegator commits approval seal; NOT part of standard sweep"
+      - "Escrow processing order: OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF"
     examples:
       - "Multi-sig rotation: arrives with 1-of-3 signatures -> PSE. Second sig arrives -> reprocess -> 2-of-3 passes -> now check witnesses -> insufficient -> PWE. Witness receipts arrive -> reprocess -> accept."
       - "Delegated inception: arrives before delegator's ixn -> PDE. Delegator's ixn arrives with seal -> reprocess -> signatures pass, witnesses pass -> accept."
@@ -196,14 +199,20 @@ terms:
 
   - term: "Escrow Processing Order"
     synonyms: []
-    definition: "The defined sequence in which escrow queues are drained during each processing sweep. Order matters because resolving one escrow type may produce events that enter another escrow type."
+    definition: "The defined sequence in which escrow queues are drained during each processing sweep. Order matters because resolving one escrow type may produce events that enter another escrow type. The oracle-confirmed 9-step order is: OOE, UWE, URE, VRE, PDE, PWE, PSE, LDE, QNF. Note: Delegable and MFE are NOT part of the standard sweep — Delegable resolves when the delegator commits, and MFE resolves only via source-promotion."
     invariants:
-      - "Order: OOE first, then receipt/witness escrows, then PSE, then PWE, then PDE"
-      - "Escrow processing order MUST be: OOE first (releases sequence-gapped events), then PSE (releases signature-deficient events), then PWE (releases witness-deficient events), then PDE (releases delegation-pending events). Order matters because each resolution may cascade into the next escrow type."
+      - "Oracle-confirmed 9-step sweep order: OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF"
+      - "OOE first: releases sequence-gapped events that may feed all downstream queues"
+      - "Receipt escrows next (UWE, URE, VRE): resolve receipt verification before checking event-level thresholds"
+      - "PDE before PWE/PSE: delegation approval may unblock witness and signature checks"
+      - "PWE before PSE: witness receipt arrival may trigger signature re-evaluation"
+      - "LDE near end: duplicity evidence is pruned on timeout but never auto-resolved"
+      - "QNF last: query-not-found escrow is the final sweep target"
+      - "Delegable and MFE are NOT in the standard sweep — they resolve by external triggers (delegator commit and source-promotion respectively)"
       - "Each sweep iterates the full queue for each escrow type before moving to the next type"
       - "Implementations may use notification-driven processing instead of explicit sweep ordering, provided the dependency order is respected"
     examples:
-      - "OOE sweep releases event at sn=4 -> this triggers PSE to re-check sn=4 (if it was also partially signed) -> PSE passes -> PWE check -> all pass -> accepted"
+      - "OOE sweep releases event at sn=4 -> UWE/URE/VRE receipt checks -> PDE delegation check -> PWE witness check -> PSE signature check -> accepted"
     related_terms: ["Escrow Cascade", "Out-of-Order Escrow", "Partially-Signed Escrow"]
 
   - term: "Escrow Timeout"
@@ -377,15 +386,18 @@ terms:
 
   - term: "Misfit Event Escrow"
     synonyms: ["MFE"]
-    definition: "Holds events received from remote sources that target locally-owned, locally-witnessed, or locally-delegated identifiers. These events are not rejected but held, requiring re-sourcing through a local protected channel before acceptance."
+    definition: "Holds events received from remote sources that target locally-owned, locally-witnessed, or locally-delegated identifiers. These events are not rejected but held, requiring re-sourcing through a local protected channel before acceptance. MFE is a source-promotion escrow, fundamentally distinct from time-based retry escrows."
     invariants:
       - "Triggered by Local Source Protection: remote source + local/witnessed/delegated AID"
       - "Indexed by AID prefix and sequence number in the Misfit Event escrow"
       - "Events are not automatically reprocessed -- they must be re-submitted from a local source"
+      - "MFE has no periodic sweep — misfit events are resolved when the same event arrives from a local (authorized) source, not by timer-based reprocessing. This is a source-promotion escrow, distinct from time-based retry escrows."
+      - "MFE is NOT part of the standard 9-step escrow sweep (OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF)"
       - "Prevents network-based injection attacks against locally controlled identifiers"
     examples:
       - "A rotation event for our own AID arrives from an external peer -> escrowed as misfit -> controller must re-submit locally"
       - "An event for an AID we witness arrives from a non-controller source -> misfit escrow"
+      - "Source-promotion: the same event SAID arrives from the controller's local process -> MFE entry is matched and promoted to normal processing pipeline"
     related_terms: ["Local Source Protection", "Event Locality", "Event Source Record"]
 
   - term: "Controller"

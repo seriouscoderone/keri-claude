@@ -38,10 +38,21 @@ ports:
         - "errors://identity/thresholds#DualThresholdError"
     refs: ["domain://identity"]
 
-  # Data Anchoring is defined in child domain identity/anchoring
-  # via port://identity/anchoring/inbound/data-anchoring — referenced here for discovery.
-  # Clients SHOULD call the parent port identity/inbound/anchor-data which delegates
-  # to identity/anchoring. See domain.yaml subdomains for via_port reference.
+  - id: "port://identity/inbound/anchor-data"
+    type: inbound
+    name: "Data Anchoring"
+    semantics: command
+    idempotent: false
+    description: >
+      Anchors external data commitments (seals) to the KEL via an interaction event.
+      Delegates to identity/anchoring for seal construction and event building.
+    contract:
+      input: "array[types://cesr/primitives#Seal]"
+      output: "types://identity#InteractionEvent"
+      errors:
+        - "errors://identity/establishment#ValidationError"
+    delegates_to: "port://identity/anchoring/inbound/data-anchoring"
+    refs: ["domain://identity"]
 
   - id: "port://identity/inbound/event-processing"
     type: inbound

@@ -88,7 +88,7 @@ types:
           - "Key state has been updated to reflect this event"
 
   - name: "EscrowType"
-    description: "Classification of escrow queues for events awaiting different blocking conditions."
+    description: "Classification of escrow queues for events awaiting different blocking conditions. The canonical set of identity-domain escrow queues, with abbreviation mappings to keripy/protocol shorthand."
     variants:
       - name: "default"
         fields:
@@ -96,14 +96,29 @@ types:
             type: "string"
             required: true
             constraints:
-              enum: ["OutOfOrder", "PartiallySigned", "PartiallyWitnessed", "PartiallyDelegated", "LikelyDuplicitous", "Misfit"]
-        invariants:
-          - "OutOfOrder (OOE) — event sn > expected, prior event not yet received"
-          - "PartiallySigned (PSE) — insufficient controller signatures for threshold"
-          - "PartiallyWitnessed (PWE) — insufficient witness receipts for TOAD"
-          - "PartiallyDelegated (PDE) — delegator's approval seal not yet found"
-          - "LikelyDuplicitous (LDE) — conflicting event detected, held as evidence"
-          - "Misfit — remote event targeting a local AID, requires local re-sourcing"
+              enum: ["OutOfOrder", "UnverifiedWitnessReceipt", "UnverifiedNonTransferableReceipt", "UnverifiedTransferableReceipt", "PartiallySigned", "PartiallyWitnessed", "PartiallyDelegated", "Delegable", "LikelyDuplicitous", "Misfit"]
+    abbreviation_map:
+      OOE: "OutOfOrder"
+      UWE: "UnverifiedWitnessReceipt"
+      URE: "UnverifiedNonTransferableReceipt"
+      VRE: "UnverifiedTransferableReceipt"
+      PSE: "PartiallySigned"
+      PWE: "PartiallyWitnessed"
+      PDE: "PartiallyDelegated"
+      Delegable: "Delegable"
+      LDE: "LikelyDuplicitous"
+      MFE: "Misfit"
+    invariants:
+      - "OutOfOrder (OOE) — event sn > expected, prior event not yet received"
+      - "UnverifiedWitnessReceipt (UWE) — witness receipt whose event has not yet been accepted into the KEL"
+      - "UnverifiedNonTransferableReceipt (URE) — non-transferable receipt whose signing key state has not yet been verified"
+      - "UnverifiedTransferableReceipt (VRE) — transferable receipt whose signing key state has not yet been verified"
+      - "PartiallySigned (PSE) — insufficient controller signatures for threshold"
+      - "PartiallyWitnessed (PWE) — insufficient witness receipts for TOAD"
+      - "PartiallyDelegated (PDE) — delegator's approval seal not yet found"
+      - "Delegable — delegated event received before the delegator has committed the approval seal; distinct from PDE which holds events whose delegator KEL is known but seal is missing"
+      - "LikelyDuplicitous (LDE) — conflicting event detected, held as evidence"
+      - "Misfit (MFE) — remote event targeting a local AID, requires local re-sourcing; has no periodic sweep — resolved only when the same event arrives from a local (authorized) source (source-promotion escrow, not time-based retry)"
 
   - name: "EscrowedEvent"
     description: "An event held in escrow awaiting resolution of its blocking condition."

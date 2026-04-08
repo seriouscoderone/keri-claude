@@ -26918,7 +26918,7 @@ const RDOD_DATA = {
           "technique": "property-based",
           "formal": {
             "language": "python",
-            "expression": "@given(endpoint_authorization())\ndef test_endpoint_auth_structure(auth):\n    assert auth.role in ('witness', 'controller', 'agent', 'watcher', 'mailbox')\n    assert auth.endpoint.startswith('http://') or auth.endpoint.startswith('https://')\n    # endpoint_aid is optional\n    if auth.endpoint_aid is not None:\n        assert len(auth.endpoint_aid) >= 44\n"
+            "expression": "@given(endpoint_authorization())\ndef test_endpoint_auth_structure(auth):\n    assert auth.role in ('controller', 'witness', 'registrar', 'gateway', 'watcher', 'judge', 'juror', 'peer', 'mailbox', 'agent', 'indexer')\n    assert auth.endpoint.startswith('http://') or auth.endpoint.startswith('https://')\n    # endpoint_aid is optional\n    if auth.endpoint_aid is not None:\n        assert len(auth.endpoint_aid) >= 44\n"
           },
           "strategy": "endpoint_authorization()",
           "notes": "Every endpoint authorization specifies at minimum a role and URL."
@@ -26973,7 +26973,7 @@ const RDOD_DATA = {
           "technique": "property-based",
           "formal": {
             "language": "python",
-            "expression": "@given(st.sampled_from(['witness', 'controller', 'agent', 'watcher', 'mailbox']))\ndef test_role_operations(role):\n    allowed_ops = get_allowed_operations(role)\n    assert len(allowed_ops) > 0\n    if role == 'witness':\n        assert 'receipt' in allowed_ops\n    elif role == 'agent':\n        assert 'manage' in allowed_ops\n    elif role == 'watcher':\n        assert 'observe' in allowed_ops\n"
+            "expression": "@given(st.sampled_from(['controller', 'witness', 'registrar', 'gateway', 'watcher', 'judge', 'juror', 'peer', 'mailbox', 'agent', 'indexer']))\ndef test_role_operations(role):\n    allowed_ops = get_allowed_operations(role)\n    assert len(allowed_ops) > 0\n    if role == 'witness':\n        assert 'receipt' in allowed_ops\n    elif role == 'agent':\n        assert 'manage' in allowed_ops\n    elif role == 'watcher':\n        assert 'observe' in allowed_ops\n"
           },
           "strategy": "sampled_from valid roles",
           "notes": "Each role has a distinct set of permitted operations."
@@ -27043,7 +27043,7 @@ const RDOD_DATA = {
             {
               "formal": {
                 "language": "python",
-                "expression": "lambda aid, role=None: (\n    isinstance(aid, str) and\n    len(aid) >= 44 and\n    (role is None or role in ('witness', 'controller', 'agent', 'watcher', 'mailbox'))\n)\n"
+                "expression": "lambda aid, role=None: (\n    isinstance(aid, str) and\n    len(aid) >= 44 and\n    (role is None or role in ('controller', 'witness', 'registrar', 'gateway', 'watcher', 'judge', 'juror', 'peer', 'mailbox', 'agent', 'indexer'))\n)\n"
               },
               "description": "AID is a valid CESR-qualified identifier, role is optional but must be valid"
             }
@@ -27339,7 +27339,7 @@ const RDOD_DATA = {
       {
         "name": "ConfigurationError",
         "description": "OOBI resolution infrastructure is not configured to handle this type",
-        "cause": "The Oobiery instance was not configured to handle rpy introductions — missing introduction handler configuration",
+        "cause": "The OOBI resolution service was not configured to handle rpy introductions — missing introduction handler configuration",
         "recovery": "abort",
         "severity": "fatal",
         "context": [
@@ -27359,9 +27359,9 @@ const RDOD_DATA = {
       {
         "name": "StaleReplyError",
         "description": "Reply data rejected by Best Available Data Accepted (BADA) policy",
-        "cause": "The rpy message's datetime or sequence number is not newer than the currently accepted data for this route — BADA RUN logic rejects stale updates",
-        "recovery": "abort",
-        "severity": "recoverable",
+        "cause": "The rpy message's datetime or sequence number is not newer than the currently accepted data for this route — BADA RUN logic rejects stale updates. The currently cached data is still valid.",
+        "recovery": "ignore",
+        "severity": "transient",
         "context": [
           {
             "field": "route",
@@ -27434,7 +27434,7 @@ const RDOD_DATA = {
       {
         "name": "MissingRouteHandlerError",
         "description": "No handler registered for the reply route",
-        "cause": "The rpy message route does not match any registered resource handler in the Router",
+        "cause": "The rpy message route does not match any registered resource handler in the reply processing service",
         "recovery": "abort",
         "severity": "fatal",
         "context": [
@@ -27449,9 +27449,9 @@ const RDOD_DATA = {
       {
         "name": "StaleKSNError",
         "description": "Key State Notification rejected by BADA monotonic-sn policy",
-        "cause": "The KSN's sn is <= the currently stored sn for the AID — BADA requires sn to be monotonically increasing",
-        "recovery": "abort",
-        "severity": "recoverable",
+        "cause": "The KSN's sn is <= the currently stored sn for the AID — BADA requires sn to be monotonically increasing. The currently cached key state is still valid.",
+        "recovery": "ignore",
+        "severity": "transient",
         "context": [
           {
             "field": "aid",
@@ -27547,9 +27547,9 @@ const RDOD_DATA = {
       {
         "name": "StaleReReplyError",
         "description": "Re-resolution reply rejected by BADA — endpoint data is not newer than cached",
-        "cause": "The fresh reply messages returned during re-resolution are not newer (by datetime) than the currently cached endpoint data",
-        "recovery": "abort",
-        "severity": "recoverable",
+        "cause": "The fresh reply messages returned during re-resolution are not newer (by datetime) than the currently cached endpoint data. The currently cached endpoints remain valid.",
+        "recovery": "ignore",
+        "severity": "transient",
         "context": [
           {
             "field": "route",
@@ -27620,11 +27620,17 @@ const RDOD_DATA = {
                 "description": "The role of the endpoint provider",
                 "constraints": {
                   "enum": [
-                    "witness",
-                    "watcher",
-                    "agent",
                     "controller",
-                    "mailbox"
+                    "witness",
+                    "registrar",
+                    "gateway",
+                    "watcher",
+                    "judge",
+                    "juror",
+                    "peer",
+                    "mailbox",
+                    "agent",
+                    "indexer"
                   ]
                 }
               },
@@ -27639,7 +27645,7 @@ const RDOD_DATA = {
               "URL pattern: /oobi/{cid}/{role} or /oobi/{cid}/{role}/{eid}",
               "Returns signed reply messages (end-role + loc-scheme) plus KEL replay for the cid",
               "If eid is specified, only returns data for that specific provider",
-              "keripy regex: OOBI_RE = /oobi/(?P<cid>[^/]+)/(?P<role>[^/]+)(?:/(?P<eid>[^/]+))?"
+              "This is an extensible set — implementations MAY add custom roles beyond the normative core."
             ]
           },
           {
@@ -27662,8 +27668,7 @@ const RDOD_DATA = {
               "URL pattern: /oobi/{said}",
               "Returns the content identified by the SAID (e.g., JSON Schema for ACDC)",
               "Verification: compute SAID of returned content, compare to the requested SAID",
-              "Content is immutable — SAIDs are content-addressed, so the data never changes",
-              "keripy regex: DOOBI_RE = /oobi/(?P<said>[^/]+)"
+              "Content is immutable — SAIDs are content-addressed, so the data never changes"
             ]
           },
           {
@@ -27688,8 +27693,7 @@ const RDOD_DATA = {
             "invariants": [
               "URL pattern: /.well-known/keri/oobi/{cid}",
               "Follows RFC 8615 well-known URI convention",
-              "May return a redirect to the actual OOBI endpoint or serve KEL directly",
-              "keripy regex: WOOBI_RE = /.well-known/keri/oobi/(?P<cid>[^/]+)"
+              "May return a redirect to the actual OOBI endpoint or serve KEL directly"
             ]
           },
           {
@@ -27726,7 +27730,8 @@ const RDOD_DATA = {
             "format": "url",
             "notes": "OOBIs are primarily exchanged as URLs — in QR codes, messages, emails, or any text channel. The URL IS the OOBI."
           }
-        ]
+        ],
+        "notes": "OOBI resolution response uses application/json+cesr content type — JSON-serialized\nKERI events with CESR-encoded signature attachments. KEL replay is interleaved with\nend-role and loc-scheme reply messages in a single CESR stream.\n"
       },
       {
         "name": "EndRole",
@@ -27748,11 +27753,17 @@ const RDOD_DATA = {
                 "description": "Service role",
                 "constraints": {
                   "enum": [
-                    "witness",
-                    "watcher",
-                    "agent",
                     "controller",
-                    "mailbox"
+                    "witness",
+                    "registrar",
+                    "gateway",
+                    "watcher",
+                    "judge",
+                    "juror",
+                    "peer",
+                    "mailbox",
+                    "agent",
+                    "indexer"
                   ]
                 }
               },
@@ -27764,6 +27775,7 @@ const RDOD_DATA = {
               }
             ],
             "invariants": [
+              "This is an extensible set — implementations MAY add custom roles beyond the normative core.",
               "Authorization via signed reply message (route=/end/role/add)",
               "Revocation via signed reply message (route=/end/role/cut)",
               "Subject to BADA acceptance policy — newer datetime replaces older"
@@ -27839,11 +27851,17 @@ const RDOD_DATA = {
                 "description": "Service role — determines what protocol the endpoint speaks",
                 "constraints": {
                   "enum": [
-                    "witness",
-                    "watcher",
-                    "agent",
                     "controller",
-                    "mailbox"
+                    "witness",
+                    "registrar",
+                    "gateway",
+                    "watcher",
+                    "judge",
+                    "juror",
+                    "peer",
+                    "mailbox",
+                    "agent",
+                    "indexer"
                   ]
                 }
               }
@@ -27922,11 +27940,17 @@ const RDOD_DATA = {
                 "description": "Service role",
                 "constraints": {
                   "enum": [
-                    "witness",
-                    "watcher",
-                    "agent",
                     "controller",
-                    "mailbox"
+                    "witness",
+                    "registrar",
+                    "gateway",
+                    "watcher",
+                    "judge",
+                    "juror",
+                    "peer",
+                    "mailbox",
+                    "agent",
+                    "indexer"
                   ]
                 }
               },
@@ -27944,6 +27968,7 @@ const RDOD_DATA = {
               }
             ],
             "invariants": [
+              "This is an extensible set — implementations MAY add custom roles beyond the normative core.",
               "Must be signed by the controller AID (cid) whose endpoint this authorizes",
               "BADA: accepted if dt >= last accepted dt for this (cid, role, eid) triple"
             ]
@@ -29964,14 +29989,17 @@ const RDOD_DATA = {
         "synonyms": [
           "Escrow State Machine"
         ],
-        "definition": "The flow of events between escrow queues based on what validation step fails. Events progress through escrows as their blocking conditions resolve, potentially visiting multiple escrow types before final acceptance.",
+        "definition": "The flow of events between escrow queues based on what validation step fails. Events progress through escrows as their blocking conditions resolve, potentially visiting multiple escrow types before final acceptance. The cascade follows the oracle-confirmed 9-step sweep order: OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF.",
         "invariants": [
-          "Out-of-Order -> accepted (when prior event arrives)",
-          "Partially-Signed -> accepted OR -> Partially-Witnessed (if sigs pass but witness threshold fails) OR -> Partially-Delegated (if sigs pass but delegation missing)",
-          "Partially-Witnessed -> accepted (when witness receipts arrive)",
+          "Out-of-Order -> accepted (when prior event arrives) OR -> another escrow (if next validation step fails)",
+          "Unverified Receipt escrows (UWE, URE, VRE) -> accepted (when receipt's event or signer key state becomes available)",
           "Partially-Delegated -> accepted (when delegator's approval event arrives) OR -> Partially-Witnessed (if delegation resolves but witnesses still insufficient)",
+          "Partially-Witnessed -> accepted (when witness receipts arrive) OR -> Partially-Signed (if witness receipts arrive but controller signatures still insufficient)",
+          "Partially-Signed -> accepted (when sufficient signatures arrive) OR -> Partially-Witnessed (if sigs pass but witness threshold fails) OR -> Partially-Delegated (if sigs pass but delegation missing)",
           "Likely Duplicitous -> permanent storage (forensic evidence, never auto-resolved)",
-          "Escrow processing order matters: OOE first, then receipt escrows, then PSE, then PWE, then PDE"
+          "Misfit -> accepted only via source-promotion (same event re-submitted from local source); NOT part of standard sweep",
+          "Delegable -> resolved when delegator commits approval seal; NOT part of standard sweep",
+          "Escrow processing order: OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF"
         ],
         "examples": [
           "Multi-sig rotation: arrives with 1-of-3 signatures -> PSE. Second sig arrives -> reprocess -> 2-of-3 passes -> now check witnesses -> insufficient -> PWE. Witness receipts arrive -> reprocess -> accept.",
@@ -30012,15 +30040,21 @@ const RDOD_DATA = {
       {
         "term": "Escrow Processing Order",
         "synonyms": [],
-        "definition": "The defined sequence in which escrow queues are drained during each processing sweep. Order matters because resolving one escrow type may produce events that enter another escrow type.",
+        "definition": "The defined sequence in which escrow queues are drained during each processing sweep. Order matters because resolving one escrow type may produce events that enter another escrow type. The oracle-confirmed 9-step order is: OOE, UWE, URE, VRE, PDE, PWE, PSE, LDE, QNF. Note: Delegable and MFE are NOT part of the standard sweep — Delegable resolves when the delegator commits, and MFE resolves only via source-promotion.",
         "invariants": [
-          "Order: OOE first, then receipt/witness escrows, then PSE, then PWE, then PDE",
-          "Escrow processing order MUST be: OOE first (releases sequence-gapped events), then PSE (releases signature-deficient events), then PWE (releases witness-deficient events), then PDE (releases delegation-pending events). Order matters because each resolution may cascade into the next escrow type.",
+          "Oracle-confirmed 9-step sweep order: OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF",
+          "OOE first: releases sequence-gapped events that may feed all downstream queues",
+          "Receipt escrows next (UWE, URE, VRE): resolve receipt verification before checking event-level thresholds",
+          "PDE before PWE/PSE: delegation approval may unblock witness and signature checks",
+          "PWE before PSE: witness receipt arrival may trigger signature re-evaluation",
+          "LDE near end: duplicity evidence is pruned on timeout but never auto-resolved",
+          "QNF last: query-not-found escrow is the final sweep target",
+          "Delegable and MFE are NOT in the standard sweep — they resolve by external triggers (delegator commit and source-promotion respectively)",
           "Each sweep iterates the full queue for each escrow type before moving to the next type",
           "Implementations may use notification-driven processing instead of explicit sweep ordering, provided the dependency order is respected"
         ],
         "examples": [
-          "OOE sweep releases event at sn=4 -> this triggers PSE to re-check sn=4 (if it was also partially signed) -> PSE passes -> PWE check -> all pass -> accepted"
+          "OOE sweep releases event at sn=4 -> UWE/URE/VRE receipt checks -> PDE delegation check -> PWE witness check -> PSE signature check -> accepted"
         ],
         "related_terms": [
           "Escrow Cascade",
@@ -30298,16 +30332,19 @@ const RDOD_DATA = {
         "synonyms": [
           "MFE"
         ],
-        "definition": "Holds events received from remote sources that target locally-owned, locally-witnessed, or locally-delegated identifiers. These events are not rejected but held, requiring re-sourcing through a local protected channel before acceptance.",
+        "definition": "Holds events received from remote sources that target locally-owned, locally-witnessed, or locally-delegated identifiers. These events are not rejected but held, requiring re-sourcing through a local protected channel before acceptance. MFE is a source-promotion escrow, fundamentally distinct from time-based retry escrows.",
         "invariants": [
           "Triggered by Local Source Protection: remote source + local/witnessed/delegated AID",
           "Indexed by AID prefix and sequence number in the Misfit Event escrow",
           "Events are not automatically reprocessed -- they must be re-submitted from a local source",
+          "MFE has no periodic sweep — misfit events are resolved when the same event arrives from a local (authorized) source, not by timer-based reprocessing. This is a source-promotion escrow, distinct from time-based retry escrows.",
+          "MFE is NOT part of the standard 9-step escrow sweep (OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF)",
           "Prevents network-based injection attacks against locally controlled identifiers"
         ],
         "examples": [
           "A rotation event for our own AID arrives from an external peer -> escrowed as misfit -> controller must re-submit locally",
-          "An event for an AID we witness arrives from a non-controller source -> misfit escrow"
+          "An event for an AID we witness arrives from a non-controller source -> misfit escrow",
+          "Source-promotion: the same event SAID arrives from the controller's local process -> MFE entry is matched and promoted to normal processing pipeline"
         ],
         "related_terms": [
           "Local Source Protection",
@@ -30500,6 +30537,25 @@ const RDOD_DATA = {
         ]
       },
       {
+        "id": "port://identity/inbound/anchor-data",
+        "type": "inbound",
+        "name": "Data Anchoring",
+        "semantics": "command",
+        "idempotent": false,
+        "description": "Anchors external data commitments (seals) to the KEL via an interaction event. Delegates to identity/anchoring for seal construction and event building.\n",
+        "contract": {
+          "input": "array[types://cesr/primitives#Seal]",
+          "output": "types://identity#InteractionEvent",
+          "errors": [
+            "errors://identity/establishment#ValidationError"
+          ]
+        },
+        "delegates_to": "port://identity/anchoring/inbound/data-anchoring",
+        "refs": [
+          "domain://identity"
+        ]
+      },
+      {
         "id": "port://identity/inbound/event-processing",
         "type": "inbound",
         "name": "Event Processing",
@@ -30613,15 +30669,15 @@ const RDOD_DATA = {
           "notes": "Exactly four outcomes: ACCEPTED (to KEL), SAME-ESCROW (stay), CASCADE (different escrow), PRUNED (discarded)."
         },
         {
-          "invariant": "Escrow processing order MUST be: OOE first (resolves sequence gaps), then PSE (resolves signature deficiency), then PWE (resolves witness deficiency), then PDE (resolves delegation deficiency). This order matters because: OOE resolution may produce events that satisfy PSE conditions; PSE resolution may produce fully-signed events that enter PWE; PWE resolution may produce fully-witnessed events that enter PDE.",
+          "invariant": "Escrow processing order MUST follow the oracle-confirmed 9-step sweep: OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF. Delegable and MFE are NOT in the standard sweep. OOE first resolves sequence gaps; receipt escrows (UWE, URE, VRE) resolve receipt verification; PDE resolves delegation before witness/signature checks; PWE before PSE because witness receipt arrival may trigger signature re-evaluation; LDE prunes timed-out duplicity evidence; QNF resolves query-not-found last.",
           "term": "Escrow Cascade",
           "technique": "property-based",
           "formal": {
             "language": "python",
-            "expression": "@given(st.data())\ndef test_escrow_processing_order(data):\n    processor = EventProcessor()\n    order = processor.get_escrow_processing_order()\n    assert order.index('OOE') < order.index('PSE'), (\n        \"OOE MUST be processed before PSE — OOE resolution may produce \"\n        \"events that satisfy PSE conditions\"\n    )\n    assert order.index('PSE') < order.index('PWE'), (\n        \"PSE MUST be processed before PWE — PSE resolution may produce \"\n        \"fully-signed events that enter PWE\"\n    )\n    assert order.index('PWE') < order.index('PDE'), (\n        \"PWE MUST be processed before PDE — PWE resolution may produce \"\n        \"fully-witnessed events that enter PDE\"\n    )\n    # Verify the complete order\n    assert order == ['OOE', 'PSE', 'PWE', 'PDE'], (\n        f\"Complete escrow processing order MUST be [OOE, PSE, PWE, PDE], got {order}\"\n    )\n"
+            "expression": "@given(st.data())\ndef test_escrow_processing_order(data):\n    processor = EventProcessor()\n    order = processor.get_escrow_processing_order()\n    # Verify the complete oracle-confirmed 9-step order\n    expected = ['OOE', 'UWE', 'URE', 'VRE', 'PDE', 'PWE', 'PSE', 'LDE', 'QNF']\n    assert order == expected, (\n        f\"Complete escrow processing order MUST be {expected}, got {order}\"\n    )\n    # Verify Delegable and MFE are excluded from sweep\n    assert 'Delegable' not in order, (\n        \"Delegable MUST NOT be in standard sweep — resolves via delegator commit\"\n    )\n    assert 'MFE' not in order, (\n        \"MFE MUST NOT be in standard sweep — resolves via source-promotion\"\n    )\n    # Key ordering constraints\n    assert order.index('OOE') < order.index('UWE'), (\n        \"OOE MUST be processed before receipt escrows\"\n    )\n    assert order.index('VRE') < order.index('PDE'), (\n        \"Receipt escrows MUST be processed before PDE\"\n    )\n    assert order.index('PDE') < order.index('PWE'), (\n        \"PDE MUST be processed before PWE — delegation approval may unblock witness checks\"\n    )\n    assert order.index('PWE') < order.index('PSE'), (\n        \"PWE MUST be processed before PSE — witness receipt arrival may trigger signature re-evaluation\"\n    )\n"
           },
-          "strategy": "Fixed order verification",
-          "notes": "OOE -> PSE -> PWE -> PDE. Each stage may produce events that satisfy the next stage's conditions."
+          "strategy": "Fixed order verification — oracle-confirmed 9-step sweep",
+          "notes": "OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF. Delegable and MFE are external-trigger escrows excluded from the sweep."
         },
         {
           "invariant": "Triggered when sn > expected_sn for a known prefix, or when the prefix is unknown and the event is not an inception",
@@ -30635,17 +30691,17 @@ const RDOD_DATA = {
           "notes": "sn > expected = OOE."
         },
         {
-          "invariant": "Default timeout: 1200 seconds (keripy TimeoutOOE)",
+          "invariant": "Default timeout: 1200 seconds (20 minutes)",
           "term": "Out-of-Order Escrow",
           "technique": "smt",
           "formal": {
             "language": "z3-python",
             "expression": "from z3 import *\ntimeout = Int('timeout')\ns = Solver()\ns.add(timeout == 1200)\ns.add(timeout > 0)\nassert s.check() == sat\n"
           },
-          "notes": "Default OOE timeout is 1200s (20 minutes)."
+          "notes": "Default OOE timeout is 1200s (20 minutes). Implementation reference: keripy TimeoutOOE."
         },
         {
-          "invariant": "Escrow timeout semantics: an escrowed item with age A and configured timeout T is active when A < T and MUST be pruned when A >= T. Timeout is checked during each processing cycle. Pruned items are permanently discarded — they cannot re-enter any escrow. Default timeouts: OOE=1200s, PSE=3600s, PWE=3600s, PDE=86400s, LDE=3600s. Reconciliation note (L67-O33): The LDE and PDE timeouts have different semantics — PDE has 86400s (24 hours) because delegation approval may require human action; LDE has 3600s (1 hour) because it holds forensic evidence. Implementations MAY configure LDE to retain events longer (forensic evidence value), but the default is 3600s. keripy TimeoutLDE=3600, TimeoutPDE=86400.",
+          "invariant": "Escrow timeout semantics: an escrowed item with age A and configured timeout T is active when A < T and MUST be pruned when A >= T. Timeout is checked during each processing cycle. Pruned items are permanently discarded — they cannot re-enter any escrow. Default timeouts: OOE=1200s, PSE=3600s, PWE=3600s, PDE=86400s, LDE=3600s. Reconciliation note (L67-O33): The LDE and PDE timeouts have different semantics — PDE has 86400s (24 hours) because delegation approval may require human action; LDE has 3600s (1 hour) because it holds forensic evidence. Implementations MAY configure LDE to retain events longer (forensic evidence value), but the default is 3600s.",
           "term": "Escrow Timeout",
           "technique": "property-based",
           "formal": {
@@ -30656,15 +30712,15 @@ const RDOD_DATA = {
           "notes": "Active when A < T, pruned when A >= T. Pruned = permanent discard. Defaults: OOE=1200s, PSE=3600s, PWE=3600s, PDE=86400s, LDE=3600s. PDE is 24h because delegation may require human intervention. LDE is 1h by default but may be extended for forensic value."
         },
         {
-          "invariant": "Events are not automatically reprocessed -- they must be re-submitted from a local source",
+          "invariant": "MFE has no periodic sweep — misfit events are resolved only when the same event arrives from a local (authorized) source, not by timer-based reprocessing. This is a source-promotion escrow, distinct from time-based retry escrows. MFE is NOT included in the standard 9-step escrow sweep order.",
           "term": "Misfit Event Escrow",
           "technique": "property-based",
           "formal": {
             "language": "python",
-            "expression": "@given(misfit=misfit_event_strategy())\ndef test_misfit_no_auto_reprocess(misfit):\n    processor = EventProcessor()\n    processor.escrow_misfit(misfit)\n    resolved = processor.process_escrows()\n    # Misfit events are never in the resolved list\n    assert misfit.said not in [r.said for r in resolved]\n"
+            "expression": "@given(misfit=misfit_event_strategy())\ndef test_misfit_no_auto_reprocess(misfit):\n    processor = EventProcessor()\n    processor.escrow_misfit(misfit)\n    resolved = processor.process_escrows()\n    # Misfit events are never in the resolved list from sweep\n    assert misfit.said not in [r.said for r in resolved], (\n        \"MFE events MUST NOT be resolved by periodic sweep — \"\n        \"only by source-promotion from a local channel\"\n    )\n    # Verify MFE is not in the sweep order\n    sweep_order = processor.get_escrow_processing_order()\n    assert 'MFE' not in sweep_order, (\n        \"MFE MUST NOT appear in the standard escrow sweep order\"\n    )\n"
           },
           "strategy": "misfit_event_strategy()",
-          "notes": "Misfits require manual re-submission."
+          "notes": "MFE is a source-promotion escrow: resolved when the same event SAID arrives from a local source, not by timer or sweep. Distinct from all other escrows which use time-based retry."
         },
         {
           "invariant": "The four-way binding between AID, current controlling keypairs (Key State), the Controller entity, and the KEL MUST be cryptographically consistent. The AID is derived from or anchored to the initial keypair (SCID property). The Key State tracks current authoritative keypairs. The KEL provides verifiable history. The Controller holds the private keys.",
@@ -30862,31 +30918,71 @@ const RDOD_DATA = {
       "validation_constraints": [
         {
           "id": "E1_ooe_first",
-          "constraint": "Out-of-Order Escrow (OOE) processed first — releases sequence-gapped events that may then need signature/witness/delegation checking",
+          "constraint": "Out-of-Order Escrow (OOE) processed first — releases sequence-gapped events that may feed all downstream queues",
           "depends_on": [],
           "on_failure": null
         },
         {
-          "id": "E2_pse_second",
-          "constraint": "Partially-Signed Escrow (PSE) processed after OOE — events released from OOE may accumulate new signatures here",
+          "id": "E2_uwe_second",
+          "constraint": "Unverified Witness Receipt Escrow (UWE) processed after OOE — resolve witness receipt verification before event-level threshold checks",
           "depends_on": [
             "E1_ooe_first"
           ],
           "on_failure": null
         },
         {
-          "id": "E3_pwe_third",
-          "constraint": "Partially-Witnessed Escrow (PWE) processed after PSE — events that pass signing threshold may still need witness receipts",
+          "id": "E3_ure_third",
+          "constraint": "Unverified Non-Transferable Receipt Escrow (URE) processed after UWE — resolve non-transferable receipt signer verification",
           "depends_on": [
-            "E2_pse_second"
+            "E2_uwe_second"
           ],
           "on_failure": null
         },
         {
-          "id": "E4_pde_fourth",
-          "constraint": "Partially-Delegated Escrow (PDE) processed after PWE — delegated events need signatures AND witnesses before delegation check",
+          "id": "E4_vre_fourth",
+          "constraint": "Unverified Transferable Receipt Escrow (VRE) processed after URE — resolve transferable receipt signer verification",
           "depends_on": [
-            "E3_pwe_third"
+            "E3_ure_third"
+          ],
+          "on_failure": null
+        },
+        {
+          "id": "E5_pde_fifth",
+          "constraint": "Partially-Delegated Escrow (PDE) processed after receipt escrows — delegation approval may unblock witness and signature checks downstream",
+          "depends_on": [
+            "E4_vre_fourth"
+          ],
+          "on_failure": null
+        },
+        {
+          "id": "E6_pwe_sixth",
+          "constraint": "Partially-Witnessed Escrow (PWE) processed after PDE — witness receipt arrival may trigger signature re-evaluation",
+          "depends_on": [
+            "E5_pde_fifth"
+          ],
+          "on_failure": null
+        },
+        {
+          "id": "E7_pse_seventh",
+          "constraint": "Partially-Signed Escrow (PSE) processed after PWE — events released from witness checks may accumulate signatures here",
+          "depends_on": [
+            "E6_pwe_sixth"
+          ],
+          "on_failure": null
+        },
+        {
+          "id": "E8_lde_eighth",
+          "constraint": "Likely-Duplicitous Escrow (LDE) processed near end — prune timed-out duplicity evidence; never auto-resolved",
+          "depends_on": [
+            "E7_pse_seventh"
+          ],
+          "on_failure": null
+        },
+        {
+          "id": "E9_qnf_ninth",
+          "constraint": "Query-Not-Found Escrow (QNF) processed last — final sweep target for queries whose responses have not yet arrived",
+          "depends_on": [
+            "E8_lde_eighth"
           ],
           "on_failure": null
         }
@@ -31032,7 +31128,7 @@ const RDOD_DATA = {
       },
       {
         "name": "EscrowType",
-        "description": "Classification of escrow queues for events awaiting different blocking conditions.",
+        "description": "Classification of escrow queues for events awaiting different blocking conditions. The canonical set of identity-domain escrow queues, with abbreviation mappings to keripy/protocol shorthand.",
         "variants": [
           {
             "name": "default",
@@ -31044,24 +31140,44 @@ const RDOD_DATA = {
                 "constraints": {
                   "enum": [
                     "OutOfOrder",
+                    "UnverifiedWitnessReceipt",
+                    "UnverifiedNonTransferableReceipt",
+                    "UnverifiedTransferableReceipt",
                     "PartiallySigned",
                     "PartiallyWitnessed",
                     "PartiallyDelegated",
+                    "Delegable",
                     "LikelyDuplicitous",
                     "Misfit"
                   ]
                 }
               }
-            ],
-            "invariants": [
-              "OutOfOrder (OOE) — event sn > expected, prior event not yet received",
-              "PartiallySigned (PSE) — insufficient controller signatures for threshold",
-              "PartiallyWitnessed (PWE) — insufficient witness receipts for TOAD",
-              "PartiallyDelegated (PDE) — delegator's approval seal not yet found",
-              "LikelyDuplicitous (LDE) — conflicting event detected, held as evidence",
-              "Misfit — remote event targeting a local AID, requires local re-sourcing"
             ]
           }
+        ],
+        "abbreviation_map": {
+          "OOE": "OutOfOrder",
+          "UWE": "UnverifiedWitnessReceipt",
+          "URE": "UnverifiedNonTransferableReceipt",
+          "VRE": "UnverifiedTransferableReceipt",
+          "PSE": "PartiallySigned",
+          "PWE": "PartiallyWitnessed",
+          "PDE": "PartiallyDelegated",
+          "Delegable": "Delegable",
+          "LDE": "LikelyDuplicitous",
+          "MFE": "Misfit"
+        },
+        "invariants": [
+          "OutOfOrder (OOE) — event sn > expected, prior event not yet received",
+          "UnverifiedWitnessReceipt (UWE) — witness receipt whose event has not yet been accepted into the KEL",
+          "UnverifiedNonTransferableReceipt (URE) — non-transferable receipt whose signing key state has not yet been verified",
+          "UnverifiedTransferableReceipt (VRE) — transferable receipt whose signing key state has not yet been verified",
+          "PartiallySigned (PSE) — insufficient controller signatures for threshold",
+          "PartiallyWitnessed (PWE) — insufficient witness receipts for TOAD",
+          "PartiallyDelegated (PDE) — delegator's approval seal not yet found",
+          "Delegable — delegated event received before the delegator has committed the approval seal; distinct from PDE which holds events whose delegator KEL is known but seal is missing",
+          "LikelyDuplicitous (LDE) — conflicting event detected, held as evidence",
+          "Misfit (MFE) — remote event targeting a local AID, requires local re-sourcing; has no periodic sweep — resolved only when the same event arrives from a local (authorized) source (source-promotion escrow, not time-based retry)"
         ]
       },
       {
@@ -37950,12 +38066,15 @@ const RDOD_DATA = {
                 "constraints": {
                   "enum": [
                     "OOE",
+                    "UWE",
+                    "URE",
+                    "VRE",
                     "PSE",
                     "PWE",
                     "PDE",
+                    "Delegable",
                     "LDE",
                     "MFE",
-                    "RPE",
                     "all"
                   ]
                 }
@@ -37963,13 +38082,17 @@ const RDOD_DATA = {
             ],
             "invariants": [
               "OOE: Out-of-Order Escrow — waiting for missing prior events",
+              "UWE: Unverified Witness Receipt Escrow — witness receipt whose event has not yet been accepted",
+              "URE: Unverified Non-Transferable Receipt Escrow — receipt whose signing key state is not yet verified",
+              "VRE: Unverified Transferable Receipt Escrow — transferable receipt whose signing key state is not yet verified",
               "PSE: Partially-Signed Escrow — waiting for additional controller signatures",
               "PWE: Partially-Witnessed Escrow — waiting for witness receipts to reach TOAD",
               "PDE: Partially-Delegated Escrow — waiting for delegator anchoring seal",
+              "Delegable: Delegable Event Escrow — delegated event received before delegator has committed approval seal; distinct from PDE",
               "LDE: Likely-Duplicitous Escrow — conflicting event held as evidence",
-              "MFE: Misfit Event Escrow — remote-sourced event for a locally-protected AID",
-              "RPE: Reply Processing Escrow — reply message whose endorser key state is not yet available",
-              "'all' drains all queues in processing order: OOE → PSE → PWE → PDE"
+              "MFE: Misfit Event Escrow — remote-sourced event for a locally-protected AID; source-promotion escrow, not time-based",
+              "'all' drains all queues in processing order: OOE → UWE → URE → VRE → PDE → PWE → PSE → LDE → QNF",
+              "RPE (Reply Processing Escrow) belongs to domain://discovery, not identity — it handles reply messages whose endorser key state is not yet available"
             ]
           }
         ]
