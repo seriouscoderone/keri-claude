@@ -24,6 +24,7 @@ ports:
         - "errors://accountability/receipting#UnverifiedWitnessReceiptError"
         - "errors://accountability/receipting#UnverifiedReceiptError"
         - "errors://accountability/receipting#StaleReceiptError"
+    delegates_to: ["port://accountability/receipting/inbound/receipt-lifecycle"]
     refs: ["domain://identity"]
 
   - id: "port://accountability/inbound/kerl-query"
@@ -35,6 +36,7 @@ ports:
       input: "types://cesr/primitives#AID"
       output: "types://accountability/receipting#KERL"
       errors: []
+    delegates_to: ["port://accountability/receipting/inbound/kerl-assembly"]
     refs: ["domain://identity"]
 
   # Outbound — what accountability calls
@@ -49,4 +51,5 @@ ports:
       errors:
         - "errors://accountability/dissemination#WitnessUnreachableError"
         - "errors://accountability/dissemination#DisseminationTimeoutError"
+    delegates_to: ["port://accountability/dissemination/inbound/event-propagation"]
     refs: ["domain://externals/transport"]

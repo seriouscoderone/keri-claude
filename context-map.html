@@ -1916,6 +1916,9 @@ const RDOD_DATA = {
             "errors://accountability/receipting#StaleReceiptError"
           ]
         },
+        "delegates_to": [
+          "port://accountability/receipting/inbound/receipt-lifecycle"
+        ],
         "refs": [
           "domain://identity"
         ]
@@ -1931,6 +1934,9 @@ const RDOD_DATA = {
           "output": "types://accountability/receipting#KERL",
           "errors": []
         },
+        "delegates_to": [
+          "port://accountability/receipting/inbound/kerl-assembly"
+        ],
         "refs": [
           "domain://identity"
         ]
@@ -1949,6 +1955,9 @@ const RDOD_DATA = {
             "errors://accountability/dissemination#DisseminationTimeoutError"
           ]
         },
+        "delegates_to": [
+          "port://accountability/dissemination/inbound/event-propagation"
+        ],
         "refs": [
           "domain://externals/transport"
         ]
@@ -2032,7 +2041,7 @@ const RDOD_DATA = {
           "notes": "The ample threshold is the BFT minimum — below it, a Byzantine minority could block accountability."
         },
         {
-          "invariant": "Triggered when toader.satisfy(windices) returns False -- insufficient witness receipts",
+          "invariant": "Triggered when the witness receipt count does not satisfy the TOAD threshold -- insufficient witness receipts",
           "term": "Partially-Witnessed Escrow",
           "technique": "property-based",
           "formal": {
@@ -2043,7 +2052,7 @@ const RDOD_DATA = {
           "notes": "Below TOAD = PWE."
         },
         {
-          "invariant": "Default timeout: 3600 seconds (keripy TimeoutPWE)",
+          "invariant": "Default timeout: 3600 seconds",
           "term": "Partially-Witnessed Escrow",
           "technique": "smt",
           "formal": {
@@ -15979,7 +15988,7 @@ const RDOD_DATA = {
     ],
     "_rules": [
       "Discloser must provide both Proof of Issuance (PoI) and Proof of Disclosure (PoD)",
-      "A signature on the most compact form SAID provides PoI for all schema-authorized variants",
+      "A KEL seal anchoring the most compact form SAID provides PoI for all schema-authorized variants",
       "Credential artifact verification requires ACDC SAID to match TEL event ta field, and TEL event digest to match KEL seal",
       "KRAM authentication is checked before processing any IPEX exchange message content",
       "Verification is stateless given a key state snapshot — it takes artifacts and returns valid/invalid"
@@ -15997,14 +16006,14 @@ const RDOD_DATA = {
         "synonyms": [
           "PoI"
         ],
-        "definition": "Evidence that an ACDC was authentically issued — provided by disclosing the SAID of the most compact form variant and the issuer's verifiable commitment (signature or seal) on that SAID.",
+        "definition": "Evidence that an ACDC was authentically issued — provided by disclosing the SAID of the most compact form variant and the issuer's KEL seal anchoring that SAID via a transaction event.",
         "invariants": [
-          "Issuer must provide signature or seal on the SAID of the most compact form",
+          "Issuer must anchor the credential's SAID in their KEL via a transaction event seal",
           "A commitment to the top-level SAID is equivalent to a commitment to the hash tree root",
           "This single commitment provides PoI for all schema-authorized variants"
         ],
         "examples": [
-          "Issuer's signature on the compact ACDC SAID, verifiable against the issuer's key state at issuance"
+          "Issuer's KEL seal anchoring the compact ACDC SAID, verifiable against the issuer's key state at issuance"
         ],
         "related_terms": [
           "Proof of Disclosure",
@@ -16021,7 +16030,7 @@ const RDOD_DATA = {
         "invariants": [
           "Discloser provides the SAD of the variant, verifiable against its SAID",
           "Nested blocks are recursively expanded from compact form and verified",
-          "May satisfy commitment made in prior step via signature on SAID"
+          "May satisfy commitment made in prior step via KEL seal on SAID"
         ],
         "examples": [
           "Full attribute section SAD disclosed and verified against its SAID from the compact form"
@@ -16060,7 +16069,7 @@ const RDOD_DATA = {
           "MCF",
           "Most Compact Form SAID"
         ],
-        "definition": "The canonical form of an ACDC (or any SAIDed block) used to compute its single unambiguous SAID. Computed by a depth-first algorithm: expand leaf blocks, compute their SAIDs, compact them into their enclosing blocks, compute those SAIDs, and repeat up to the root. The result is a representation where every SAIDed subblock is replaced by its SAID. This is what the issuer signs — one commitment that covers all schema-authorized disclosure variants.",
+        "definition": "The canonical form of an ACDC (or any SAIDed block) used to compute its single unambiguous SAID. Computed by a depth-first algorithm: expand leaf blocks, compute their SAIDs, compact them into their enclosing blocks, compute those SAIDs, and repeat up to the root. The result is a representation where every SAIDed subblock is replaced by its SAID. This is what the issuer anchors in their KEL — one commitment that covers all schema-authorized disclosure variants.",
         "invariants": [
           "Every SAIDed block has exactly one Most Compact Form regardless of how many oneOf variants its schema allows",
           "Algorithm: depth-first — SAIDify leaves first, compact them, SAIDify parents, repeat to root",
@@ -16084,12 +16093,12 @@ const RDOD_DATA = {
           "SAID Tree",
           "Verification Tree"
         ],
-        "definition": "The implicit hash tree formed by an ACDC's nested SAIDed blocks. The top-level SAID is the tree root; each section SAID (attributes, edges, rules) is a branch; leaf blocks are the terminal nodes. A commitment (signature or seal) to the root SAID is a commitment to the entire tree — any branch can be independently verified by expanding it and checking its SAID against its compact form in the parent.",
+        "definition": "The implicit hash tree formed by an ACDC's nested SAIDed blocks. The top-level SAID is the tree root; each section SAID (attributes, edges, rules) is a branch; leaf blocks are the terminal nodes. A KEL seal anchoring the root SAID is a commitment to the entire tree — any branch can be independently verified by expanding it and checking its SAID against its compact form in the parent.",
         "invariants": [
           "Commitment to the top-level SAID is equivalent to commitment to the hash tree root",
           "Verifying a nested block is verifying proof of inclusion in the tree",
           "Any schema-authorized variant corresponds to a different expansion path through the same tree",
-          "One PoI (signature on root SAID) provides issuance proof for all disclosure variants"
+          "One PoI (KEL seal anchoring root SAID) provides issuance proof for all disclosure variants"
         ],
         "examples": [
           "Root: ACDC SAID → branches: a.d (attributes), e.d (edges), r.d (rules) → leaves: individual attribute SAIDs",
@@ -16211,15 +16220,15 @@ const RDOD_DATA = {
     "_verification": {
       "properties": [
         {
-          "invariant": "Issuer must provide signature or seal on the SAID of the most compact form",
+          "invariant": "Issuer must anchor the credential's SAID in their KEL via a transaction event seal",
           "term": "Proof of Issuance",
           "technique": "property-based",
           "formal": {
             "language": "python",
-            "expression": "lambda acdc, issuer_commitment, issuer_key_state: (\n  compact_said := compute_most_compact_form(acdc).d,\n  verify_signature(issuer_commitment, compact_said, issuer_key_state)\n  or verify_seal(issuer_commitment, compact_said, issuer_key_state)\n)\n"
+            "expression": "lambda acdc, kel_seal, issuer_key_state: (\n  compact_said := compute_most_compact_form(acdc).d,\n  verify_seal(kel_seal, compact_said, issuer_key_state)\n)\n"
           },
-          "strategy": "Generate ACDCs with valid and invalid issuer commitments; verify PoI check",
-          "notes": "Either signature or seal is acceptable"
+          "strategy": "Generate ACDCs with valid and invalid KEL seals; verify PoI check",
+          "notes": "ACDCs are NOT directly signed by the Issuer — the ACDC's SAID is anchored in the Issuer's KEL via a transaction event seal"
         },
         {
           "invariant": "A commitment to the top-level SAID is equivalent to a commitment to the hash tree root",
@@ -16325,18 +16334,18 @@ const RDOD_DATA = {
             {
               "formal": {
                 "language": "python",
-                "expression": "is_valid_said(acdc_said) and is_valid_signature(issuer_commitment) and is_valid_key_state(issuer_key_state)\n"
+                "expression": "is_valid_said(acdc_said) and is_valid_seal(kel_seal) and is_valid_key_state(issuer_key_state)\n"
               },
-              "description": "SAID, commitment, and key state must all be valid"
+              "description": "SAID, KEL seal, and key state must all be valid"
             }
           ],
           "postconditions": [
             {
               "formal": {
                 "language": "python",
-                "expression": "(result == True and verify_signature(issuer_commitment, acdc_said, issuer_key_state))\nor (result == False)\n"
+                "expression": "(result == True and verify_seal(kel_seal, acdc_said, issuer_key_state))\nor (result == False)\n"
               },
-              "description": "verify_proof_of_issuance returns True iff the commitment is cryptographically valid"
+              "description": "verify_proof_of_issuance returns True iff the KEL seal anchoring the credential's SAID is cryptographically valid"
             }
           ]
         },
@@ -16409,7 +16418,7 @@ const RDOD_DATA = {
         },
         {
           "id": "C4_proof_of_issuance",
-          "constraint": "Issuer's commitment (signature or seal) must verify against the most compact form's SAID",
+          "constraint": "Issuer's KEL seal must anchor the most compact form's SAID via a transaction event",
           "depends_on": [
             "C3_tel_anchor_verify"
           ],
@@ -16424,6 +16433,7 @@ const RDOD_DATA = {
         "cause": "A valid grant must bundle ACDC + TEL event + KEL seal — one or more is absent",
         "recovery": "abort",
         "severity": "fatal",
+        "related_port": "port://credential-exchange/proof/inbound/verify-disclosure",
         "context": [
           {
             "field": "grant_said",
@@ -16443,6 +16453,7 @@ const RDOD_DATA = {
         "cause": "The TEL event SAID does not match the ACDC's registry entry, or the KEL seal does not authorize the TEL event",
         "recovery": "abort",
         "severity": "fatal",
+        "related_port": "port://credential-exchange/proof/inbound/verify-disclosure",
         "context": [
           {
             "field": "credential_said",
@@ -16482,6 +16493,7 @@ const RDOD_DATA = {
         "cause": "The expanded credential's SAID does not match the SAID committed in the compact form — the credential was tampered with after commitment",
         "recovery": "abort",
         "severity": "fatal",
+        "related_port": "port://credential-exchange/proof/inbound/verify-disclosure",
         "context": [
           {
             "field": "compact_said",
@@ -16554,7 +16566,7 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "registry_said",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
                 "description": "REGID of the registry"
               },
@@ -40779,7 +40791,7 @@ const RDOD_DATA = {
     "subdomains": [
       {
         "ref": "domain://integrity/evidence",
-        "relationship": "Owns fork detection, evidence escrow lifecycle (.ldes -> .dels), and escrow reprocessing triggers"
+        "relationship": "Owns fork detection, evidence escrow lifecycle (LDE to DEL), and escrow reprocessing triggers"
       },
       {
         "ref": "domain://integrity/recovery",
@@ -40999,7 +41011,7 @@ const RDOD_DATA = {
         "idempotent": false,
         "description": "Start duplicity monitoring for an AID against a specified set of witness sources. Delegates to monitoring-lifecycle and evidence-management subdomains.\n",
         "contract": {
-          "input": "types://cesr/primitives#AID + sources:array[types://cesr/primitives#AID]",
+          "input": "types://integrity/detection#MonitoringRequest",
           "output": "types://integrity/detection#MonitorHandle",
           "errors": [
             "errors://integrity/detection#LikelyDuplicitousError",
@@ -41053,7 +41065,7 @@ const RDOD_DATA = {
         },
         "delegates_to": [
           "port://integrity/evidence/inbound/evidence-management",
-          "port://integrity/recovery/inbound/reconciliation"
+          "port://integrity/recovery/inbound/disputed-branch-query"
         ],
         "refs": [
           "domain://identity"
@@ -41151,12 +41163,12 @@ const RDOD_DATA = {
           "notes": "Same sn, different SAID = likely duplicitous."
         },
         {
-          "invariant": "LDE entries are NEVER automatically promoted, resolved, or reprocessed — they await explicit human/judge intervention. However, LDE entries ARE subject to pruning after the escrow timeout (default 3600s). Pruning is administrative cleanup, not resolution: a pruned LDE entry means the duplicity investigation was abandoned due to inactivity, NOT that the duplicity was resolved. After pruning, the entry is removed from .ldes but the conflict is NOT cleared.",
+          "invariant": "LDE entries are NEVER automatically promoted, resolved, or reprocessed — they await explicit human/judge intervention. However, LDE entries ARE subject to pruning after the escrow timeout (default 3600s). Pruning is administrative cleanup, not resolution: a pruned LDE entry means the duplicity investigation was abandoned due to inactivity, NOT that the duplicity was resolved. After pruning, the entry is removed from the LDE but the conflict is NOT cleared.",
           "term": "Likely Duplicitous Escrow",
           "technique": "property-based",
           "formal": {
             "language": "python",
-            "expression": "@given(lde_event=lde_event_strategy(), elapsed=st.integers(min_value=0, max_value=7200))\ndef test_lde_never_auto_resolved(lde_event, elapsed):\n    # L1-O26: Clarification — LDE entries can be pruned (timeout) but never auto-resolved\n    processor = EventProcessor()\n    processor.escrow_lde(lde_event)\n    processor.advance_time(elapsed)\n    resolved_events = processor.process_escrows()\n    # LDE entries are NEVER in the auto-resolved set\n    assert lde_event.said not in [r.said for r in resolved_events], (\n        \"LDE entries must never be auto-resolved regardless of elapsed time\"\n    )\n    # After timeout, entry may be pruned (removed) but NOT resolved\n    if elapsed >= 3600:\n        lde_entry = processor.get_lde(lde_event.prefix, lde_event.sn)\n        pruned_entries = processor.get_pruned()\n        # The entry is either still present (not yet swept) or pruned — never resolved\n        was_pruned = any(e.said == lde_event.said for e in pruned_entries)\n        if was_pruned:\n            assert lde_entry is None, \"Pruned entry must be removed from .ldes\"\n            # Pruning != resolution — duplicity is still noted\n"
+            "expression": "@given(lde_event=lde_event_strategy(), elapsed=st.integers(min_value=0, max_value=7200))\ndef test_lde_never_auto_resolved(lde_event, elapsed):\n    # L1-O26: Clarification — LDE entries can be pruned (timeout) but never auto-resolved\n    processor = EventProcessor()\n    processor.escrow_lde(lde_event)\n    processor.advance_time(elapsed)\n    resolved_events = processor.process_escrows()\n    # LDE entries are NEVER in the auto-resolved set\n    assert lde_event.said not in [r.said for r in resolved_events], (\n        \"LDE entries must never be auto-resolved regardless of elapsed time\"\n    )\n    # After timeout, entry may be pruned (removed) but NOT resolved\n    if elapsed >= 3600:\n        lde_entry = processor.get_lde(lde_event.prefix, lde_event.sn)\n        pruned_entries = processor.get_pruned()\n        # The entry is either still present (not yet swept) or pruned — never resolved\n        was_pruned = any(e.said == lde_event.said for e in pruned_entries)\n        if was_pruned:\n            assert lde_entry is None, \"Pruned entry must be removed from the LDE\"\n            # Pruning != resolution — duplicity is still noted\n"
           },
           "strategy": "lde_event_strategy() x st.integers for elapsed time",
           "notes": "L1-O26: Reconciliation of 'never auto-resolve' vs timeout. These are NOT contradictory: LDE entries are never automatically promoted or resolved (the duplicity stays unresolved), BUT they ARE pruned from the escrow queue after timeout (3600s default). Pruning removes the entry from .ldes to prevent unbounded growth; it does not clear the duplicity. Once promoted to .dels (DEL), entries are permanent and never pruned. Summary: LDE (.ldes) = temporary suspected evidence, prunable; DEL (.dels) = permanent confirmed evidence, never pruned.\n"
@@ -41570,7 +41582,7 @@ const RDOD_DATA = {
           },
           {
             "seq": 5,
-            "domain": "domain://integrity/detection",
+            "domain": "domain://integrity/evidence",
             "action": "alert_validators",
             "port": "port://integrity/evidence/inbound/notification",
             "input": {
@@ -54912,6 +54924,9 @@ const RDOD_DATA = {
         "name": "Event Submission",
         "semantics": "command",
         "idempotent": true,
+        "invariants": [
+          "Witnesses MUST receipt all key event types (icp, rot, ixn, dip, drt) equally — the TOAD threshold applies to every event in the KEL, not just establishment events"
+        ],
         "contract": {
           "input": "CESR-encoded key event message",
           "output": "types://witness-service/api#EventSubmissionResult",
@@ -54920,7 +54935,7 @@ const RDOD_DATA = {
             "errors://witness-service/api#UnsupportedEventTypeError",
             "errors://witness-service/api#SignatureVerificationFailedError",
             "errors://witness-service/api#UnauthorizedEventError",
-            "errors://witness-service/api#DuplicateReceiptError"
+            "errors://witness-service/api#FirstSeenConflictError"
           ]
         },
         "refs": [
@@ -54933,12 +54948,11 @@ const RDOD_DATA = {
         "type": "inbound",
         "name": "Receipting",
         "semantics": "command",
-        "idempotent": false,
+        "idempotent": true,
         "contract": {
           "input": "types://cesr/primitives#AID",
           "output": "types://accountability/consensus#Receipt",
           "errors": [
-            "errors://witness-service/api#DuplicateReceiptError",
             "errors://witness-service/api#EventValidationError"
           ]
         },
@@ -55084,29 +55098,31 @@ const RDOD_DATA = {
         "cause": "The event's witness list (b field) does not include this witness's AID",
         "recovery": "abort",
         "severity": "fatal",
+        "related_port": "port://witness-service/api/inbound/event-submission",
         "context": [
           {
             "field": "event_prefix",
-            "type": "string",
+            "type": "types://cesr/primitives#AID",
             "description": "The AID of the event"
           },
           {
             "field": "witness_aid",
-            "type": "string",
+            "type": "types://cesr/primitives#AID",
             "description": "This witness's AID"
           }
         ]
       },
       {
-        "name": "DuplicateReceiptError",
-        "description": "Already receipted a different event at this (prefix, sn)",
-        "cause": "First-seen rule violation — this witness already signed an event with a different SAID at the same sequence number",
+        "name": "FirstSeenConflictError",
+        "description": "Already receipted a different event at this (prefix, sn) — first-seen rule violation",
+        "cause": "This witness already signed an event with a different SAID at the same sequence number",
         "recovery": "abort",
         "severity": "fatal",
+        "related_port": "port://witness-service/api/inbound/event-submission",
         "context": [
           {
             "field": "prefix",
-            "type": "string",
+            "type": "types://cesr/primitives#AID",
             "description": "The AID"
           },
           {
@@ -55116,12 +55132,12 @@ const RDOD_DATA = {
           },
           {
             "field": "first_seen_said",
-            "type": "string",
+            "type": "types://cesr/primitives#SAID",
             "description": "SAID of the event already receipted"
           },
           {
             "field": "new_said",
-            "type": "string",
+            "type": "types://cesr/primitives#SAID",
             "description": "SAID of the conflicting event"
           }
         ]
@@ -55132,6 +55148,7 @@ const RDOD_DATA = {
         "cause": "Event body is malformed, signatures are missing or invalid, or SAID does not match",
         "recovery": "abort",
         "severity": "fatal",
+        "related_port": "port://witness-service/api/inbound/receipting",
         "context": [
           {
             "field": "reason",
@@ -55146,6 +55163,7 @@ const RDOD_DATA = {
         "cause": "The CESR stream cannot be parsed or the deserialized event is missing required fields",
         "recovery": "abort",
         "severity": "fatal",
+        "related_port": "port://witness-service/api/inbound/event-submission",
         "context": [
           {
             "field": "reason",
@@ -55160,6 +55178,7 @@ const RDOD_DATA = {
         "cause": "Witness only accepts KEL events (icp, rot, ixn, dip, drt) and receipts (rct) — other ilks are rejected",
         "recovery": "abort",
         "severity": "fatal",
+        "related_port": "port://witness-service/api/inbound/event-submission",
         "context": [
           {
             "field": "ilk",
@@ -55174,15 +55193,16 @@ const RDOD_DATA = {
         "cause": "Event signatures could not be verified against the controller's current key state",
         "recovery": "abort",
         "severity": "fatal",
+        "related_port": "port://witness-service/api/inbound/event-submission",
         "context": [
           {
             "field": "aid",
-            "type": "string",
+            "type": "types://cesr/primitives#AID",
             "description": "The AID whose signatures failed"
           },
           {
             "field": "event_said",
-            "type": "string",
+            "type": "types://cesr/primitives#SAID",
             "description": "SAID of the rejected event"
           }
         ]
@@ -55198,7 +55218,7 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "witness_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "This witness's non-transferable AID"
               },
@@ -55250,7 +55270,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "event_said",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
                 "description": "SAID of the accepted event"
               }
@@ -55270,7 +55290,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "event_said",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
                 "description": "SAID of the escrowed event"
               }
@@ -55290,7 +55310,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "event_said",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
                 "description": "SAID of the rejected event"
               }
@@ -55310,7 +55330,7 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "The AID whose KERL was requested"
               },
@@ -55609,10 +55629,7 @@ const RDOD_DATA = {
         "contract": {
           "input": "types://witness-service#ReceiptedEvent",
           "output": "types://witness-service#ReceiptedEvent",
-          "errors": [
-            "errors://witness-service/api#DuplicateReceiptError",
-            "errors://witness-service/api#EventValidationError"
-          ]
+          "errors": []
         },
         "refs": [
           "domain://externals/persistence"

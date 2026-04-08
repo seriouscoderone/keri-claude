@@ -7,7 +7,7 @@ types:
       - name: "default"
         fields:
           - name: "witness_aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "This witness's non-transferable AID"
           - name: "listen_port"
@@ -41,7 +41,7 @@ types:
             required: true
             description: "Witness's non-transferable signature over the event SAID"
           - name: "event_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the accepted event"
         invariants:
@@ -53,7 +53,7 @@ types:
             required: true
             description: "Why the event was escrowed (out-of-order, missing signatures, etc.)"
           - name: "event_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the escrowed event"
         invariants:
@@ -65,7 +65,7 @@ types:
             required: true
             description: "Why the event was rejected (first-seen conflict, invalid signatures, etc.)"
           - name: "event_said"
-            type: "string"
+            type: "types://cesr/primitives#SAID"
             required: true
             description: "SAID of the rejected event"
         invariants:
@@ -77,7 +77,7 @@ types:
       - name: "default"
         fields:
           - name: "aid"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "The AID whose KERL was requested"
           - name: "events"

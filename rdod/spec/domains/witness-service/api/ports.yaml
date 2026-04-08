@@ -7,6 +7,8 @@ ports:
     name: "Event Submission"
     semantics: command
     idempotent: true  # duplicate submissions return cached receipt — per UL ("Receipt Response") and verification (test_resubmission_idempotent)
+    invariants:
+      - "Witnesses MUST receipt all key event types (icp, rot, ixn, dip, drt) equally — the TOAD threshold applies to every event in the KEL, not just establishment events"
     contract:
       input: "CESR-encoded key event message"
       output: "types://witness-service/api#EventSubmissionResult"
@@ -15,19 +17,18 @@ ports:
         - "errors://witness-service/api#UnsupportedEventTypeError"
         - "errors://witness-service/api#SignatureVerificationFailedError"
         - "errors://witness-service/api#UnauthorizedEventError"
-        - "errors://witness-service/api#DuplicateReceiptError"
+        - "errors://witness-service/api#FirstSeenConflictError"
     refs: ["domain://cloud-agent-service", "domain://local-agent"]
 
   - id: "port://witness-service/api/inbound/receipting"
     type: inbound
     name: "Receipting"
     semantics: command
-    idempotent: false
+    idempotent: true  # duplicate submissions return the same cached receipt — per UL and oracle confirmation
     contract:
       input: "types://cesr/primitives#AID"
       output: "types://accountability/consensus#Receipt"
       errors:
-        - "errors://witness-service/api#DuplicateReceiptError"
         - "errors://witness-service/api#EventValidationError"
     refs: ["domain://cloud-agent-service", "domain://local-agent"]
 

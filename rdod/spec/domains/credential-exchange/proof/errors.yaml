@@ -6,6 +6,7 @@ errors:
     cause: "A valid grant must bundle ACDC + TEL event + KEL seal — one or more is absent"
     recovery: "abort"
     severity: "fatal"
+    related_port: "port://credential-exchange/proof/inbound/verify-disclosure"
     context:
       - field: "grant_said"
         type: "string"
@@ -19,6 +20,7 @@ errors:
     cause: "The TEL event SAID does not match the ACDC's registry entry, or the KEL seal does not authorize the TEL event"
     recovery: "abort"
     severity: "fatal"
+    related_port: "port://credential-exchange/proof/inbound/verify-disclosure"
     context:
       - field: "credential_said"
         type: "string"
@@ -46,6 +48,7 @@ errors:
     cause: "The expanded credential's SAID does not match the SAID committed in the compact form — the credential was tampered with after commitment"
     recovery: "abort"
     severity: "fatal"
+    related_port: "port://credential-exchange/proof/inbound/verify-disclosure"
     context:
       - field: "compact_said"
         type: "string"

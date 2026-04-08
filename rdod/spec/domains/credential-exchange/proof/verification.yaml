@@ -2,19 +2,18 @@
 domain_ref: "credential-exchange/proof"
 
 properties:
-  - invariant: "Issuer must provide signature or seal on the SAID of the most compact form"
+  - invariant: "Issuer must anchor the credential's SAID in their KEL via a transaction event seal"
     term: "Proof of Issuance"
     technique: property-based
     formal:
       language: python
       expression: |
-        lambda acdc, issuer_commitment, issuer_key_state: (
+        lambda acdc, kel_seal, issuer_key_state: (
           compact_said := compute_most_compact_form(acdc).d,
-          verify_signature(issuer_commitment, compact_said, issuer_key_state)
-          or verify_seal(issuer_commitment, compact_said, issuer_key_state)
+          verify_seal(kel_seal, compact_said, issuer_key_state)
         )
-    strategy: "Generate ACDCs with valid and invalid issuer commitments; verify PoI check"
-    notes: "Either signature or seal is acceptable"
+    strategy: "Generate ACDCs with valid and invalid KEL seals; verify PoI check"
+    notes: "ACDCs are NOT directly signed by the Issuer — the ACDC's SAID is anchored in the Issuer's KEL via a transaction event seal"
 
   - invariant: "A commitment to the top-level SAID is equivalent to a commitment to the hash tree root"
     term: "Proof of Issuance"
@@ -148,15 +147,15 @@ contracts:
       - formal:
           language: python
           expression: |
-            is_valid_said(acdc_said) and is_valid_signature(issuer_commitment) and is_valid_key_state(issuer_key_state)
-        description: "SAID, commitment, and key state must all be valid"
+            is_valid_said(acdc_said) and is_valid_seal(kel_seal) and is_valid_key_state(issuer_key_state)
+        description: "SAID, KEL seal, and key state must all be valid"
     postconditions:
       - formal:
           language: python
           expression: |
-            (result == True and verify_signature(issuer_commitment, acdc_said, issuer_key_state))
+            (result == True and verify_seal(kel_seal, acdc_said, issuer_key_state))
             or (result == False)
-        description: "verify_proof_of_issuance returns True iff the commitment is cryptographically valid"
+        description: "verify_proof_of_issuance returns True iff the KEL seal anchoring the credential's SAID is cryptographically valid"
 
   - port_ref: "port://credential-exchange/proof/inbound/verify-disclosure"
     preconditions:
@@ -205,6 +204,6 @@ validation_constraints:
     on_failure: "escrow — missing TEL or KEL authorization"
 
   - id: "C4_proof_of_issuance"
-    constraint: "Issuer's commitment (signature or seal) must verify against the most compact form's SAID"
+    constraint: "Issuer's KEL seal must anchor the most compact form's SAID via a transaction event"
     depends_on: ["C3_tel_anchor_verify"]
     on_failure: "reject — invalid proof of issuance"

@@ -150,7 +150,7 @@ properties:
     notes: "The ample threshold is the BFT minimum — below it, a Byzantine minority could block accountability."
 
   # Partially-Witnessed Escrow invariants
-  - invariant: "Triggered when toader.satisfy(windices) returns False -- insufficient witness receipts"
+  - invariant: "Triggered when the witness receipt count does not satisfy the TOAD threshold -- insufficient witness receipts"
     term: "Partially-Witnessed Escrow"
     technique: property-based
     formal:
@@ -165,7 +165,7 @@ properties:
     strategy: "st.integers for toad and receipt count"
     notes: "Below TOAD = PWE."
 
-  - invariant: "Default timeout: 3600 seconds (keripy TimeoutPWE)"
+  - invariant: "Default timeout: 3600 seconds"
     term: "Partially-Witnessed Escrow"
     technique: smt
     formal:
