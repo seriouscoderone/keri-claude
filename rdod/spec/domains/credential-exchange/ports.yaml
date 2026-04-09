@@ -19,6 +19,7 @@ ports:
         - "errors://credential-exchange#UnknownExchangeRouteError"
         - "errors://credential-exchange#ExchangeAuthenticationError"
     refs: ["domain://credential-lifecycle"]
+    delegates_to: "port://credential-exchange/negotiation/inbound/negotiate"
     notes: |
       L811-O8: The exchange-protocol port is bidirectional — both discloser and disclosee
       call this port when receiving messages. The ExchangeResult.state indicates the outcome

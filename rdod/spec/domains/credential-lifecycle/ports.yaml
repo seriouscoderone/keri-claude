@@ -17,6 +17,7 @@ ports:
         - "errors://credential-lifecycle#IssuerKeyStateError"
         - "errors://credential-lifecycle#CredentialSAIDError"
     refs: ["domain://credential-lifecycle"]
+    delegates_to: "port://credential-lifecycle/status/inbound/authorize"
 
   - id: "port://credential-lifecycle/inbound/shielded-state"
     type: inbound

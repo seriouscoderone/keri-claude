@@ -23,6 +23,7 @@ ports:
         - "errors://privacy#MutualExclusionViolation"
         - "errors://privacy#PublicBlockDisclosureGuardError"
     refs: ["domain://credential-lifecycle"]
+    delegates_to: "port://privacy/disclosure/inbound/mode-definitions"
     notes: |
       L811-O15: Public block guard — the port now declares the precondition that partial
       disclosure form is only valid for blocks with u fields (Private or Metadata classification).
@@ -46,6 +47,7 @@ ports:
       errors:
         - "errors://privacy#InvalidSAIDOrderError"
     refs: []
+    delegates_to: "port://privacy/aggregation/inbound/aggregation-operations"
     invariants:
       - "Attribute SAIDs MUST be in schema-defined anyOf order (not insertion order)"
       - "AGID = digest(concat(saids)) using the algorithm specified in AGIDComputationInput"

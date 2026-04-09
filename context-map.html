@@ -11595,12 +11595,12 @@ const RDOD_DATA = {
         "usage": "TEL Registrar manages registry TEL events; has processEscrows() called by Escrow Processing Worker; integrates with Monitor for registry/credential operations"
       },
       {
-        "term": "Credentialer",
+        "term": "Credential Manager",
         "from": "domain://credential-lifecycle",
-        "usage": "Issues and manages ACDC credentials; Monitor queries Credentialer to detect credential operation completion"
+        "usage": "Issues and manages ACDC credentials; Monitor queries Credential Manager to detect credential operation completion"
       },
       {
-        "term": "Seeker",
+        "term": "Credential Index",
         "from": "domain://credential-lifecycle",
         "usage": "Credential search index triggered by Verifier cues when credentials are saved; queried by API handlers"
       }
@@ -13205,7 +13205,7 @@ const RDOD_DATA = {
         ],
         "related_terms": [
           "Exchange Negotiation",
-          "Exchanger"
+          "Exchange Dispatcher"
         ]
       }
     ],
@@ -13228,6 +13228,7 @@ const RDOD_DATA = {
         "refs": [
           "domain://credential-lifecycle"
         ],
+        "delegates_to": "port://credential-exchange/negotiation/inbound/negotiate",
         "notes": "L811-O8: The exchange-protocol port is bidirectional — both discloser and disclosee\ncall this port when receiving messages. The ExchangeResult.state indicates the outcome\nfrom the receiver's perspective: 'admitted' when a grant is processed by the disclosee,\n'spurned' when any party spurns, 'pending' for intermediate states.\n"
       },
       {
@@ -13682,7 +13683,7 @@ const RDOD_DATA = {
       },
       {
         "name": "ExchangeResult",
-        "description": "Outcome of processing an IPEX exchange message through the protocol state machine.",
+        "description": "Outcome of processing an IPEX exchange message through the protocol state machine. States map to the full IPEX FSM: applied/offered/agreed are intermediate negotiation states, granted means credential delivered awaiting acknowledgment, admitted and spurned are terminal states.",
         "variants": [
           {
             "name": "default",
@@ -13691,12 +13692,15 @@ const RDOD_DATA = {
                 "name": "state",
                 "type": "string",
                 "required": true,
-                "description": "Terminal or pending state of the exchange",
+                "description": "Current state of the exchange in the IPEX FSM",
                 "constraints": {
                   "enum": [
+                    "applied",
+                    "offered",
+                    "agreed",
+                    "granted",
                     "admitted",
-                    "spurned",
-                    "pending"
+                    "spurned"
                   ]
                 }
               },
@@ -13706,6 +13710,14 @@ const RDOD_DATA = {
                 "required": true,
                 "description": "SAID of the exchange thread this result belongs to"
               }
+            ],
+            "invariants": [
+              "applied: disclosee has sent an apply requesting a credential — awaiting offer",
+              "offered: discloser has sent an offer with credential preview — awaiting agree or grant",
+              "agreed: disclosee has agreed to terms (chain-link confidentiality gate passed) — awaiting grant",
+              "granted: discloser has sent grant with credential bundle — awaiting admit",
+              "admitted: disclosee acknowledged receipt — terminal success",
+              "spurned: any party rejected the exchange — terminal failure"
             ]
           }
         ]
@@ -16645,12 +16657,12 @@ const RDOD_DATA = {
         "description": "TEL Registrar — maintains and publishes registry TEL state updates"
       },
       {
-        "term": "Credentialer",
-        "description": "Issues and manages ACDC credentials — validates schemas, creates credential events"
+        "term": "Credential Manager",
+        "description": "Issues and manages ACDC credentials — validates schemas, creates credential events, tracks issuance completion"
       },
       {
-        "term": "Seeker",
-        "description": "Credential search index — full-text search for credentials by schema, issuer, subject"
+        "term": "Credential Index",
+        "description": "Full-text credential search index — queries credentials by schema, issuer, subject, and dynamic attribute fields"
       },
       {
         "term": "TEL",
@@ -17141,16 +17153,18 @@ const RDOD_DATA = {
         ]
       },
       {
-        "term": "Credentialer",
-        "synonyms": [],
+        "term": "Credential Manager",
+        "synonyms": [
+          "Credentialer [keripy]"
+        ],
         "definition": "Issues and manages ACDC credentials — validates schemas, creates credential events, tracks issuance completion. Companion to TEL Registrar.",
         "invariants": [
           "complete() returns true when credential issuance is fully anchored",
           "Has processEscrows() for pending credential operations",
-          "Monitor queries Credentialer to detect credential operation completion"
+          "Monitor queries Credential Manager to detect credential operation completion"
         ],
         "examples": [
-          "POST /credentials triggers Credentialer -> issues ACDC -> anchors to KEL via TEL Registrar"
+          "POST /credentials triggers Credential Manager -> issues ACDC -> anchors to KEL via TEL Registrar"
         ],
         "related_terms": [
           "TEL Registrar",
@@ -17160,8 +17174,9 @@ const RDOD_DATA = {
         ]
       },
       {
-        "term": "Seeker",
+        "term": "Credential Index",
         "synonyms": [
+          "Seeker [keripy]",
           "Credential Search"
         ],
         "definition": "Full-text search index for credentials. Creates static indexes (issuer/schema, issuee/schema) and dynamic indexes (all scalar fields in credential payload) for efficient querying.",
@@ -17171,11 +17186,11 @@ const RDOD_DATA = {
           "Triggered by Verifier cues when credentials are saved"
         ],
         "examples": [
-          "seeker.find({'schema': schemaSaid, '-a-i': issuerAid}) -> [SAID, ...]",
+          "credentialIndex.find({'schema': schemaSaid, '-a-i': issuerAid}) -> [SAID, ...]",
           "Dynamic index: credential attribute 'LEI' becomes searchable via '-a-LEI'"
         ],
         "related_terms": [
-          "Credentialer",
+          "Credential Manager",
           "Credential Storage",
           "Registry Collection"
         ]
@@ -17545,7 +17560,8 @@ const RDOD_DATA = {
         },
         "refs": [
           "domain://credential-lifecycle"
-        ]
+        ],
+        "delegates_to": "port://credential-lifecycle/status/inbound/authorize"
       },
       {
         "id": "port://credential-lifecycle/inbound/shielded-state",
@@ -18791,7 +18807,7 @@ const RDOD_DATA = {
                 "error": "MissingRegistryError",
                 "ref": "errors://credential-lifecycle/status#MissingRegistryError",
                 "action": "abort",
-                "compensation": "Issuer must create registry first via vcp event"
+                "compensation": "Issuer must create registry first via rip event"
               }
             ]
           },
@@ -49849,6 +49865,7 @@ const RDOD_DATA = {
         "refs": [
           "domain://credential-lifecycle"
         ],
+        "delegates_to": "port://privacy/disclosure/inbound/mode-definitions",
         "notes": "L811-O15: Public block guard — the port now declares the precondition that partial\ndisclosure form is only valid for blocks with u fields (Private or Metadata classification).\nPublic blocks have no u field and no shielding, so partial form is meaningless:\nthe verifier can compute the full content from the SAID via rainbow table. Attempting\npartial disclosure on a public block raises PublicBlockPartialDisclosureError.\n"
       },
       {
@@ -49866,6 +49883,7 @@ const RDOD_DATA = {
           ]
         },
         "refs": [],
+        "delegates_to": "port://privacy/aggregation/inbound/aggregation-operations",
         "invariants": [
           "Attribute SAIDs MUST be in schema-defined anyOf order (not insertion order)",
           "AGID = digest(concat(saids)) using the algorithm specified in AGIDComputationInput"
@@ -50143,7 +50161,8 @@ const RDOD_DATA = {
             "type": "string",
             "description": "Why this form is invalid for this block"
           }
-        ]
+        ],
+        "related_port": "port://privacy/inbound/privacy-management"
       },
       {
         "name": "DisclosureMonotonicityViolation",
@@ -50162,7 +50181,8 @@ const RDOD_DATA = {
             "type": "string",
             "description": "The lower level that was attempted"
           }
-        ]
+        ],
+        "related_port": "port://privacy/inbound/privacy-management"
       },
       {
         "name": "InsufficientEntropyError",
@@ -50181,7 +50201,8 @@ const RDOD_DATA = {
             "type": "integer",
             "description": "Minimum required: 128"
           }
-        ]
+        ],
+        "related_port": "port://privacy/inbound/privacy-management"
       },
       {
         "name": "ChainLinkConfidentialityViolation",
@@ -50200,7 +50221,8 @@ const RDOD_DATA = {
             "type": "string",
             "description": "The rules section requiring agreement"
           }
-        ]
+        ],
+        "related_port": "port://privacy/inbound/privacy-management"
       },
       {
         "name": "DisclosureConstraintError",
@@ -50219,7 +50241,8 @@ const RDOD_DATA = {
             "type": "string",
             "description": "The credential whose privacy constraint was violated"
           }
-        ]
+        ],
+        "related_port": "port://privacy/inbound/privacy-management"
       },
       {
         "name": "MutualExclusionViolation",
@@ -51053,6 +51076,7 @@ const RDOD_DATA = {
             "seq": 1,
             "domain": "domain://privacy/blinding",
             "action": "generate_unique_uuids",
+            "port": "port://privacy/blinding/inbound/uuid-derivation",
             "input": {
               "description": "Count N, shared secret salt"
             },
@@ -51078,6 +51102,7 @@ const RDOD_DATA = {
             "seq": 3,
             "domain": "domain://privacy/aggregation",
             "action": "compute_bulk_commitment",
+            "port": "port://privacy/aggregation/inbound/aggregation-operations",
             "input": {
               "description": "List of N ACDC SAIDs"
             },
@@ -51092,15 +51117,17 @@ const RDOD_DATA = {
             "seq": 4,
             "domain": "domain://credential-lifecycle",
             "action": "issue_with_bulk_commitment",
+            "port": "port://identity/anchoring/inbound/data-anchoring",
             "input": {
               "description": "Bulk commitment B, issuer AID, registry SAID"
             },
             "output": {
-              "description": "Issuer signs commitment to bulk set — one signature covers all N copies"
+              "description": "Issuer signs commitment to bulk set via KEL seal — one signature covers all N copies"
             },
             "depends_on": [
               3
-            ]
+            ],
+            "notes": "Per oracle Q4: the issuer commits the bulk set to their KEL via an anchor seal, not via individual credential signatures."
           }
         ],
         "invariants": [
@@ -54682,14 +54709,15 @@ const RDOD_DATA = {
             "type": "integer",
             "description": "Minimum needed for duplicity comparison (at least 2)"
           }
-        ]
+        ],
+        "related_port": "port://watcher-service/outbound/witness-poll"
       },
       {
         "name": "DuplicityAlertError",
         "description": "Duplicity detected during cross-witness comparison",
         "cause": "Two witnesses have different events at the same (prefix, sn)",
         "recovery": "escalate",
-        "severity": "recoverable",
+        "severity": "transient",
         "context": [
           {
             "field": "prefix",
@@ -54706,7 +54734,8 @@ const RDOD_DATA = {
             "type": "DuplicityEvidence",
             "description": "Full evidence record with both events and their signatures"
           }
-        ]
+        ],
+        "related_port": "port://watcher-service/outbound/watcher-repository"
       }
     ],
     "_types": [

@@ -16,6 +16,7 @@ errors:
       - field: "reason"
         type: "string"
         description: "Why this form is invalid for this block"
+    related_port: "port://privacy/inbound/privacy-management"
 
   - name: "DisclosureMonotonicityViolation"
     description: "Attempted to reduce disclosure level after a higher level was already disclosed"
@@ -29,6 +30,7 @@ errors:
       - field: "attempted_level"
         type: "string"
         description: "The lower level that was attempted"
+    related_port: "port://privacy/inbound/privacy-management"
 
   - name: "InsufficientEntropyError"
     description: "UUID shielding factor does not have sufficient entropy for privacy"
@@ -42,6 +44,7 @@ errors:
       - field: "required_entropy_bits"
         type: "integer"
         description: "Minimum required: 128"
+    related_port: "port://privacy/inbound/privacy-management"
 
   - name: "ChainLinkConfidentialityViolation"
     description: "Full disclosure attempted before contractual agreement"
@@ -55,6 +58,7 @@ errors:
       - field: "rules_said"
         type: "string"
         description: "The rules section requiring agreement"
+    related_port: "port://privacy/inbound/privacy-management"
 
   - name: "DisclosureConstraintError"
     description: "Privacy constraint violated during credential disclosure"
@@ -68,6 +72,7 @@ errors:
       - field: "credential_said"
         type: "string"
         description: "The credential whose privacy constraint was violated"
+    related_port: "port://privacy/inbound/privacy-management"
 
   - name: "MutualExclusionViolation"
     description: "ACDC contains both a (attribute) and A (aggregate) sections"

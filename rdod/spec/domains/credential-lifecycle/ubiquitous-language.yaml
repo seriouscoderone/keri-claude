@@ -241,28 +241,28 @@ terms:
       - "A credential event escrowed in the missing registry escrow because the registry rip has not yet been received"
     related_terms: ["TEL Storage Schema", "TEL Database", "Credential Storage"]
 
-  - term: "Credentialer"
-    synonyms: []
+  - term: "Credential Manager"
+    synonyms: ["Credentialer [keripy]"]
     definition: "Issues and manages ACDC credentials — validates schemas, creates credential events, tracks issuance completion. Companion to TEL Registrar."
     invariants:
       - "complete() returns true when credential issuance is fully anchored"
       - "Has processEscrows() for pending credential operations"
-      - "Monitor queries Credentialer to detect credential operation completion"
+      - "Monitor queries Credential Manager to detect credential operation completion"
     examples:
-      - "POST /credentials triggers Credentialer -> issues ACDC -> anchors to KEL via TEL Registrar"
+      - "POST /credentials triggers Credential Manager -> issues ACDC -> anchors to KEL via TEL Registrar"
     related_terms: ["TEL Registrar", "Registry", "TEL", "Credential State"]
 
-  - term: "Seeker"
-    synonyms: ["Credential Search"]
+  - term: "Credential Index"
+    synonyms: ["Seeker [keripy]", "Credential Search"]
     definition: "Full-text search index for credentials. Creates static indexes (issuer/schema, issuee/schema) and dynamic indexes (all scalar fields in credential payload) for efficient querying."
     invariants:
       - "Indexes built from credential schema — each schema field becomes a searchable index"
       - "Queries via find(filter, sort, skip, limit) returning matching SAIDs"
       - "Triggered by Verifier cues when credentials are saved"
     examples:
-      - "seeker.find({'schema': schemaSaid, '-a-i': issuerAid}) -> [SAID, ...]"
+      - "credentialIndex.find({'schema': schemaSaid, '-a-i': issuerAid}) -> [SAID, ...]"
       - "Dynamic index: credential attribute 'LEI' becomes searchable via '-a-LEI'"
-    related_terms: ["Credentialer", "Credential Storage", "Registry Collection"]
+    related_terms: ["Credential Manager", "Credential Storage", "Registry Collection"]
 
   # ACDC structural terms distributed from parent acdc domain
   - term: "ACDC"

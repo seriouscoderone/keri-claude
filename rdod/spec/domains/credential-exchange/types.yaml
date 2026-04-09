@@ -160,17 +160,24 @@ types:
           - "Sent by discloser (issuer) in response to an apply or unsolicited"
 
   - name: "ExchangeResult"
-    description: "Outcome of processing an IPEX exchange message through the protocol state machine."
+    description: "Outcome of processing an IPEX exchange message through the protocol state machine. States map to the full IPEX FSM: applied/offered/agreed are intermediate negotiation states, granted means credential delivered awaiting acknowledgment, admitted and spurned are terminal states."
     variants:
       - name: "default"
         fields:
           - name: "state"
             type: "string"
             required: true
-            description: "Terminal or pending state of the exchange"
+            description: "Current state of the exchange in the IPEX FSM"
             constraints:
-              enum: ["admitted", "spurned", "pending"]
+              enum: ["applied", "offered", "agreed", "granted", "admitted", "spurned"]
           - name: "thread_said"
             type: "string"
             required: true
             description: "SAID of the exchange thread this result belongs to"
+        invariants:
+          - "applied: disclosee has sent an apply requesting a credential — awaiting offer"
+          - "offered: discloser has sent an offer with credential preview — awaiting agree or grant"
+          - "agreed: disclosee has agreed to terms (chain-link confidentiality gate passed) — awaiting grant"
+          - "granted: discloser has sent grant with credential bundle — awaiting admit"
+          - "admitted: disclosee acknowledged receipt — terminal success"
+          - "spurned: any party rejected the exchange — terminal failure"

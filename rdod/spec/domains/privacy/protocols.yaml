@@ -165,6 +165,7 @@ protocols:
       - seq: 1
         domain: "domain://privacy/blinding"
         action: "generate_unique_uuids"
+        port: "port://privacy/blinding/inbound/uuid-derivation"
         input:
           description: "Count N, shared secret salt"
         output:
@@ -182,6 +183,7 @@ protocols:
       - seq: 3
         domain: "domain://privacy/aggregation"
         action: "compute_bulk_commitment"
+        port: "port://privacy/aggregation/inbound/aggregation-operations"
         input:
           description: "List of N ACDC SAIDs"
         output:
@@ -191,11 +193,13 @@ protocols:
       - seq: 4
         domain: "domain://credential-lifecycle"
         action: "issue_with_bulk_commitment"
+        port: "port://identity/anchoring/inbound/data-anchoring"
         input:
           description: "Bulk commitment B, issuer AID, registry SAID"
         output:
-          description: "Issuer signs commitment to bulk set — one signature covers all N copies"
+          description: "Issuer signs commitment to bulk set via KEL seal — one signature covers all N copies"
         depends_on: [3]
+        notes: "Per oracle Q4: the issuer commits the bulk set to their KEL via an anchor seal, not via individual credential signatures."
 
     invariants:
       - "Each copy has a unique SAID and UUID — copies are unlinkable"

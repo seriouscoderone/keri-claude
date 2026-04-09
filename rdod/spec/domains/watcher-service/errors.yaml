@@ -16,12 +16,13 @@ errors:
       - field: "minimum_required"
         type: "integer"
         description: "Minimum needed for duplicity comparison (at least 2)"
+    related_port: "port://watcher-service/outbound/witness-poll"
 
   - name: "DuplicityAlertError"
     description: "Duplicity detected during cross-witness comparison"
     cause: "Two witnesses have different events at the same (prefix, sn)"
     recovery: "escalate"
-    severity: "recoverable"
+    severity: "transient"
     context:
       - field: "prefix"
         type: "string"
@@ -32,3 +33,4 @@ errors:
       - field: "evidence"
         type: "DuplicityEvidence"
         description: "Full evidence record with both events and their signatures"
+    related_port: "port://watcher-service/outbound/watcher-repository"
