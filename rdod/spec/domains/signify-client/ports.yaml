@@ -8,9 +8,12 @@ ports:
     name: "User Operations"
     semantics: command
     idempotent: false
+    delegates_to:
+      - "port://signify-client/key-management/inbound/key-ops"
+      - "port://signify-client/resources/inbound/resource-ops"
     contract:
       input: "types://signify-client/key-management#SessionState"
-      output: "types://signify-client#Operation"
+      output: "types://signify-client#AsyncOperation"
       errors:
         - "errors://signify-client/resources#AgentConnectionError"
         - "errors://signify-client/resources#SignifyAuthError"

@@ -34,7 +34,7 @@ properties:
     notes: "CLI is a thin layer — verified by state equivalence with the programmatic API, not by checking method existence"
 
   - invariant: "init() creates a Habery that can manage identifiers, sign content, and process events"
-    term: "Hab/Habery API"
+    term: "Identifier Operations API"
     technique: property-based
     formal:
       language: pseudocode
@@ -57,7 +57,7 @@ properties:
     notes: "Habery initialization verified by exercising its core capabilities, not by checking internal field existence"
 
   - invariant: "All operations are synchronous and in-process"
-    term: "Hab/Habery API"
+    term: "Identifier Operations API"
     technique: property-based
     formal:
       language: python
@@ -73,10 +73,10 @@ properties:
             assert key_state is not None
             assert key_state.sn >= 0
     strategy: "valid_key_event_strategy()"
-    notes: "Core Hab/Habery operations execute entirely in-process"
+    notes: "Core Identifier Operations API calls execute entirely in-process"
 
 contracts:
-  - port_ref: "port://local-agent/api/inbound/hab-operations"
+  - port_ref: "port://local-agent/api/inbound/identifier-operations"
     preconditions:
       - formal:
           language: python

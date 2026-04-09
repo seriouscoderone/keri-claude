@@ -14,3 +14,31 @@ errors:
         type: "string"
         description: "OS-level error message"
 
+  - name: "WitnessUnreachableError"
+    description: "A witness endpoint is not responding to direct HTTP requests from the local agent"
+    cause: "Witness is down, network is unreachable, or OOBI endpoint is stale"
+    recovery: "retry"
+    severity: "transient"
+    related_port: "port://local-agent/outbound/witness-comms"
+    context:
+      - field: "witness_aid"
+        type: "string"
+        description: "The AID of the unreachable witness"
+      - field: "endpoint"
+        type: "string"
+        description: "The HTTP endpoint that failed"
+
+  - name: "WatcherUnreachableError"
+    description: "A watcher endpoint is not responding to direct HTTP requests from the local agent"
+    cause: "Watcher is down, network is unreachable, or OOBI endpoint is stale"
+    recovery: "retry"
+    severity: "transient"
+    related_port: "port://local-agent/outbound/watcher-comms"
+    context:
+      - field: "watcher_aid"
+        type: "string"
+        description: "The AID of the unreachable watcher"
+      - field: "endpoint"
+        type: "string"
+        description: "The HTTP endpoint that failed"
+

@@ -11,6 +11,7 @@ errors:
     cause: "Agent is initializing, shutting down, or in a degraded state"
     recovery: "retry"
     severity: "transient"
+    related_port: "port://cloud-agent-service/outbound/agent-repository"
     context:
       - field: "agent_aid"
         type: "string"
@@ -21,6 +22,7 @@ errors:
     cause: "Invalid signature, unknown sender AID, or sender is not the agent's controller"
     recovery: "abort"
     severity: "fatal"
+    related_port: "port://cloud-agent-service/api/inbound/admin-api"
     context:
       - field: "sender_aid"
         type: "string"

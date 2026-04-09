@@ -8,6 +8,7 @@ ports:
     name: "Controller Operations"
     semantics: command
     idempotent: false
+    delegates_to: "port://local-agent/api/inbound/identifier-operations"
     contract:
       input: "types://local-agent/api#Habitat"
       output: "types://identity/state#KeyState"
@@ -22,6 +23,7 @@ ports:
     name: "CLI Commands"
     semantics: command
     idempotent: false
+    delegates_to: "port://local-agent/api/inbound/cli"
     contract:
       input: "CLI arguments (name, alias, config_file)"
       output: "types://identity/state#KeyState"
@@ -85,7 +87,7 @@ ports:
       input: "types://identity/establishment#KeyEvent"
       output: "types://accountability/consensus#Receipt"
       errors:
-        - "errors://watcher-service/api#WitnessUnreachableError"
+        - "errors://local-agent#WitnessUnreachableError"
     refs: ["domain://witness-service"]
 
   # Outbound — direct watcher HTTP communication
@@ -98,5 +100,5 @@ ports:
       input: "types://cesr/primitives#AID"
       output: "types://watcher-service#DuplicityReport"
       errors:
-        - "errors://watcher-service/api#WitnessUnreachableError"
+        - "errors://local-agent#WatcherUnreachableError"
     refs: ["domain://watcher-service"]

@@ -1,8 +1,12 @@
 domain_ref: "signify-client"
 
 types:
-  - name: "Operation"
-    description: "A long-running operation tracked by KERIA. Clients poll for completion. Operations span witness receipt collection, multisig coordination, delegation approval, OOBI resolution, and credential issuance."
+  - name: "AsyncOperation"
+    description: >
+      A long-running operation tracked by KERIA. Clients poll for completion. Operations
+      span witness receipt collection, multisig coordination, delegation approval, OOBI
+      resolution, and credential issuance. This is the canonical parent-domain type;
+      the resources subdomain's OperationStatus is an alias for the same concept.
     variants:
       - name: "default"
         fields:

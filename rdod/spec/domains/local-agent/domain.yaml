@@ -5,8 +5,8 @@ name: "Local Agent (Full-Stack KERI Application)"
 description: >
   Application-tier domain for fat wallet KERI applications. The complete KERI stack runs
   on the controller's device: private keys, event processing, database, and direct witness
-  communication all in one process. No cloud agent dependency. The Hab/Habery pattern is
-  the primary API. Implementations: keripy (direct usage), keriox (standalone mode).
+  communication all in one process. No cloud agent dependency. The Identifier Operations API
+  (Hab/Habery pattern in keripy) is the primary interface. Implementations: keripy (direct usage), keriox (standalone mode).
 
   Cohesion note — this domain defines 8 terms spanning key management, event processing,
   database, witness/watcher communication, and credentials. These are NOT decomposable
@@ -33,7 +33,7 @@ domain_clients: []
 subdomains:
   - ref: "domain://local-agent/api"
     relationship: "CLI and direct function interface — the boundary through which controllers interact with their local KERI stack"
-    via_port: "port://local-agent/api/inbound/hab-operations"
+    via_port: "port://local-agent/api/inbound/identifier-operations"
 
 kernels: []
 
@@ -107,7 +107,5 @@ tags: ["fat-wallet", "local-agent", "hab", "habery", "kli", "standalone", "appli
 #            input type, but Habitat is the domain's primary aggregate; the
 #            port should accept an identifier AID and derive the Habitat
 #            internally, or the Habitat lookup should be an internal step
-# [L811-O26] witness-comms error uses wrong domain namespace — the error type
-#            on the witness-comms outbound port is prefixed with
-#            cloud-agent-service rather than local-agent, leaking a
-#            different domain's namespace into this domain's port contract
+# [L811-O26] RESOLVED — witness-comms and watcher-comms errors now reference
+#            local-agent#WitnessUnreachableError and local-agent#WatcherUnreachableError

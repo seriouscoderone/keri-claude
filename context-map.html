@@ -11085,9 +11085,7 @@ const RDOD_DATA = {
         "contract": {
           "input": "types://identity/establishment#KeyEvent",
           "output": "types://cloud-agent-service#ReceiptSet",
-          "errors": [
-            "errors://cloud-agent-service#AgentUnavailableError"
-          ]
+          "errors": []
         },
         "refs": [
           "domain://witness-service"
@@ -11241,6 +11239,7 @@ const RDOD_DATA = {
         "cause": "Agent is initializing, shutting down, or in a degraded state",
         "recovery": "retry",
         "severity": "transient",
+        "related_port": "port://cloud-agent-service/outbound/agent-repository",
         "context": [
           {
             "field": "agent_aid",
@@ -11255,6 +11254,7 @@ const RDOD_DATA = {
         "cause": "Invalid signature, unknown sender AID, or sender is not the agent's controller",
         "recovery": "abort",
         "severity": "fatal",
+        "related_port": "port://cloud-agent-service/api/inbound/admin-api",
         "context": [
           {
             "field": "sender_aid",
@@ -11484,7 +11484,7 @@ const RDOD_DATA = {
     "template_version": "2.0",
     "id": "cloud-agent-service/processing",
     "name": "Agent Processing",
-    "description": "The async event processing pipeline — Processing Units, Message Queues, escrow management, long-running operation tracking (Monitor), and the specialized processing components (Counselor, Boatswain, Registrar, Credentialer, Seeker, Postman). Owns the cooperative scheduling model where producers append to Message Queues and consumer Processing Units drain work in their periodic work cycles. Tracks all async operations via the Monitor for edge-client polling. Implementation: keria (Python), serious-keri (TypeScript/Lambda).\n",
+    "description": "The async event processing pipeline — Processing Units, Message Queues, escrow management, long-running operation tracking (Monitor), and the specialized processing components (Counselor, Boatswain, Registrar, Credential Manager, Seeker, Postman). Owns the cooperative scheduling model where producers append to Message Queues and consumer Processing Units drain work in their periodic work cycles. Tracks all async operations via the Monitor for edge-client polling. Implementation: keria (Python), serious-keri (TypeScript/Lambda).\n",
     "version": "0.1.0",
     "tier": "service",
     "source_material": [
@@ -11524,7 +11524,7 @@ const RDOD_DATA = {
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
-      "notes": "In keria, the Agent class is a DoDoer composing many sub-doers (Witnesser, Delegator, Escrower, ParserDoer). Each doer's recur() method drains its assigned Deck. The Monitor class (monitoring.py) tracks operations and queries specialized components (Counselor, Boatswain, Registrar, Credentialer) for completion status. In serious-keri, the cooperative scheduling model maps to Lambda invocations with DynamoDB-backed work queues.\n"
+      "notes": "In keria, the Agent class is a DoDoer composing many sub-doers (Witnesser, Delegator, Escrower, ParserDoer). Each doer's recur() method drains its assigned Deck. The Monitor class (monitoring.py) tracks operations and queries specialized components (Counselor, Boatswain, Registrar, Credential Manager [Credentialer in keripy]) for completion status. In serious-keri, the cooperative scheduling model maps to Lambda invocations with DynamoDB-backed work queues.\n"
     },
     "issues": [],
     "tags": [
@@ -11572,7 +11572,7 @@ const RDOD_DATA = {
       "All async work flows through Message Queues (Decks in HIO/keripy) — producers append, consumer Processing Units drain in their work cycle",
       "Long-running operations are the ONLY mechanism for tracking async completion — no callbacks to edge",
       "Incomplete events are escrowed with timeout, not rejected — escrows processed periodically by Processing Units",
-      "Each component (Identity Event Processor [Kevery in keripy], Credential Event Processor [Tevery in keripy], Exchanger, Verifier, Registrar, Credentialer) maintains its own escrows",
+      "Each component (Identity Event Processor [Kevery in keripy], Credential Event Processor [Tevery in keripy], Exchanger, Verifier, Registrar, Credential Manager [Credentialer in keripy]) maintains its own escrows",
       "Monitor checks completion by querying the relevant specialized component",
       "Credential search indexes are rebuilt from schema structure — each scalar attribute becomes a searchable field",
       "Credential wallet operations (present, revoke) require edge-signed authorization — the agent cannot present credentials unilaterally",
@@ -11663,7 +11663,7 @@ const RDOD_DATA = {
           "Escrowed items have a timeout after which they are discarded",
           "Items automatically complete when missing data arrives",
           "Multiple escrow types: partial signature, out-of-order event, unverified receipt",
-          "Each component (Identity Event Processor [Kevery in keripy], Credential Event Processor [Tevery in keripy], Exchanger, Verifier, Registrar, Credentialer) maintains its own escrows",
+          "Each component (Identity Event Processor [Kevery in keripy], Credential Event Processor [Tevery in keripy], Exchanger, Verifier, Registrar, Credential Manager [Credentialer in keripy]) maintains its own escrows",
           "Escrows are swept once per work cycle by the processing loop — each domain's escrow queue is checked for items whose blocking conditions have resolved or whose timeout has expired"
         ],
         "examples": [
@@ -11699,7 +11699,7 @@ const RDOD_DATA = {
           "Counselor",
           "Boatswain",
           "Registrar",
-          "Credentialer"
+          "Credential Manager"
         ]
       },
       {
@@ -45581,7 +45581,7 @@ const RDOD_DATA = {
     "template_version": "2.0",
     "id": "local-agent/api",
     "name": "Local Agent API",
-    "description": "TCP, CLI, and direct function interface for the fat wallet — the boundary through which controllers interact with their local KERI stack. The Directant serves as the network interface via direct TCP connections carrying raw CESR streams, while kli provides the command-line interface and Hab/Habery provides the programmatic API. Handles all identity, credential, and discovery operations locally without cloud agent dependency.\n",
+    "description": "TCP, CLI, and direct function interface for the fat wallet — the boundary through which controllers interact with their local KERI stack. The Directant serves as the network interface via direct TCP connections carrying raw CESR streams, while kli provides the command-line interface and the Identifier Operations API (Hab/Habery in keripy) provides the programmatic API. Handles all identity, credential, and discovery operations locally without cloud agent dependency.\n",
     "version": "0.1.0",
     "tier": "application",
     "source_material": [
@@ -45651,7 +45651,7 @@ const RDOD_DATA = {
       {
         "name": "APIOperationInvoked",
         "payload": "operation: string, aid: AID, source: cli | method-call",
-        "triggers": "Controller invokes an operation via kli command or Hab/Habery method call"
+        "triggers": "Controller invokes an operation via kli command or Identifier Operations API method call"
       },
       {
         "name": "APIOperationCompleted",
@@ -45685,26 +45685,27 @@ const RDOD_DATA = {
           "Witness sends receipt back on the same TCP connection"
         ],
         "related_terms": [
-          "Hab/Habery API",
+          "Identifier Operations API",
           "CLI Interface"
         ]
       },
       {
-        "term": "Hab/Habery API",
+        "term": "Identifier Operations API",
         "synonyms": [
-          "Habery Interface",
+          "Hab/Habery API [keripy]",
+          "Habery Interface [keripy]",
           "Programmatic API"
         ],
-        "definition": "The direct function interface through which application code interacts with the local KERI stack. The Identifier Repository (Habery in keripy) manages the collection; Hab represents a single AID with signing capability.",
+        "definition": "The direct function interface through which application code interacts with the local KERI stack. The Identifier Repository (Habery in keripy) manages the collection; a Habitat (Hab in keripy) represents a single AID with signing capability.",
         "invariants": [
           "init() creates an Identifier Repository (Habery in keripy) with shared database, key manager, and event processor",
-          "incept() creates a new Hab (AID) under the Identifier Repository",
-          "rotate(), interact(), sign() operate on an existing Hab",
+          "incept() creates a new Habitat (AID) under the Identifier Repository",
+          "rotate(), interact(), sign() operate on an existing Habitat",
           "All operations are synchronous and in-process"
         ],
         "examples": [
-          "habery = Habery(name='controller', salt=salt)",
-          "hab = habery.makeHab('myaid', icount=1, ncount=1, wits=[wit1, wit2])"
+          "habery = Habery(name='controller', salt=salt)  # keripy",
+          "hab = habery.makeHab('myaid', icount=1, ncount=1, wits=[wit1, wit2])  # keripy"
         ],
         "related_terms": [
           "Directant",
@@ -45719,9 +45720,9 @@ const RDOD_DATA = {
           "KERI Command Line"
         ],
         "specializes": "CLI Interface",
-        "definition": "In the context of the API subdomain, the CLI interface is the command-line boundary through which human operators interact with the local KERI stack. Specializes the parent definition with the API perspective: each kli command maps to an Identifier Repository (Habery in keripy)/Hab operation through the programmatic API layer.",
+        "definition": "In the context of the API subdomain, the CLI interface is the command-line boundary through which human operators interact with the local KERI stack. Specializes the parent definition with the API perspective: each kli command maps to an Identifier Repository/Habitat operation through the Identifier Operations API layer.",
         "invariants": [
-          "kli commands map directly to Identifier Repository (Habery in keripy)/Hab/Manager operations",
+          "kli commands map directly to Identifier Repository/Habitat/Manager operations (Habery/Hab/Manager in keripy)",
           "Configuration via --config-dir and --config-file",
           "Each invocation opens the local database, performs the operation, and closes"
         ],
@@ -45730,7 +45731,7 @@ const RDOD_DATA = {
           "kli incept --name controller --alias myaid --file inception-config.json"
         ],
         "related_terms": [
-          "Hab/Habery API"
+          "Identifier Operations API"
         ]
       },
       {
@@ -45748,7 +45749,7 @@ const RDOD_DATA = {
           "kli vc issue --name controller --alias myaid --registry myreg --schema SAID --data @payload.json"
         ],
         "related_terms": [
-          "Hab/Habery API",
+          "Identifier Operations API",
           "CLI Interface"
         ]
       }
@@ -45768,9 +45769,9 @@ const RDOD_DATA = {
         "refs": []
       },
       {
-        "id": "port://local-agent/api/inbound/hab-operations",
+        "id": "port://local-agent/api/inbound/identifier-operations",
         "type": "inbound",
-        "name": "Hab/Habery Operations",
+        "name": "Identifier Operations",
         "semantics": "command",
         "idempotent": false,
         "contract": {
@@ -45845,7 +45846,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "init() creates a Habery that can manage identifiers, sign content, and process events",
-          "term": "Hab/Habery API",
+          "term": "Identifier Operations API",
           "technique": "property-based",
           "formal": {
             "language": "pseudocode",
@@ -45856,19 +45857,19 @@ const RDOD_DATA = {
         },
         {
           "invariant": "All operations are synchronous and in-process",
-          "term": "Hab/Habery API",
+          "term": "Identifier Operations API",
           "technique": "property-based",
           "formal": {
             "language": "python",
             "expression": "@given(valid_key_event_strategy())\ndef test_operations_are_synchronous(event):\n    with capture_network_traffic() as traffic:\n        habery = create_habery()\n        hab = habery.makeHab('test')\n        hab.interact(data=[{'test': 1}])\n        key_state = hab.kever\n    # Core operations should not require network (witness comms are separate)\n    assert key_state is not None\n    assert key_state.sn >= 0\n"
           },
           "strategy": "valid_key_event_strategy()",
-          "notes": "Core Hab/Habery operations execute entirely in-process"
+          "notes": "Core Identifier Operations API calls execute entirely in-process"
         }
       ],
       "contracts": [
         {
-          "port_ref": "port://local-agent/api/inbound/hab-operations",
+          "port_ref": "port://local-agent/api/inbound/identifier-operations",
           "preconditions": [
             {
               "formal": {
@@ -45931,7 +45932,7 @@ const RDOD_DATA = {
       {
         "name": "IdentifierNotFoundError",
         "description": "Requested identifier alias does not exist in the local Identifier Repository",
-        "cause": "No Hab with this name has been incepted",
+        "cause": "No Habitat with this alias has been incepted",
         "recovery": "abort",
         "severity": "fatal",
         "context": [
@@ -45998,7 +45999,7 @@ const RDOD_DATA = {
     "_types": [
       {
         "name": "Habitat",
-        "description": "The container for a single identifier's complete state — keys, event log, witness configuration, and agent context. Called Hab/Habery in keripy.",
+        "description": "The container for a single identifier's complete state — keys, event log, witness configuration, and agent context. Called Hab in keripy; the collection is called Habery.",
         "variants": [
           {
             "name": "single",
@@ -46120,7 +46121,7 @@ const RDOD_DATA = {
     "template_version": "2.0",
     "id": "local-agent",
     "name": "Local Agent (Full-Stack KERI Application)",
-    "description": "Application-tier domain for fat wallet KERI applications. The complete KERI stack runs on the controller's device: private keys, event processing, database, and direct witness communication all in one process. No cloud agent dependency. The Hab/Habery pattern is the primary API. Implementations: keripy (direct usage), keriox (standalone mode).\nCohesion note — this domain defines 8 terms spanning key management, event processing, database, witness/watcher communication, and credentials. These are NOT decomposable subdomains — they are facets of a single unified runtime (Habery) that shares one database, one key manager, and one event processing pipeline. Splitting them would create artificial boundaries between components that share a single process instance. Compare with cloud-agent-service which HAS genuine subdomains (api, provisioning, processing) because those serve different consumers over different ports.\n",
+    "description": "Application-tier domain for fat wallet KERI applications. The complete KERI stack runs on the controller's device: private keys, event processing, database, and direct witness communication all in one process. No cloud agent dependency. The Identifier Operations API (Hab/Habery pattern in keripy) is the primary interface. Implementations: keripy (direct usage), keriox (standalone mode).\nCohesion note — this domain defines 8 terms spanning key management, event processing, database, witness/watcher communication, and credentials. These are NOT decomposable subdomains — they are facets of a single unified runtime (Habery) that shares one database, one key manager, and one event processing pipeline. Splitting them would create artificial boundaries between components that share a single process instance. Compare with cloud-agent-service which HAS genuine subdomains (api, provisioning, processing) because those serve different consumers over different ports.\n",
     "version": "0.1.0",
     "tier": "application",
     "source_material": [
@@ -46146,7 +46147,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://local-agent/api",
         "relationship": "CLI and direct function interface — the boundary through which controllers interact with their local KERI stack",
-        "via_port": "port://local-agent/api/inbound/hab-operations"
+        "via_port": "port://local-agent/api/inbound/identifier-operations"
       }
     ],
     "kernels": [],
@@ -46529,6 +46530,7 @@ const RDOD_DATA = {
         "name": "Controller Operations",
         "semantics": "command",
         "idempotent": false,
+        "delegates_to": "port://local-agent/api/inbound/identifier-operations",
         "contract": {
           "input": "types://local-agent/api#Habitat",
           "output": "types://identity/state#KeyState",
@@ -46546,6 +46548,7 @@ const RDOD_DATA = {
         "name": "CLI Commands",
         "semantics": "command",
         "idempotent": false,
+        "delegates_to": "port://local-agent/api/inbound/cli",
         "contract": {
           "input": "CLI arguments (name, alias, config_file)",
           "output": "types://identity/state#KeyState",
@@ -46617,7 +46620,7 @@ const RDOD_DATA = {
           "input": "types://identity/establishment#KeyEvent",
           "output": "types://accountability/consensus#Receipt",
           "errors": [
-            "errors://watcher-service/api#WitnessUnreachableError"
+            "errors://local-agent#WitnessUnreachableError"
           ]
         },
         "refs": [
@@ -46634,7 +46637,7 @@ const RDOD_DATA = {
           "input": "types://cesr/primitives#AID",
           "output": "types://watcher-service#DuplicityReport",
           "errors": [
-            "errors://watcher-service/api#WitnessUnreachableError"
+            "errors://local-agent#WatcherUnreachableError"
           ]
         },
         "refs": [
@@ -46928,6 +46931,46 @@ const RDOD_DATA = {
             "field": "reason",
             "type": "string",
             "description": "OS-level error message"
+          }
+        ]
+      },
+      {
+        "name": "WitnessUnreachableError",
+        "description": "A witness endpoint is not responding to direct HTTP requests from the local agent",
+        "cause": "Witness is down, network is unreachable, or OOBI endpoint is stale",
+        "recovery": "retry",
+        "severity": "transient",
+        "related_port": "port://local-agent/outbound/witness-comms",
+        "context": [
+          {
+            "field": "witness_aid",
+            "type": "string",
+            "description": "The AID of the unreachable witness"
+          },
+          {
+            "field": "endpoint",
+            "type": "string",
+            "description": "The HTTP endpoint that failed"
+          }
+        ]
+      },
+      {
+        "name": "WatcherUnreachableError",
+        "description": "A watcher endpoint is not responding to direct HTTP requests from the local agent",
+        "cause": "Watcher is down, network is unreachable, or OOBI endpoint is stale",
+        "recovery": "retry",
+        "severity": "transient",
+        "related_port": "port://local-agent/outbound/watcher-comms",
+        "context": [
+          {
+            "field": "watcher_aid",
+            "type": "string",
+            "description": "The AID of the unreachable watcher"
+          },
+          {
+            "field": "endpoint",
+            "type": "string",
+            "description": "The HTTP endpoint that failed"
           }
         ]
       }
@@ -51266,7 +51309,7 @@ const RDOD_DATA = {
       {
         "term": "Salter",
         "from": "domain://cesr/primitives",
-        "usage": "Key derivation from salt"
+        "usage": "Key derivation from salt — Salter is the CESR primitives domain term for the salt primitive type"
       },
       {
         "term": "KRAM",
@@ -51385,9 +51428,13 @@ const RDOD_DATA = {
         "name": "User Operations",
         "semantics": "command",
         "idempotent": false,
+        "delegates_to": [
+          "port://signify-client/key-management/inbound/key-ops",
+          "port://signify-client/resources/inbound/resource-ops"
+        ],
         "contract": {
           "input": "types://signify-client/key-management#SessionState",
-          "output": "types://signify-client#Operation",
+          "output": "types://signify-client#AsyncOperation",
           "errors": [
             "errors://signify-client/resources#AgentConnectionError",
             "errors://signify-client/resources#SignifyAuthError",
@@ -51497,8 +51544,8 @@ const RDOD_DATA = {
     },
     "_types": [
       {
-        "name": "Operation",
-        "description": "A long-running operation tracked by KERIA. Clients poll for completion. Operations span witness receipt collection, multisig coordination, delegation approval, OOBI resolution, and credential issuance.",
+        "name": "AsyncOperation",
+        "description": "A long-running operation tracked by KERIA. Clients poll for completion. Operations span witness receipt collection, multisig coordination, delegation approval, OOBI resolution, and credential issuance. This is the canonical parent-domain type; the resources subdomain's OperationStatus is an alias for the same concept.\n",
         "variants": [
           {
             "name": "default",
@@ -53211,7 +53258,7 @@ const RDOD_DATA = {
     "_types": [
       {
         "name": "OperationStatus",
-        "description": "Current status of a long-running operation polled by the Signify client.",
+        "description": "Current status of a long-running operation polled by the Signify client. Alias for the parent domain's AsyncOperation type — same concept, scoped to the resources subdomain's polling contract.\n",
         "variants": [
           {
             "name": "default",

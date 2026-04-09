@@ -56,7 +56,7 @@ terms:
       - "Escrowed items have a timeout after which they are discarded"
       - "Items automatically complete when missing data arrives"
       - "Multiple escrow types: partial signature, out-of-order event, unverified receipt"
-      - "Each component (Identity Event Processor [Kevery in keripy], Credential Event Processor [Tevery in keripy], Exchanger, Verifier, Registrar, Credentialer) maintains its own escrows"
+      - "Each component (Identity Event Processor [Kevery in keripy], Credential Event Processor [Tevery in keripy], Exchanger, Verifier, Registrar, Credential Manager [Credentialer in keripy]) maintains its own escrows"
       - "Escrows are swept once per work cycle by the processing loop — each domain's escrow queue is checked for items whose blocking conditions have resolved or whose timeout has expired"
     examples:
       - "A multi-sig event with 1 of 3 required signatures is escrowed until others arrive"
@@ -75,7 +75,7 @@ terms:
     examples:
       - "POST /identifiers returns op name 'witness.EDP1...' — poll until done"
       - "POST /credentials returns op name 'credential.EDP1...' — poll until TEL authorized"
-    related_terms: ["Processing Unit", "Counselor", "Boatswain", "Registrar", "Credentialer"]
+    related_terms: ["Processing Unit", "Counselor", "Boatswain", "Registrar", "Credential Manager"]
 
   - term: "Postman"
     synonyms: ["Message Sender"]
@@ -131,7 +131,7 @@ rules:
   - "All async work flows through Message Queues (Decks in HIO/keripy) — producers append, consumer Processing Units drain in their work cycle"
   - "Long-running operations are the ONLY mechanism for tracking async completion — no callbacks to edge"
   - "Incomplete events are escrowed with timeout, not rejected — escrows processed periodically by Processing Units"
-  - "Each component (Identity Event Processor [Kevery in keripy], Credential Event Processor [Tevery in keripy], Exchanger, Verifier, Registrar, Credentialer) maintains its own escrows"
+  - "Each component (Identity Event Processor [Kevery in keripy], Credential Event Processor [Tevery in keripy], Exchanger, Verifier, Registrar, Credential Manager [Credentialer in keripy]) maintains its own escrows"
   - "Monitor checks completion by querying the relevant specialized component"
   - "Credential search indexes are rebuilt from schema structure — each scalar attribute becomes a searchable field"
   - "Credential wallet operations (present, revoke) require edge-signed authorization — the agent cannot present credentials unilaterally"

@@ -5,7 +5,7 @@ name: "Agent Processing"
 description: >
   The async event processing pipeline — Processing Units, Message Queues, escrow management,
   long-running operation tracking (Monitor), and the specialized processing components
-  (Counselor, Boatswain, Registrar, Credentialer, Seeker, Postman). Owns the cooperative
+  (Counselor, Boatswain, Registrar, Credential Manager, Seeker, Postman). Owns the cooperative
   scheduling model where producers append to Message Queues and consumer Processing Units drain work in
   their periodic work cycles. Tracks all async operations via the Monitor for edge-client polling.
   Implementation: keria (Python), serious-keri (TypeScript/Lambda).
@@ -44,7 +44,7 @@ implementation_guidance:
     In keria, the Agent class is a DoDoer composing many sub-doers (Witnesser, Delegator,
     Escrower, ParserDoer). Each doer's recur() method drains its assigned Deck. The Monitor
     class (monitoring.py) tracks operations and queries specialized components (Counselor,
-    Boatswain, Registrar, Credentialer) for completion status. In serious-keri, the cooperative
+    Boatswain, Registrar, Credential Manager [Credentialer in keripy]) for completion status. In serious-keri, the cooperative
     scheduling model maps to Lambda invocations with DynamoDB-backed work queues.
 
 issues: []
