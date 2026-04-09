@@ -112,7 +112,7 @@ events:
 rules:
   - "Witness NEVER signs on behalf of a controller — only signs receipts with its own non-transferable key"
   - "First-seen rule is absolute — once a witness accepts an event at (prefix, sn), conflicting events at the same position are permanently rejected"
-  - "Witness nodes are stateless with respect to each other — no inter-witness communication"
+  - "Witnesses are stateless with respect to each other — no shared mutable state. Receipt dissemination between witnesses is OPTIONAL per individual witness policy (MAY use broadcast, gossip, or not disseminate at all)."
   - "A witness's receipt is authoritative only if the witness AID is in the controller's designated witness list"
   - "KERL served to any requester — no authentication required for read access"
   - "Witness storage is append-only — events and receipts are never modified or deleted"

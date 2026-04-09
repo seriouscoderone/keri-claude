@@ -7,7 +7,7 @@ ports:
     type: inbound
     name: "Registry Management"
     semantics: command
-    idempotent: false
+    idempotent: true  # rip is effectively idempotent by SAID determinism — submitting the same rip twice returns the existing registry
     contract:
       input: "types://credential-lifecycle/registry#RegistryInceptionRequest"
       output: "types://credential-lifecycle/registry#RegistryStateSnapshot"
@@ -16,7 +16,7 @@ ports:
         - "errors://credential-lifecycle/registry#RegistryNotOwnedError"
         - "errors://credential-lifecycle/registry#InvalidBackerConfigError"
         - "errors://credential-lifecycle/registry#MissingKELSealError"
-        - "errors://credential-lifecycle/registry#ConfigTraitMutationError"
+        # ConfigTraitMutationError removed — LEGACY v1 ONLY (v2 rip has no c field)
     refs: ["domain://credential-lifecycle"]
 
   # Outbound -- what registry calls

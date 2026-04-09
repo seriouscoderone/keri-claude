@@ -30,6 +30,10 @@ ports:
       output: "types://accountability/consensus#Receipt"
       errors:
         - "errors://witness-service/api#EventValidationError"
+    notes: >
+      Input is an AID — the witness returns the receipt for the latest known event
+      for this AID. For a specific event, use the event-submission port which accepts
+      a full signed event message and returns an EventSubmissionResult with the receipt.
     refs: ["domain://cloud-agent-service", "domain://local-agent"]
 
   - id: "port://witness-service/api/inbound/kerl-query"

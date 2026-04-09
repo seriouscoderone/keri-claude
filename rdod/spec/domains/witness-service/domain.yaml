@@ -84,9 +84,10 @@ tags: ["witness", "service", "receipting", "first-seen", "infrastructure"]
 # [L67-O19] Duplicate witness query ports — the api subdomain declares two ports
 #           that both model KERL queries from watchers; one should be removed or
 #           the distinction (e.g., full KERL vs. latest receipt) made explicit
-# [L67-O20] No witness-to-witness dissemination port — the KERI spec requires
-#           witnesses to disseminate receipts to each other, but there is no
-#           outbound port modelling this peer-to-peer dissemination
+# [L67-O20] No witness-to-witness dissemination port — the KERI spec says
+#           witnesses MAY disseminate receipts to each other (OPTIONAL per
+#           individual witness policy — broadcast, gossip, or not at all);
+#           no outbound port models this optional peer-to-peer dissemination
 # [L67-O21] No KERL persistence port — the witness stores KERLs but there is no
 #           outbound port modelling the append-only KERL write contract; the
 #           witness-repository external is referenced but not typed

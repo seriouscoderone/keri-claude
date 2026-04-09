@@ -19237,7 +19237,7 @@ const RDOD_DATA = {
         "type": "inbound",
         "name": "Registry Management",
         "semantics": "command",
-        "idempotent": false,
+        "idempotent": true,
         "contract": {
           "input": "types://credential-lifecycle/registry#RegistryInceptionRequest",
           "output": "types://credential-lifecycle/registry#RegistryStateSnapshot",
@@ -19245,8 +19245,7 @@ const RDOD_DATA = {
             "errors://credential-lifecycle/registry#RegistryAlreadyExistsError",
             "errors://credential-lifecycle/registry#RegistryNotOwnedError",
             "errors://credential-lifecycle/registry#InvalidBackerConfigError",
-            "errors://credential-lifecycle/registry#MissingKELSealError",
-            "errors://credential-lifecycle/registry#ConfigTraitMutationError"
+            "errors://credential-lifecycle/registry#MissingKELSealError"
           ]
         },
         "refs": [
@@ -19371,14 +19370,14 @@ const RDOD_DATA = {
       {
         "name": "RegistryAlreadyExistsError",
         "description": "Attempted to create a registry with a REGID that already exists",
-        "cause": "A registry inception event (rip) was submitted but a registry with this REGID is already established",
-        "recovery": "abort",
-        "severity": "fatal",
+        "cause": "A registry inception event (rip) was submitted but a registry with this REGID is already established — since rip is idempotent by SAID determinism, this is recoverable by returning the existing registry",
+        "recovery": "ignore",
+        "severity": "recoverable",
         "context": [
           {
             "field": "regid",
-            "type": "string",
-            "description": "The duplicate REGID"
+            "type": "types://cesr/primitives#SAID",
+            "description": "The duplicate REGID — return existing registry on duplicate SAID"
           }
         ],
         "related_port": "port://credential-lifecycle/registry/inbound/registry-management"
@@ -19392,17 +19391,17 @@ const RDOD_DATA = {
         "context": [
           {
             "field": "regid",
-            "type": "string",
+            "type": "types://cesr/primitives#SAID",
             "description": "The registry REGID"
           },
           {
             "field": "issuer_aid",
-            "type": "string",
+            "type": "types://cesr/primitives#AID",
             "description": "The AID that attempted the operation"
           },
           {
             "field": "owner_aid",
-            "type": "string",
+            "type": "types://cesr/primitives#AID",
             "description": "The registry's actual owner"
           }
         ],
@@ -19417,7 +19416,7 @@ const RDOD_DATA = {
         "context": [
           {
             "field": "regid",
-            "type": "string",
+            "type": "types://cesr/primitives#SAID",
             "description": "The registry REGID"
           },
           {
@@ -19443,43 +19442,18 @@ const RDOD_DATA = {
         "context": [
           {
             "field": "regid",
-            "type": "string",
+            "type": "types://cesr/primitives#SAID",
             "description": "The registry REGID"
           },
           {
             "field": "issuer_aid",
-            "type": "string",
+            "type": "types://cesr/primitives#AID",
             "description": "The issuer whose KEL lacks the seal"
           },
           {
             "field": "event_said",
-            "type": "string",
+            "type": "types://cesr/primitives#SAID",
             "description": "The SAID of the unauthorized registry event"
-          }
-        ],
-        "related_port": "port://credential-lifecycle/registry/inbound/registry-management"
-      },
-      {
-        "name": "ConfigTraitMutationError",
-        "description": "Attempted to modify immutable config traits after registry inception",
-        "cause": "An event attempted to change config traits (e.g., EstOnly, DoNotDelegate) that were set at inception and are immutable — in v2 registry config cannot be changed after rip inception",
-        "recovery": "abort",
-        "severity": "fatal",
-        "context": [
-          {
-            "field": "regid",
-            "type": "string",
-            "description": "The registry REGID"
-          },
-          {
-            "field": "inception_traits",
-            "type": "array[string]",
-            "description": "The config traits set at inception"
-          },
-          {
-            "field": "attempted_traits",
-            "type": "array[string]",
-            "description": "The config traits in the rotation event"
           }
         ],
         "related_port": "port://credential-lifecycle/registry/inbound/registry-management"
@@ -19512,9 +19486,9 @@ const RDOD_DATA = {
               },
               {
                 "name": "d",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
-                "description": "SAID — becomes the REGID"
+                "description": "SAID — becomes the REGID (self-addressing identifier of this event)"
               },
               {
                 "name": "u",
@@ -19524,9 +19498,9 @@ const RDOD_DATA = {
               },
               {
                 "name": "i",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
-                "description": "Registry identifier — computed as SAID (same as d for self-addressing)"
+                "description": "Issuer's AID prefix — identifies the controller who owns this registry. NOT equal to d; d is the REGID (SAID of the event), i is the issuer's AID."
               },
               {
                 "name": "n",
@@ -19548,7 +19522,7 @@ const RDOD_DATA = {
             ],
             "invariants": [
               "Field order: [v, t, d, u, i, n, dt]",
-              "d and i are both computed as SAID",
+              "d is the REGID (SAID of the event); i is the issuer's AID prefix — they are NOT equal",
               "Must be authorized in the issuer's KEL via a seal",
               "n is the sequence number field (not s as in legacy vcp events)"
             ]
@@ -19581,13 +19555,13 @@ const RDOD_DATA = {
               },
               {
                 "name": "d",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
-                "description": "SAID"
+                "description": "SAID of this event"
               },
               {
                 "name": "rd",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
                 "description": "Registry delegation — REGID of the managing registry"
               },
@@ -19599,7 +19573,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "p",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
                 "description": "Prior TEL event SAID — hash chain linkage"
               },
@@ -19653,13 +19627,13 @@ const RDOD_DATA = {
               },
               {
                 "name": "d",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
-                "description": "SAID"
+                "description": "SAID of this event"
               },
               {
                 "name": "rd",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
                 "description": "Registry delegation — REGID of the managing registry"
               },
@@ -19671,7 +19645,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "p",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
                 "description": "Prior TEL event SAID — hash chain linkage"
               },
@@ -19683,7 +19657,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "ta",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
                 "description": "Transaction ACDC SAID — the credential this event applies to"
               },
@@ -19736,7 +19710,7 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "issuer_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "AID of the issuer who will own this registry"
               },
@@ -19774,13 +19748,13 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "registry_said",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
                 "description": "REGID — SAID of the registry inception event"
               },
               {
                 "name": "issuer_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "AID of the issuer who owns this registry"
               },
@@ -19819,13 +19793,13 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "registry_said",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
                 "description": "REGID"
               },
               {
                 "name": "issuer_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "AID of the registry owner/issuer"
               },
@@ -19833,7 +19807,7 @@ const RDOD_DATA = {
                 "name": "sn",
                 "type": "integer",
                 "required": true,
-                "description": "Registry sequence number"
+                "description": "Registry management TEL sequence number"
               },
               {
                 "name": "shieldable",
@@ -19843,7 +19817,8 @@ const RDOD_DATA = {
               }
             ],
             "invariants": [
-              "Derived from processing rip event and subsequent updates"
+              "Derived from processing rip event and subsequent updates",
+              "sn tracks the registry management TEL sequence number. For a standard registry, sn is always 0 (single rip event). The credential-level TEL events (bup/upd) have their own sequence numbers tracked in credential-lifecycle/status, not here."
             ]
           }
         ]
@@ -55079,6 +55054,7 @@ const RDOD_DATA = {
             "errors://witness-service/api#EventValidationError"
           ]
         },
+        "notes": "Input is an AID — the witness returns the receipt for the latest known event for this AID. For a specific event, use the event-submission port which accepts a full signed event message and returns an EventSubmissionResult with the receipt.\n",
         "refs": [
           "domain://cloud-agent-service",
           "domain://local-agent"
@@ -55459,7 +55435,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "events",
-                "type": "array[ReceiptedEvent]",
+                "type": "array[types://witness-service#ReceiptedEvent]",
                 "required": true,
                 "description": "Ordered sequence of key events with witness receipts"
               }
@@ -55587,7 +55563,7 @@ const RDOD_DATA = {
     "_rules": [
       "Witness NEVER signs on behalf of a controller — only signs receipts with its own non-transferable key",
       "First-seen rule is absolute — once a witness accepts an event at (prefix, sn), conflicting events at the same position are permanently rejected",
-      "Witness nodes are stateless with respect to each other — no inter-witness communication",
+      "Witnesses are stateless with respect to each other — no shared mutable state. Receipt dissemination between witnesses is OPTIONAL per individual witness policy (MAY use broadcast, gossip, or not disseminate at all).",
       "A witness's receipt is authoritative only if the witness AID is in the controller's designated witness list",
       "KERL served to any requester — no authentication required for read access",
       "Witness storage is append-only — events and receipts are never modified or deleted"
@@ -55847,7 +55823,7 @@ const RDOD_DATA = {
             "expression": "@given(\n    pool_size=st.integers(min_value=2, max_value=10),\n    event=valid_key_event_strategy()\n)\ndef test_witness_independence(pool_size, event):\n    witnesses = [create_witness_node() for _ in range(pool_size)]\n    # Submit event to first witness only\n    witnesses[0].submit(event)\n    # Other witnesses should not have the event\n    for w in witnesses[1:]:\n        assert not w.has_event(event.prefix, event.sn)\n"
           },
           "strategy": "st.integers for pool size, valid_key_event_strategy() for events",
-          "notes": "No inter-witness communication — each witness only knows about events submitted directly to it"
+          "notes": "No shared mutable state between witnesses — each witness only knows about events submitted directly to it. Receipt dissemination between witnesses is OPTIONAL per witness policy."
         }
       ],
       "contracts": [
@@ -55924,7 +55900,8 @@ const RDOD_DATA = {
         "description": "Witness is at capacity and cannot accept new identifiers",
         "cause": "Maximum number of managed identifiers reached",
         "recovery": "abort",
-        "severity": "recoverable",
+        "severity": "fatal",
+        "related_port": "port://witness-service/api/inbound/event-submission",
         "context": [
           {
             "field": "current_count",

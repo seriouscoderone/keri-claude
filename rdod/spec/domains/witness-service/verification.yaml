@@ -167,7 +167,7 @@ properties:
             for w in witnesses[1:]:
                 assert not w.has_event(event.prefix, event.sn)
     strategy: "st.integers for pool size, valid_key_event_strategy() for events"
-    notes: "No inter-witness communication — each witness only knows about events submitted directly to it"
+    notes: "No shared mutable state between witnesses — each witness only knows about events submitted directly to it. Receipt dissemination between witnesses is OPTIONAL per witness policy."
 
 # Formalized port contracts
 contracts:
