@@ -142,15 +142,18 @@ terms:
 
   - term: "Seqner"
     synonyms: ["Sequence Number Primitive"]
-    definition: "A FIXED-code sequence number primitive. Seqner always uses code M (2-byte, 4 chars qb64) regardless of value magnitude. Distinct from Number, which auto-sizes. Used for event sequence numbers, first-seen numbers, and other ordinal values in protocol group attachments."
+    definition: "A FIXED-width sequence number primitive. Seqner always uses code 0A (Salt_128, 16 bytes raw, 24 chars qb64) regardless of value magnitude — the value is zero-padded to 16 bytes. Distinct from Number, which auto-sizes to the smallest code. Used for LMDB database keys where fixed-width enables lexicographic ordering. Seqner does NOT inherit from Number — both independently inherit from Matter."
     invariants:
-      - "Always uses code M (short, 2 bytes raw, 4 chars qb64) — code is fixed, not auto-selected"
-      - "Value range: 0–65,535 (u16); values > 65535 are not representable by Seqner — use Number instead"
-      - "Contrast with Number: Number auto-selects the smallest code for the value (M/0H/N/R/S/T/U); Seqner fixes to M"
+      - "Always uses code 0A (Salt_128, 16 bytes raw, 24 chars qb64) — code is fixed, not auto-selected"
+      - "Value range: 0–2^128-1 (16 bytes); any value fits because the raw is always 16 bytes"
+      - "Value is zero-padded to 16 bytes — small values have leading zero bytes"
+      - "Fixed width enables lexicographic ordering in LMDB database keys"
+      - "Contrast with Number: Number auto-selects the smallest code (M/R/N/S/T/U); Seqner fixes to 0A"
+      - "Seqner and Number are sibling classes (both extend Matter), NOT parent-child"
       - "Provides .sn property for the integer sequence number value"
     examples:
-      - "Seqner(sn=0) — sequence number 0, code 'M', qb64 'MAAA'"
-      - "Seqner(sn=257) — sequence number 257, code 'M', qb64 'MAQB'"
+      - "Seqner(sn=0) — code '0A', 16 bytes raw (all zeros), 24 chars qb64"
+      - "Seqner(sn=100000) — code '0A', 16 bytes raw (zero-padded), 24 chars qb64"
     related_terms: ["Number", "Matter"]
 
   - term: "SAID"
@@ -361,21 +364,24 @@ terms:
 
   - term: "Number"
     synonyms: ["Variable-Length Number"]
-    definition: "An AUTO-SIZED unsigned integer primitive. Number auto-selects the smallest code that fits the value (M/0H/N/R/S/T/U). Distinct from Seqner, which always uses fixed code M regardless of value."
+    definition: "An AUTO-SIZED unsigned integer primitive. Number auto-selects the smallest code that fits the value from the NumDex progression: M→R→N→S→T→U. Distinct from Seqner, which always uses fixed code 0A."
     invariants:
       - "Auto-selects smallest code that fits the value — code is chosen by value magnitude, not fixed"
       - "Short (code M): 0–65,535 (2 bytes, 4 chars qb64)"
-      - "Long (code 0H): 0–4,294,967,295 (4 bytes, 8 chars qb64)"
-      - "Big (code N): 0–2^64-1 (8 bytes, 12 chars qb64)"
       - "Tall (code R): 0–2^40-1 (5 bytes, 8 chars qb64)"
+      - "Big (code N): 0–2^64-1 (8 bytes, 12 chars qb64)"
       - "Large (code S): 0–2^88-1 (11 bytes, 16 chars qb64)"
       - "Great (code T): 0–2^112-1 (14 bytes, 20 chars qb64)"
       - "Vast (code U): 0–2^136-1 (17 bytes, 24 chars qb64)"
-      - "Contrast with Seqner: Seqner is always code M (fixed); Number is code-auto-selected"
+      - "Auto-sizing order: M → R → N → S → T → U (note: 0H is a valid code but NOT in the auto-sizing path)"
+      - "Number and Seqner are sibling classes (both extend Matter), NOT parent-child"
+      - "Contrast with Seqner: Seqner is always code 0A (fixed, 16 bytes); Number is code-auto-selected"
+      - "Number provides sequence-number access aliases for backward compatibility with Seqner"
     examples:
       - "Number(num=42) → code 'M', 4 chars qb64"
-      - "Number(num=100000) → code '0H', 8 chars qb64"
-      - "Number(num=2**64) → code 'R' or 'S' depending on size"
+      - "Number(num=100000) → code 'R', 8 chars qb64"
+      - "Number(num=2**33) → code 'R', 8 chars qb64"
+      - "Number(num=2**41) → code 'N', 12 chars qb64"
     related_terms: ["Seqner", "NumDex", "Matter"]
 
   - term: "Dater"
@@ -497,6 +503,18 @@ terms:
       - "Code 'E' (Blake3_256): hs=1, ss=0, xs=0, fs=44, ls=0"
       - "Code '0B' (Ed25519_Sig): hs=2, ss=0, xs=0, fs=88, ls=0"
     related_terms: ["Code Table", "Matter", "Mid-Padding Algorithm"]
+
+  - term: "SecurityLevel"
+    synonyms: ["Crypto Minimum"]
+    definition: "The minimum cryptographic security level required for CESR primitives to be considered safe. All cryptographic codes MUST provide at least 128-bit security strength."
+    invariants:
+      - "Signing algorithms must provide >= 128-bit security (Ed25519 = 128, ECDSA secp256k1 = 128, ECDSA secp256r1 = 128, Ed448 = 224)"
+      - "Digest algorithms must produce >= 256-bit output (Blake3-256 = 128-bit collision resistance, SHA-256 = 128-bit collision resistance)"
+      - "No code in the CESR table maps to an algorithm below 128-bit security"
+    examples:
+      - "Ed25519 (code D): 128-bit security — meets minimum"
+      - "SHA-256 (code I): 128-bit collision resistance — meets minimum"
+    related_terms: ["Code Table", "CESR Primitive Pattern"]
 
 events:
   - name: "PrimitiveQualified"

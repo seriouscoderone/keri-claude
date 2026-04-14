@@ -562,20 +562,21 @@ properties:
     notes: "The SAID embedded in the data structure verifies itself."
 
   # --- Seqner ---
-  - invariant: "Code M for short 2-byte numbers (0-65535) -- 4 chars qb64"
+  - invariant: "Code 0A (Salt_128) for fixed-width 16-byte ordinals -- 24 chars qb64"
     term: "Seqner"
     technique: "property-based"
     formal:
       language: "python"
       expression: |
-        @given(st.integers(min_value=0, max_value=65535))
-        def test_seqner_short(sn):
+        @given(st.integers(min_value=0, max_value=2**64 - 1))
+        def test_seqner_fixed_width(sn):
             seqner = Seqner(sn=sn)
-            assert seqner.code == 'M'
-            assert len(seqner.qb64) == 4
+            assert seqner.code == '0A'
+            assert len(seqner.qb64) == 24
+            assert len(seqner.raw) == 16
             assert seqner.sn == sn
-    strategy: "st.integers(0, 65535)"
-    notes: "Short Seqner covers most common sequence numbers."
+    strategy: "st.integers(0, 2^64-1)"
+    notes: "Seqner always uses code 0A (16 bytes raw, 24 chars qb64). Fixed width enables lexicographic LMDB key ordering."
 
   - invariant: "Seqner round-trip: construction from sn and from qb64 produce same value"
     term: "Seqner"
@@ -586,10 +587,11 @@ properties:
         @given(st.integers(min_value=0, max_value=2**64 - 1))
         def test_seqner_roundtrip(sn):
             seqner = Seqner(sn=sn)
+            assert seqner.code == '0A'
             from_qb64 = Seqner(qb64=seqner.qb64)
             assert from_qb64.sn == sn
     strategy: "st.integers(0, 2^64-1)"
-    notes: "Sequence number round-trip through qb64."
+    notes: "Seqner uses fixed-width 0A code. For compact wire encoding use Number which auto-sizes (M/R/N/S/T/U)."
 
   # --- Sizage ---
   - invariant: "hs: number of hard (type) characters in the code"

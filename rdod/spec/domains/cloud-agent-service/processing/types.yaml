@@ -164,7 +164,7 @@ types:
           - name: "error"
             type: "map"
             required: false
-            description: "Error payload — present only when done is true and the operation failed. Contains code (string), message (string), and optional details (map) fields regardless of operation_type."
+            description: "Error payload — present only when done is true and the operation failed. Contains code (int, HTTP status convention), message (string), and optional details (map) fields regardless of operation_type."
         invariants:
           - "name follows the {type}.{qualifier} convention (e.g., witness.EDP1..., credential.ESAID...)"
           - "done=false implies both result and error are absent"

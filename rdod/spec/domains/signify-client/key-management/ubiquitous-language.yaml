@@ -70,11 +70,15 @@ terms:
 
   - term: "Tier"
     synonyms: ["Security Tier"]
-    definition: "Security level controlling argon2 CPU/memory cost for passcode stretching. Higher tiers are slower but more resistant to brute-force."
+    definition: "Security level controlling Argon2id v1.3 CPU/memory cost for passcode stretching. Higher tiers are slower but more resistant to brute-force. Algorithm is Argon2id (NOT argon2d or argon2i) — confirmed in keripy and signify-ts via pysodium.crypto_pwhash_ALG_ARGON2ID13."
     invariants:
-      - "Three levels: low, med, high"
+      - "Three production levels: low, med, high (plus 'temp' for testing)"
+      - "Algorithm: Argon2id v1.3 (argon2id13) — hybrid of argon2i (side-channel resistant) and argon2d (GPU resistant)"
+      - "temp: opslimit=1, memlimit=8,192 (testing only — NOT for production)"
+      - "low: opslimit=2, memlimit=67,108,864 (64 MB) — interactive use"
+      - "med: opslimit=3, memlimit=268,435,456 (256 MB) — moderate security"
+      - "high: opslimit=4, memlimit=1,073,741,824 (1 GB) — sensitive/hardware wallet"
       - "Tier is set at client construction and affects all key derivation"
-      - "Higher tier = more argon2 iterations = slower unlock but stronger protection"
     examples:
       - "Tier.low for development/testing; Tier.high for production hardware wallets"
       - "new SignifyClient(url, bran, Tier.low)"

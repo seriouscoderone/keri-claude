@@ -2,35 +2,34 @@ domain_ref: "accountability/consensus"
 
 types:
   - name: "Receipt"
-    description: "A witness's signed acknowledgment that a specific event was first-seen and accepted. The cryptographic proof of witness accountability — combines the event identity with the witness's signature."
+    description: "A witness's signed acknowledgment that a specific event was first-seen and accepted. The receipt message body (rct) identifies the receipted event via {v, t, d, i, s}. Witness signatures are CESR attachments, not body fields — each witness signs the referenced event (not the receipt body) and its signature index corresponds to its position in the effective witness list."
     variants:
       - name: "default"
         fields:
           - name: "aid"
             type: "types://cesr/primitives#AID"
             required: true
-            description: "AID of the identifier whose event was receipted"
+            description: "AID of the identifier whose event was receipted (i field)"
           - name: "sn"
             type: "integer"
             required: true
-            description: "Sequence number of the receipted event"
+            description: "Sequence number of the receipted event (s field)"
           - name: "said"
             type: "types://cesr/primitives#SAID"
             required: true
-            description: "SAID of the receipted event"
-          - name: "witness_signatures"
-            type: "array[types://cesr/primitives#UnindexedSignature]"
+            description: "SAID of the receipted event (d field)"
+          - name: "witness_indexed_signatures"
+            type: "array[types://cesr/primitives#IndexedSignature]"
             required: true
-            description: "Non-indexed (UnindexedSignature) signatures from each signing witness"
-          - name: "witness_aid"
-            type: "types://cesr/primitives#AID"
-            required: true
-            description: "AID of the witnessing party that issued this receipt"
+            description: "Indexed signatures from witnesses — each signature's index is the witness's position in the effective witness list. Witnesses are non-transferable but use indexed signatures (Siger), not unindexed (Cigar)."
         invariants:
-          - "Signatures must verify against the witness's current signing keys"
-          - "The receipted event must have been first-seen by this witness before signing"
+          - "Witnesses MUST be non-transferable AIDs — transferable AIDs MUST NOT appear in the witness list"
+          - "Each witness signature's index corresponds to its position in the effective witness list at the receipted event's key state"
+          - "Signatures are on the referenced key event's serialization, NOT on the receipt body"
+          - "The receipted event must have been first-seen by the witness before signing"
           - "A receipt is immutable once issued — first seen, always seen, never unseen"
           - "Duplicate receipts (same witness, same event SAID) are absorbed idempotently"
+          - "Non-witness receipts from non-transferable identifiers use unindexed signatures (Cigar couples) — handled by accountability/receipting, not consensus"
 
   - name: "QuorumRequest"
     description: "Input for quorum evaluation — the numeric parameters needed to compute BFT thresholds and check immune constraints."
@@ -74,6 +73,29 @@ types:
           - "ample_threshold == 0 when witness_count == 0, else 1 <= ample_threshold <= witness_count"
           - "immune == true implies valid == true (an immune configuration is always structurally valid)"
           - "valid == false when proposed_toad > witness_count or when proposed_toad == 0 with witness_count > 0"
+
+  - name: "FirstSeenQuery"
+    description: "Input for checking whether an event at a given (aid, sn) has already been first-seen. Provides the full event identity triple."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The identifier prefix"
+          - name: "sn"
+            type: "integer"
+            required: true
+            description: "Sequence number of the event to check"
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the candidate event"
+        invariants:
+          - "The triple (aid, sn, event_said) uniquely identifies an event"
+          - "If no event at (aid, sn) has been first-seen, the event is new"
+          - "If an event at (aid, sn) has been first-seen with the SAME said, the check is idempotent"
+          - "If an event at (aid, sn) has been first-seen with a DIFFERENT said, this raises FirstSeenConflictError"
 
   - name: "AlreadySeen"
     description: "Result when a witness or validator has already first-seen an event at the given sequence number."

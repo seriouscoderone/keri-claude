@@ -32,7 +32,7 @@ terms:
     related_terms: ["Delegation Validation", "Delegable Event Escrow", "Approved Delegation Seals"]
 
   - term: "Delegable Event Escrow"
-    synonyms: []
+    synonyms: ["Delegable"]
     definition: "Holds events that need delegation approval but the delegator's event hasn't been processed yet. Distinguished from PDE: delegables are waiting for the delegator's event to even arrive, while PDE events have the delegator's event but are waiting for it to contain the right seal."
     invariants:
       - "Contains events where the delegator's approval event has not yet arrived at all"
@@ -89,4 +89,5 @@ rules:
   - "Events failing validation are escrowed — not rejected — to handle asynchronous arrival of delegator events"
   - "Delegable events (Delegable Event escrow) wait for delegator event arrival; partially-delegated events (Partially-Delegated escrow) wait for seal match — these are distinct escrow states"
   - "Escrowed events are pruned after timeout (Delegable=1200s, PDE=3600s default — configurable implementation parameters) — stale delegations do not accumulate"
+  - "Escrow timeout uses a SHARED timestamp per event (keyed by prefix+SAID) — when an event transitions between escrow queues (e.g., Delegable→PDE), the timestamp does NOT reset. The clock starts at first escrow entry."
   - "When the delegator's KEL advances, all relevant escrow queues must be swept for promotable events"

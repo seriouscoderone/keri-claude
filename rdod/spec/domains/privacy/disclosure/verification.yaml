@@ -105,8 +105,12 @@ contracts:
 state_machines:
   - name: "Disclosure Progression"
     term: "Graduated Disclosure"
-    states: ["compact", "partial", "full"]
+    states: ["metadata", "compact", "partial", "full"]
     transitions:
+      - from: "metadata"
+        to: "compact"
+        trigger: "Credential SAID anchored and verifiable"
+        guard: "Block has d field with valid SAID"
       - from: "compact"
         to: "partial"
         trigger: "UUID and schema disclosed alongside SAID"
@@ -122,9 +126,10 @@ state_machines:
     invariants:
       - "Disclosure is monotonically increasing — cannot retract disclosed information"
       - "Chain-link confidentiality gates the partial-to-full transition"
-      - "Compact < partial < full in information revealed"
+      - "Metadata is an optional pre-disclosure phase — structural fields visible but uncorrelated to actual credential"
+      - "metadata < compact < partial < full in information revealed"
       - "This state machine models the block-level progression of detail for a GIVEN section (attributes, edges, rules)"
-      - "Selective disclosure, metadata credentials, nested partial disclosure, and bulk issuance are ORTHOGONAL mechanisms that can be combined with any progression level — they are not states in this FSM"
+      - "Selective disclosure, nested partial disclosure, and bulk issuance are ORTHOGONAL mechanisms that can be combined with any progression level — they are not states in this FSM"
       - "All graduated disclosure mechanisms MAY be used in combination (ACDC spec section 12.5)"
-    initial_state: "compact"
+    initial_state: "metadata"
     terminal_states: ["full"]

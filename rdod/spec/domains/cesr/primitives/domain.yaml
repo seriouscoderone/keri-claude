@@ -14,14 +14,12 @@ description: >
   representation transforms (qb64, qb2, raw). Follows the KERI naming
   convention: gerund-module, agent-noun class, -Dex code table.
 
-  NOTE: This is a kernel, not a full domain. The ports defined in ports.yaml
-  represent type-level convenience operations (qualification, code resolution)
-  called only by the parent cesr domain — they are NOT domain interface
-  contracts. The real API surface is the types themselves (Matter, Verfer,
-  Diger, etc.) which downstream domains import and use directly.
+  Downstream domains import its published types (Matter, Verfer, Diger, etc.)
+  directly through published_language. The inbound ports serve the parent cesr
+  domain for qualification and code resolution operations.
 
 version: "0.1.0"
-tier: "kernel"
+tier: "domain"
 
 source_material:
   - type: document
