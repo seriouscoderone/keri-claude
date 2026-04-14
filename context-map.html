@@ -25801,7 +25801,7 @@ const RDOD_DATA = {
       "An exploiter must compromise both delegatee and delegator keys simultaneously for full control — the joint compromise requirement",
       "Delegated rotations may only supersede the latest-seen delegated rotation at a given sn — earlier rotations are final",
       "Superseding rules for delegated events (B1-B3) are based on delegating event ordering in the delegator's KEL",
-      "Recursive rule C applies up the delegation chain to the root non-delegated KEL",
+      "Recursive rule C applies up the delegation chain to the root non-delegated KEL. Circular delegation is structurally impossible: the di field is set at inception and immutable, and the delegator's KEL must exist before the delegated inception can be anchored. The delegation graph is necessarily a DAG rooted at non-delegated AIDs — no cycle detection needed.",
       "Custodial delegation is a deployment pattern — same protocol mechanics, different key custody arrangement",
       "The delegator MUST NOT automatically approve a delegated rotation that changes the witness pool beyond its prior threshold — this requires explicit delegator review"
     ],
@@ -26330,7 +26330,7 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "delegator_aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "AID of the delegator"
               },
@@ -26342,7 +26342,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "said",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
                 "description": "SAID of the delegating event"
               },
@@ -35217,19 +35217,19 @@ const RDOD_DATA = {
       },
       {
         "name": "KeyConfigurationUpdated",
-        "payload": "aid: AID, new_signing_keys: [PublicKey], new_next_digests: [Digest], prior_next_digests: [Digest]",
+        "payload": "aid: AID, new_signing_keys: [VerificationKey], new_next_digests: [Digest], prior_next_digests: [Digest]",
         "triggers": "A rotation event replaces the current key configuration — prior next digests are consumed and new ones committed"
       },
       {
         "name": "PartialRotationPerformed",
-        "payload": "aid: AID, promoted_keys: [PublicKey], discarded_digests: [Digest], new_signing_keys: [PublicKey]",
+        "payload": "aid: AID, promoted_keys: [VerificationKey], discarded_digests: [Digest], new_signing_keys: [VerificationKey]",
         "triggers": "A rotation event promotes only a subset of pre-committed keys to signing keys, discarding the rest"
       }
     ],
     "_rules": [
       "Every establishment event for a transferable AID must include a non-empty next key digest list (n field)",
       "An empty next key digest list (n = []) permanently ends the AID's transferability — no further rotations are valid",
-      "At rotation, each new signing key must match a pre-committed digest from the prior establishment event's n field",
+      "At rotation, the signing key list MUST include a threshold-satisfying subset of keys matching prior next-key digests (via ondex mapping). Additional keys without prior digest matches MAY be included (augmented rotation) — the constraint is on signatures, not the key list.",
       "Pre-rotated keys are first-time, one-time, only-time use for rotation authority — once consumed (matched or discarded), they cannot be reused",
       "The digest algorithm for next key digests is encoded in the CESR prefix of each n field entry and must be a supported algorithm from the kernel",
       "Partial rotation is valid as long as the promoted keys satisfy the prior rotation threshold (nt)",
@@ -35492,7 +35492,7 @@ const RDOD_DATA = {
         "semantics": "query",
         "idempotent": true,
         "contract": {
-          "input": "types://identity/key-commitment#PublicKey",
+          "input": "types://identity/key-commitment#VerificationKey",
           "output": "types://identity/key-commitment#KeyConfiguration",
           "errors": [
             "errors://identity/key-commitment#PreRotationBindingError",
@@ -35530,9 +35530,9 @@ const RDOD_DATA = {
         "name": "Partial Rotation",
         "semantics": "query",
         "idempotent": true,
-        "description": "Validates a partial rotation — verifying that the subset of revealed keys satisfies the prior next threshold, and that each revealed key matches one of the prior next key digest commitments. Unrevealed keys remain as Reserve Keys. Input: revealed_keys (array[PublicKey] — keys being revealed, subset of prior next commitments), prior_next_digests (array[Digest] — full prior n field), and prior_next_threshold (string — the prior nt expression the revealed subset must satisfy).\n",
+        "description": "Validates a partial rotation — verifying that the subset of revealed keys satisfies the prior next threshold, and that each revealed key matches one of the prior next key digest commitments. Unrevealed keys remain as Reserve Keys. Input: revealed_keys (array[VerificationKey] — keys being revealed, subset of prior next commitments), prior_next_digests (array[Digest] — full prior n field), and prior_next_threshold (string — the prior nt expression the revealed subset must satisfy).\n",
         "contract": {
-          "input": "array[types://identity/key-commitment#PublicKey] revealed_keys + array[Digest] prior_next_digests + string prior_next_threshold",
+          "input": "array[types://identity/key-commitment#VerificationKey] revealed_keys + array[Digest] prior_next_digests + string prior_next_threshold",
           "output": "array[types://identity/key-commitment#MatchedIndex]",
           "errors": [
             "errors://identity/key-commitment#PartialRotationThresholdError"
@@ -36026,7 +36026,7 @@ const RDOD_DATA = {
     ],
     "_types": [
       {
-        "name": "PublicKey",
+        "name": "VerificationKey",
         "description": "A CESR-qualified public verification key. The qb64 representation includes the algorithm code prefix.",
         "variants": [
           {
@@ -36167,7 +36167,7 @@ const RDOD_DATA = {
           "description": "Construct a KeyConfiguration with validated key list, threshold, and pre-rotation commitments.",
           "required_fields": [
             {
-              "keys": "array of PublicKey — at least one signing key required"
+              "keys": "array of VerificationKey — at least one signing key required"
             },
             {
               "threshold": "threshold expression — integer string or fractional weight list"
@@ -36194,7 +36194,7 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "keys",
-                "type": "array[PublicKey]",
+                "type": "array[VerificationKey]",
                 "required": true,
                 "description": "Current signing public keys",
                 "constraints": {
@@ -36850,7 +36850,7 @@ const RDOD_DATA = {
         "semantics": "query",
         "idempotent": true,
         "contract": {
-          "input": "AID prefix and optional target sequence number",
+          "input": "types://identity/state#ReconstructionQuery",
           "output": "types://identity/state#KeyState",
           "errors": [
             "errors://identity/state#ReconstructionError",
@@ -37414,12 +37414,6 @@ const RDOD_DATA = {
             },
             {
               "from": "active",
-              "to": "est_only",
-              "trigger": "establishment event with EO trait",
-              "guard": "event.t in ('rot', 'drt') and 'EO' in event.c"
-            },
-            {
-              "from": "active",
               "to": "abandoned",
               "trigger": "rotation with empty next digests — controller chose to permanently retire this identifier",
               "guard": "event.t in ('rot', 'drt') and event.n == [] and event.nt == '0'"
@@ -37873,7 +37867,8 @@ const RDOD_DATA = {
         "invariants": [
           "EstOnly (EO) restricts the identifier to establishment events only — no interaction events",
           "DoNotDelegate (DND) prevents the identifier from acting as a delegator",
-          "Traits are set at inception only — once set, a trait persists for the identifier's lifetime and cannot be removed (v2.0 admits c in rot wire format but keripy never applies it on rotation)"
+          "Two trait categories: (1) Inception-only traits (EO, DND, DID) — one-way latches set only at inception, persist permanently, keripy config() only called at __init__; (2) Rotation-eligible traits (RB, NRB) — MAY appear in rotation events per spec, but currently unimplemented in keripy",
+          "Inception-only traits cannot be added via rotation — the wire format accepts c in rot but EO/DND/DID are only processed at inception"
         ]
       },
       {
@@ -38089,6 +38084,34 @@ const RDOD_DATA = {
             "invariants": [
               "The event is not stored — it is dropped",
               "Rejection is terminal — the event will not be retried unless re-submitted by the caller"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "ReconstructionQuery",
+        "description": "Input for state reconstruction — replay the KEL from inception up to an optional target sequence number to derive the key state at that point.",
+        "variants": [
+          {
+            "name": "default",
+            "fields": [
+              {
+                "name": "aid",
+                "type": "types://cesr/primitives#AID",
+                "required": true,
+                "description": "The identifier to reconstruct state for"
+              },
+              {
+                "name": "target_sn",
+                "type": "integer",
+                "required": false,
+                "description": "Optional target sequence number — if omitted, reconstruct to the latest event. If provided, reconstruct to the state as of that sn."
+              }
+            ],
+            "invariants": [
+              "If target_sn is omitted, the result is the current key state",
+              "If target_sn is provided, the result is the key state as of that establishment event (or the last establishment event at or before target_sn)",
+              "Reconstruction is deterministic — same KEL always produces the same state"
             ]
           }
         ]
@@ -38939,7 +38962,7 @@ const RDOD_DATA = {
           "notes": "Cannot remove what is not there."
         },
         {
-          "invariant": "Additions (ba) MUST NOT reference AIDs already in the witness list (after removals are applied); adding a duplicate MUST be rejected",
+          "invariant": "Additions (ba) that reference AIDs already in the post-removal witness list are silently skipped (per KERI spec: 'appending...except for any AIDs that already appear'). NOTE: keripy is stricter and rejects duplicates with ValidationError — this is a known spec-vs-implementation divergence.",
           "term": "Witness Configuration",
           "technique": "property-based",
           "formal": {
@@ -39328,9 +39351,9 @@ const RDOD_DATA = {
               },
               {
                 "name": "accumulated_signatures",
-                "type": "array[map]",
+                "type": "array[types://cesr/primitives#IndexedSignature]",
                 "required": true,
-                "description": "Signatures collected so far (index + siger per member)"
+                "description": "Indexed signatures collected so far — each signature's index maps to a member's key position in the group"
               },
               {
                 "name": "satisfied",
@@ -39382,7 +39405,7 @@ const RDOD_DATA = {
             "invariants": [
               "0 <= toad <= len(witnesses) — TOAD must be satisfiable given the witness count",
               "Witness AIDs must be unique — no duplicates permitted",
-              "Witness AIDs must be non-transferable (B prefix for Ed25519, 1AAA for secp256k1, etc.)",
+              "Witness AIDs MUST be non-transferable (B prefix for Ed25519, 1AAA for secp256k1, etc.) — normative MUST per KERI spec. Witness receipt verification requires extracting the public key directly from the AID, which is only possible with basic (non-transferable) prefixes.",
               "An empty witness list (witnesses=[]) must have toad=0",
               "toad=0 with non-empty witnesses is valid — unwitnessed operation mode even though witnesses exist"
             ]
@@ -40893,7 +40916,7 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "The AID whose trust was restored"
               },
@@ -40920,7 +40943,7 @@ const RDOD_DATA = {
             "fields": [
               {
                 "name": "aid",
-                "type": "string",
+                "type": "types://cesr/primitives#AID",
                 "required": true,
                 "description": "The AID whose trust was revoked"
               },
@@ -40932,7 +40955,7 @@ const RDOD_DATA = {
               },
               {
                 "name": "evidence_said",
-                "type": "string",
+                "type": "types://cesr/primitives#SAID",
                 "required": true,
                 "description": "SAID of the duplicity evidence that triggered revocation"
               }
@@ -48211,8 +48234,8 @@ const RDOD_DATA = {
         "id": "port://privacy/blinding/inbound/construct-bound-block",
         "type": "inbound",
         "name": "Construct Bound Shielded Attribute Block",
-        "semantics": "command",
-        "idempotent": false,
+        "semantics": "query",
+        "idempotent": true,
         "description": "Builder — constructs a BoundShieldedAttributeBlock by combining a shielded attribute block with binding context (transaction SAID, state, key event sn/SAID).\n",
         "contract": {
           "input": "types://privacy/blinding#ShieldedAttributeBlock",

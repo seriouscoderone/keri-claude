@@ -1,7 +1,7 @@
 domain_ref: "identity/key-commitment"
 
 types:
-  - name: "PublicKey"
+  - name: "VerificationKey"
     description: "A CESR-qualified public verification key. The qb64 representation includes the algorithm code prefix."
     variants:
       - name: "default"
@@ -86,7 +86,7 @@ types:
     builder:
       description: "Construct a KeyConfiguration with validated key list, threshold, and pre-rotation commitments."
       required_fields:
-        - keys: "array of PublicKey — at least one signing key required"
+        - keys: "array of VerificationKey — at least one signing key required"
         - threshold: "threshold expression — integer string or fractional weight list"
         - next_keys: "array of Digest — pre-rotation commitments; empty only for non-transferable or abandonment"
         - next_threshold: "threshold expression for next keys — '0' with empty next_keys for non-transferable"
@@ -101,7 +101,7 @@ types:
       - name: "default"
         fields:
           - name: "keys"
-            type: "array[PublicKey]"
+            type: "array[VerificationKey]"
             required: true
             description: "Current signing public keys"
             constraints:

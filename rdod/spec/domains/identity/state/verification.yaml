@@ -638,10 +638,9 @@ state_machines:
         to: "active"
         trigger: "interaction event (ixn) processed"
         guard: "event.t == 'ixn' and event.sn == expected_sn and not estOnly"
-      - from: "active"
-        to: "est_only"
-        trigger: "establishment event with EO trait"
-        guard: "event.t in ('rot', 'drt') and 'EO' in event.c"
+      # NOTE: No active→est_only transition. EO is inception-only per KERI spec (line 372).
+      # keripy's config() is only called at __init__, never during rotation.
+      # RB/NRB are rotation-eligible per spec but currently unimplemented in keripy.
       - from: "active"
         to: "abandoned"
         trigger: "rotation with empty next digests — controller chose to permanently retire this identifier"

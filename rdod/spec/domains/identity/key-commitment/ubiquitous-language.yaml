@@ -153,17 +153,17 @@ events:
     triggers: "An establishment event publishes new next key digests, creating a forward-blinded commitment to the next rotation keys"
 
   - name: "KeyConfigurationUpdated"
-    payload: "aid: AID, new_signing_keys: [PublicKey], new_next_digests: [Digest], prior_next_digests: [Digest]"
+    payload: "aid: AID, new_signing_keys: [VerificationKey], new_next_digests: [Digest], prior_next_digests: [Digest]"
     triggers: "A rotation event replaces the current key configuration — prior next digests are consumed and new ones committed"
 
   - name: "PartialRotationPerformed"
-    payload: "aid: AID, promoted_keys: [PublicKey], discarded_digests: [Digest], new_signing_keys: [PublicKey]"
+    payload: "aid: AID, promoted_keys: [VerificationKey], discarded_digests: [Digest], new_signing_keys: [VerificationKey]"
     triggers: "A rotation event promotes only a subset of pre-committed keys to signing keys, discarding the rest"
 
 rules:
   - "Every establishment event for a transferable AID must include a non-empty next key digest list (n field)"
   - "An empty next key digest list (n = []) permanently ends the AID's transferability — no further rotations are valid"
-  - "At rotation, each new signing key must match a pre-committed digest from the prior establishment event's n field"
+  - "At rotation, the signing key list MUST include a threshold-satisfying subset of keys matching prior next-key digests (via ondex mapping). Additional keys without prior digest matches MAY be included (augmented rotation) — the constraint is on signatures, not the key list."
   - "Pre-rotated keys are first-time, one-time, only-time use for rotation authority — once consumed (matched or discarded), they cannot be reused"
   - "The digest algorithm for next key digests is encoded in the CESR prefix of each n field entry and must be a supported algorithm from the kernel"
   - "Partial rotation is valid as long as the promoted keys satisfy the prior rotation threshold (nt)"

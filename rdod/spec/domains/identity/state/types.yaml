@@ -127,7 +127,8 @@ types:
     invariants:
       - "EstOnly (EO) restricts the identifier to establishment events only — no interaction events"
       - "DoNotDelegate (DND) prevents the identifier from acting as a delegator"
-      - "Traits are set at inception only — once set, a trait persists for the identifier's lifetime and cannot be removed (v2.0 admits c in rot wire format but keripy never applies it on rotation)"
+      - "Two trait categories: (1) Inception-only traits (EO, DND, DID) — one-way latches set only at inception, persist permanently, keripy config() only called at __init__; (2) Rotation-eligible traits (RB, NRB) — MAY appear in rotation events per spec, but currently unimplemented in keripy"
+      - "Inception-only traits cannot be added via rotation — the wire format accepts c in rot but EO/DND/DID are only processed at inception"
 
   - name: "LastEstablishmentData"
     description: "Cached snapshot of the most recent establishment event's key configuration, used for efficient state queries without replaying the KEL."
@@ -266,6 +267,24 @@ types:
         invariants:
           - "The event is not stored — it is dropped"
           - "Rejection is terminal — the event will not be retried unless re-submitted by the caller"
+
+  - name: "ReconstructionQuery"
+    description: "Input for state reconstruction — replay the KEL from inception up to an optional target sequence number to derive the key state at that point."
+    variants:
+      - name: "default"
+        fields:
+          - name: "aid"
+            type: "types://cesr/primitives#AID"
+            required: true
+            description: "The identifier to reconstruct state for"
+          - name: "target_sn"
+            type: "integer"
+            required: false
+            description: "Optional target sequence number — if omitted, reconstruct to the latest event. If provided, reconstruct to the state as of that sn."
+        invariants:
+          - "If target_sn is omitted, the result is the current key state"
+          - "If target_sn is provided, the result is the key state as of that establishment event (or the last establishment event at or before target_sn)"
+          - "Reconstruction is deterministic — same KEL always produces the same state"
 
   - name: "BADAInput"
     description: "Input for BADA (Best Available Data Algorithm) reply acceptance. BADA compares an incoming reply against the stored reply for the same route and endorser to determine freshness. Only fresher replies replace stored ones."

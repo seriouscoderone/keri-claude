@@ -496,7 +496,7 @@ properties:
     strategy: "st.lists(witness_aid_strategy(), 2..6, unique=True)"
     notes: "Cannot remove what is not there."
 
-  - invariant: "Additions (ba) MUST NOT reference AIDs already in the witness list (after removals are applied); adding a duplicate MUST be rejected"
+  - invariant: "Additions (ba) that reference AIDs already in the post-removal witness list are silently skipped (per KERI spec: 'appending...except for any AIDs that already appear'). NOTE: keripy is stricter and rejects duplicates with ValidationError — this is a known spec-vs-implementation divergence."
     term: "Witness Configuration"
     technique: property-based
     formal:

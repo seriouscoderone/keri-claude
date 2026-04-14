@@ -19,9 +19,9 @@ types:
             required: true
             description: "The threshold that must be satisfied"
           - name: "accumulated_signatures"
-            type: "array[map]"
+            type: "array[types://cesr/primitives#IndexedSignature]"
             required: true
-            description: "Signatures collected so far (index + siger per member)"
+            description: "Indexed signatures collected so far — each signature's index maps to a member's key position in the group"
           - name: "satisfied"
             type: "boolean"
             required: true
@@ -55,7 +55,7 @@ types:
         invariants:
           - "0 <= toad <= len(witnesses) — TOAD must be satisfiable given the witness count"
           - "Witness AIDs must be unique — no duplicates permitted"
-          - "Witness AIDs must be non-transferable (B prefix for Ed25519, 1AAA for secp256k1, etc.)"
+          - "Witness AIDs MUST be non-transferable (B prefix for Ed25519, 1AAA for secp256k1, etc.) — normative MUST per KERI spec. Witness receipt verification requires extracting the public key directly from the AID, which is only possible with basic (non-transferable) prefixes."
           - "An empty witness list (witnesses=[]) must have toad=0"
           - "toad=0 with non-empty witnesses is valid — unwitnessed operation mode even though witnesses exist"
     builder:
