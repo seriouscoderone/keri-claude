@@ -8,13 +8,13 @@ name: "CESR Primitives"
 
 description: >
   Kernel providing CESR-qualified cryptographic primitives and data types.
-  Defines the Matter base type and its specialized agent-noun subtypes
-  (Verfer, Diger, Siger, etc.), the code table entries that map type codes
+  Defines the Primitive base type and its specialized agent-noun subtypes
+  (Verification Key, Digest, Indexed Signature, etc.), the code table entries that map type codes
   to cryptographic algorithms and raw sizes, and the three-domain (T, B, R)
   representation transforms (qb64, qb2, raw). Follows the KERI naming
   convention: gerund-module, agent-noun class, -Dex code table.
 
-  Downstream domains import its published types (Matter, Verfer, Diger, etc.)
+  Downstream domains import its published types (Primitive, Verification Key, Digest, etc.)
   directly through published_language. The inbound ports serve the parent cesr
   domain for qualification and code resolution operations.
 
@@ -32,26 +32,26 @@ source_material:
 published_language:
   - term: "SAID"
     description: "Self-Addressing Identifier — content-addressable digest used by all domains for field maps"
-  - term: "Matter"
+  - term: "Primitive Base"
     description: "Base type for all non-indexed CESR primitives — (code, raw) pair with domain transforms"
-  - term: "Verfer"
+  - term: "Verification Key"
     description: "Public key primitive — signature verification"
-  - term: "Diger"
+  - term: "Digest"
     description: "Digest primitive — hash computation and comparison"
-  - term: "Siger"
+  - term: "Indexed Signature"
     description: "Indexed signature primitive — threshold multi-signature schemes"
-  - term: "Cigar"
+  - term: "Unindexed Signature"
     description: "Unindexed signature primitive — witness receipts"
-  - term: "Salter"
+  - term: "Salt Primitive"
     description: "Salt/seed primitive — deterministic key derivation"
-  - term: "Saider"
+  - term: "SAID Primitive"
     description: "SAID primitive — self-addressing identifier computation"
-  - term: "Prefixer"
+  - term: "Identifier Prefix"
     description: "AID prefix primitive — identifier representation"
-  - term: "Seqner"
+  - term: "Fixed-Width Ordinal"
     description: "Sequence number primitive — ordinal encoding"
   # Serder, Creder, Sadder moved to cesr/composition published_language
-  - term: "Tholder"
+  - term: "Threshold Primitive"
     description: "Threshold holder — signing/rotation threshold representation and satisfaction"
 
 domain_clients:

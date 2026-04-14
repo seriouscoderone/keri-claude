@@ -54,18 +54,18 @@ types:
           - "Both the delegator's sealing event and the delegatee's event must be independently valid"
 
   - name: "DelegationSealSource"
-    description: "A CESR attachment (SealSourceCouples, code -S) consisting of a (Seqner, Diger) couple that links a delegated event to the delegator's approval event. This is an ATTACHMENT type, NOT an event body field — the event body has di (delegator prefix) but the source seal couple is external."
+    description: "A CESR attachment (SealSourceCouples, code -S) consisting of a (Fixed-Width Ordinal, Digest) couple that links a delegated event to the delegator's approval event. This is an ATTACHMENT type, NOT an event body field — the event body has di (delegator prefix) but the source seal couple is external."
     variants:
       - name: "default"
         fields:
           - name: "sn"
             type: "integer"
             required: true
-            description: "Sequence number of the delegator's event containing the seal (Seqner)"
+            description: "Sequence number of the delegator's event containing the seal (Fixed-Width Ordinal)"
           - name: "said"
             type: "string"
             required: true
-            description: "SAID of the delegator's event containing the seal (Diger)"
+            description: "SAID of the delegator's event containing the seal (Digest)"
         invariants:
           - "Transmitted as a CESR SealSourceCouples (-S) attachment, not part of the event body"
           - "Used by validators to locate the approval seal without scanning the full delegator KEL"

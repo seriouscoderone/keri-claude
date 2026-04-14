@@ -14,10 +14,11 @@ terms:
     examples:
       - "Converting a concatenation of two Text domain primitives to Binary and back yields the original concatenation"
       - "A stream of mixed primitives in the B domain can be converted to T domain en-masse by a stream processor, and reconverted at the other end"
-    related_terms: ["Self-Framing", "Domain", "Primitive", "24-bit Alignment"]
+    related_terms: ["Self-Framing", "Domain", "Primitive Base", "24-bit Alignment"]
 
-  - term: "Primitive"
+  - term: "Primitive Base"
     synonyms: ["CESR Primitive"]
+    specializes: "domain://cesr/primitives"
     definition: "A self-framing atomic unit of encoded data consisting of a prepended type code and a value. The fundamental building block of CESR streams."
     invariants:
       - "Every primitive is self-framing — extractable from a stream without external delimiters"
@@ -94,7 +95,7 @@ terms:
       - "Code 'D' tells the parser: 1-char code, 43-char value, 44 chars total — extract exactly 44 characters"
       - "Code '0B' tells the parser: 2-char code, 86-char value, 88 chars total"
       - "Count code '-A##' tells the parser: 4-char code, then ## quadlets of grouped material"
-    related_terms: ["Primitive", "Code", "Count Code", "Composability"]
+    related_terms: ["Primitive Base", "Code", "Count Code", "Composability"]
 
   - term: "Code"
     synonyms: ["Framing Code", "Type Code", "Text Code"]
@@ -208,7 +209,7 @@ terms:
     examples:
       - "Raw 32-byte Ed25519 public key + code 'D' = 44-character qb64 string"
       - "Raw 64-byte Ed25519 signature + code '0B' = 88-character qb64 string"
-    related_terms: ["Code", "qb64", "qb2", "Primitive"]
+    related_terms: ["Code", "qb64", "qb2", "Primitive Base"]
 
   - term: "qb64"
     synonyms: ["Qualified Base64"]
@@ -331,7 +332,7 @@ terms:
       - "Self-framing at every level of composition"
     examples:
       - "A KERI inception event serialized as JSON with CESR-encoded signature attachments"
-    related_terms: ["Message", "Stream", "Primitive"]
+    related_terms: ["Message", "Stream", "Primitive Base"]
 
   - term: "Cryptographic Agility"
     synonyms: ["Agility"]

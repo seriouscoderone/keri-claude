@@ -274,7 +274,7 @@ properties:
     strategy: "cesr_group() x cesr_primitive_qb64() for trailing data"
     notes: "Self-framing enables skip-ahead parsing without understanding group contents."
 
-  - invariant: "Allowed group contents: -K## (TransIndexedControllerSigs) contains only Siger primitives. -L## (TransLastIdxSigs) contains only Siger primitives. -M## (NonTransReceiptCouples) contains (Prefixer, Cigar) couples. -N## (TransReceiptQuadruples) contains (Prefixer, Seqner, Diger, Siger) quadruples. -Q## (SealDigest) contains (Diger) singles. -T## (SealEventSeal) contains (Prefixer, Seqner, Diger) triples."
+  - invariant: "Allowed group contents: -K## (TransIndexedControllerSigs) contains only Indexed Signature primitives. -L## (TransLastIdxSigs) contains only Indexed Signature primitives. -M## (NonTransReceiptCouples) contains (Identifier Prefix, Unindexed Signature) couples. -N## (TransReceiptQuadruples) contains (Identifier Prefix, Fixed-Width Ordinal, Digest, Indexed Signature) quadruples. -Q## (SealDigest) contains (Digest) singles. -T## (SealEventSeal) contains (Identifier Prefix, Fixed-Width Ordinal, Digest) triples."
     term: "Group"
     technique: "property-based"
     formal:
@@ -832,7 +832,7 @@ properties:
     notes: "Spec L1822-1843. Small = 2 Base64 size chars (max 4095), large = 5 (max 1,073,741,823). Finding: CESR-INV-020."
 
   # --- Concrete Group Types ---
-  - invariant: "ControllerIdxSigs group: counter code MUST end with 'A'; contents MUST be a Vec<Siger> where each item is an indexed signature"
+  - invariant: "ControllerIdxSigs group: counter code MUST end with 'A'; contents MUST be a Vec<Indexed Signature> where each item is an indexed signature"
     term: "Concrete Group Types"
     technique: "property-based"
     formal:
@@ -849,7 +849,7 @@ properties:
     strategy: "st.lists(ed25519_indexed_signature())"
     notes: "Controller indexed signature groups contain only Siger primitives."
 
-  - invariant: "TransReceiptQuadruples group: counter code MUST end with 'D'; each item MUST be a 4-tuple (Prefixer, Seqner, Saider, Siger)"
+  - invariant: "TransReceiptQuadruples group: counter code MUST end with 'D'; each item MUST be a 4-tuple (Identifier Prefix, Fixed-Width Ordinal, SAID Primitive, Indexed Signature)"
     term: "Concrete Group Types"
     technique: "property-based"
     formal:

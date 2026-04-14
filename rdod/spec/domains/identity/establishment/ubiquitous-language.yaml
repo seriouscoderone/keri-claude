@@ -50,28 +50,28 @@ terms:
     synonyms: ["verifySigs() [keripy]", "KeyConfig.verify() [keriox]"]
     definition: "Cryptographic verification of each indexed controller signature against the event serialization bytes and the public key at the corresponding index in the current signing key list. Returns the set of indices whose signatures are valid."
     invariants:
-      - "Each Siger carries an index specifying its position in the signing key list"
-      - "For each Siger: verfer_at[siger.index].verify(siger.raw, event_raw) must return True"
+      - "Each Indexed Signature carries an index specifying its position in the signing key list"
+      - "For each Indexed Signature: verfer_at[siger.index].verify(siger.raw, event_raw) must return True"
       - "Invalid signatures are silently dropped -- only valid indices are collected"
       - "At least one valid signature is required to proceed (otherwise immediate reject)"
       - "The raw bytes verified are the serialized event body (not the full message with attachments)"
     examples:
       - "3-key list, Sigers at indices [0, 2]: verify key[0] against sig[0] -> valid; verify key[2] against sig[2] -> valid; return indices=[0, 2]"
-      - "Siger at index 1 fails verification -> index 1 excluded from the valid set"
+      - "Indexed Signature at index 1 fails verification -> index 1 excluded from the valid set"
     related_terms: ["Dual Threshold Verification", "Threshold Satisfaction", "Indexed Signature"]
 
   - term: "Pre-rotation Binding"
     synonyms: ["exposeds() [keripy]", "verify_next() / check_threshold() [keriox]"]
     definition: "The mechanism that enforces pre-rotation commitments during key rotation. Each indexed signature in a rotation event carries both an index (position in current key list) and an ondex (position in the prior next-key digest list). The binding is verified by computing the digest of the new signing key and comparing it to the pre-committed digest at the ondex position."
     invariants:
-      - "Each Siger carries index (current key position) and ondex (next key position)"
+      - "Each Indexed Signature carries index (current key position) and ondex (next key position)"
       - "For each siger: digest(new_key_at[index]) must equal prior_next_digest_at[ondex]"
       - "Only ondices with valid key-digest matches count toward the next threshold"
       - "The next threshold (ntholder) must be satisfied by the matched ondices"
       - "BothSigCodex codes auto-match ondex=index; CurrentSigCodex codes have no ondex (current signing list only)"
       - "This prevents an attacker from rotating to arbitrary keys -- they must use the pre-committed keys"
     examples:
-      - "Prior inception committed to next digests [D(N1), D(N2), D(N3)]. Rotation presents keys [N1, N2, N3]. Siger at index=0 has ondex=0 -> digest(N1) must equal D(N1) -> match."
+      - "Prior inception committed to next digests [D(N1), D(N2), D(N3)]. Rotation presents keys [N1, N2, N3]. Indexed Signature at index=0 has ondex=0 -> digest(N1) must equal D(N1) -> match."
       - "Attacker tries rotation with unauthorized key K4 at index=0 -> digest(K4) != D(N1) -> no ondex match -> next threshold not satisfied -> rejected"
     related_terms: ["Dual Threshold Verification", "Threshold Satisfaction", "Pre-rotation Commitment", "Ondex"]
 
@@ -143,7 +143,7 @@ terms:
       - "All functions compute the SAID and version string automatically — callers provide logical fields only"
       - "Default thresholds are computed via quorum calculation (ample/simple) when not explicitly provided"
     examples:
-      - "serder = incept(keys=['DABC...'], ndigs=['EDEF...'], wits=['BGHI...'], toad=1, code=MtrDex.Blake3_256)"
+      - "serder = incept(keys=['DABC...'], ndigs=['EDEF...'], wits=['BGHI...'], toad=1, code=Master Code Table.Blake3_256)"
       - "serder = rotate(pre='EABC...', keys=new_keys, dig=prior_said, sn=2, cuts=['Bxyz...'], adds=['Bdef...'])"
     related_terms: ["Event Field Structure", "Quorum Calculation", "Seal Types"]
 
@@ -228,7 +228,7 @@ rules:
   - "Every event must have at least one cryptographically valid signature to enter validation"
   - "Rotation events must satisfy BOTH the current signing threshold (kt) AND the prior next threshold (nt) -- the dual threshold requirement"
   - "Pre-rotation binding is checked by digest comparison: digest(new_key) must equal the pre-committed digest at the ondex position"
-  - "Witness threshold satisfaction uses the same Tholder.satisfy() mechanism as signing threshold"
+  - "Witness threshold satisfaction uses the same Signing Threshold.satisfy() mechanism as signing threshold"
   - "Delegation validation requires the delegator's KEL to contain a seal referencing the delegated event by prefix, sn, and SAID"
   - "Local source protection is checked before signature verification -- remote events targeting local AIDs are escrowed as misfits"
   - "Validation is stateless given a key state snapshot -- it does not mutate state, only returns accept/reject/escrow-reason"

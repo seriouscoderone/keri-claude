@@ -33,7 +33,7 @@ adjacents: []
 externals:
   - ref: "domain://externals/cryptographic-primitives"
     source: "argon2 for passcode stretching, Ed25519/ECDSA for key generation, X25519 for key-at-rest encryption (ECDH + secretbox)"
-    relationship: "All cryptographic primitives — key derivation, signing, encryption — are kernel operations. This subdomain composes them into the Keeper abstraction and Encrypter"
+    relationship: "All cryptographic primitives — key derivation, signing, encryption — are kernel operations. This subdomain composes them into the Keeper abstraction and Encryption Primitive"
   - ref: "domain://externals/persistence"
     relationship: "Encrypted key material at rest — the key-repository outbound port delegates to this external"
   - name: "KRAM Protocol"
@@ -45,11 +45,11 @@ implementation_guidance:
   language_affinity: "any"
   notes: >
     In signify-ts, the Manager class owns Keeper lifecycle: new() creates the appropriate Keeper
-    type based on Algos, get() retrieves it. SaltyKeeper derives keys from salt + path via
+    type based on Algos, get() retrieves it. SalteryKeeper derives keys from salt + path via
     libsodium. RandyKeeper generates random keys and stores encrypted proxies. GroupKeeper wraps
     a member AID's keeper with index remapping. The Encrypter uses X25519 ECDH to encrypt the
     salt (sxlt) for cloud-side storage. In signifypy, the same structure exists in
-    core/keeping.py with Manager, SaltyKeeper, RandyKeeper, GroupKeeper.
+    core/keeping.py with Manager, SalteryKeeper, RandyKeeper, GroupKeeper.
 
 issues: []
 

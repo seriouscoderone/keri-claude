@@ -32,7 +32,7 @@ subdomains: []
 
 kernels:
   - ref: "kernel://cesr/primitives"
-    relationship: "Typed CESR primitives (SAID, AID, Diger) for seal digest computation and seal type references"
+    relationship: "Typed CESR primitives (SAID, AID, Digest) for seal digest computation and seal type references"
 
 adjacents:
   - ref: "domain://identity/establishment"
@@ -49,7 +49,7 @@ implementation_guidance:
   language_affinity: "any"
   notes: >
     In keripy, interaction events are created by the interact() method on Hab/Habery. Seal
-    construction uses SealDigest, SealEvent, and SealLast namedtuples from coring.py. In keriox,
+    construction uses SealDiger, SealEvent, and SealLast namedtuples from coring.py. In keriox,
     InteractionEvent carries seal data in its payload. Interaction events are the primary mechanism
     for committing ACDC credential authorization/revocation, delegation approval seals, and arbitrary
     data commitments. They are lightweight because they do not change key state.

@@ -66,11 +66,11 @@ terms:
 
   - term: "SAD Path Signatures"
     synonyms: []
-    definition: "Signatures over specific paths within a SAD structure, enabling selective disclosure. Indexed signatures use quinkey indexing mapped to Siger primitives; non-indexed signatures use couple form mapping Verfer to Cigar. Used with Pather primitives to prove specific attribute disclosures without revealing the entire credential."
+    definition: "Signatures over specific paths within a SAD structure, enabling selective disclosure. Indexed signatures use quinkey indexing mapped to Indexed Signature primitives; non-indexed signatures use couple form mapping Verification Key to Unindexed Signature. Used with Path primitives to prove specific attribute disclosures without revealing the entire credential."
     invariants:
-      - "Indexed SAD path signatures use quinkey indexing mapped to Siger primitives"
-      - "Non-indexed SAD path signatures use couple form mapping Verfer to Cigar"
-      - "Each signature is bound to a specific path within the SAD tree via a Pather primitive"
+      - "Indexed SAD path signatures use quinkey indexing mapped to Indexed Signature primitives"
+      - "Non-indexed SAD path signatures use couple form mapping Verification Key to Unindexed Signature"
+      - "Each signature is bound to a specific path within the SAD tree via a Path primitive"
       - "Enables proof of specific attribute values without disclosing the full credential"
     examples:
       - "Signing the path /a/score within a credential to prove the score value without revealing other attributes"

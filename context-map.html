@@ -946,7 +946,7 @@ const RDOD_DATA = {
                 "name": "witness_indexed_signatures",
                 "type": "array[types://cesr/primitives#IndexedSignature]",
                 "required": true,
-                "description": "Indexed signatures from witnesses — each signature's index is the witness's position in the effective witness list. Witnesses are non-transferable but use indexed signatures (Siger), not unindexed (Cigar)."
+                "description": "Indexed signatures from witnesses — each signature's index is the witness's position in the effective witness list. Witnesses are non-transferable but use indexed signatures (Indexed Signature), not unindexed (Unindexed Signature)."
               }
             ],
             "invariants": [
@@ -956,7 +956,7 @@ const RDOD_DATA = {
               "The receipted event must have been first-seen by the witness before signing",
               "A receipt is immutable once issued — first seen, always seen, never unseen",
               "Duplicate receipts (same witness, same event SAID) are absorbed idempotently",
-              "Non-witness receipts from non-transferable identifiers use unindexed signatures (Cigar couples) — handled by accountability/receipting, not consensus"
+              "Non-witness receipts from non-transferable identifiers use unindexed signatures (Unindexed Signature couples) — handled by accountability/receipting, not consensus"
             ]
           }
         ]
@@ -1780,7 +1780,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://cesr",
         "pattern": "conformist",
-        "relationship": "CESR primitives (Cigar, Siger, Verfer, AID) adopted natively for receipt signatures and witness identification"
+        "relationship": "CESR primitives (Unindexed Signature, Indexed Signature, Verification Key, AID) adopted natively for receipt signatures and witness identification"
       }
     ],
     "externals": [
@@ -2769,7 +2769,7 @@ const RDOD_DATA = {
           "notes": "All receipt signatures use CESR encoding — this ensures portability across implementations."
         },
         {
-          "invariant": "Non-transferable receipt MUST be a couple: (Prefixer with non-transferable AID, Cigar with unindexed signature); the Prefixer MUST NOT be transferable; the signature type MUST be Cigar (unindexed), not Siger (indexed)",
+          "invariant": "Non-transferable receipt MUST be a couple: (Identifier Prefix with non-transferable AID, Unindexed Signature with unindexed signature); the Identifier Prefix MUST NOT be transferable; the signature type MUST be Unindexed Signature (unindexed), not Indexed Signature (indexed)",
           "term": "Receipt Types",
           "technique": "property-based",
           "formal": {
@@ -2780,7 +2780,7 @@ const RDOD_DATA = {
           "notes": "Non-transferable receipts: (Prefixer, Cigar) couple. Witnesses use this form."
         },
         {
-          "invariant": "Transferable receipt MUST be a quadruple: (Prefixer with transferable AID, Seqner for sn, Saider for digest, Siger with indexed signature); all four components MUST be present; the Prefixer MUST be transferable",
+          "invariant": "Transferable receipt MUST be a quadruple: (Identifier Prefix with transferable AID, Fixed-Width Ordinal for sn, SAID Primitive for digest, Indexed Signature with indexed signature); all four components MUST be present; the Identifier Prefix MUST be transferable",
           "term": "Receipt Types",
           "technique": "property-based",
           "formal": {
@@ -3079,7 +3079,7 @@ const RDOD_DATA = {
       {
         "name": "UnverifiedTransferableReceiptError",
         "description": "Transferable receipt cannot be verified because the receipter's establishment event or the receipted event is missing",
-        "cause": "A transferable receipt quadruple (Prefixer, Seqner, Saider, Siger) references either a receipted event not yet in the local KEL or a receipter establishment event that has not been received",
+        "cause": "A transferable receipt quadruple (Identifier Prefix, Fixed-Width Ordinal, SAID Primitive, Indexed Signature) references either a receipted event not yet in the local KEL or a receipter establishment event that has not been received",
         "recovery": "escrow",
         "recovery_target": "VRE",
         "severity": "transient",
@@ -3389,7 +3389,7 @@ const RDOD_DATA = {
     "template_version": "2.0",
     "id": "cesr/composition",
     "name": "CESR Composition",
-    "description": "How primitives compose into messages — count codes, attachment groups, stream framing, and round-trip serialization. The subdomain responsible for composing CESR primitives into hierarchically grouped streams using count codes, managing pipelining and multiplexing, handling cold-start detection and resynchronization, interleaving non-native serializations (JSON, CBOR, MGPK), and structuring messages with attachments. Count codes enable a stream parser to extract and offload entire groups without parsing individual primitives, supporting core-affinity and concurrent processing. Build order: Layer 1 (moved from Layer 0 per OQ-29: depends on cesr/primitives types — Matter, Siger, Cigar, Diger, Prefixer, Seqner).\n",
+    "description": "How primitives compose into messages — count codes, attachment groups, stream framing, and round-trip serialization. The subdomain responsible for composing CESR primitives into hierarchically grouped streams using count codes, managing pipelining and multiplexing, handling cold-start detection and resynchronization, interleaving non-native serializations (JSON, CBOR, MGPK), and structuring messages with attachments. Count codes enable a stream parser to extract and offload entire groups without parsing individual primitives, supporting core-affinity and concurrent processing. Build order: Layer 1 (moved from Layer 0 per OQ-29: depends on cesr/primitives types — Primitive, Indexed Signature, Unindexed Signature, Digest, Identifier Prefix, Fixed-Width Ordinal).\n",
     "version": "0.1.0",
     "tier": "domain",
     "source_material": [
@@ -3612,15 +3612,15 @@ const RDOD_DATA = {
           "Attachment types are identified by their count code type character"
         ],
         "examples": [
-          "Controller indexed signatures: -K## followed by Siger primitives",
-          "Witness indexed signatures: -L## followed by Siger primitives",
+          "Controller indexed signatures: -K## followed by Indexed Signature primitives",
+          "Witness indexed signatures: -L## followed by Indexed Signature primitives",
           "Non-transferable receipt couples: -M## followed by (prefix, signature) pairs",
           "Transferable receipt quadruples: -N## followed by (prefix, seq, digest, signature) tuples"
         ],
         "related_terms": [
           "Message",
           "Count Code",
-          "Siger"
+          "Indexed Signature"
         ]
       },
       {
@@ -3886,8 +3886,8 @@ const RDOD_DATA = {
           "Unknown counter codes produce an error (extensible via new variants)"
         ],
         "examples": [
-          "CesrGroup::ControllerIdxSigsVariant — counter code '-K', wraps Vec<Siger>",
-          "CesrGroup::TransReceiptQuadruplesVariant — counter code '-N', wraps Vec<(Prefixer, Seqner, Saider, Siger)>"
+          "CesrGroup::ControllerIdxSigsVariant — counter code '-K', wraps Vec<Indexed Signature>",
+          "CesrGroup::TransReceiptQuadruplesVariant — counter code '-N', wraps Vec<(Identifier Prefix, Fixed-Width Ordinal, SAID Primitive, Indexed Signature)>"
         ],
         "related_terms": [
           "GroupItem",
@@ -3983,18 +3983,18 @@ const RDOD_DATA = {
         "invariants": [
           "Universal groups: GenericPipelineGroup (-A), MessageGroup (-B, message+attachments), AttachmentGroup (-C, attachments only)",
           "Universal groups: DatagramSegment (-D), ESSRSignable (-E), CESRNativeFixedSignable (-F), CESRNativeFieldMapSignable (-G), EnclosedNonNative (-H)",
-          "Genus-specific sig groups: ControllerIdxSigs (-K, Vec<Siger>), WitnessIdxSigs (-L, Vec<Siger>)",
-          "Genus-specific couple groups: NonTransReceiptCouples (-M, Vec<Cigar>), TransReceiptQuadruples (-N, Vec<(Prefixer,Seqner,Saider,Siger)>)",
-          "Genus-specific couple groups: FirstSeenReplayCouples (-O, Vec<(Seqner,Dater)>), SealSourceCouples (-S, Vec<(Seqner,Saider)>)",
-          "Genus-specific nested groups: TransIdxSigGroups (-X, Vec<(Prefixer,Seqner,Saider,ControllerIdxSigs)>), TransLastIdxSigGroups (-Y, Vec<(Prefixer,ControllerIdxSigs)>)",
+          "Genus-specific sig groups: ControllerIdxSigs (-K, Vec<Indexed Signature>), WitnessIdxSigs (-L, Vec<Indexed Signature>)",
+          "Genus-specific couple groups: NonTransReceiptCouples (-M, Vec<Unindexed Signature>), TransReceiptQuadruples (-N, Vec<(Identifier Prefix,Fixed-Width Ordinal,SAID Primitive,Indexed Signature)>)",
+          "Genus-specific couple groups: FirstSeenReplayCouples (-O, Vec<(Fixed-Width Ordinal,DateTime)>), SealSourceCouples (-S, Vec<(Fixed-Width Ordinal,SAID Primitive)>)",
+          "Genus-specific nested groups: TransIdxSigGroups (-X, Vec<(Identifier Prefix,Fixed-Width Ordinal,SAID Primitive,ControllerIdxSigs)>), TransLastIdxSigGroups (-Y, Vec<(Identifier Prefix,ControllerIdxSigs)>)",
           "Genus-specific container: PathedMaterialQuadlets (-Z, raw bytes)",
-          "Genus-specific seal couples: RegistrarBackerSealCouples (-V, Vec<(Prefixer,Saider)>)",
-          "Genus-specific shielded state: ShieldedStateCouples (-a, Vec<(Saider, Salter, Diger, Diger, Prefixer)>) — quintuple [d, u, td, ts, BLID] for shielded state",
-          "Genus-specific bound shielded state: ShieldedStateDiscCouples (-b, Vec<(Saider, Salter, Diger, Diger, Seqner, Saider)>) — sextuple [d, u, td, ts, bn, bd] for bound shielded state"
+          "Genus-specific seal couples: RegistrarBackerSealCouples (-V, Vec<(Identifier Prefix,SAID Primitive)>)",
+          "Genus-specific shielded state: ShieldedStateCouples (-a, Vec<(SAID Primitive, Salt, Digest, Digest, Identifier Prefix)>) — quintuple [d, u, td, ts, BLID] for shielded state",
+          "Genus-specific bound shielded state: ShieldedStateDiscCouples (-b, Vec<(SAID Primitive, Salt, Digest, Digest, Fixed-Width Ordinal, SAID Primitive)>) — sextuple [d, u, td, ts, bn, bd] for bound shielded state"
         ],
         "examples": [
-          "-K## + Siger Siger Siger → ControllerIdxSigs with 3 controller signatures",
-          "-N## + (Prefixer Seqner Saider Siger) × N → TransReceiptQuadruples with N receipts",
+          "-K## + Indexed Signature Indexed Signature Indexed Signature → ControllerIdxSigs with 3 controller signatures",
+          "-N## + (Identifier Prefix Fixed-Width Ordinal SAID Primitive Indexed Signature) × N → TransReceiptQuadruples with N receipts",
           "-C## + any CesrGroup* → AttachmentGroup containing nested groups"
         ],
         "related_terms": [
@@ -4062,7 +4062,7 @@ const RDOD_DATA = {
         "related_terms": [
           "Serder",
           "Creder",
-          "Saider (cesr/primitives)",
+          "SAID Primitive (cesr/primitives)",
           "Version String"
         ]
       },
@@ -4184,7 +4184,7 @@ const RDOD_DATA = {
         "related_terms": [
           "SAD",
           "SAD Path Signature",
-          "Primitive"
+          "Primitive Base"
         ]
       }
     ],
@@ -4405,7 +4405,7 @@ const RDOD_DATA = {
           "notes": "Self-framing enables skip-ahead parsing without understanding group contents."
         },
         {
-          "invariant": "Allowed group contents: -K## (TransIndexedControllerSigs) contains only Siger primitives. -L## (TransLastIdxSigs) contains only Siger primitives. -M## (NonTransReceiptCouples) contains (Prefixer, Cigar) couples. -N## (TransReceiptQuadruples) contains (Prefixer, Seqner, Diger, Siger) quadruples. -Q## (SealDigest) contains (Diger) singles. -T## (SealEventSeal) contains (Prefixer, Seqner, Diger) triples.",
+          "invariant": "Allowed group contents: -K## (TransIndexedControllerSigs) contains only Indexed Signature primitives. -L## (TransLastIdxSigs) contains only Indexed Signature primitives. -M## (NonTransReceiptCouples) contains (Identifier Prefix, Unindexed Signature) couples. -N## (TransReceiptQuadruples) contains (Identifier Prefix, Fixed-Width Ordinal, Digest, Indexed Signature) quadruples. -Q## (SealDigest) contains (Digest) singles. -T## (SealEventSeal) contains (Identifier Prefix, Fixed-Width Ordinal, Digest) triples.",
           "term": "Group",
           "technique": "property-based",
           "formal": {
@@ -4696,7 +4696,7 @@ const RDOD_DATA = {
           "notes": "Spec L1822-1843. Small = 2 Base64 size chars (max 4095), large = 5 (max 1,073,741,823). Finding: CESR-INV-020."
         },
         {
-          "invariant": "ControllerIdxSigs group: counter code MUST end with 'A'; contents MUST be a Vec<Siger> where each item is an indexed signature",
+          "invariant": "ControllerIdxSigs group: counter code MUST end with 'A'; contents MUST be a Vec<Indexed Signature> where each item is an indexed signature",
           "term": "Concrete Group Types",
           "technique": "property-based",
           "formal": {
@@ -4707,7 +4707,7 @@ const RDOD_DATA = {
           "notes": "Controller indexed signature groups contain only Siger primitives."
         },
         {
-          "invariant": "TransReceiptQuadruples group: counter code MUST end with 'D'; each item MUST be a 4-tuple (Prefixer, Seqner, Saider, Siger)",
+          "invariant": "TransReceiptQuadruples group: counter code MUST end with 'D'; each item MUST be a 4-tuple (Identifier Prefix, Fixed-Width Ordinal, SAID Primitive, Indexed Signature)",
           "term": "Concrete Group Types",
           "technique": "property-based",
           "formal": {
@@ -5415,7 +5415,7 @@ const RDOD_DATA = {
       },
       {
         "name": "CESRGroup",
-        "description": "A count-code-prefixed group of CESR primitives. Groups are self-framing and composable — they can nest. KERI/ACDC 2.00 genus-specific group codes: -K ControllerIdxSigs Vec<IndexedSignature>, -L WitnessIdxSigs Vec<IndexedSignature>, -M NonTransReceiptCouples Vec<(Prefixer, UnindexedSignature)>, -N TransReceiptQuadruples Vec<(Prefixer, Seqner, Saider, IndexedSignature)>, -O FirstSeenReplayCouples Vec<(Seqner, Dater)>, -P PathedMaterial Vec<(Pather, CesrGroup)>, -Q DigestSealSingles Vec<Saider>, -R MerkleRootSealSingles Vec<Digest>, -S SealSourceCouples Vec<(Seqner, Saider)>, -T SealSourceTriples Vec<(Seqner, Saider, Digest)>, -U SealSourceLastSingles Vec<Prefixer>, -V BackerRegistrarSealCouples Vec<(Prefixer, Saider)>, -W TypedDigestSealCouples Vec<(Bexter, Saider)>, -X TransIdxSigGroups Vec<(Prefixer, Seqner, Saider, ControllerIdxSigs)>, -Y TransLastIdxSigGroups Vec<(Prefixer, ControllerIdxSigs)>, -Z PathedMaterialQuadlets raw bytes (opaque), -a ShieldedStateCouples shielded state attachment, -b ShieldedStateDiscCouples shielded state disclosure attachment.\n",
+        "description": "A count-code-prefixed group of CESR primitives. Groups are self-framing and composable — they can nest. KERI/ACDC 2.00 genus-specific group codes: -K ControllerIdxSigs Vec<IndexedSignature>, -L WitnessIdxSigs Vec<IndexedSignature>, -M NonTransReceiptCouples Vec<(Identifier Prefix, UnindexedSignature)>, -N TransReceiptQuadruples Vec<(Identifier Prefix, Fixed-Width Ordinal, SAID Primitive, IndexedSignature)>, -O FirstSeenReplayCouples Vec<(Fixed-Width Ordinal, DateTime)>, -P PathedMaterial Vec<(Path, CesrGroup)>, -Q DigestSealSingles Vec<SAID Primitive>, -R MerkleRootSealSingles Vec<Digest>, -S SealSourceCouples Vec<(Fixed-Width Ordinal, SAID Primitive)>, -T SealSourceTriples Vec<(Fixed-Width Ordinal, SAID Primitive, Digest)>, -U SealSourceLastSingles Vec<Identifier Prefix>, -V BackerRegistrarSealCouples Vec<(Identifier Prefix, SAID Primitive)>, -W TypedDigestSealCouples Vec<(Base64 Extended, SAID Primitive)>, -X TransIdxSigGroups Vec<(Identifier Prefix, Fixed-Width Ordinal, SAID Primitive, ControllerIdxSigs)>, -Y TransLastIdxSigGroups Vec<(Identifier Prefix, ControllerIdxSigs)>, -Z PathedMaterialQuadlets raw bytes (opaque), -a ShieldedStateCouples shielded state attachment, -b ShieldedStateDiscCouples shielded state disclosure attachment.\n",
         "variants": [
           {
             "name": "attachment",
@@ -5888,15 +5888,16 @@ const RDOD_DATA = {
         "related_terms": [
           "Self-Framing",
           "Domain",
-          "Primitive",
+          "Primitive Base",
           "24-bit Alignment"
         ]
       },
       {
-        "term": "Primitive",
+        "term": "Primitive Base",
         "synonyms": [
           "CESR Primitive"
         ],
+        "specializes": "domain://cesr/primitives",
         "definition": "A self-framing atomic unit of encoded data consisting of a prepended type code and a value. The fundamental building block of CESR streams.",
         "invariants": [
           "Every primitive is self-framing — extractable from a stream without external delimiters",
@@ -6025,7 +6026,7 @@ const RDOD_DATA = {
           "Count code '-A##' tells the parser: 4-char code, then ## quadlets of grouped material"
         ],
         "related_terms": [
-          "Primitive",
+          "Primitive Base",
           "Code",
           "Count Code",
           "Composability"
@@ -6218,7 +6219,7 @@ const RDOD_DATA = {
           "Code",
           "qb64",
           "qb2",
-          "Primitive"
+          "Primitive Base"
         ]
       },
       {
@@ -6433,7 +6434,7 @@ const RDOD_DATA = {
         "related_terms": [
           "Message",
           "Stream",
-          "Primitive"
+          "Primitive Base"
         ]
       },
       {
@@ -6556,7 +6557,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Every primitive is self-framing -- extractable from a stream without external delimiters",
-          "term": "Primitive",
+          "term": "Primitive Base",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -6567,7 +6568,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "In the R domain, represented as a (code, raw) pair where code is text and raw is binary bytes",
-          "term": "Primitive",
+          "term": "Primitive Base",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -7130,7 +7131,7 @@ const RDOD_DATA = {
     "_types": [
       {
         "name": "CodeEntry",
-        "description": "A single entry in the CESR code table defining a primitive's encoding geometry. For non-indexed codes, soft_size is the count/size field. For indexed codes (Siger), soft_size splits into primary_index_size (ms) and secondary_index_size (os).",
+        "description": "A single entry in the CESR code table defining a primitive's encoding geometry. For non-indexed codes, soft_size is the count/size field. For indexed codes (Indexed Signature), soft_size splits into primary_index_size (ms) and secondary_index_size (os).",
         "variants": [
           {
             "name": "default",
@@ -7367,7 +7368,7 @@ const RDOD_DATA = {
     "template_version": "2.0",
     "id": "cesr/primitives",
     "name": "CESR Primitives",
-    "description": "Kernel providing CESR-qualified cryptographic primitives and data types. Defines the Matter base type and its specialized agent-noun subtypes (Verfer, Diger, Siger, etc.), the code table entries that map type codes to cryptographic algorithms and raw sizes, and the three-domain (T, B, R) representation transforms (qb64, qb2, raw). Follows the KERI naming convention: gerund-module, agent-noun class, -Dex code table.\nDownstream domains import its published types (Matter, Verfer, Diger, etc.) directly through published_language. The inbound ports serve the parent cesr domain for qualification and code resolution operations.\n",
+    "description": "Kernel providing CESR-qualified cryptographic primitives and data types. Defines the Primitive base type and its specialized agent-noun subtypes (Verification Key, Digest, Indexed Signature, etc.), the code table entries that map type codes to cryptographic algorithms and raw sizes, and the three-domain (T, B, R) representation transforms (qb64, qb2, raw). Follows the KERI naming convention: gerund-module, agent-noun class, -Dex code table.\nDownstream domains import its published types (Primitive, Verification Key, Digest, etc.) directly through published_language. The inbound ports serve the parent cesr domain for qualification and code resolution operations.\n",
     "version": "0.1.0",
     "tier": "domain",
     "source_material": [
@@ -7390,43 +7391,43 @@ const RDOD_DATA = {
         "description": "Self-Addressing Identifier — content-addressable digest used by all domains for field maps"
       },
       {
-        "term": "Matter",
+        "term": "Primitive Base",
         "description": "Base type for all non-indexed CESR primitives — (code, raw) pair with domain transforms"
       },
       {
-        "term": "Verfer",
+        "term": "Verification Key",
         "description": "Public key primitive — signature verification"
       },
       {
-        "term": "Diger",
+        "term": "Digest",
         "description": "Digest primitive — hash computation and comparison"
       },
       {
-        "term": "Siger",
+        "term": "Indexed Signature",
         "description": "Indexed signature primitive — threshold multi-signature schemes"
       },
       {
-        "term": "Cigar",
+        "term": "Unindexed Signature",
         "description": "Unindexed signature primitive — witness receipts"
       },
       {
-        "term": "Salter",
+        "term": "Salt Primitive",
         "description": "Salt/seed primitive — deterministic key derivation"
       },
       {
-        "term": "Saider",
+        "term": "SAID Primitive",
         "description": "SAID primitive — self-addressing identifier computation"
       },
       {
-        "term": "Prefixer",
+        "term": "Identifier Prefix",
         "description": "AID prefix primitive — identifier representation"
       },
       {
-        "term": "Seqner",
+        "term": "Fixed-Width Ordinal",
         "description": "Sequence number primitive — ordinal encoding"
       },
       {
-        "term": "Tholder",
+        "term": "Threshold Primitive",
         "description": "Threshold holder — signing/rotation threshold representation and satisfaction"
       }
     ],
@@ -7472,23 +7473,23 @@ const RDOD_DATA = {
       },
       {
         "name": "SignatureCreated",
-        "payload": "signer: Signer, serialization: bytes, signature: Siger | Cigar",
-        "triggers": "A Signer signs serialized data to produce an indexed or unindexed signature"
+        "payload": "signer: Signing Key, serialization: bytes, signature: Indexed Signature | Unindexed Signature",
+        "triggers": "A Signing Key signs serialized data to produce an indexed or unindexed signature"
       },
       {
         "name": "SignatureVerified",
-        "payload": "verfer: Verfer, signature: bytes, serialization: bytes, valid: bool",
-        "triggers": "A Verfer verifies a signature against serialized data"
+        "payload": "verfer: Verification Key, signature: bytes, serialization: bytes, valid: bool",
+        "triggers": "A Verification Key verifies a signature against serialized data"
       },
       {
         "name": "DigestComputed",
-        "payload": "code: Code, serialization: bytes, digest: Diger",
+        "payload": "code: Code, serialization: bytes, digest: Digest",
         "triggers": "Serialized data is hashed to produce a digest primitive"
       },
       {
         "name": "KeyDerived",
-        "payload": "salter: Salter, path: str, code: Code, signer: Signer",
-        "triggers": "A Salter derives a Signer via argon2 key stretching at a given derivation path"
+        "payload": "salter: Salt, path: str, code: Code, signer: Signing Key",
+        "triggers": "A Salt derives a Signing Key via argon2 key stretching at a given derivation path"
       }
     ],
     "_rules": [
@@ -7496,10 +7497,10 @@ const RDOD_DATA = {
       "Raw binary size MUST match the size dictated by the code table entry — mismatches are errors",
       "Non-transferable prefix codes (B, 1AAA, 1AAI, 1AAC) indicate the AID cannot rotate keys",
       "Transferable prefix codes (D, 1AAB, 1AAJ, 1AAD) indicate the AID supports key rotation",
-      "Indexed signatures (Siger) use context-specific code tables; unindexed signatures (Cigar) use the master code table",
+      "Indexed signatures (Indexed Signature) use context-specific code tables; unindexed signatures (Unindexed Signature) use the master code table",
       "Self-addressing identifiers (SAIDs) are computed by digesting the serialization with the 'd' field replaced by a dummy string of the correct length",
-      "Agent-noun naming convention: class names end in -er suffix (Verfer, Diger, Siger, Cigar, Salter, Signer)",
-      "Code table constant naming convention: frozen dataclass names end in -Dex suffix (MtrDex, NumDex, DigDex)"
+      "Agent-noun naming convention: class names end in -er suffix (Verification Key, Digest, Indexed Signature, Unindexed Signature, Salt, Signing Key)",
+      "Code table constant naming convention: frozen dataclass names end in -Dex suffix (Master Code Table, Number Code Table, DigDex)"
     ],
     "_imports": [],
     "ubiquitous_language": [
@@ -7508,64 +7509,66 @@ const RDOD_DATA = {
         "synonyms": [
           "Primitive Structure"
         ],
-        "definition": "The common structure shared by all CESR primitive types. Every primitive is defined by five elements: (1) a base trait (Matter for non-indexed, Indexer for indexed), (2) a code from the code table identifying the algorithm and raw size, (3) raw binary material of the size specified by the code, (4) three domain representations (qb64, qb2, raw) with lossless conversion, and (5) a Sizage entry (hs/ss/fs/ls) governing the encoding geometry.",
+        "definition": "The common structure shared by all CESR primitive types. Every primitive is defined by five elements: (1) a base trait (Primitive for non-indexed, Indexed Primitive Base for indexed), (2) a code from the code table identifying the algorithm and raw size, (3) raw binary material of the size specified by the code, (4) three domain representations (qb64, qb2, raw) with lossless conversion, and (5) a Sizage entry (hs/ss/fs/ls) governing the encoding geometry.",
         "invariants": [
-          "Every primitive extends Matter (non-indexed) or Indexer (indexed signatures)",
+          "Every primitive extends Primitive (non-indexed) or Indexed Primitive Base (indexed signatures)",
           "The code determines the algorithm — there is no separate algorithm parameter",
           "Raw size must match the size specified by the code's Sizage entry",
           "All three domain representations (qb64, qb2, raw) are derivable from any one",
-          "Agent-noun naming convention: class names end in -er suffix (Verfer, Diger, Siger, Salter)",
-          "Specialized primitives add domain-specific methods (verify for Verfer, sign for Signer, compare for Diger)"
+          "Agent-noun naming convention: class names end in -er suffix (Verification Key, Digest, Indexed Signature, Salt)",
+          "Specialized primitives add domain-specific methods (verify for Verification Key, sign for Signing Key, compare for Digest)"
         ],
         "examples": [
-          "Verfer: Matter + code D (Ed25519) + 32-byte raw + verify(sig, ser) method",
-          "Diger: Matter + code E (Blake3-256) + 32-byte raw + compare(ser, diger) method",
-          "Siger: Indexer + code A (Ed25519 indexed) + 64-byte raw + index + ondex",
-          "Salter: Matter + code 0A (Salt_128) + 16-byte raw + signer(path, code) method"
+          "Verification Key: Primitive + code D (Ed25519) + 32-byte raw + verify(sig, ser) method",
+          "Digest: Primitive + code E (Blake3-256) + 32-byte raw + compare(ser, diger) method",
+          "Indexed Signature: Indexed Primitive Base + code A (Ed25519 indexed) + 64-byte raw + index + ondex",
+          "Salt: Primitive + code 0A (Salt_128) + 16-byte raw + signer(path, code) method"
         ],
         "related_terms": [
-          "Matter",
-          "Indexer",
+          "Primitive Base",
+          "Indexed Primitive Base",
           "Sizage",
           "Code Table"
         ]
       },
       {
-        "term": "Matter",
+        "term": "Primitive Base",
         "synonyms": [
-          "CESR Matter",
-          "Base Primitive"
+          "CESR Primitive",
+          "Base Primitive",
+          "Matter"
         ],
         "specializes": "domain://cesr",
         "definition": "The base type for all non-indexed CESR primitives. Encapsulates a (code, raw) pair and provides bidirectional domain transforms to qb64, qb2, and (code, raw).",
         "invariants": [
-          "Every Matter instance holds exactly one code (text) and one raw (bytes) value",
+          "Every Primitive instance holds exactly one code (text) and one raw (bytes) value",
           "Code MUST be a valid entry in the master code table for the active protocol genus",
           "Raw size MUST match the size specified by the code table entry",
           "Supports property access: .code, .raw, .qb64, .qb64b, .qb2"
         ],
         "examples": [
-          "Matter(qb64='DKxy2sgzfplyr-tgwIxS19f2OchFHtLwPWD3v4oYimBx') — parse from T domain",
-          "Matter(raw=<32 bytes>, code='D') — construct from R domain"
+          "Primitive(qb64='DKxy2sgzfplyr-tgwIxS19f2OchFHtLwPWD3v4oYimBx') — parse from T domain",
+          "Primitive(raw=<32 bytes>, code='D') — construct from R domain"
         ],
         "related_terms": [
-          "Verfer",
-          "Diger",
-          "Signer",
-          "Siger",
-          "Cigar",
-          "Salter",
+          "Verification Key",
+          "Digest",
+          "Signing Key",
+          "Indexed Signature",
+          "Unindexed Signature",
+          "Salt Primitive",
           "Code Table"
         ]
       },
       {
-        "term": "Verfer",
+        "term": "Verification Key",
         "synonyms": [
           "Verifier",
-          "Public Key Primitive"
+          "Public Key Primitive",
+          "Verfer"
         ],
         "specializes": "domain://cesr",
-        "definition": "A public verification key primitive. Extends Matter with a verify(sig, ser) method that validates a signature against serialized data using the embedded public key.",
+        "definition": "A public verification key primitive. Extends Primitive with a verify(sig, ser) method that validates a signature against serialized data using the embedded public key.",
         "invariants": [
           "Code determines the key algorithm: D=Ed25519, 1AAA=ECDSA secp256k1 non-transferable, 1AAB=ECDSA secp256k1, 1AAI=ECDSA secp256r1 non-transferable, 1AAJ=ECDSA secp256r1, 1AAC=Ed448 non-transferable, 1AAD=Ed448",
           "Ed25519 public keys are 32 bytes raw (44 chars qb64, code 'D')",
@@ -7574,25 +7577,26 @@ const RDOD_DATA = {
           "verify() returns True if signature is valid for the given serialization"
         ],
         "examples": [
-          "Verfer(qb64='DKxy2...') — an Ed25519 public key, 44 characters",
-          "Verfer(raw=<33 bytes>, code='1AAB') — an ECDSA secp256k1 public key, 48 characters"
+          "Verification Key(qb64='DKxy2...') — an Ed25519 public key, 44 characters",
+          "Verification Key(raw=<33 bytes>, code='1AAB') — an ECDSA secp256k1 public key, 48 characters"
         ],
         "related_terms": [
-          "Signer",
-          "Siger",
-          "Cigar",
-          "Matter"
+          "Signing Key",
+          "Indexed Signature",
+          "Unindexed Signature",
+          "Primitive Base"
         ]
       },
       {
-        "term": "Diger",
+        "term": "Digest",
         "synonyms": [
           "Digester",
           "Digest Primitive",
-          "Hash Primitive"
+          "Hash Primitive",
+          "Diger"
         ],
         "specializes": "domain://cesr",
-        "definition": "A cryptographic digest primitive. Extends Matter with methods to compute digests from serialized data and compare digest values.",
+        "definition": "A cryptographic digest primitive. Extends Primitive with methods to compute digests from serialized data and compare digest values.",
         "invariants": [
           "Code determines the hash algorithm: E=Blake3-256, F=Blake2b-256, G=Blake2s-256, H=SHA3-256, I=SHA2-256",
           "256-bit digests are 32 bytes raw (44 chars qb64)",
@@ -7600,43 +7604,45 @@ const RDOD_DATA = {
           "compare(ser, diger) verifies that the digest of ser matches diger's value"
         ],
         "examples": [
-          "Diger(ser=b'hello', code='E') — compute Blake3-256 digest of 'hello'",
-          "Diger(qb64='EGK0JxOC...') — wrap an existing 44-char Blake3-256 digest"
+          "Digest(ser=b'hello', code='E') — compute Blake3-256 digest of 'hello'",
+          "Digest(qb64='EGK0JxOC...') — wrap an existing 44-char Blake3-256 digest"
         ],
         "related_terms": [
           "SAID",
-          "Saider",
-          "Matter"
+          "SAID Primitive",
+          "Primitive Base"
         ]
       },
       {
-        "term": "Signer",
+        "term": "Signing Key",
         "synonyms": [
-          "Private Key Primitive"
+          "Private Key Primitive",
+          "Signer"
         ],
-        "definition": "A private signing key primitive. Extends Matter with a sign(ser) method that produces a Siger or Cigar signature over serialized data.",
+        "definition": "A private signing key primitive. Extends Primitive with a sign(ser) method that produces a Indexed Signature or Unindexed Signature signature over serialized data.",
         "invariants": [
           "Code determines the key algorithm: A=Ed25519 seed, J=ECDSA secp256k1 seed, K=Ed448 seed",
           "Private key material is 32 bytes raw for Ed25519/ECDSA seeds (44 chars qb64)",
-          "The corresponding Verfer (public key) is derivable from the Signer",
-          "sign(ser, index) returns a Siger (indexed); sign(ser) returns a Cigar (unindexed)"
+          "The corresponding Verification Key (public key) is derivable from the Signing Key",
+          "sign(ser, index) returns a Indexed Signature (indexed); sign(ser) returns a Unindexed Signature (unindexed)"
         ],
         "examples": [
-          "Signer(raw=<32 bytes>, code='A') — an Ed25519 private key",
-          "signer.sign(b'data', index=0) — produce an indexed Ed25519 signature (Siger)"
+          "Signing Key(raw=<32 bytes>, code='A') — an Ed25519 private key",
+          "signer.sign(b'data', index=0) — produce an indexed Ed25519 signature (Indexed Signature)"
         ],
         "related_terms": [
-          "Verfer",
-          "Siger",
-          "Cigar",
-          "Salter",
-          "Matter"
+          "Verification Key",
+          "Indexed Signature",
+          "Unindexed Signature",
+          "Salt Primitive",
+          "Primitive Base"
         ]
       },
       {
-        "term": "Siger",
+        "term": "Indexed Signature",
         "synonyms": [
-          "Indexed Signature Primitive"
+          "Indexed Signature Primitive",
+          "Siger"
         ],
         "definition": "An indexed signature primitive used in threshold multi-signature schemes. Contains a signature value and an index into the ordered list of public keys.",
         "invariants": [
@@ -7647,24 +7653,25 @@ const RDOD_DATA = {
           "Index encodes position in the public key list; ondex encodes position in the rotation key list"
         ],
         "examples": [
-          "Siger with code 'AA' — Ed25519 signature at index 0, both signing and rotation lists",
-          "Siger with code 'BD' — Ed25519 signature at index 3, current signing list only",
-          "Siger with code '2AABAC' — Ed25519 big dual-indexed: index=1, ondex=2"
+          "Indexed Signature with code 'AA' — Ed25519 signature at index 0, both signing and rotation lists",
+          "Indexed Signature with code 'BD' — Ed25519 signature at index 3, current signing list only",
+          "Indexed Signature with code '2AABAC' — Ed25519 big dual-indexed: index=1, ondex=2"
         ],
         "related_terms": [
-          "Verfer",
-          "Signer",
-          "Cigar",
+          "Verification Key",
+          "Signing Key",
+          "Unindexed Signature",
           "Index",
           "Ondex"
         ]
       },
       {
-        "term": "Cigar",
+        "term": "Unindexed Signature",
         "synonyms": [
-          "Unindexed Signature Primitive"
+          "Unindexed Signature Primitive",
+          "Cigar"
         ],
-        "definition": "An unindexed (non-indexed) signature primitive. Contains a signature value and an associated Verfer (public key) but no key list index.",
+        "definition": "An unindexed (non-indexed) signature primitive. Contains a signature value and an associated Verification Key (public key) but no key list index.",
         "invariants": [
           "Uses the master code table, not indexed code tables",
           "Code determines algorithm: 0B=Ed25519, 0C=ECDSA secp256k1, 0I=ECDSA secp256r1",
@@ -7672,40 +7679,42 @@ const RDOD_DATA = {
           "Carries a .verfer property linking to the public key that produced the signature"
         ],
         "examples": [
-          "Cigar(raw=<64 bytes>, code='0B', verfer=verfer) — Ed25519 unindexed signature with associated public key"
+          "Unindexed Signature(raw=<64 bytes>, code='0B', verfer=verfer) — Ed25519 unindexed signature with associated public key"
         ],
         "related_terms": [
-          "Siger",
-          "Verfer",
-          "Signer",
-          "Matter"
+          "Indexed Signature",
+          "Verification Key",
+          "Signing Key",
+          "Primitive Base"
         ]
       },
       {
-        "term": "Salter",
+        "term": "Salt Primitive",
         "synonyms": [
           "Salt Primitive",
-          "Seed Primitive"
+          "Seed Primitive",
+          "Salter"
         ],
         "definition": "A salt or seed primitive used to deterministically generate signing keys. Provides a signer() method using argon2 key stretching.",
         "invariants": [
           "Code 0A for 128-bit (16-byte) random salt — 24 chars qb64",
           "Key stretching uses argon2 to derive signing keys from the salt",
-          "signer(path, code) generates a Signer for the given derivation path and algorithm"
+          "signer(path, code) generates a Signing Key for the given derivation path and algorithm"
         ],
         "examples": [
-          "Salter(raw=<16 bytes>) — a 128-bit random salt",
-          "salter.signer(path='0', code='A') — derive an Ed25519 Signer from the salt at path '0'"
+          "Salt(raw=<16 bytes>) — a 128-bit random salt",
+          "salter.signer(path='0', code='A') — derive an Ed25519 Signing Key from the salt at path '0'"
         ],
         "related_terms": [
-          "Signer",
-          "Matter"
+          "Signing Key",
+          "Primitive Base"
         ]
       },
       {
-        "term": "Prefixer",
+        "term": "Identifier Prefix",
         "synonyms": [
-          "Identifier Prefix Primitive"
+          "Identifier Prefix Primitive",
+          "Prefixer"
         ],
         "definition": "An identifier prefix primitive. Wraps the AID prefix value — either a public key (basic/non-transferable) or a self-addressing digest of the inception event.",
         "invariants": [
@@ -7714,14 +7723,14 @@ const RDOD_DATA = {
           "Self-addressing prefix uses a digest code (E, F, H, I, etc.) applied to the inception event"
         ],
         "examples": [
-          "Prefixer(qb64='BKxy2...') — non-transferable Ed25519 prefix (code B, cannot rotate)",
-          "Prefixer(qb64='DKxy2...') — transferable Ed25519 prefix (code D, can rotate)",
-          "Prefixer(qb64='EGK0J...') — self-addressing prefix (Blake3-256 digest of inception event)"
+          "Identifier Prefix(qb64='BKxy2...') — non-transferable Ed25519 prefix (code B, cannot rotate)",
+          "Identifier Prefix(qb64='DKxy2...') — transferable Ed25519 prefix (code D, can rotate)",
+          "Identifier Prefix(qb64='EGK0J...') — self-addressing prefix (Blake3-256 digest of inception event)"
         ],
         "related_terms": [
-          "Verfer",
-          "Diger",
-          "Matter"
+          "Verification Key",
+          "Digest",
+          "Primitive Base"
         ]
       },
       {
@@ -7730,7 +7739,7 @@ const RDOD_DATA = {
           "Self-Addressing Data",
           "Self-Addressed Data"
         ],
-        "definition": "A data structure that contains a field ('d') whose value is the cryptographic digest of the structure itself. The foundation of KERI's content-addressable design — events, credentials, and schemas are all SADs. The Sadder trait serializes SADs; Saider computes their SAID; Saidify is the derivation algorithm.",
+        "definition": "A data structure that contains a field ('d') whose value is the cryptographic digest of the structure itself. The foundation of KERI's content-addressable design — events, credentials, and schemas are all SADs. The Sadder trait serializes SADs; SAID Primitive computes their SAID; Saidify is the derivation algorithm.",
         "invariants": [
           "A SAD MUST contain a 'd' field holding its own SAID",
           "The SAID is computed via the saidify algorithm (dummy → serialize → digest → inject)",
@@ -7742,7 +7751,7 @@ const RDOD_DATA = {
           "An ACDC credential is a SAD — each section (attributes, edges, rules) is also independently a SAD"
         ],
         "related_terms": [
-          "Saider",
+          "SAID Primitive",
           "Saidify",
           "Sadder (cesr/composition)",
           "Serder (cesr/composition)",
@@ -7750,27 +7759,28 @@ const RDOD_DATA = {
         ]
       },
       {
-        "term": "Seqner",
+        "term": "Fixed-Width Ordinal",
         "synonyms": [
-          "Sequence Number Primitive"
+          "Sequence Number Primitive",
+          "Seqner"
         ],
-        "definition": "A FIXED-width sequence number primitive. Seqner always uses code 0A (Salt_128, 16 bytes raw, 24 chars qb64) regardless of value magnitude — the value is zero-padded to 16 bytes. Distinct from Number, which auto-sizes to the smallest code. Used for LMDB database keys where fixed-width enables lexicographic ordering. Seqner does NOT inherit from Number — both independently inherit from Matter.",
+        "definition": "A FIXED-width sequence number primitive. Fixed-Width Ordinal always uses code 0A (16 bytes raw, 24 chars qb64) regardless of value magnitude — the value is zero-padded to 16 bytes. Distinct from Number, which auto-sizes to the smallest code. Used for database keys where fixed-width enables lexicographic ordering. Fixed-Width Ordinal does NOT inherit from Number — both independently inherit from Primitive.",
         "invariants": [
-          "Always uses code 0A (Salt_128, 16 bytes raw, 24 chars qb64) — code is fixed, not auto-selected",
+          "Always uses code 0A (16 bytes raw, 24 chars qb64) — code is fixed, not auto-selected",
           "Value range: 0–2^128-1 (16 bytes); any value fits because the raw is always 16 bytes",
           "Value is zero-padded to 16 bytes — small values have leading zero bytes",
           "Fixed width enables lexicographic ordering in LMDB database keys",
-          "Contrast with Number: Number auto-selects the smallest code (M/R/N/S/T/U); Seqner fixes to 0A",
-          "Seqner and Number are sibling classes (both extend Matter), NOT parent-child",
+          "Contrast with Number: Number auto-selects the smallest code (M/R/N/S/T/U); Fixed-Width Ordinal fixes to 0A",
+          "Fixed-Width Ordinal and Number are sibling classes (both extend Primitive), NOT parent-child",
           "Provides .sn property for the integer sequence number value"
         ],
         "examples": [
-          "Seqner(sn=0) — code '0A', 16 bytes raw (all zeros), 24 chars qb64",
-          "Seqner(sn=100000) — code '0A', 16 bytes raw (zero-padded), 24 chars qb64"
+          "Fixed-Width Ordinal(sn=0) — code '0A', 16 bytes raw (all zeros), 24 chars qb64",
+          "Fixed-Width Ordinal(sn=100000) — code '0A', 16 bytes raw (zero-padded), 24 chars qb64"
         ],
         "related_terms": [
           "Number",
-          "Matter"
+          "Primitive Base"
         ]
       },
       {
@@ -7792,29 +7802,30 @@ const RDOD_DATA = {
         ],
         "related_terms": [
           "SAD",
-          "Saider",
+          "SAID Primitive",
           "Saidify",
-          "Diger"
+          "Digest"
         ]
       },
       {
-        "term": "Saider",
+        "term": "SAID Primitive",
         "synonyms": [
           "SAID Primitive",
-          "Self-Addressing Identifier Primitive"
+          "Self-Addressing Identifier Primitive",
+          "Saider"
         ],
         "definition": "A Self-Addressing Identifier primitive. Computes or verifies a SAID — a cryptographic digest used as the unique identifier of the data structure it is embedded in.",
         "invariants": [
           "SAID is computed by replacing the 'd' field with a dummy value of the correct length, serializing, then digesting",
-          "Uses the same digest codes as Diger (E=Blake3-256, I=SHA2-256, etc.)",
+          "Uses the same digest codes as Digest (E=Blake3-256, I=SHA2-256, etc.)",
           "The SAID is self-referential — it identifies the data structure that contains it"
         ],
         "examples": [
-          "Saider(sad={'d': ''}, code='E') — compute Blake3-256 SAID of a self-addressing data structure"
+          "SAID Primitive(sad={'d': ''}, code='E') — compute Blake3-256 SAID of a self-addressing data structure"
         ],
         "related_terms": [
-          "Diger",
-          "Matter",
+          "Digest",
+          "Primitive Base",
           "Saidify"
         ]
       },
@@ -7835,12 +7846,12 @@ const RDOD_DATA = {
         "examples": [
           "saidify(sad={'d': '', 'i': 'EAID...'}, code='E') → sad['d'] = 'ESAID...'",
           "ACDC construction: saidify attributes section → saidify edges section → saidify top-level credential",
-          "Saider.saidify(sad, label='d') → (original_sad, sad_with_said)"
+          "SAID Primitive.saidify(sad, label='d') → (original_sad, sad_with_said)"
         ],
         "related_terms": [
-          "Saider",
+          "SAID Primitive",
           "SAID",
-          "Diger",
+          "Digest",
           "Sadder (cesr/composition)"
         ]
       },
@@ -7861,7 +7872,7 @@ const RDOD_DATA = {
         ],
         "related_terms": [
           "Ondex",
-          "Siger"
+          "Indexed Signature"
         ]
       },
       {
@@ -7880,7 +7891,7 @@ const RDOD_DATA = {
         ],
         "related_terms": [
           "Index",
-          "Siger"
+          "Indexed Signature"
         ]
       },
       {
@@ -7904,38 +7915,40 @@ const RDOD_DATA = {
           "qb64",
           "qb2",
           "Code",
-          "Matter"
+          "Primitive Base"
         ]
       },
       {
-        "term": "MtrDex",
+        "term": "Master Code Table",
         "synonyms": [
-          "Matter Code Index",
-          "Matter Code Table Constants"
+          "Primitive Code Index",
+          "Primitive Code Table Constants",
+          "MtrDex"
         ],
-        "definition": "The frozen dataclass (or enum) holding all master code table constant strings for non-indexed Matter primitives. Naming convention: -Dex suffix.",
+        "definition": "The frozen dataclass (or enum) holding all master code table constant strings for non-indexed Primitive primitives. Naming convention: -Dex suffix.",
         "invariants": [
           "Each attribute maps a descriptive name to its code string",
           "Values are immutable after definition",
           "Entries match the master code table for the active protocol genus"
         ],
         "examples": [
-          "MtrDex.Ed25519N = 'B' — Ed25519 non-transferable prefix",
-          "MtrDex.Ed25519 = 'D' — Ed25519 public verification key",
-          "MtrDex.Blake3_256 = 'E' — Blake3-256 digest",
-          "MtrDex.Ed25519_Seed = 'A' — Ed25519 seed/private key",
-          "MtrDex.Salt_128 = '0A' — 128-bit random salt"
+          "Master Code Table.Ed25519N = 'B' — Ed25519 non-transferable prefix",
+          "Master Code Table.Ed25519 = 'D' — Ed25519 public verification key",
+          "Master Code Table.Blake3_256 = 'E' — Blake3-256 digest",
+          "Master Code Table.Ed25519_Seed = 'A' — Ed25519 seed/private key",
+          "Master Code Table.Salt_128 = '0A' — 128-bit random salt"
         ],
         "related_terms": [
           "Code Table",
-          "Matter",
-          "NumDex"
+          "Primitive Base",
+          "Number Code Table"
         ]
       },
       {
-        "term": "NumDex",
+        "term": "Number Code Table",
         "synonyms": [
-          "Number Code Index"
+          "Number Code Index",
+          "NumDex"
         ],
         "definition": "The frozen dataclass holding code constants for numeric primitives (sequence numbers, counts).",
         "invariants": [
@@ -7943,12 +7956,12 @@ const RDOD_DATA = {
           "Tall = 'R' (5-byte), Large = 'S' (11-byte), Great = 'T' (14-byte), Vast = 'U' (17-byte)"
         ],
         "examples": [
-          "NumDex.Short = 'M' — 2-byte number, 4 chars qb64",
-          "NumDex.Big = 'N' — 8-byte number, 12 chars qb64"
+          "Number Code Table.Short = 'M' — 2-byte number, 4 chars qb64",
+          "Number Code Table.Big = 'N' — 8-byte number, 12 chars qb64"
         ],
         "related_terms": [
-          "Seqner",
-          "MtrDex"
+          "Fixed-Width Ordinal",
+          "Master Code Table"
         ]
       },
       {
@@ -8048,11 +8061,12 @@ const RDOD_DATA = {
         ]
       },
       {
-        "term": "Indexer",
+        "term": "Indexed Primitive Base",
         "synonyms": [
-          "Indexed Primitive Base"
+          "Indexed Primitive Base",
+          "Indexer"
         ],
-        "definition": "The base trait for indexed CESR primitives (parallel to Matter for non-indexed). Encapsulates (code, raw, index, ondex) and provides bidirectional transforms. Used by Siger.",
+        "definition": "The base trait for indexed CESR primitives (parallel to Primitive for non-indexed). Encapsulates (code, raw, index, ondex) and provides bidirectional transforms. Used by Indexed Signature.",
         "invariants": [
           "Carries two indices: index (main key position) and ondex (other/rotation key position)",
           "Soft size (ss) splits into ms (main index size) and os (other index size)",
@@ -8061,44 +8075,46 @@ const RDOD_DATA = {
           "Index must satisfy: index <= 64^ms - 1"
         ],
         "examples": [
-          "Siger with code 'AA' → index=0, ondex=0 (BothSig, auto-matched)",
-          "Siger with code 'BD' → index=3, ondex forbidden (CurrentSig)",
-          "Siger with code '2AABAC' → index=1, ondex=2 (Big dual-indexed)"
+          "Indexed Signature with code 'AA' → index=0, ondex=0 (BothSig, auto-matched)",
+          "Indexed Signature with code 'BD' → index=3, ondex forbidden (CurrentSig)",
+          "Indexed Signature with code '2AABAC' → index=1, ondex=2 (Big dual-indexed)"
         ],
         "related_terms": [
-          "Matter",
-          "Siger",
+          "Primitive Base",
+          "Indexed Signature",
           "Index",
           "Ondex",
-          "IdrDex"
+          "Indexed Code Table"
         ]
       },
       {
-        "term": "IdrDex",
+        "term": "Indexed Code Table",
         "synonyms": [
-          "Indexer Code Index",
-          "Indexer Code Table Constants"
+          "Indexed Primitive Base Code Index",
+          "Indexed Primitive Base Code Table Constants",
+          "IdrDex"
         ],
-        "definition": "The frozen code table for indexed signature primitives. Parallel to MtrDex but for indexed codes.",
+        "definition": "The frozen code table for indexed signature primitives. Parallel to Master Code Table but for indexed codes.",
         "invariants": [
           "Basic codes (2-char): A/B (Ed25519 both/current), C/D (ECDSA 256k1), E/F (ECDSA 256r1), 0A/0B (Ed448)",
           "Big codes (4-char): 2A-2F, 3A-3B — support index/ondex > 63 (up to 64^4)"
         ],
         "examples": [
-          "IdrDex.Ed25519 = 'A' — Ed25519 both-same indexed signature",
-          "IdrDex.Ed25519_Crt = 'B' — Ed25519 current-only indexed signature",
-          "IdrDex.Ed25519_Big = '2A' — Ed25519 big dual-indexed"
+          "Indexed Code Table.Ed25519 = 'A' — Ed25519 both-same indexed signature",
+          "Indexed Code Table.Ed25519_Crt = 'B' — Ed25519 current-only indexed signature",
+          "Indexed Code Table.Ed25519_Big = '2A' — Ed25519 big dual-indexed"
         ],
         "related_terms": [
-          "MtrDex",
-          "Indexer",
-          "Siger"
+          "Master Code Table",
+          "Indexed Primitive Base",
+          "Indexed Signature"
         ]
       },
       {
-        "term": "Tholder",
+        "term": "Threshold Primitive",
         "synonyms": [
-          "Threshold Holder"
+          "Threshold Holder",
+          "Tholder"
         ],
         "definition": "Represents signing/rotation threshold constraints. Supports simple integer thresholds and weighted fractional thresholds with multiple clauses.",
         "invariants": [
@@ -8109,11 +8125,11 @@ const RDOD_DATA = {
           "satisfy(indices) checks whether the given key indices meet the threshold"
         ],
         "examples": [
-          "Tholder('2') — simple threshold: 2 of N signatures required",
-          "Tholder(['1/2', '1/2', '1/2']) — weighted: any 2 of 3 equal-weight keys"
+          "Signing Threshold('2') — simple threshold: 2 of N signatures required",
+          "Signing Threshold(['1/2', '1/2', '1/2']) — weighted: any 2 of 3 equal-weight keys"
         ],
         "related_terms": [
-          "Siger",
+          "Indexed Signature",
           "Key State"
         ]
       },
@@ -8122,7 +8138,7 @@ const RDOD_DATA = {
         "synonyms": [
           "Variable-Length Number"
         ],
-        "definition": "An AUTO-SIZED unsigned integer primitive. Number auto-selects the smallest code that fits the value from the NumDex progression: M→R→N→S→T→U. Distinct from Seqner, which always uses fixed code 0A.",
+        "definition": "An AUTO-SIZED unsigned integer primitive. Number auto-selects the smallest code that fits the value from the Number Code Table progression: M→R→N→S→T→U. Distinct from Fixed-Width Ordinal, which always uses fixed code 0A.",
         "invariants": [
           "Auto-selects smallest code that fits the value — code is chosen by value magnitude, not fixed",
           "Short (code M): 0–65,535 (2 bytes, 4 chars qb64)",
@@ -8132,9 +8148,9 @@ const RDOD_DATA = {
           "Great (code T): 0–2^112-1 (14 bytes, 20 chars qb64)",
           "Vast (code U): 0–2^136-1 (17 bytes, 24 chars qb64)",
           "Auto-sizing order: M → R → N → S → T → U (note: 0H is a valid code but NOT in the auto-sizing path)",
-          "Number and Seqner are sibling classes (both extend Matter), NOT parent-child",
-          "Contrast with Seqner: Seqner is always code 0A (fixed, 16 bytes); Number is code-auto-selected",
-          "Number provides sequence-number access aliases for backward compatibility with Seqner"
+          "Number and Fixed-Width Ordinal are sibling classes (both extend Primitive), NOT parent-child",
+          "Contrast with Fixed-Width Ordinal: Fixed-Width Ordinal is always code 0A (fixed, 16 bytes); Number is code-auto-selected",
+          "Number provides sequence-number access aliases for backward compatibility with Fixed-Width Ordinal"
         ],
         "examples": [
           "Number(num=42) → code 'M', 4 chars qb64",
@@ -8143,15 +8159,16 @@ const RDOD_DATA = {
           "Number(num=2**41) → code 'N', 12 chars qb64"
         ],
         "related_terms": [
-          "Seqner",
-          "NumDex",
-          "Matter"
+          "Fixed-Width Ordinal",
+          "Number Code Table",
+          "Primitive Base"
         ]
       },
       {
-        "term": "Dater",
+        "term": "DateTime",
         "synonyms": [
-          "DateTime Primitive"
+          "DateTime Primitive",
+          "Dater"
         ],
         "definition": "An ISO-8601 datetime encoded as a CESR primitive. Special characters substituted for Base64 compatibility: ':' → 'c', '.' → 'd', '+' → 'p'.",
         "invariants": [
@@ -8160,57 +8177,61 @@ const RDOD_DATA = {
           "new() with no args captures current UTC time"
         ],
         "examples": [
-          "Dater('2024-01-15T12c30c00d000000p00c00') — 2024-01-15T12:30:00.000000+00:00"
+          "DateTime('2024-01-15T12c30c00d000000p00c00') — 2024-01-15T12:30:00.000000+00:00"
         ],
         "related_terms": [
-          "Matter"
+          "Primitive Base"
         ]
       },
       {
-        "term": "Bexter",
+        "term": "Base64 Extended",
         "synonyms": [
-          "Base64 Extended"
+          "Base64 Extended",
+          "Bexter"
         ],
         "definition": "A base64 extended encoding primitive for text strings and byte arrays. Computes lead padding (wrap size) from the code's lead size to achieve proper alignment.",
         "invariants": [
           "Codes: 4A-6A (small StrB64), 7AAA-9AAA (large StrB64), 4B-6B (small Bytes), 7AAB-9AAB (large Bytes)",
           "bext(): encodes raw with calculated wrap-size padding",
           "rawify(): decodes bext back to raw bytes",
-          "Used by Pather for encoding JSON path arrays"
+          "Used by Path for encoding JSON path arrays"
         ],
         "examples": [
-          "Bexter(bext='some-base64-text') → variable-length CESR primitive"
+          "Base64 Extended(bext='some-base64-text') → variable-length CESR primitive"
         ],
         "related_terms": [
-          "Pather",
-          "Matter",
+          "Path",
+          "Primitive Base",
           "Variable-Length Code"
         ]
       },
       {
-        "term": "Pather",
+        "term": "Path",
         "synonyms": [
-          "Path Primitive"
+          "Path Primitive",
+          "Pather"
         ],
-        "definition": "A path to a nested value within a SAD structure. Encodes a JSON path array as a Bexter, enabling CESR-qualified references to embedded fields.",
+        "definition": "A path to a nested value within a SAD structure. Encodes a JSON path array as a Base64 Extended, enabling CESR-qualified references to embedded fields.",
         "invariants": [
           "Constructed from path list: ['a', 'fieldName'] → points to sad['a']['fieldName']",
-          "Uses Bexter encoding with StrB64 codes",
+          "Uses Base64 Extended encoding with StrB64 codes",
           "Used in pathed material groups (-P##) for selective disclosure"
         ],
         "examples": [
-          "Pather(['a', 'i']) → path to the issuer field inside the attribute section",
-          "Pather(['e', 'qvi']) → path to the QVI edge"
+          "Path(['a', 'i']) → path to the issuer field inside the attribute section",
+          "Path(['e', 'qvi']) → path to the QVI edge"
         ],
         "related_terms": [
-          "Bexter",
+          "Base64 Extended",
           "Sadder (cesr/composition)",
           "Disclosure"
         ]
       },
       {
-        "term": "Encrypter",
-        "synonyms": [],
+        "term": "Encryption Primitive",
+        "synonyms": [
+          "Encrypter"
+        ],
         "definition": "Encrypts data using X25519 ECDH key agreement + symmetric encryption (secretbox/sealedbox). Produces Cipher primitives.",
         "invariants": [
           "Uses X25519 public key for ECDH key agreement",
@@ -8218,27 +8239,29 @@ const RDOD_DATA = {
           "Output is a Cipher (CESR-qualified encrypted data)"
         ],
         "examples": [
-          "Encrypter(verkey=x25519_pubkey).encrypt(matter=salter) → Cipher"
+          "Encryption Primitive(verkey=x25519_pubkey).encrypt(matter=salter) → Cipher"
         ],
         "related_terms": [
-          "Decrypter",
+          "Decryption Primitive",
           "Cipher",
-          "Salter"
+          "Salt Primitive"
         ]
       },
       {
-        "term": "Decrypter",
-        "synonyms": [],
-        "definition": "Decrypts Cipher primitives using X25519 private key. Recovers the original Matter primitive from encrypted data.",
+        "term": "Decryption Primitive",
+        "synonyms": [
+          "Decrypter"
+        ],
+        "definition": "Decrypts Cipher primitives using X25519 private key. Recovers the original Primitive primitive from encrypted data.",
         "invariants": [
           "Uses X25519 private key for ECDH key agreement",
-          "decrypt(cipher) → recovered Matter (e.g., Signer, Salter)"
+          "decrypt(cipher) → recovered Primitive (e.g., Signing Key, Salt)"
         ],
         "examples": [
-          "Decrypter(seed=x25519_privkey).decrypt(cipher) → Salter"
+          "Decryption Primitive(seed=x25519_privkey).decrypt(cipher) → Salt"
         ],
         "related_terms": [
-          "Encrypter",
+          "Encryption Primitive",
           "Cipher"
         ]
       },
@@ -8251,15 +8274,15 @@ const RDOD_DATA = {
         "invariants": [
           "Codes: 4C-9AC (X25519 SealedBox variants), 4D-9AD (QB64 variants), 4E-9AE (QB2 variants)",
           "Variable-length — size encoded in the code",
-          "Provides qb64 and qb2 representations like other Matter types"
+          "Provides qb64 and qb2 representations like other Primitive types"
         ],
         "examples": [
           "Cipher(qb64='4C...') — X25519 SealedBox encrypted salt"
         ],
         "related_terms": [
-          "Encrypter",
-          "Decrypter",
-          "Matter"
+          "Encryption Primitive",
+          "Decryption Primitive",
+          "Primitive Base"
         ]
       },
       {
@@ -8270,16 +8293,16 @@ const RDOD_DATA = {
         "definition": "Security classification for salt-based key stretching operations. Controls argon2 CPU/memory cost parameters.",
         "invariants": [
           "Values: 'low', 'med', 'high' (plus reserved 'min')",
-          "Carried by Salter — determines stretching cost when deriving Signers",
+          "Carried by Salt — determines stretching cost when deriving Signers",
           "Higher tier = more argon2 iterations = slower but stronger"
         ],
         "examples": [
-          "Salter(tier=Tierage.low) — fast derivation for development",
-          "Salter(tier=Tierage.high) — production-grade key stretching"
+          "Salt(tier=Tierage.low) — fast derivation for development",
+          "Salt(tier=Tierage.high) — production-grade key stretching"
         ],
         "related_terms": [
-          "Salter",
-          "Signer"
+          "Salt Primitive",
+          "Signing Key"
         ]
       },
       {
@@ -8287,18 +8310,18 @@ const RDOD_DATA = {
         "synonyms": [
           "Sensitive Material Cleanup"
         ],
-        "definition": "Memory safety pattern ensuring private key material is overwritten with zeros when the holding object is destroyed. Applied to Signer and Salter.",
+        "definition": "Memory safety pattern ensuring private key material is overwritten with zeros when the holding object is destroyed. Applied to Signing Key and Salt.",
         "invariants": [
           "All bytes of raw key material are zeroed on object destruction",
           "Prevents key material from lingering in freed memory",
           "Implemented via Rust's Zeroize trait or TypeScript manual zeroing"
         ],
         "examples": [
-          "Signer dropped → 32 bytes of Ed25519 seed overwritten with zeros"
+          "Signing Key dropped → 32 bytes of Ed25519 seed overwritten with zeros"
         ],
         "related_terms": [
-          "Signer",
-          "Salter"
+          "Signing Key",
+          "Salt Primitive"
         ]
       },
       {
@@ -8322,7 +8345,7 @@ const RDOD_DATA = {
           "Qualification",
           "qb64",
           "Sizage",
-          "Matter"
+          "Primitive Base"
         ]
       },
       {
@@ -8337,7 +8360,7 @@ const RDOD_DATA = {
           "xs = extra size (variable portion)",
           "fs = full size (total qb64 character count, 0 for variable-length)",
           "ls = lead size (number of lead padding bytes)",
-          "Complete table must be extracted from keripy's Matter.Sizes, Indexer.Sizes, and Counter sizes",
+          "Complete table must be extracted from keripy's Primitive.Sizes, Indexed Primitive Base.Sizes, and Counter sizes",
           "Every code table entry MUST have a corresponding Sizage entry"
         ],
         "examples": [
@@ -8347,7 +8370,7 @@ const RDOD_DATA = {
         ],
         "related_terms": [
           "Code Table",
-          "Matter",
+          "Primitive Base",
           "Mid-Padding Algorithm"
         ]
       },
@@ -8431,7 +8454,7 @@ const RDOD_DATA = {
     "_verification": {
       "properties": [
         {
-          "invariant": "Every CESR primitive type MUST implement the following interface contract: constructor(code: string, raw: bytes) for R-domain construction; constructor(qb64: string) for T-domain construction; constructor(qb2: bytes) for B-domain construction. Properties: .code (string), .raw (bytes), .qb64 (string), .qb2 (bytes). Indexed primitives (Siger) additionally require: .index (integer), .ondex (integer|None).",
+          "invariant": "Every CESR primitive type MUST implement the following interface contract: constructor(code: string, raw: bytes) for R-domain construction; constructor(qb64: string) for T-domain construction; constructor(qb2: bytes) for B-domain construction. Properties: .code (string), .raw (bytes), .qb64 (string), .qb2 (bytes). Indexed primitives (Indexed Signature) additionally require: .index (integer), .ondex (integer|None).",
           "term": "CESR Primitive Pattern",
           "technique": "property-based",
           "formal": {
@@ -8475,8 +8498,8 @@ const RDOD_DATA = {
           "notes": "Any single domain representation must fully determine the other two."
         },
         {
-          "invariant": "Every Matter instance holds exactly one code (text) and one raw (bytes) value",
-          "term": "Matter",
+          "invariant": "Every Primitive instance holds exactly one code (text) and one raw (bytes) value",
+          "term": "Primitive Base",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8487,7 +8510,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Code MUST be a valid entry in the master code table for the active protocol genus",
-          "term": "Matter",
+          "term": "Primitive Base",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8498,7 +8521,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Raw size MUST match the size specified by the code table entry",
-          "term": "Matter",
+          "term": "Primitive Base",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8509,7 +8532,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Ed25519 public keys are 32 bytes raw (44 chars qb64, code 'D')",
-          "term": "Verfer",
+          "term": "Verification Key",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8520,7 +8543,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "ECDSA secp256k1/r1 public keys are 33 bytes raw (48 chars qb64, code '1AAB'/'1AAJ')",
-          "term": "Verfer",
+          "term": "Verification Key",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8531,7 +8554,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "verify() returns True if signature is valid for the given serialization",
-          "term": "Verfer",
+          "term": "Verification Key",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8542,7 +8565,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "verify() returns False for tampered data",
-          "term": "Verfer",
+          "term": "Verification Key",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8553,7 +8576,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "256-bit digests are 32 bytes raw (44 chars qb64)",
-          "term": "Diger",
+          "term": "Digest",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8564,7 +8587,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "512-bit digests are 64 bytes raw (88 chars qb64)",
-          "term": "Diger",
+          "term": "Digest",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8575,7 +8598,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "compare(ser, diger) verifies that the digest of ser matches diger's value",
-          "term": "Diger",
+          "term": "Digest",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8586,7 +8609,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Digest determinism: same input always produces same digest",
-          "term": "Diger",
+          "term": "Digest",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8596,8 +8619,8 @@ const RDOD_DATA = {
           "notes": "Cryptographic hash functions are deterministic."
         },
         {
-          "invariant": "The corresponding Verfer (public key) is derivable from the Signer",
-          "term": "Signer",
+          "invariant": "The corresponding Verification Key (public key) is derivable from the Signing Key",
+          "term": "Signing Key",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8607,8 +8630,8 @@ const RDOD_DATA = {
           "notes": "Every Signer must produce a matching Verfer."
         },
         {
-          "invariant": "sign(ser, index) returns a Siger (indexed); sign(ser) returns a Cigar (unindexed)",
-          "term": "Signer",
+          "invariant": "sign(ser, index) returns a Indexed Signature (indexed); sign(ser) returns a Unindexed Signature (unindexed)",
+          "term": "Signing Key",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8619,7 +8642,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Ed25519 indexed signatures are 64 bytes raw (88 chars qb64 with 2-char code)",
-          "term": "Siger",
+          "term": "Indexed Signature",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8630,7 +8653,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Index encodes position in the public key list; ondex encodes position in the rotation key list",
-          "term": "Siger",
+          "term": "Indexed Signature",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8641,7 +8664,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Index must satisfy: index <= 64^ms - 1",
-          "term": "Indexer",
+          "term": "Indexed Primitive Base",
           "technique": "smt",
           "formal": {
             "language": "z3",
@@ -8651,7 +8674,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Ed25519 signatures are 64 bytes raw (88 chars qb64 with 2-char code '0B')",
-          "term": "Cigar",
+          "term": "Unindexed Signature",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8661,8 +8684,8 @@ const RDOD_DATA = {
           "notes": "Unindexed Ed25519: code '0B' (2 chars) + 86-char value = 88 total."
         },
         {
-          "invariant": "Signer-Verfer binding postcondition: for any Signer s and any data d, s.verfer.verify(s.sign(d).raw, d) MUST return True. The .verfer property on a Siger/Cigar links back to the public key that can verify the signature.",
-          "term": "Cigar",
+          "invariant": "Signing Key-Verification Key binding postcondition: for any Signing Key s and any data d, s.verfer.verify(s.sign(d).raw, d) MUST return True. The .verfer property on a Indexed Signature/Unindexed Signature links back to the public key that can verify the signature.",
+          "term": "Unindexed Signature",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8673,7 +8696,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Code 0A for 128-bit (16-byte) random salt -- 24 chars qb64",
-          "term": "Salter",
+          "term": "Salt Primitive",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8683,8 +8706,8 @@ const RDOD_DATA = {
           "notes": "128-bit salt: 2-char code '0A' + 22-char value = 24 total."
         },
         {
-          "invariant": "signer(path, code) generates a Signer for the given derivation path and algorithm",
-          "term": "Salter",
+          "invariant": "signer(path, code) generates a Signing Key for the given derivation path and algorithm",
+          "term": "Salt Primitive",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8695,7 +8718,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Deterministic encoding guarantee: for any primitive p, encoding is idempotent — identical (code, raw) pairs MUST produce byte-identical qb64 and byte-identical qb2. Conversely, identical qb64 MUST decode to identical (code, raw). This is the round-trip guarantee: decode(encode(p)) == p for all valid primitives.",
-          "term": "Salter",
+          "term": "Salt Primitive",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8706,7 +8729,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Non-transferable basic prefix uses code B; Transferable basic prefix uses code D",
-          "term": "Prefixer",
+          "term": "Identifier Prefix",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8717,7 +8740,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Self-addressing prefix uses a digest code applied to the inception event",
-          "term": "Prefixer",
+          "term": "Identifier Prefix",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8760,7 +8783,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Code 0A (Salt_128) for fixed-width 16-byte ordinals -- 24 chars qb64",
-          "term": "Seqner",
+          "term": "Fixed-Width Ordinal",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8770,8 +8793,8 @@ const RDOD_DATA = {
           "notes": "Seqner always uses code 0A (16 bytes raw, 24 chars qb64). Fixed width enables lexicographic LMDB key ordering."
         },
         {
-          "invariant": "Seqner round-trip: construction from sn and from qb64 produce same value",
-          "term": "Seqner",
+          "invariant": "Fixed-Width Ordinal round-trip: construction from sn and from qb64 produce same value",
+          "term": "Fixed-Width Ordinal",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8813,8 +8836,8 @@ const RDOD_DATA = {
           "notes": "Variable-length primitives encode their size in soft characters."
         },
         {
-          "invariant": "Each MtrDex attribute maps a descriptive name to its code string; values are immutable",
-          "term": "MtrDex",
+          "invariant": "Each Master Code Table attribute maps a descriptive name to its code string; values are immutable",
+          "term": "Master Code Table",
           "technique": "property-based",
           "formal": {
             "language": "pseudocode",
@@ -8824,8 +8847,8 @@ const RDOD_DATA = {
           "notes": "Code table constants must be frozen/immutable."
         },
         {
-          "invariant": "MtrDex entries match the master code table for the active protocol genus",
-          "term": "MtrDex",
+          "invariant": "Master Code Table entries match the master code table for the active protocol genus",
+          "term": "Master Code Table",
           "technique": "property-based",
           "formal": {
             "language": "pseudocode",
@@ -8879,7 +8902,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Simple: integer M-of-N",
-          "term": "Tholder",
+          "term": "Threshold Primitive",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8890,7 +8913,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "satisfy(indices) checks whether the given key indices meet the threshold",
-          "term": "Tholder",
+          "term": "Threshold Primitive",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8901,7 +8924,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Code '1AAG' -- 32-char ISO-8601 string (36 chars qb64)",
-          "term": "Dater",
+          "term": "DateTime",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8912,7 +8935,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Base64url character substitution: standard Base64 characters + and / are replaced with - and _ respectively for URL safety. Substitution is applied AFTER Base64 encoding and reversed BEFORE Base64 decoding. Round-trip: url_safe(base64_encode(bytes)) -> base64_decode(url_unsafe(text)) MUST produce original bytes.",
-          "term": "Dater",
+          "term": "DateTime",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8945,7 +8968,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "A compliant KERI/ACDC genus MUST include all master code entries specified in the spec's §8 table. The required 1-char codes include at minimum: A (RandomSeed128), B (Ed25519NT), D (Ed25519), E (Blake3-256), F (Blake2b-256), H (SHA3-256), I (SHA2-256), M (Short2ByteSeqNum). Required 2-char codes include: 0B (Ed25519Sig), 0C (ECDSA256k1Sig). Required 4-char codes include: 1AAB (ECDSA256k1NT), 1AAE (Ed448). Each MUST be present in the active genus master code table.",
-          "term": "MtrDex",
+          "term": "Master Code Table",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -8978,7 +9001,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Every indexed signature algorithm MUST provide both a 'both same' (dual index where index == ondex, stored as single index) variant and a 'current only' (index != ondex, each stored separately) variant. For each algorithm at each code size, the two variants MUST appear as consecutive type characters: A#/B# (Ed25519 both/current), C#/D# (ECDSA secp256k1 both/current), 0A##/0B## (Ed448 both/current). The 'big' forms follow the same pattern: 2A####/2B#### (Ed25519 big both/current), etc. This dual-variant structure is required by KERI's partial rotation mechanism.",
-          "term": "Indexer",
+          "term": "Indexed Primitive Base",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -9141,7 +9164,7 @@ const RDOD_DATA = {
       {
         "name": "InvalidPrimitiveCodeError",
         "description": "CESR type code is not valid for the requested primitive type",
-        "cause": "The code exists in the master code table but does not correspond to a valid primitive of the requested kind (e.g., using a digest code to construct a Verfer), or the code is not registered for the active protocol genus/version during primitive construction",
+        "cause": "The code exists in the master code table but does not correspond to a valid primitive of the requested kind (e.g., using a digest code to construct a Verification Key), or the code is not registered for the active protocol genus/version during primitive construction",
         "recovery": "abort",
         "severity": "fatal",
         "context": [
@@ -9222,7 +9245,7 @@ const RDOD_DATA = {
       {
         "name": "SignatureVerificationError",
         "description": "Cryptographic signature does not verify against the public key and message",
-        "cause": "Verfer.verify(sig, ser) returned false — the signature is invalid for this key and serialization",
+        "cause": "Verification Key.verify(sig, ser) returned false — the signature is invalid for this key and serialization",
         "recovery": "abort",
         "severity": "fatal",
         "context": [
@@ -9241,7 +9264,7 @@ const RDOD_DATA = {
       {
         "name": "DigestMismatchError",
         "description": "Computed digest does not match expected digest",
-        "cause": "Diger.verify(ser) returned false — the data has been tampered with or the wrong digest algorithm was used",
+        "cause": "Digest.verify(ser) returned false — the data has been tampered with or the wrong digest algorithm was used",
         "recovery": "abort",
         "severity": "fatal",
         "context": [
@@ -9285,7 +9308,7 @@ const RDOD_DATA = {
     "_types": [
       {
         "name": "Primitive",
-        "description": "Base type for all CESR-qualified cryptographic primitives. Encapsulates a (code, raw) pair with domain transforms to/from qb64 (Text) and qb2 (Binary). Code assignments: all 26 uppercase one-char codes (A-Z) are assigned (see code-table.yaml); only lowercase 'a' (Salt_256) is assigned — lowercase b-z are parser-recognized but UNASSIGNED/RESERVED (error handling should distinguish 'reserved/unassigned' from 'invalid'); encryption codes C (X25519), O (X25519_Private), P (X25519_CipherSeed), 1AAH (ECDSA_256r1_Seed) are included in code table with Sizage entries — behavioral types (Encrypter/Decrypter) deferred to future encryption subdomain.\n",
+        "description": "Base type for all CESR-qualified cryptographic primitives. Encapsulates a (code, raw) pair with domain transforms to/from qb64 (Text) and qb2 (Binary). Code assignments: all 26 uppercase one-char codes (A-Z) are assigned (see code-table.yaml); only lowercase 'a' (Salt_256) is assigned — lowercase b-z are parser-recognized but UNASSIGNED/RESERVED (error handling should distinguish 'reserved/unassigned' from 'invalid'); encryption codes C (X25519), O (X25519_Private), P (X25519_CipherSeed), 1AAH (ECDSA_256r1_Seed) are included in code table with Sizage entries — behavioral types (Encryption Primitive/Decryption Primitive) deferred to future encryption subdomain.\n",
         "variants": [
           {
             "name": "default",
@@ -9321,8 +9344,8 @@ const RDOD_DATA = {
               "qb64 length is always a multiple of 4 characters (quadlet-aligned)",
               "qb2 length is always a multiple of 3 bytes (triplet-aligned)",
               "Construction from any one representation yields the other two",
-              "Qualification (type-level operation): constructing a Matter from raw bytes, qb64, or qb2 is idempotent — the same input always yields the same qualified primitive. Errors: InvalidPrimitiveCodeError, RawSizeMismatchError, InvalidQB64Error, InvalidQB2Error.",
-              "Subtype-specific validation: Verfer construction additionally verifies key algorithm compatibility; Diger validates digest length; Siger/Cigar may raise SignatureVerificationError or DigestMismatchError on verify().",
+              "Qualification (type-level operation): constructing a Primitive from raw bytes, qb64, or qb2 is idempotent — the same input always yields the same qualified primitive. Errors: InvalidPrimitiveCodeError, RawSizeMismatchError, InvalidQB64Error, InvalidQB2Error.",
+              "Subtype-specific validation: Verification Key construction additionally verifies key algorithm compatibility; Digest validates digest length; Indexed Signature/Unindexed Signature may raise SignatureVerificationError or DigestMismatchError on verify().",
               "Reserved/unassigned codes: all 26 uppercase letters (A-Z) are assigned; only lowercase 'a' (Salt_256) is assigned. Lowercase b-z are parser-recognized but RESERVED/UNASSIGNED — construction with a reserved code MUST raise InvalidPrimitiveCodeError with cause='reserved/unassigned' (distinct from 'unknown' or 'invalid format')."
             ]
           }
@@ -9330,7 +9353,7 @@ const RDOD_DATA = {
       },
       {
         "name": "SigningThreshold",
-        "description": "CESR-encoded threshold expression (Tholder). Three encoding variants for representing signing quorum requirements. Tholder owns BOTH encoding/decoding AND satisfaction logic — satisfy() is a core part of Tholder, not delegated to a separate domain. This is a deliberate design choice following keripy.",
+        "description": "CESR-encoded threshold expression (Signing Threshold). Three encoding variants for representing signing quorum requirements. Signing Threshold owns BOTH encoding/decoding AND satisfaction logic — satisfy() is a core part of Signing Threshold, not delegated to a separate domain. This is a deliberate design choice following keripy.",
         "variants": [
           {
             "name": "simple",
@@ -9685,7 +9708,7 @@ const RDOD_DATA = {
                 "name": "verfer",
                 "type": "types://cesr/primitives#Primitive",
                 "required": true,
-                "description": "The public key (Verfer) that produced this signature"
+                "description": "The public key (Verification Key) that produced this signature"
               }
             ],
             "invariants": [
@@ -9794,7 +9817,7 @@ const RDOD_DATA = {
             ],
             "invariants": [
               "main_index_size + other_index_size = soft_size",
-              "Used for dual-indexed signatures (Siger) where ondex differs from index",
+              "Used for dual-indexed signatures (Indexed Signature) where ondex differs from index",
               "full_size is always a multiple of 4 (quadlet alignment)",
               "Code resolution (type-level operation): given a CESR type code string, returns the corresponding IndexedSizage entry. This is an idempotent lookup — the code table is fixed at compile/init time. Raises InvalidPrimitiveCodeError for unrecognized codes."
             ]
@@ -9850,7 +9873,7 @@ const RDOD_DATA = {
       },
       {
         "name": "Signature",
-        "description": "Generic signature reference used in port contracts. Resolves to Siger (indexed) or Cigar (unindexed) depending on context. Implementations should accept either form.",
+        "description": "Generic signature reference used in port contracts. Resolves to Indexed Signature (indexed) or Unindexed Signature (unindexed) depending on context. Implementations should accept either form.",
         "variants": [
           {
             "name": "indexed",
@@ -9974,7 +9997,7 @@ const RDOD_DATA = {
       },
       {
         "name": "IndexedSignaturePrimitive",
-        "description": "Base type for CESR primitives from the Indexed Code Table — signatures that carry positional key-list indices in the code's soft portion. Parallel to the master code table primitive (NOT a subclass). The CESR spec defines \"Indexed codes\" as a separate code table family with its own encoding rules. keripy: Indexer class (indexing.py).\n",
+        "description": "Base type for CESR primitives from the Indexed Code Table — signatures that carry positional key-list indices in the code's soft portion. Parallel to the master code table primitive (NOT a subclass). The CESR spec defines \"Indexed codes\" as a separate code table family with its own encoding rules. keripy: Indexed Primitive Base class (indexing.py).\n",
         "variants": [
           {
             "name": "default",
@@ -10025,7 +10048,7 @@ const RDOD_DATA = {
       },
       {
         "name": "SADPath",
-        "description": "CESR-encoded field path for locating specific content within a Self-Addressing Data structure. The CESR spec defines \"SAD Path Signatures\" and the \"SAD Path Language\" for binding signatures to specific fields in ACDC selective disclosure. Uses variable-size codes (4A##/5A##/6A##). keripy: Pather class (coring.py).\n",
+        "description": "CESR-encoded field path for locating specific content within a Self-Addressing Data structure. The CESR spec defines \"SAD Path Signatures\" and the \"SAD Path Language\" for binding signatures to specific fields in ACDC selective disclosure. Uses variable-size codes (4A##/5A##/6A##). keripy: Path class (coring.py).\n",
         "variants": [
           {
             "name": "default",
@@ -10054,7 +10077,7 @@ const RDOD_DATA = {
       },
       {
         "name": "SigningKey",
-        "description": "Application-level signing primitive — holds a private key seed and produces signatures. NOT in the CESR code tables or wire format. The spec says \"signing key\" (never \"Signer\"). Encapsulates key material and exposes a sign operation that produces indexed or unindexed signatures. keripy: Signer class (signing.py).\n",
+        "description": "Application-level signing primitive — holds a private key seed and produces signatures. NOT in the CESR code tables or wire format. The spec says \"signing key\" (never \"Signing Key\"). Encapsulates key material and exposes a sign operation that produces indexed or unindexed signatures. keripy: Signing Key class (signing.py).\n",
         "variants": [
           {
             "name": "default",
@@ -10120,7 +10143,7 @@ const RDOD_DATA = {
               }
             ],
             "invariants": [
-              "Subtype of Matter — inherits code + raw ↔ qb64 ↔ qb2 equivalence",
+              "Subtype of Primitive — inherits code + raw ↔ qb64 ↔ qb2 equivalence",
               "verify(data, signature) returns True iff signature is valid for data under this public key",
               "code determines the expected raw key length and verification algorithm"
             ]
@@ -10803,7 +10826,7 @@ const RDOD_DATA = {
                 "name": "salt",
                 "type": "string",
                 "required": true,
-                "description": "CESR-qualified salt (Salter qb64) — the root secret for deterministic key derivation"
+                "description": "CESR-qualified salt (Salt qb64) — the root secret for deterministic key derivation"
               },
               {
                 "name": "tier",
@@ -13191,7 +13214,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://cesr",
         "pattern": "conformist",
-        "relationship": "CESR primitives (SAID, AID, Siger) adopted natively for credential artifact verification"
+        "relationship": "CESR primitives (SAID, AID, Indexed Signature) adopted natively for credential artifact verification"
       },
       {
         "ref": "domain://keri-messaging",
@@ -16751,7 +16774,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://cesr",
         "pattern": "conformist",
-        "relationship": "CESR primitives (SAID, AID, Diger) adopted natively in credential and TEL data structures"
+        "relationship": "CESR primitives (SAID, AID, Digest) adopted natively in credential and TEL data structures"
       },
       {
         "ref": "domain://credential-exchange",
@@ -17152,7 +17175,7 @@ const RDOD_DATA = {
         "invariants": [
           "TEL event store: serialized TEL event bytes indexed by (registry SAID, event digest) -- the primary event store",
           "TEL sequence index: mapping (registry SAID, sequence number) to event digest -- ordered access by sequence number",
-          "Backer signature store: backer indexed signatures (Siger) per event, indexed by (registry SAID, event digest) -- insertion-ordered, append-only",
+          "Backer signature store: backer indexed signatures (Indexed Signature) per event, indexed by (registry SAID, event digest) -- insertion-ordered, append-only",
           "Backer AID list store: backer AID lists per registry, indexed by registry SAID -- current set of designated backer witnesses",
           "Anchor seal store: anchor seals per event, indexed by (registry SAID, event digest) -- the KEL seal that anchors each TEL event",
           "Event timestamp store: event datetime timestamps per event, indexed by (registry SAID, event digest) -- recorded at first acceptance"
@@ -22899,12 +22922,12 @@ const RDOD_DATA = {
         "invariants": [
           "Contains a sequence number and SAID digest identifying the delegator's approval event",
           "In keriox: SourceSeal struct with sn and digest fields",
-          "In keripy: deSourceCouple is a (Seqner, Saider) couple attached to delegated events",
+          "In keripy: deSourceCouple is a (Fixed-Width Ordinal, SAID Primitive) couple attached to delegated events",
           "The couple allows validators to locate the specific event in the delegator's KEL that approves the delegation",
           "Without the source seal, validators cannot verify the delegator's approval"
         ],
         "examples": [
-          "deSourceCouple(Seqner(sn=1), Saider(said='E...')) — references delegator's ixn at sn=1 that contains the approval seal",
+          "deSourceCouple(Fixed-Width Ordinal(sn=1), SAID Primitive(said='E...')) — references delegator's ixn at sn=1 that contains the approval seal",
           "SourceSeal { sn: 1, digest: SelfAddressing::Blake3_256(...) } in keriox"
         ],
         "related_terms": [
@@ -23428,7 +23451,7 @@ const RDOD_DATA = {
       },
       {
         "name": "DelegationSealSource",
-        "description": "A CESR attachment (SealSourceCouples, code -S) consisting of a (Seqner, Diger) couple that links a delegated event to the delegator's approval event. This is an ATTACHMENT type, NOT an event body field — the event body has di (delegator prefix) but the source seal couple is external.",
+        "description": "A CESR attachment (SealSourceCouples, code -S) consisting of a (Fixed-Width Ordinal, Digest) couple that links a delegated event to the delegator's approval event. This is an ATTACHMENT type, NOT an event body field — the event body has di (delegator prefix) but the source seal couple is external.",
         "variants": [
           {
             "name": "default",
@@ -23437,13 +23460,13 @@ const RDOD_DATA = {
                 "name": "sn",
                 "type": "integer",
                 "required": true,
-                "description": "Sequence number of the delegator's event containing the seal (Seqner)"
+                "description": "Sequence number of the delegator's event containing the seal (Fixed-Width Ordinal)"
               },
               {
                 "name": "said",
                 "type": "string",
                 "required": true,
-                "description": "SAID of the delegator's event containing the seal (Diger)"
+                "description": "SAID of the delegator's event containing the seal (Digest)"
               }
             ],
             "invariants": [
@@ -23574,7 +23597,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://cesr",
         "pattern": "conformist",
-        "relationship": "CESR primitives (Prefixer, Diger, Seqner, Seal) adopted natively for delegation seal construction and verification"
+        "relationship": "CESR primitives (Identifier Prefix, Digest, Fixed-Width Ordinal, Seal) adopted natively for delegation seal construction and verification"
       }
     ],
     "externals": [
@@ -26396,7 +26419,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://cesr",
         "pattern": "conformist",
-        "relationship": "CESR primitives (AID, SAID, Prefixer) adopted natively for OOBI resolution and endpoint authorization"
+        "relationship": "CESR primitives (AID, SAID, Identifier Prefix) adopted natively for OOBI resolution and endpoint authorization"
       },
       {
         "ref": "domain://keri-messaging",
@@ -29016,7 +29039,7 @@ const RDOD_DATA = {
     "kernels": [
       {
         "ref": "kernel://cesr/primitives",
-        "relationship": "Typed CESR primitives (SAID, AID, Diger) for seal digest computation and seal type references"
+        "relationship": "Typed CESR primitives (SAID, AID, Digest) for seal digest computation and seal type references"
       }
     ],
     "adjacents": [
@@ -29036,7 +29059,7 @@ const RDOD_DATA = {
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
-      "notes": "In keripy, interaction events are created by the interact() method on Hab/Habery. Seal construction uses SealDigest, SealEvent, and SealLast namedtuples from coring.py. In keriox, InteractionEvent carries seal data in its payload. Interaction events are the primary mechanism for committing ACDC credential authorization/revocation, delegation approval seals, and arbitrary data commitments. They are lightweight because they do not change key state.\n"
+      "notes": "In keripy, interaction events are created by the interact() method on Hab/Habery. Seal construction uses SealDiger, SealEvent, and SealLast namedtuples from coring.py. In keriox, InteractionEvent carries seal data in its payload. Interaction events are the primary mechanism for committing ACDC credential authorization/revocation, delegation approval seals, and arbitrary data commitments. They are lightweight because they do not change key state.\n"
     },
     "issues": [],
     "tags": [
@@ -29657,7 +29680,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://cesr",
         "pattern": "conformist",
-        "relationship": "CESR primitives (Verfer, Diger, Siger, AID, SAID) adopted natively in all identity data structures"
+        "relationship": "CESR primitives (Verification Key, Digest, Indexed Signature, AID, SAID) adopted natively in all identity data structures"
       },
       {
         "ref": "domain://keri-messaging",
@@ -32202,7 +32225,7 @@ const RDOD_DATA = {
     "kernels": [
       {
         "ref": "kernel://cesr/primitives",
-        "relationship": "Typed CESR primitives (SAID, AID, Verfer, Diger, Siger) used as first-class types in event validation and key state"
+        "relationship": "Typed CESR primitives (SAID, AID, Verification Key, Digest, Indexed Signature) used as first-class types in event validation and key state"
       }
     ],
     "adjacents": [
@@ -32271,7 +32294,7 @@ const RDOD_DATA = {
       "Every event must have at least one cryptographically valid signature to enter validation",
       "Rotation events must satisfy BOTH the current signing threshold (kt) AND the prior next threshold (nt) -- the dual threshold requirement",
       "Pre-rotation binding is checked by digest comparison: digest(new_key) must equal the pre-committed digest at the ondex position",
-      "Witness threshold satisfaction uses the same Tholder.satisfy() mechanism as signing threshold",
+      "Witness threshold satisfaction uses the same Signing Threshold.satisfy() mechanism as signing threshold",
       "Delegation validation requires the delegator's KEL to contain a seal referencing the delegated event by prefix, sn, and SAID",
       "Local source protection is checked before signature verification -- remote events targeting local AIDs are escrowed as misfits",
       "Validation is stateless given a key state snapshot -- it does not mutate state, only returns accept/reject/escrow-reason"
@@ -32357,15 +32380,15 @@ const RDOD_DATA = {
         ],
         "definition": "Cryptographic verification of each indexed controller signature against the event serialization bytes and the public key at the corresponding index in the current signing key list. Returns the set of indices whose signatures are valid.",
         "invariants": [
-          "Each Siger carries an index specifying its position in the signing key list",
-          "For each Siger: verfer_at[siger.index].verify(siger.raw, event_raw) must return True",
+          "Each Indexed Signature carries an index specifying its position in the signing key list",
+          "For each Indexed Signature: verfer_at[siger.index].verify(siger.raw, event_raw) must return True",
           "Invalid signatures are silently dropped -- only valid indices are collected",
           "At least one valid signature is required to proceed (otherwise immediate reject)",
           "The raw bytes verified are the serialized event body (not the full message with attachments)"
         ],
         "examples": [
           "3-key list, Sigers at indices [0, 2]: verify key[0] against sig[0] -> valid; verify key[2] against sig[2] -> valid; return indices=[0, 2]",
-          "Siger at index 1 fails verification -> index 1 excluded from the valid set"
+          "Indexed Signature at index 1 fails verification -> index 1 excluded from the valid set"
         ],
         "related_terms": [
           "Dual Threshold Verification",
@@ -32381,7 +32404,7 @@ const RDOD_DATA = {
         ],
         "definition": "The mechanism that enforces pre-rotation commitments during key rotation. Each indexed signature in a rotation event carries both an index (position in current key list) and an ondex (position in the prior next-key digest list). The binding is verified by computing the digest of the new signing key and comparing it to the pre-committed digest at the ondex position.",
         "invariants": [
-          "Each Siger carries index (current key position) and ondex (next key position)",
+          "Each Indexed Signature carries index (current key position) and ondex (next key position)",
           "For each siger: digest(new_key_at[index]) must equal prior_next_digest_at[ondex]",
           "Only ondices with valid key-digest matches count toward the next threshold",
           "The next threshold (ntholder) must be satisfied by the matched ondices",
@@ -32389,7 +32412,7 @@ const RDOD_DATA = {
           "This prevents an attacker from rotating to arbitrary keys -- they must use the pre-committed keys"
         ],
         "examples": [
-          "Prior inception committed to next digests [D(N1), D(N2), D(N3)]. Rotation presents keys [N1, N2, N3]. Siger at index=0 has ondex=0 -> digest(N1) must equal D(N1) -> match.",
+          "Prior inception committed to next digests [D(N1), D(N2), D(N3)]. Rotation presents keys [N1, N2, N3]. Indexed Signature at index=0 has ondex=0 -> digest(N1) must equal D(N1) -> match.",
           "Attacker tries rotation with unauthorized key K4 at index=0 -> digest(K4) != D(N1) -> no ondex match -> next threshold not satisfied -> rejected"
         ],
         "related_terms": [
@@ -32518,7 +32541,7 @@ const RDOD_DATA = {
           "Default thresholds are computed via quorum calculation (ample/simple) when not explicitly provided"
         ],
         "examples": [
-          "serder = incept(keys=['DABC...'], ndigs=['EDEF...'], wits=['BGHI...'], toad=1, code=MtrDex.Blake3_256)",
+          "serder = incept(keys=['DABC...'], ndigs=['EDEF...'], wits=['BGHI...'], toad=1, code=Master Code Table.Blake3_256)",
           "serder = rotate(pre='EABC...', keys=new_keys, dig=prior_said, sn=2, cuts=['Bxyz...'], adds=['Bdef...'])"
         ],
         "related_terms": [
@@ -32836,7 +32859,7 @@ const RDOD_DATA = {
           "notes": "Each failure type routes to its specific escrow."
         },
         {
-          "invariant": "Each Siger carries an index specifying its position in the signing key list",
+          "invariant": "Each Indexed Signature carries an index specifying its position in the signing key list",
           "term": "Signature Verification",
           "technique": "property-based",
           "formal": {
@@ -32847,7 +32870,7 @@ const RDOD_DATA = {
           "notes": "Every indexed signature must have a non-negative index."
         },
         {
-          "invariant": "For each Siger: verfer_at[siger.index].verify(siger.raw, event_raw) must return True",
+          "invariant": "For each Indexed Signature: verfer_at[siger.index].verify(siger.raw, event_raw) must return True",
           "term": "Signature Verification",
           "technique": "property-based",
           "formal": {
@@ -32899,7 +32922,7 @@ const RDOD_DATA = {
           "notes": "Weighted threshold sum >= 1 criterion via SMT."
         },
         {
-          "invariant": "Each Siger carries index (current key position) and ondex (next key position)",
+          "invariant": "Each Indexed Signature carries index (current key position) and ondex (next key position)",
           "term": "Pre-rotation Binding",
           "technique": "property-based",
           "formal": {
@@ -35161,14 +35184,14 @@ const RDOD_DATA = {
     "kernels": [
       {
         "ref": "kernel://cesr/primitives",
-        "relationship": "Typed CESR primitives (Verfer, Diger, SAID, AID) for key types, digest computation, and prefix code classification"
+        "relationship": "Typed CESR primitives (Verification Key, Digest, SAID, AID) for key types, digest computation, and prefix code classification"
       }
     ],
     "adjacents": [],
     "externals": [
       {
         "ref": "domain://externals/cryptographic-primitives",
-        "source": "Ed25519/ECDSA key types for signing keys (Verfer construction), Blake3-256/SHA-256 for computing next key digests (Diger construction), prefix code classification for transferability",
+        "source": "Ed25519/ECDSA key types for signing keys (Verification Key construction), Blake3-256/SHA-256 for computing next key digests (Digest construction), prefix code classification for transferability",
         "relationship": "Public key qualification and digest computation are kernel operations — this subdomain uses them to build key configurations and verify pre-rotation bindings"
       }
     ],
@@ -35254,7 +35277,7 @@ const RDOD_DATA = {
           "At rotation, the new signing keys must include a threshold-satisficing subset of the previously pre-committed next keys (unblinded)",
           "Ordered — index position matters for indexed signatures and threshold satisfaction",
           "Each key is a qualified public key with a CESR prefix code identifying its algorithm",
-          "In keripy, stored as a list of Verfer instances on the Kever",
+          "In keripy, stored as a list of Verification Key instances on the Kever",
           "In keriox, stored as current_public_keys in the KeyConfig struct"
         ],
         "examples": [
@@ -35283,9 +35306,9 @@ const RDOD_DATA = {
           "The actual public keys are kept secret until used in a subsequent rotation",
           "Provides post-quantum resistance — attacker must compromise both current and pre-committed keys",
           "An empty next key digest list (n = []) signals a non-transferable AID — no further rotations possible",
-          "In keripy, stored as a list of Diger instances on the Kever (ndigers attribute)",
+          "In keripy, stored as a list of Digest instances on the Kever (ndigers attribute)",
           "In keriox, stored as NextKeysData within KeyConfig, holding digests and the next threshold",
-          "The digest is computed over the raw qualified public key bytes (qb64 of the Verfer)"
+          "The digest is computed over the raw qualified public key bytes (qb64 of the Verification Key)"
         ],
         "examples": [
           "A list of three Blake3-256 digests: ['ELeFYMmuJb...', 'ENY9GYShOj...', 'EGyJ7y3Tle...']",
@@ -35314,7 +35337,7 @@ const RDOD_DATA = {
           "In keriox, KeyConfig bundles current_public_keys, next_keys_data (digests + next threshold), and the signing threshold"
         ],
         "examples": [
-          "In keripy: verfers=[Verfer(qb64='DABC...'), Verfer(qb64='DDEF...')] + ndigers=[Diger(qb64='EABC...')]",
+          "In keripy: verfers=[Verification Key(qb64='DABC...'), Verification Key(qb64='DDEF...')] + ndigers=[Digest(qb64='EABC...')]",
           "In keriox: KeyConfig { current_public_keys: [...], next_keys_data: NextKeysData { digests: [...], threshold: ... } }",
           "After rotation: previous ndigers are consumed (verified against new keys), new ndigers committed"
         ],
@@ -36035,7 +36058,7 @@ const RDOD_DATA = {
             ],
             "invariants": [
               "First character(s) of qb64 determine the algorithm (D=Ed25519, 1AAB=secp256k1, etc.)",
-              "Equivalent to a Verfer primitive in CESR"
+              "Equivalent to a Verification Key primitive in CESR"
             ]
           }
         ]
@@ -36493,14 +36516,14 @@ const RDOD_DATA = {
     "kernels": [
       {
         "ref": "kernel://cesr/primitives",
-        "relationship": "Typed CESR primitives (SAID, AID, Verfer, Diger) used as first-class types in key state fields and state queries"
+        "relationship": "Typed CESR primitives (SAID, AID, Verification Key, Digest) used as first-class types in key state fields and state queries"
       }
     ],
     "adjacents": [],
     "externals": [
       {
         "ref": "domain://externals/cryptographic-primitives",
-        "source": "Ed25519/ECDSA public keys (Verfer) for signing key lists, Blake3-256/SHA-256 digests (Diger) for next key commitment lists, SAID computation for event digest tracking",
+        "source": "Ed25519/ECDSA public keys (Verification Key) for signing key lists, Blake3-256/SHA-256 digests (Digest) for next key commitment lists, SAID computation for event digest tracking",
         "relationship": "Cryptographic primitives appear directly in state machine fields — the tracker stores and compares qualified public keys, digests, and SAIDs as kernel types"
       },
       {
@@ -38189,7 +38212,7 @@ const RDOD_DATA = {
     "template_version": "2.0",
     "id": "identity/thresholds",
     "name": "Signing Thresholds",
-    "description": "Multi-signature requirements and threshold satisfaction. Signing, rotation, dual, and weighted threshold mechanics. Determines when a set of signatures or witness receipts satisfies the required quorum. This subdomain owns the Tholder abstraction that parses threshold expressions (simple integer or fractionally weighted), the satisfy() check that tests whether a set of indices meets a threshold, and the three threshold roles in KERI key state: signing threshold (kt), rotation threshold (nt), and witness threshold (bt/TOAD). It also owns the witness configuration — the witness list paired with the witness threshold — and the dual threshold requirement that rotation events must satisfy both kt and nt.\n",
+    "description": "Multi-signature requirements and threshold satisfaction. Signing, rotation, dual, and weighted threshold mechanics. Determines when a set of signatures or witness receipts satisfies the required quorum. This subdomain owns the Signing Threshold abstraction that parses threshold expressions (simple integer or fractionally weighted), the satisfy() check that tests whether a set of indices meets a threshold, and the three threshold roles in KERI key state: signing threshold (kt), rotation threshold (nt), and witness threshold (bt/TOAD). It also owns the witness configuration — the witness list paired with the witness threshold — and the dual threshold requirement that rotation events must satisfy both kt and nt.\n",
     "version": "0.1.0",
     "tier": "domain",
     "source_material": [
@@ -38245,7 +38268,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://cesr/primitives",
         "pattern": "conformist",
-        "relationship": "Published Language — uses Tholder/SignatureThreshold type for threshold representation (simple integer and fractionally weighted) and satisfaction checking"
+        "relationship": "Published Language — uses Signing Threshold/SignatureThreshold type for threshold representation (simple integer and fractionally weighted) and satisfaction checking"
       }
     ],
     "externals": [],
@@ -38689,7 +38712,7 @@ const RDOD_DATA = {
           "notes": "No keys = no valid threshold configuration. Must be caught at construction time."
         },
         {
-          "invariant": "Signing threshold can be a simple integer M (M-of-N) or a fractionally weighted threshold (list of fractions); parse_threshold MUST accept both forms and return a Tholder with satisfy() method",
+          "invariant": "Signing threshold can be a simple integer M (M-of-N) or a fractionally weighted threshold (list of fractions); parse_threshold MUST accept both forms and return a Signing Threshold with satisfy() method",
           "term": "Signing Threshold",
           "technique": "property-based",
           "formal": {
@@ -40984,7 +41007,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://cesr",
         "pattern": "conformist",
-        "relationship": "CESR primitives (Verfer, Diger, SAID) adopted natively for duplicity evidence verification"
+        "relationship": "CESR primitives (Verification Key, Digest, SAID) adopted natively for duplicity evidence verification"
       },
       {
         "ref": "domain://identity",
@@ -44043,7 +44066,7 @@ const RDOD_DATA = {
         "invariants": [
           "Signed headers (signature base): Signify-Resource (signer AID), @method (HTTP method), @path (request path), Signify-Timestamp (ISO-8601 with microsecond resolution)",
           "Signature-Input header: RFC 8941 dictionary with member 'signify' — inner list of signed field names plus parameters (created, alg=ed25519, keyid=signer_qb64)",
-          "Signature header: RFC 8941 dictionary with member 'signify' — unindexed signature (Cigar) encoded as unqualified base64",
+          "Signature header: RFC 8941 dictionary with member 'signify' — unindexed signature (Unindexed Signature) encoded as unqualified base64",
           "Signify-Resource header carries the signer's AID prefix — Client AID on requests, Agent AID on responses",
           "Signify-Timestamp format: ISO-8601 with microsecond resolution and explicit UTC offset (e.g., 2024-01-15T12:00:00.000000+00:00)",
           "Mutual authentication: client verifies response Signature against Agent AID's current verfer; agent verifies request Signature against Client AID's current key state",
@@ -45626,7 +45649,7 @@ const RDOD_DATA = {
                 "name": "delegation_seal_couple",
                 "type": "types://delegation/authorization#DelegationSealSource",
                 "required": false,
-                "description": "Source seal couple for delegated events (Seqner + Diger CESR attachment)"
+                "description": "Source seal couple for delegated events (Fixed-Width Ordinal + Digest CESR attachment)"
               }
             ],
             "invariants": [
@@ -46218,7 +46241,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://cesr",
         "pattern": "conformist",
-        "relationship": "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly for all encoding"
+        "relationship": "Conformist — uses CESR primitives (Verification Key, Indexed Signature, Digest, Salt, Unindexed Signature) directly for all encoding"
       },
       {
         "ref": "domain://keri-messaging",
@@ -46300,7 +46323,7 @@ const RDOD_DATA = {
       },
       {
         "name": "KeysRotated",
-        "payload": "aid: AID, sn: int, new_verfers: [Verfer], new_digers: [Diger]",
+        "payload": "aid: AID, sn: int, new_verfers: [Verification Key], new_digers: [Digest]",
         "triggers": "Controller rotates keys via hab.rotate() or kli rotate"
       },
       {
@@ -46310,7 +46333,7 @@ const RDOD_DATA = {
       },
       {
         "name": "WitnessReceiptCollected",
-        "payload": "aid: AID, sn: int, witness_aid: AID, receipt_dig: Diger",
+        "payload": "aid: AID, sn: int, witness_aid: AID, receipt_dig: Digest",
         "triggers": "Controller receives a witness receipt after sending an event directly"
       },
       {
@@ -46406,7 +46429,7 @@ const RDOD_DATA = {
           "Manager",
           "Keeper"
         ],
-        "definition": "Manages private keys entirely on the controller's device. Generates Signers (private key wrappers that produce signatures) from a Salter with configurable security tiers. No passcode-over-network — the salt lives on the local filesystem, encrypted at rest.",
+        "definition": "Manages private keys entirely on the controller's device. Generates Signers (private key wrappers that produce signatures) from a Salt with configurable security tiers. No passcode-over-network — the salt lives on the local filesystem, encrypted at rest.",
         "invariants": [
           "Keys stored locally in encrypted form — no network dependency for key operations",
           "Manager holds current signing keys (Signers) and pre-rotated next key digests (Digers)",
@@ -46419,7 +46442,7 @@ const RDOD_DATA = {
         "examples": [
           "mgr = Manager(ks=Keeper(db), salt=salter.qb64) → local key manager with on-disk key store",
           "verfers, digers, _, _ = mgr.incept(icount=1, ncount=1) → Ed25519 keypair + next key digest",
-          "mgr.sign(ser=event.raw, pre=hab.pre) → [Siger] — indexed signature from local private key",
+          "mgr.sign(ser=event.raw, pre=hab.pre) → [Indexed Signature] — indexed signature from local private key",
           "Alternatively, a controller.incept(key_config) call handles key generation internally"
         ],
         "related_terms": [
@@ -47190,7 +47213,7 @@ const RDOD_DATA = {
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
-      "notes": "The AGID computation requires serialization-kind-aware digest computation — the SAID list is serialized before digesting, and the zeroth element is the AGID itself (computed via dummy character replacement). The most compact form algorithm is a depth-first traversal that SAIDifies leaves first and works upward. In keripy, the Compactor class implements hierarchical graduated partial disclosure with .leaves, .partials, and .iscompact properties. SAD path signatures (SadPathSig groups) use Pather primitives to bind signatures to specific paths within the SAD tree. Indexed variants use quinkey indexing (.spsgs), non-indexed use couple form (.spcgs).\n"
+      "notes": "The AGID computation requires serialization-kind-aware digest computation — the SAID list is serialized before digesting, and the zeroth element is the AGID itself (computed via dummy character replacement). The most compact form algorithm is a depth-first traversal that SAIDifies leaves first and works upward. In keripy, the Compactor class implements hierarchical graduated partial disclosure with .leaves, .partials, and .iscompact properties. SAD path signatures (SadPatherSig groups) use Pather primitives to bind signatures to specific paths within the SAD tree. Indexed variants use quinkey indexing (.spsgs), non-indexed use couple form (.spcgs).\n"
     },
     "issues": [],
     "tags": [
@@ -47336,11 +47359,11 @@ const RDOD_DATA = {
       {
         "term": "SAD Path Signatures",
         "synonyms": [],
-        "definition": "Signatures over specific paths within a SAD structure, enabling selective disclosure. Indexed signatures use quinkey indexing mapped to Siger primitives; non-indexed signatures use couple form mapping Verfer to Cigar. Used with Pather primitives to prove specific attribute disclosures without revealing the entire credential.",
+        "definition": "Signatures over specific paths within a SAD structure, enabling selective disclosure. Indexed signatures use quinkey indexing mapped to Indexed Signature primitives; non-indexed signatures use couple form mapping Verification Key to Unindexed Signature. Used with Path primitives to prove specific attribute disclosures without revealing the entire credential.",
         "invariants": [
-          "Indexed SAD path signatures use quinkey indexing mapped to Siger primitives",
-          "Non-indexed SAD path signatures use couple form mapping Verfer to Cigar",
-          "Each signature is bound to a specific path within the SAD tree via a Pather primitive",
+          "Indexed SAD path signatures use quinkey indexing mapped to Indexed Signature primitives",
+          "Non-indexed SAD path signatures use couple form mapping Verification Key to Unindexed Signature",
+          "Each signature is bound to a specific path within the SAD tree via a Path primitive",
           "Enables proof of specific attribute values without disclosing the full credential"
         ],
         "examples": [
@@ -49583,7 +49606,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://cesr",
         "pattern": "conformist",
-        "relationship": "CESR primitives (Saider, Diger, SAID) adopted natively for AGID computation, shielding, and disclosure verification"
+        "relationship": "CESR primitives (SAID Primitive, Digest, SAID) adopted natively for AGID computation, shielding, and disclosure verification"
       },
       {
         "ref": "domain://credential-exchange",
@@ -51296,7 +51319,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://cesr",
         "pattern": "conformist",
-        "relationship": "Conformist — uses CESR primitives (Verfer, Siger, Diger, Salter, Cigar) directly"
+        "relationship": "Conformist — uses CESR primitives (Verification Key, Indexed Signature, Digest, Salt, Unindexed Signature) directly"
       },
       {
         "ref": "domain://keri-messaging",
@@ -51356,7 +51379,7 @@ const RDOD_DATA = {
       },
       {
         "name": "SigningCompleted",
-        "payload": "controller_aid: AID, signature: Siger, event_said: SAID",
+        "payload": "controller_aid: AID, signature: Indexed Signature, event_said: SAID",
         "triggers": "Controller approves and signs the requested content"
       },
       {
@@ -51378,9 +51401,9 @@ const RDOD_DATA = {
         "usage": "Signify clients manage AIDs at the edge"
       },
       {
-        "term": "Salter",
+        "term": "Salt Primitive",
         "from": "domain://cesr/primitives",
-        "usage": "Key derivation from salt — Salter is the CESR primitives domain term for the salt primitive type"
+        "usage": "Key derivation from salt — Salt Primitive is the CESR encoding type; signify-client specializes it as the master secret for key derivation"
       },
       {
         "term": "KRAM",
@@ -51723,7 +51746,7 @@ const RDOD_DATA = {
       {
         "ref": "domain://externals/cryptographic-primitives",
         "source": "argon2 for passcode stretching, Ed25519/ECDSA for key generation, X25519 for key-at-rest encryption (ECDH + secretbox)",
-        "relationship": "All cryptographic primitives — key derivation, signing, encryption — are kernel operations. This subdomain composes them into the Keeper abstraction and Encrypter"
+        "relationship": "All cryptographic primitives — key derivation, signing, encryption — are kernel operations. This subdomain composes them into the Keeper abstraction and Encryption Primitive"
       },
       {
         "ref": "domain://externals/persistence",
@@ -51738,7 +51761,7 @@ const RDOD_DATA = {
     "implementation_guidance": {
       "suggested_type": "module",
       "language_affinity": "any",
-      "notes": "In signify-ts, the Manager class owns Keeper lifecycle: new() creates the appropriate Keeper type based on Algos, get() retrieves it. SaltyKeeper derives keys from salt + path via libsodium. RandyKeeper generates random keys and stores encrypted proxies. GroupKeeper wraps a member AID's keeper with index remapping. The Encrypter uses X25519 ECDH to encrypt the salt (sxlt) for cloud-side storage. In signifypy, the same structure exists in core/keeping.py with Manager, SaltyKeeper, RandyKeeper, GroupKeeper.\n"
+      "notes": "In signify-ts, the Manager class owns Keeper lifecycle: new() creates the appropriate Keeper type based on Algos, get() retrieves it. SalteryKeeper derives keys from salt + path via libsodium. RandyKeeper generates random keys and stores encrypted proxies. GroupKeeper wraps a member AID's keeper with index remapping. The Encrypter uses X25519 ECDH to encrypt the salt (sxlt) for cloud-side storage. In signifypy, the same structure exists in core/keeping.py with Manager, SalteryKeeper, RandyKeeper, GroupKeeper.\n"
     },
     "issues": [],
     "tags": [
@@ -51780,7 +51803,7 @@ const RDOD_DATA = {
       {
         "name": "KeyMaterialEncrypted",
         "payload": "type: sxlt | prxs | nxts, storage_target: string",
-        "triggers": "Encrypter encrypts key material for at-rest storage"
+        "triggers": "Encryption Primitive encrypts key material for at-rest storage"
       }
     ],
     "_rules": [
@@ -51823,6 +51846,7 @@ const RDOD_DATA = {
           "Master Salt",
           "Salter"
         ],
+        "specializes": "domain://cesr/primitives",
         "definition": "The cryptographic seed derived from the passcode via argon2 key stretching. All private keys for the controller are deterministically derived from this salt.",
         "invariants": [
           "Derived from passcode + argon2 — not stored directly",
@@ -51831,13 +51855,13 @@ const RDOD_DATA = {
           "Encrypted as sxlt before storage on the cloud agent"
         ],
         "examples": [
-          "Salter(raw=stretched_bytes) → deterministic key derivation for all AIDs",
+          "Salt(raw=stretched_bytes) → deterministic key derivation for all AIDs",
           "sxlt field on agent record — encrypted salt that only the passcode can unlock"
         ],
         "related_terms": [
           "Passcode",
           "Key Derivation Path",
-          "Encrypter"
+          "Encryption Primitive"
         ]
       },
       {
@@ -51879,7 +51903,7 @@ const RDOD_DATA = {
         ],
         "examples": [
           "manager.new(Algos.salty, pidx, {stem, tier, ...}) → SaltyKeeper",
-          "keeper.sign(serialized_event, indexed=true) → [Siger]",
+          "keeper.sign(serialized_event, indexed=true) → [Indexed Signature]",
           "GroupKeeper: sign(ser) delegates to member keeper, remaps indices for group threshold"
         ],
         "related_terms": [
@@ -51914,7 +51938,7 @@ const RDOD_DATA = {
         "synonyms": [
           "Security Tier"
         ],
-        "definition": "Security level controlling Argon2id v1.3 CPU/memory cost for passcode stretching. Higher tiers are slower but more resistant to brute-force. Algorithm is Argon2id (NOT argon2d or argon2i) — confirmed in keripy and signify-ts via pysodium.crypto_pwhash_ALG_ARGON2ID13.",
+        "definition": "Security level controlling Argon2id v1.3 CPU/memory cost for passcode stretching. Higher tiers are slower but more resistant to brute-force. Algorithm is Argon2id (NOT argon2d or argon2i).",
         "invariants": [
           "Three production levels: low, med, high (plus 'temp' for testing)",
           "Algorithm: Argon2id v1.3 (argon2id13) — hybrid of argon2i (side-channel resistant) and argon2d (GPU resistant)",
@@ -51958,9 +51982,9 @@ const RDOD_DATA = {
         ]
       },
       {
-        "term": "Encrypter",
+        "term": "Encryption Primitive",
         "synonyms": [
-          "Key Encrypter"
+          "Key Encryption Primitive"
         ],
         "definition": "Encrypts key material at rest using X25519 ECDH-derived symmetric keys. The salt and private key proxies are encrypted before storage.",
         "invariants": [
@@ -51970,7 +51994,7 @@ const RDOD_DATA = {
         ],
         "examples": [
           "encrypter.encrypt(matter=salter) → Cipher (stored as sxlt on KERIA)",
-          "RandyKeeper stores encrypted private key proxies (prxs) via Encrypter"
+          "RandyKeeper stores encrypted private key proxies (prxs) via Encryption Primitive"
         ],
         "related_terms": [
           "Passcode",
@@ -52075,7 +52099,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Same passcode + same salt -> same derived keys (determinism)",
-          "term": "Salt",
+          "term": "Salt Primitive",
           "technique": "property-based",
           "formal": {
             "language": "python",
@@ -52119,7 +52143,7 @@ const RDOD_DATA = {
         },
         {
           "invariant": "Encrypted salt (sxlt) stored on the cloud agent — agent cannot decrypt without passcode",
-          "term": "Encrypter",
+          "term": "Encryption Primitive",
           "technique": "property-based",
           "formal": {
             "language": "python/pytest",
@@ -52538,7 +52562,7 @@ const RDOD_DATA = {
                 "name": "salt",
                 "type": "string",
                 "required": true,
-                "description": "CESR-qualified salt (Salter qb64) — the root secret"
+                "description": "CESR-qualified salt (Salt qb64) — the root secret"
               },
               {
                 "name": "tier",
@@ -52834,7 +52858,7 @@ const RDOD_DATA = {
       },
       {
         "name": "IdentifierRotated",
-        "payload": "aid: AID, ridx: int, new_keys: [Verfer]",
+        "payload": "aid: AID, ridx: int, new_keys: [Verification Key]",
         "triggers": "Controller rotates an AID's keys — ridx increments, new derivation path"
       },
       {
@@ -55132,7 +55156,7 @@ const RDOD_DATA = {
         ],
         "definition": "The CESR-encoded receipt returned by the witness after accepting a key event. Contains the witness's signature over the event, proving the witness has seen and stored it. This receipt is what controllers collect to meet their TOAD threshold.",
         "invariants": [
-          "Contains the witness's non-transferable signature (Cigar) over the event SAID",
+          "Contains the witness's non-transferable signature (Unindexed Signature) over the event SAID",
           "Only produced for first-seen events — duplicate submissions return the existing receipt",
           "Receipt is CESR-encoded for wire transmission",
           "Controller collects receipts from multiple witnesses to satisfy TOAD"

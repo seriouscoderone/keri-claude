@@ -99,11 +99,11 @@ terms:
     invariants:
       - "Contains a sequence number and SAID digest identifying the delegator's approval event"
       - "In keriox: SourceSeal struct with sn and digest fields"
-      - "In keripy: deSourceCouple is a (Seqner, Saider) couple attached to delegated events"
+      - "In keripy: deSourceCouple is a (Fixed-Width Ordinal, SAID Primitive) couple attached to delegated events"
       - "The couple allows validators to locate the specific event in the delegator's KEL that approves the delegation"
       - "Without the source seal, validators cannot verify the delegator's approval"
     examples:
-      - "deSourceCouple(Seqner(sn=1), Saider(said='E...')) — references delegator's ixn at sn=1 that contains the approval seal"
+      - "deSourceCouple(Fixed-Width Ordinal(sn=1), SAID Primitive(said='E...')) — references delegator's ixn at sn=1 that contains the approval seal"
       - "SourceSeal { sn: 1, digest: SelfAddressing::Blake3_256(...) } in keriox"
     related_terms: ["Delegation Seal", "Two-way Binding", "Delegating Event"]
 

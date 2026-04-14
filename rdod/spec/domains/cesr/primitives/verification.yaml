@@ -8,7 +8,7 @@ domain_ref: "cesr/primitives"
 # Formalized invariants from ubiquitous_language terms
 properties:
   # --- CESR Primitive Pattern ---
-  - invariant: "Every CESR primitive type MUST implement the following interface contract: constructor(code: string, raw: bytes) for R-domain construction; constructor(qb64: string) for T-domain construction; constructor(qb2: bytes) for B-domain construction. Properties: .code (string), .raw (bytes), .qb64 (string), .qb2 (bytes). Indexed primitives (Siger) additionally require: .index (integer), .ondex (integer|None)."
+  - invariant: "Every CESR primitive type MUST implement the following interface contract: constructor(code: string, raw: bytes) for R-domain construction; constructor(qb64: string) for T-domain construction; constructor(qb2: bytes) for B-domain construction. Properties: .code (string), .raw (bytes), .qb64 (string), .qb2 (bytes). Indexed primitives (Indexed Signature) additionally require: .index (integer), .ondex (integer|None)."
     term: "CESR Primitive Pattern"
     technique: "property-based"
     formal:
@@ -97,9 +97,9 @@ properties:
     strategy: "cesr_primitive_instance()"
     notes: "Any single domain representation must fully determine the other two."
 
-  # --- Matter ---
-  - invariant: "Every Matter instance holds exactly one code (text) and one raw (bytes) value"
-    term: "Matter"
+  # --- Primitive ---
+  - invariant: "Every Primitive instance holds exactly one code (text) and one raw (bytes) value"
+    term: "Primitive Base"
     technique: "property-based"
     formal:
       language: "python"
@@ -113,7 +113,7 @@ properties:
     notes: "Matter is fundamentally a (code, raw) pair."
 
   - invariant: "Code MUST be a valid entry in the master code table for the active protocol genus"
-    term: "Matter"
+    term: "Primitive Base"
     technique: "property-based"
     formal:
       language: "python"
@@ -125,7 +125,7 @@ properties:
     notes: "Invalid codes must be rejected at construction time."
 
   - invariant: "Raw size MUST match the size specified by the code table entry"
-    term: "Matter"
+    term: "Primitive Base"
     technique: "property-based"
     formal:
       language: "python"
@@ -139,9 +139,9 @@ properties:
     strategy: "matter_instance()"
     notes: "Size mismatch between code and raw is a construction error."
 
-  # --- Verfer ---
+  # --- Verification Key ---
   - invariant: "Ed25519 public keys are 32 bytes raw (44 chars qb64, code 'D')"
-    term: "Verfer"
+    term: "Verification Key"
     technique: "property-based"
     formal:
       language: "python"
@@ -156,7 +156,7 @@ properties:
     notes: "Ed25519 Verfer geometry is fixed: 1-char code + 43-char value = 44 total."
 
   - invariant: "ECDSA secp256k1/r1 public keys are 33 bytes raw (48 chars qb64, code '1AAB'/'1AAJ')"
-    term: "Verfer"
+    term: "Verification Key"
     technique: "property-based"
     formal:
       language: "python"
@@ -172,7 +172,7 @@ properties:
     notes: "ECDSA compressed public keys are 33 bytes: 4-char code + 44-char value = 48 total."
 
   - invariant: "verify() returns True if signature is valid for the given serialization"
-    term: "Verfer"
+    term: "Verification Key"
     technique: "property-based"
     formal:
       language: "python"
@@ -187,7 +187,7 @@ properties:
     notes: "Sign-then-verify must always succeed for matching key pairs."
 
   - invariant: "verify() returns False for tampered data"
-    term: "Verfer"
+    term: "Verification Key"
     technique: "property-based"
     formal:
       language: "python"
@@ -203,9 +203,9 @@ properties:
     strategy: "ed25519_keypair() x st.binary(min_size=2)"
     notes: "Tampered messages must fail verification."
 
-  # --- Diger ---
+  # --- Digest ---
   - invariant: "256-bit digests are 32 bytes raw (44 chars qb64)"
-    term: "Diger"
+    term: "Digest"
     technique: "property-based"
     formal:
       language: "python"
@@ -220,7 +220,7 @@ properties:
     notes: "All 256-bit digest algorithms produce 32-byte raw, 44-char qb64."
 
   - invariant: "512-bit digests are 64 bytes raw (88 chars qb64)"
-    term: "Diger"
+    term: "Digest"
     technique: "property-based"
     formal:
       language: "python"
@@ -235,7 +235,7 @@ properties:
     notes: "All 512-bit digest algorithms produce 64-byte raw, 88-char qb64."
 
   - invariant: "compare(ser, diger) verifies that the digest of ser matches diger's value"
-    term: "Diger"
+    term: "Digest"
     technique: "property-based"
     formal:
       language: "python"
@@ -250,7 +250,7 @@ properties:
     notes: "Digest comparison must be true for same data and false for different data."
 
   - invariant: "Digest determinism: same input always produces same digest"
-    term: "Diger"
+    term: "Digest"
     technique: "property-based"
     formal:
       language: "python"
@@ -265,9 +265,9 @@ properties:
     strategy: "st.binary() x digest code"
     notes: "Cryptographic hash functions are deterministic."
 
-  # --- Signer ---
-  - invariant: "The corresponding Verfer (public key) is derivable from the Signer"
-    term: "Signer"
+  # --- Signing Key ---
+  - invariant: "The corresponding Verification Key (public key) is derivable from the Signing Key"
+    term: "Signing Key"
     technique: "property-based"
     formal:
       language: "python"
@@ -281,8 +281,8 @@ properties:
     strategy: "ed25519_keypair()"
     notes: "Every Signer must produce a matching Verfer."
 
-  - invariant: "sign(ser, index) returns a Siger (indexed); sign(ser) returns a Cigar (unindexed)"
-    term: "Signer"
+  - invariant: "sign(ser, index) returns a Indexed Signature (indexed); sign(ser) returns a Unindexed Signature (unindexed)"
+    term: "Signing Key"
     technique: "property-based"
     formal:
       language: "python"
@@ -298,9 +298,9 @@ properties:
     strategy: "ed25519_keypair() x binary() x index"
     notes: "Index parameter determines whether Siger or Cigar is produced."
 
-  # --- Siger ---
+  # --- Indexed Signature ---
   - invariant: "Ed25519 indexed signatures are 64 bytes raw (88 chars qb64 with 2-char code)"
-    term: "Siger"
+    term: "Indexed Signature"
     technique: "property-based"
     formal:
       language: "python"
@@ -314,7 +314,7 @@ properties:
     notes: "Indexed Ed25519 signatures: 2-char code + 86-char value = 88 total."
 
   - invariant: "Index encodes position in the public key list; ondex encodes position in the rotation key list"
-    term: "Siger"
+    term: "Indexed Signature"
     technique: "property-based"
     formal:
       language: "python"
@@ -336,7 +336,7 @@ properties:
     notes: "Index/ondex are preserved through qualification round-trip."
 
   - invariant: "Index must satisfy: index <= 64^ms - 1"
-    term: "Indexer"
+    term: "Indexed Primitive Base"
     technique: "smt"
     formal:
       language: "z3"
@@ -359,9 +359,9 @@ properties:
         s.pop()
     notes: "Index range is bounded by the number of soft chars allocated."
 
-  # --- Cigar ---
+  # --- Unindexed Signature ---
   - invariant: "Ed25519 signatures are 64 bytes raw (88 chars qb64 with 2-char code '0B')"
-    term: "Cigar"
+    term: "Unindexed Signature"
     technique: "property-based"
     formal:
       language: "python"
@@ -374,8 +374,8 @@ properties:
     strategy: "ed25519_unindexed_signature()"
     notes: "Unindexed Ed25519: code '0B' (2 chars) + 86-char value = 88 total."
 
-  - invariant: "Signer-Verfer binding postcondition: for any Signer s and any data d, s.verfer.verify(s.sign(d).raw, d) MUST return True. The .verfer property on a Siger/Cigar links back to the public key that can verify the signature."
-    term: "Cigar"
+  - invariant: "Signing Key-Verification Key binding postcondition: for any Signing Key s and any data d, s.verfer.verify(s.sign(d).raw, d) MUST return True. The .verfer property on a Indexed Signature/Unindexed Signature links back to the public key that can verify the signature."
+    term: "Unindexed Signature"
     technique: "property-based"
     formal:
       language: "python"
@@ -398,9 +398,9 @@ properties:
     strategy: "ed25519_keypair() x binary()"
     notes: "Signer-Verfer binding: for any Signer s and data d, s.verfer.verify(s.sign(d).raw, d) MUST return True."
 
-  # --- Salter ---
+  # --- Salt ---
   - invariant: "Code 0A for 128-bit (16-byte) random salt -- 24 chars qb64"
-    term: "Salter"
+    term: "Salt Primitive"
     technique: "property-based"
     formal:
       language: "python"
@@ -414,8 +414,8 @@ properties:
     strategy: "st.binary(min_size=16, max_size=16)"
     notes: "128-bit salt: 2-char code '0A' + 22-char value = 24 total."
 
-  - invariant: "signer(path, code) generates a Signer for the given derivation path and algorithm"
-    term: "Salter"
+  - invariant: "signer(path, code) generates a Signing Key for the given derivation path and algorithm"
+    term: "Salt Primitive"
     technique: "property-based"
     formal:
       language: "python"
@@ -432,7 +432,7 @@ properties:
     notes: "Salter derives deterministic Signers via argon2 key stretching."
 
   - invariant: "Deterministic encoding guarantee: for any primitive p, encoding is idempotent — identical (code, raw) pairs MUST produce byte-identical qb64 and byte-identical qb2. Conversely, identical qb64 MUST decode to identical (code, raw). This is the round-trip guarantee: decode(encode(p)) == p for all valid primitives."
-    term: "Salter"
+    term: "Salt Primitive"
     technique: "property-based"
     formal:
       language: "python"
@@ -457,9 +457,9 @@ properties:
     strategy: "salt x path"
     notes: "Round-trip guarantee: decode(encode(p)) == p. Identical inputs MUST produce identical outputs across all three domains."
 
-  # --- Prefixer ---
+  # --- Identifier Prefix ---
   - invariant: "Non-transferable basic prefix uses code B; Transferable basic prefix uses code D"
-    term: "Prefixer"
+    term: "Identifier Prefix"
     technique: "property-based"
     formal:
       language: "python"
@@ -476,7 +476,7 @@ properties:
     notes: "First character visually distinguishes transferable (D) from non-transferable (B)."
 
   - invariant: "Self-addressing prefix uses a digest code applied to the inception event"
-    term: "Prefixer"
+    term: "Identifier Prefix"
     technique: "property-based"
     formal:
       language: "python"
@@ -561,9 +561,9 @@ properties:
     strategy: "sad_structure()"
     notes: "The SAID embedded in the data structure verifies itself."
 
-  # --- Seqner ---
+  # --- Fixed-Width Ordinal ---
   - invariant: "Code 0A (Salt_128) for fixed-width 16-byte ordinals -- 24 chars qb64"
-    term: "Seqner"
+    term: "Fixed-Width Ordinal"
     technique: "property-based"
     formal:
       language: "python"
@@ -578,8 +578,8 @@ properties:
     strategy: "st.integers(0, 2^64-1)"
     notes: "Seqner always uses code 0A (16 bytes raw, 24 chars qb64). Fixed width enables lexicographic LMDB key ordering."
 
-  - invariant: "Seqner round-trip: construction from sn and from qb64 produce same value"
-    term: "Seqner"
+  - invariant: "Fixed-Width Ordinal round-trip: construction from sn and from qb64 produce same value"
+    term: "Fixed-Width Ordinal"
     technique: "property-based"
     formal:
       language: "python"
@@ -642,8 +642,8 @@ properties:
     notes: "Variable-length primitives encode their size in soft characters."
 
   # --- Code Table Constants ---
-  - invariant: "Each MtrDex attribute maps a descriptive name to its code string; values are immutable"
-    term: "MtrDex"
+  - invariant: "Each Master Code Table attribute maps a descriptive name to its code string; values are immutable"
+    term: "Master Code Table"
     technique: "property-based"
     formal:
       language: "pseudocode"
@@ -657,8 +657,8 @@ properties:
     strategy: "exhaustive — enumerate all MtrDex attributes"
     notes: "Code table constants must be frozen/immutable."
 
-  - invariant: "MtrDex entries match the master code table for the active protocol genus"
-    term: "MtrDex"
+  - invariant: "Master Code Table entries match the master code table for the active protocol genus"
+    term: "Master Code Table"
     technique: "property-based"
     formal:
       language: "pseudocode"
@@ -756,9 +756,9 @@ properties:
     strategy: "st.integers(0, 2^64-1)"
     notes: "Number constructor must pick the most compact encoding."
 
-  # --- Tholder ---
+  # --- Signing Threshold ---
   - invariant: "Simple: integer M-of-N"
-    term: "Tholder"
+    term: "Threshold Primitive"
     technique: "property-based"
     formal:
       language: "python"
@@ -772,7 +772,7 @@ properties:
     notes: "Simple thresholds are integer M-of-N."
 
   - invariant: "satisfy(indices) checks whether the given key indices meet the threshold"
-    term: "Tholder"
+    term: "Threshold Primitive"
     technique: "property-based"
     formal:
       language: "python"
@@ -791,9 +791,9 @@ properties:
     strategy: "threshold x num_keys"
     notes: "Threshold satisfaction requires exactly M valid indices."
 
-  # --- Dater ---
+  # --- DateTime ---
   - invariant: "Code '1AAG' -- 32-char ISO-8601 string (36 chars qb64)"
-    term: "Dater"
+    term: "DateTime"
     technique: "property-based"
     formal:
       language: "python"
@@ -807,7 +807,7 @@ properties:
     notes: "Dater is always code 1AAG, 36 chars qb64."
 
   - invariant: "Base64url character substitution: standard Base64 characters + and / are replaced with - and _ respectively for URL safety. Substitution is applied AFTER Base64 encoding and reversed BEFORE Base64 decoding. Round-trip: url_safe(base64_encode(bytes)) -> base64_decode(url_unsafe(text)) MUST produce original bytes."
-    term: "Dater"
+    term: "DateTime"
     technique: "property-based"
     formal:
       language: "python"
@@ -882,7 +882,7 @@ properties:
 
   # --- KERI/ACDC Master Code Required Set (Enrichment CESR-INV-015) ---
   - invariant: "A compliant KERI/ACDC genus MUST include all master code entries specified in the spec's §8 table. The required 1-char codes include at minimum: A (RandomSeed128), B (Ed25519NT), D (Ed25519), E (Blake3-256), F (Blake2b-256), H (SHA3-256), I (SHA2-256), M (Short2ByteSeqNum). Required 2-char codes include: 0B (Ed25519Sig), 0C (ECDSA256k1Sig). Required 4-char codes include: 1AAB (ECDSA256k1NT), 1AAE (Ed448). Each MUST be present in the active genus master code table."
-    term: "MtrDex"
+    term: "Master Code Table"
     technique: property-based
     formal:
       language: python
@@ -971,7 +971,7 @@ properties:
 
   # --- Indexed Signature Dual/Current Pairing (Finding CESR-INV-021) ---
   - invariant: "Every indexed signature algorithm MUST provide both a 'both same' (dual index where index == ondex, stored as single index) variant and a 'current only' (index != ondex, each stored separately) variant. For each algorithm at each code size, the two variants MUST appear as consecutive type characters: A#/B# (Ed25519 both/current), C#/D# (ECDSA secp256k1 both/current), 0A##/0B## (Ed448 both/current). The 'big' forms follow the same pattern: 2A####/2B#### (Ed25519 big both/current), etc. This dual-variant structure is required by KERI's partial rotation mechanism."
-    term: "Indexer"
+    term: "Indexed Primitive Base"
     technique: property-based
     formal:
       language: python

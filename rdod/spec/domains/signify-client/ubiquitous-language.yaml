@@ -5,9 +5,9 @@ imports:
   - term: "AID"
     from: "domain://identity"
     usage: "Signify clients manage AIDs at the edge"
-  - term: "Salter"
+  - term: "Salt Primitive"
     from: "domain://cesr/primitives"
-    usage: "Key derivation from salt — Salter is the CESR primitives domain term for the salt primitive type"
+    usage: "Key derivation from salt — Salt Primitive is the CESR encoding type; signify-client specializes it as the master secret for key derivation"
   - term: "KRAM"
     from: "domain://keri-messaging"
     usage: "Signify clients must produce KRAM-compatible timestamps and signatures for cloud agent authentication"
@@ -81,7 +81,7 @@ events:
     triggers: "Cloud agent requests a signature for a pending operation"
 
   - name: "SigningCompleted"
-    payload: "controller_aid: AID, signature: Siger, event_said: SAID"
+    payload: "controller_aid: AID, signature: Indexed Signature, event_said: SAID"
     triggers: "Controller approves and signs the requested content"
 
   - name: "SigningAssociationEstablished"

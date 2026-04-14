@@ -150,7 +150,7 @@ properties:
     notes: "Each failure type routes to its specific escrow."
 
   # Signature Verification invariants
-  - invariant: "Each Siger carries an index specifying its position in the signing key list"
+  - invariant: "Each Indexed Signature carries an index specifying its position in the signing key list"
     term: "Signature Verification"
     technique: property-based
     formal:
@@ -163,7 +163,7 @@ properties:
     strategy: "siger_strategy()"
     notes: "Every indexed signature must have a non-negative index."
 
-  - invariant: "For each Siger: verfer_at[siger.index].verify(siger.raw, event_raw) must return True"
+  - invariant: "For each Indexed Signature: verfer_at[siger.index].verify(siger.raw, event_raw) must return True"
     term: "Signature Verification"
     technique: property-based
     formal:
@@ -256,7 +256,7 @@ properties:
     notes: "Weighted threshold sum >= 1 criterion via SMT."
 
   # Pre-rotation Binding invariants
-  - invariant: "Each Siger carries index (current key position) and ondex (next key position)"
+  - invariant: "Each Indexed Signature carries index (current key position) and ondex (next key position)"
     term: "Pre-rotation Binding"
     technique: property-based
     formal:

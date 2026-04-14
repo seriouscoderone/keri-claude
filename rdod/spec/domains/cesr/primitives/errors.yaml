@@ -13,7 +13,7 @@ domain_ref: "cesr/primitives"
 errors:
   - name: "InvalidPrimitiveCodeError"
     description: "CESR type code is not valid for the requested primitive type"
-    cause: "The code exists in the master code table but does not correspond to a valid primitive of the requested kind (e.g., using a digest code to construct a Verfer), or the code is not registered for the active protocol genus/version during primitive construction"
+    cause: "The code exists in the master code table but does not correspond to a valid primitive of the requested kind (e.g., using a digest code to construct a Verification Key), or the code is not registered for the active protocol genus/version during primitive construction"
     recovery: "abort"
     severity: "fatal"
     context:
@@ -68,7 +68,7 @@ errors:
 
   - name: "SignatureVerificationError"
     description: "Cryptographic signature does not verify against the public key and message"
-    cause: "Verfer.verify(sig, ser) returned false — the signature is invalid for this key and serialization"
+    cause: "Verification Key.verify(sig, ser) returned false — the signature is invalid for this key and serialization"
     recovery: "abort"
     severity: "fatal"
     context:
@@ -81,7 +81,7 @@ errors:
 
   - name: "DigestMismatchError"
     description: "Computed digest does not match expected digest"
-    cause: "Diger.verify(ser) returned false — the data has been tampered with or the wrong digest algorithm was used"
+    cause: "Digest.verify(ser) returned false — the data has been tampered with or the wrong digest algorithm was used"
     recovery: "abort"
     severity: "fatal"
     context:

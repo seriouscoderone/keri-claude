@@ -39,7 +39,7 @@ terms:
     synonyms: ["Witness Receipt"]
     definition: "The CESR-encoded receipt returned by the witness after accepting a key event. Contains the witness's signature over the event, proving the witness has seen and stored it. This receipt is what controllers collect to meet their TOAD threshold."
     invariants:
-      - "Contains the witness's non-transferable signature (Cigar) over the event SAID"
+      - "Contains the witness's non-transferable signature (Unindexed Signature) over the event SAID"
       - "Only produced for first-seen events — duplicate submissions return the existing receipt"
       - "Receipt is CESR-encoded for wire transmission"
       - "Controller collects receipts from multiple witnesses to satisfy TOAD"

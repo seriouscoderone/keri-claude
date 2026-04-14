@@ -9,7 +9,7 @@ types:
       (Salt_256) is assigned — lowercase b-z are parser-recognized but UNASSIGNED/RESERVED
       (error handling should distinguish 'reserved/unassigned' from 'invalid'); encryption codes
       C (X25519), O (X25519_Private), P (X25519_CipherSeed), 1AAH (ECDSA_256r1_Seed) are
-      included in code table with Sizage entries — behavioral types (Encrypter/Decrypter)
+      included in code table with Sizage entries — behavioral types (Encryption Primitive/Decryption Primitive)
       deferred to future encryption subdomain.
     variants:
       - name: "default"
@@ -36,12 +36,12 @@ types:
           - "qb64 length is always a multiple of 4 characters (quadlet-aligned)"
           - "qb2 length is always a multiple of 3 bytes (triplet-aligned)"
           - "Construction from any one representation yields the other two"
-          - "Qualification (type-level operation): constructing a Matter from raw bytes, qb64, or qb2 is idempotent — the same input always yields the same qualified primitive. Errors: InvalidPrimitiveCodeError, RawSizeMismatchError, InvalidQB64Error, InvalidQB2Error."
-          - "Subtype-specific validation: Verfer construction additionally verifies key algorithm compatibility; Diger validates digest length; Siger/Cigar may raise SignatureVerificationError or DigestMismatchError on verify()."
+          - "Qualification (type-level operation): constructing a Primitive from raw bytes, qb64, or qb2 is idempotent — the same input always yields the same qualified primitive. Errors: InvalidPrimitiveCodeError, RawSizeMismatchError, InvalidQB64Error, InvalidQB2Error."
+          - "Subtype-specific validation: Verification Key construction additionally verifies key algorithm compatibility; Digest validates digest length; Indexed Signature/Unindexed Signature may raise SignatureVerificationError or DigestMismatchError on verify()."
           - "Reserved/unassigned codes: all 26 uppercase letters (A-Z) are assigned; only lowercase 'a' (Salt_256) is assigned. Lowercase b-z are parser-recognized but RESERVED/UNASSIGNED — construction with a reserved code MUST raise InvalidPrimitiveCodeError with cause='reserved/unassigned' (distinct from 'unknown' or 'invalid format')."
 
   - name: "SigningThreshold"
-    description: "CESR-encoded threshold expression (Tholder). Three encoding variants for representing signing quorum requirements. Tholder owns BOTH encoding/decoding AND satisfaction logic — satisfy() is a core part of Tholder, not delegated to a separate domain. This is a deliberate design choice following keripy."
+    description: "CESR-encoded threshold expression (Signing Threshold). Three encoding variants for representing signing quorum requirements. Signing Threshold owns BOTH encoding/decoding AND satisfaction logic — satisfy() is a core part of Signing Threshold, not delegated to a separate domain. This is a deliberate design choice following keripy."
     variants:
       - name: "simple"
         fields:
@@ -269,7 +269,7 @@ types:
           - name: "verfer"
             type: "types://cesr/primitives#Primitive"
             required: true
-            description: "The public key (Verfer) that produced this signature"
+            description: "The public key (Verification Key) that produced this signature"
         invariants:
           - "verfer.verify(raw_data, cigar.raw) must return True"
 
@@ -289,9 +289,9 @@ types:
         invariants:
           - "qb64 is the CESR encoding of code + raw digest bytes"
 
-  # Note: Digest was removed — keripy defines only Diger (no separate Digest class).
-  # Diger handles both construction paths: compute-from-bytes (ser= parameter) and
-  # wrap-existing (qb64= parameter). Use Diger for all digest references.
+  # Note: Digest was removed — keripy defines only Digest (no separate Digest class).
+  # Digest handles both construction paths: compute-from-bytes (ser= parameter) and
+  # wrap-existing (qb64= parameter). Use Digest for all digest references.
 
   - name: "SealEvent"
     description: "A seal that references a specific key event by AID prefix (i), sequence number (s), and event SAID (d). Used to cross-reference events across KELs — for example, a delegation seal references the delegated event. The CESR spec calls this a 'seal source triple' (-T count code)."
@@ -342,7 +342,7 @@ types:
             description: "Number of soft characters encoding the other (rotation) index"
         invariants:
           - "main_index_size + other_index_size = soft_size"
-          - "Used for dual-indexed signatures (Siger) where ondex differs from index"
+          - "Used for dual-indexed signatures (Indexed Signature) where ondex differs from index"
           - "full_size is always a multiple of 4 (quadlet alignment)"
           - "Code resolution (type-level operation): given a CESR type code string, returns the corresponding IndexedSizage entry. This is an idempotent lookup — the code table is fixed at compile/init time. Raises InvalidPrimitiveCodeError for unrecognized codes."
 
@@ -380,7 +380,7 @@ types:
   # Generic aliases — these are used across port contracts as domain-agnostic names
 
   - name: "Signature"
-    description: "Generic signature reference used in port contracts. Resolves to Siger (indexed) or Cigar (unindexed) depending on context. Implementations should accept either form."
+    description: "Generic signature reference used in port contracts. Resolves to Indexed Signature (indexed) or Unindexed Signature (unindexed) depending on context. Implementations should accept either form."
     variants:
       - name: "indexed"
         fields:
@@ -453,7 +453,7 @@ types:
       Base type for CESR primitives from the Indexed Code Table — signatures that carry
       positional key-list indices in the code's soft portion. Parallel to the master code
       table primitive (NOT a subclass). The CESR spec defines "Indexed codes" as a separate
-      code table family with its own encoding rules. keripy: Indexer class (indexing.py).
+      code table family with its own encoding rules. keripy: Indexed Primitive Base class (indexing.py).
     variants:
       - name: "default"
         fields:
@@ -491,7 +491,7 @@ types:
       CESR-encoded field path for locating specific content within a Self-Addressing Data
       structure. The CESR spec defines "SAD Path Signatures" and the "SAD Path Language"
       for binding signatures to specific fields in ACDC selective disclosure. Uses variable-size
-      codes (4A##/5A##/6A##). keripy: Pather class (coring.py).
+      codes (4A##/5A##/6A##). keripy: Path class (coring.py).
     variants:
       - name: "default"
         fields:
@@ -512,9 +512,9 @@ types:
   - name: "SigningKey"
     description: >
       Application-level signing primitive — holds a private key seed and produces signatures.
-      NOT in the CESR code tables or wire format. The spec says "signing key" (never "Signer").
+      NOT in the CESR code tables or wire format. The spec says "signing key" (never "Signing Key").
       Encapsulates key material and exposes a sign operation that produces indexed or
-      unindexed signatures. keripy: Signer class (signing.py).
+      unindexed signatures. keripy: Signing Key class (signing.py).
     variants:
       - name: "default"
         fields:
@@ -558,6 +558,6 @@ types:
             required: false
             description: "Qualified Base64 representation — code prefix + Base64url-encoded key"
         invariants:
-          - "Subtype of Matter — inherits code + raw ↔ qb64 ↔ qb2 equivalence"
+          - "Subtype of Primitive — inherits code + raw ↔ qb64 ↔ qb2 equivalence"
           - "verify(data, signature) returns True iff signature is valid for data under this public key"
           - "code determines the expected raw key length and verification algorithm"

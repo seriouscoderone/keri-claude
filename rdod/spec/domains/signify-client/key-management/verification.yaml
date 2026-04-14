@@ -116,7 +116,7 @@ properties:
     notes: "SMT proof that tier-to-argon2 mapping is deterministic — each tier has exactly one parameter set"
 
   - invariant: "Same passcode + same salt -> same derived keys (determinism)"
-    term: "Salt"
+    term: "Salt Primitive"
     technique: property-based
     formal:
       language: python
@@ -218,7 +218,7 @@ properties:
     notes: "Derivation path determinism — same inputs always produce the same output"
 
   - invariant: "Encrypted salt (sxlt) stored on the cloud agent — agent cannot decrypt without passcode"
-    term: "Encrypter"
+    term: "Encryption Primitive"
     technique: property-based
     formal:
       language: "python/pytest"  # uses pytest.raises — adapt to your language's error assertion

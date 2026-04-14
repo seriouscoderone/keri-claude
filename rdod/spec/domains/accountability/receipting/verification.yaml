@@ -39,7 +39,7 @@ properties:
     strategy: "receipt_strategy()"
     notes: "All receipt signatures use CESR encoding — this ensures portability across implementations."
 
-  - invariant: "Non-transferable receipt MUST be a couple: (Prefixer with non-transferable AID, Cigar with unindexed signature); the Prefixer MUST NOT be transferable; the signature type MUST be Cigar (unindexed), not Siger (indexed)"
+  - invariant: "Non-transferable receipt MUST be a couple: (Identifier Prefix with non-transferable AID, Unindexed Signature with unindexed signature); the Identifier Prefix MUST NOT be transferable; the signature type MUST be Unindexed Signature (unindexed), not Indexed Signature (indexed)"
     term: "Receipt Types"
     technique: property-based
     formal:
@@ -58,7 +58,7 @@ properties:
     strategy: "non_transferable_receipt_strategy()"
     notes: "Non-transferable receipts: (Prefixer, Cigar) couple. Witnesses use this form."
 
-  - invariant: "Transferable receipt MUST be a quadruple: (Prefixer with transferable AID, Seqner for sn, Saider for digest, Siger with indexed signature); all four components MUST be present; the Prefixer MUST be transferable"
+  - invariant: "Transferable receipt MUST be a quadruple: (Identifier Prefix with transferable AID, Fixed-Width Ordinal for sn, SAID Primitive for digest, Indexed Signature with indexed signature); all four components MUST be present; the Identifier Prefix MUST be transferable"
     term: "Receipt Types"
     technique: property-based
     formal:

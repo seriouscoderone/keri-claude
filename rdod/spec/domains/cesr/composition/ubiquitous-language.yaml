@@ -66,11 +66,11 @@ terms:
       - "Attachments-only group uses count code -C## or --C#####"
       - "Attachment types are identified by their count code type character"
     examples:
-      - "Controller indexed signatures: -K## followed by Siger primitives"
-      - "Witness indexed signatures: -L## followed by Siger primitives"
+      - "Controller indexed signatures: -K## followed by Indexed Signature primitives"
+      - "Witness indexed signatures: -L## followed by Indexed Signature primitives"
       - "Non-transferable receipt couples: -M## followed by (prefix, signature) pairs"
       - "Transferable receipt quadruples: -N## followed by (prefix, seq, digest, signature) tuples"
-    related_terms: ["Message", "Count Code", "Siger"]
+    related_terms: ["Message", "Count Code", "Indexed Signature"]
 
   - term: "Message"
     synonyms: ["CESR Message"]
@@ -222,8 +222,8 @@ terms:
       - "Implements GroupItem trait for polymorphic round-trip serialization"
       - "Unknown counter codes produce an error (extensible via new variants)"
     examples:
-      - "CesrGroup::ControllerIdxSigsVariant — counter code '-K', wraps Vec<Siger>"
-      - "CesrGroup::TransReceiptQuadruplesVariant — counter code '-N', wraps Vec<(Prefixer, Seqner, Saider, Siger)>"
+      - "CesrGroup::ControllerIdxSigsVariant — counter code '-K', wraps Vec<Indexed Signature>"
+      - "CesrGroup::TransReceiptQuadruplesVariant — counter code '-N', wraps Vec<(Identifier Prefix, Fixed-Width Ordinal, SAID Primitive, Indexed Signature)>"
     related_terms: ["GroupItem", "Counter", "Parser Dispatch"]
 
   - term: "GroupItem"
@@ -279,17 +279,17 @@ terms:
     invariants:
       - "Universal groups: GenericPipelineGroup (-A), MessageGroup (-B, message+attachments), AttachmentGroup (-C, attachments only)"
       - "Universal groups: DatagramSegment (-D), ESSRSignable (-E), CESRNativeFixedSignable (-F), CESRNativeFieldMapSignable (-G), EnclosedNonNative (-H)"
-      - "Genus-specific sig groups: ControllerIdxSigs (-K, Vec<Siger>), WitnessIdxSigs (-L, Vec<Siger>)"
-      - "Genus-specific couple groups: NonTransReceiptCouples (-M, Vec<Cigar>), TransReceiptQuadruples (-N, Vec<(Prefixer,Seqner,Saider,Siger)>)"
-      - "Genus-specific couple groups: FirstSeenReplayCouples (-O, Vec<(Seqner,Dater)>), SealSourceCouples (-S, Vec<(Seqner,Saider)>)"
-      - "Genus-specific nested groups: TransIdxSigGroups (-X, Vec<(Prefixer,Seqner,Saider,ControllerIdxSigs)>), TransLastIdxSigGroups (-Y, Vec<(Prefixer,ControllerIdxSigs)>)"
+      - "Genus-specific sig groups: ControllerIdxSigs (-K, Vec<Indexed Signature>), WitnessIdxSigs (-L, Vec<Indexed Signature>)"
+      - "Genus-specific couple groups: NonTransReceiptCouples (-M, Vec<Unindexed Signature>), TransReceiptQuadruples (-N, Vec<(Identifier Prefix,Fixed-Width Ordinal,SAID Primitive,Indexed Signature)>)"
+      - "Genus-specific couple groups: FirstSeenReplayCouples (-O, Vec<(Fixed-Width Ordinal,DateTime)>), SealSourceCouples (-S, Vec<(Fixed-Width Ordinal,SAID Primitive)>)"
+      - "Genus-specific nested groups: TransIdxSigGroups (-X, Vec<(Identifier Prefix,Fixed-Width Ordinal,SAID Primitive,ControllerIdxSigs)>), TransLastIdxSigGroups (-Y, Vec<(Identifier Prefix,ControllerIdxSigs)>)"
       - "Genus-specific container: PathedMaterialQuadlets (-Z, raw bytes)"
-      - "Genus-specific seal couples: RegistrarBackerSealCouples (-V, Vec<(Prefixer,Saider)>)"
-      - "Genus-specific shielded state: ShieldedStateCouples (-a, Vec<(Saider, Salter, Diger, Diger, Prefixer)>) — quintuple [d, u, td, ts, BLID] for shielded state"
-      - "Genus-specific bound shielded state: ShieldedStateDiscCouples (-b, Vec<(Saider, Salter, Diger, Diger, Seqner, Saider)>) — sextuple [d, u, td, ts, bn, bd] for bound shielded state"
+      - "Genus-specific seal couples: RegistrarBackerSealCouples (-V, Vec<(Identifier Prefix,SAID Primitive)>)"
+      - "Genus-specific shielded state: ShieldedStateCouples (-a, Vec<(SAID Primitive, Salt, Digest, Digest, Identifier Prefix)>) — quintuple [d, u, td, ts, BLID] for shielded state"
+      - "Genus-specific bound shielded state: ShieldedStateDiscCouples (-b, Vec<(SAID Primitive, Salt, Digest, Digest, Fixed-Width Ordinal, SAID Primitive)>) — sextuple [d, u, td, ts, bn, bd] for bound shielded state"
     examples:
-      - "-K## + Siger Siger Siger → ControllerIdxSigs with 3 controller signatures"
-      - "-N## + (Prefixer Seqner Saider Siger) × N → TransReceiptQuadruples with N receipts"
+      - "-K## + Indexed Signature Indexed Signature Indexed Signature → ControllerIdxSigs with 3 controller signatures"
+      - "-N## + (Identifier Prefix Fixed-Width Ordinal SAID Primitive Indexed Signature) × N → TransReceiptQuadruples with N receipts"
       - "-C## + any CesrGroup* → AttachmentGroup containing nested groups"
     related_terms: ["CesrGroup", "Count Code", "Genus-Specific Count Code", "Universal Count Code"]
 
@@ -326,7 +326,7 @@ terms:
     examples:
       - "Sadder.new_with_raw(raw_bytes) → parse version string, extract KED"
       - "Sadder.new_with_ked(ked_value) → serialize, compute SAID"
-    related_terms: ["Serder", "Creder", "Saider (cesr/primitives)", "Version String"]
+    related_terms: ["Serder", "Creder", "SAID Primitive (cesr/primitives)", "Version String"]
 
   # Serder moved to identity/establishment domain — KERI event facade extending Sadder
   # Creder moved to credential-lifecycle/status domain — ACDC credential facade extending Sadder
@@ -406,7 +406,7 @@ terms:
       - "'a.0.d' — the SAID of the first element in the attribute section"
       - "'-0' — the SAID of the root SAD"
       - "'-1' — the full serialized value of the root SAD"
-    related_terms: ["SAD", "SAD Path Signature", "Primitive"]
+    related_terms: ["SAD", "SAD Path Signature", "Primitive Base"]
 
 events:
   - name: "StreamStarted"

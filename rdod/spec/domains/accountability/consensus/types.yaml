@@ -21,7 +21,7 @@ types:
           - name: "witness_indexed_signatures"
             type: "array[types://cesr/primitives#IndexedSignature]"
             required: true
-            description: "Indexed signatures from witnesses — each signature's index is the witness's position in the effective witness list. Witnesses are non-transferable but use indexed signatures (Siger), not unindexed (Cigar)."
+            description: "Indexed signatures from witnesses — each signature's index is the witness's position in the effective witness list. Witnesses are non-transferable but use indexed signatures (Indexed Signature), not unindexed (Unindexed Signature)."
         invariants:
           - "Witnesses MUST be non-transferable AIDs — transferable AIDs MUST NOT appear in the witness list"
           - "Each witness signature's index corresponds to its position in the effective witness list at the receipted event's key state"
@@ -29,7 +29,7 @@ types:
           - "The receipted event must have been first-seen by the witness before signing"
           - "A receipt is immutable once issued — first seen, always seen, never unseen"
           - "Duplicate receipts (same witness, same event SAID) are absorbed idempotently"
-          - "Non-witness receipts from non-transferable identifiers use unindexed signatures (Cigar couples) — handled by accountability/receipting, not consensus"
+          - "Non-witness receipts from non-transferable identifiers use unindexed signatures (Unindexed Signature couples) — handled by accountability/receipting, not consensus"
 
   - name: "QuorumRequest"
     description: "Input for quorum evaluation — the numeric parameters needed to compute BFT thresholds and check immune constraints."

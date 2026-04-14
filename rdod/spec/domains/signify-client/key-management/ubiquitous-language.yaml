@@ -17,6 +17,7 @@ terms:
 
   - term: "Salt"
     synonyms: ["Master Salt", "Salter"]
+    specializes: "domain://cesr/primitives"
     definition: "The cryptographic seed derived from the passcode via argon2 key stretching. All private keys for the controller are deterministically derived from this salt."
     invariants:
       - "Derived from passcode + argon2 — not stored directly"
@@ -24,9 +25,9 @@ terms:
       - "Salt reconstruction requires the original passcode"
       - "Encrypted as sxlt before storage on the cloud agent"
     examples:
-      - "Salter(raw=stretched_bytes) → deterministic key derivation for all AIDs"
+      - "Salt(raw=stretched_bytes) → deterministic key derivation for all AIDs"
       - "sxlt field on agent record — encrypted salt that only the passcode can unlock"
-    related_terms: ["Passcode", "Key Derivation Path", "Encrypter"]
+    related_terms: ["Passcode", "Key Derivation Path", "Encryption Primitive"]
 
   - term: "Session"
     synonyms: ["Authenticated Session"]
@@ -52,7 +53,7 @@ terms:
       - "GroupKeeper: wraps a member AID's keeper, maps group indices to member indices"
     examples:
       - "manager.new(Algos.salty, pidx, {stem, tier, ...}) → SaltyKeeper"
-      - "keeper.sign(serialized_event, indexed=true) → [Siger]"
+      - "keeper.sign(serialized_event, indexed=true) → [Indexed Signature]"
       - "GroupKeeper: sign(ser) delegates to member keeper, remaps indices for group threshold"
     related_terms: ["Algos", "Key Derivation Path", "Salt"]
 
@@ -99,8 +100,8 @@ terms:
       - "After rotation: ridx=1, kidx=0 → path 'signify:aid10' → new signing key"
     related_terms: ["Keeper", "Salt", "Tier"]
 
-  - term: "Encrypter"
-    synonyms: ["Key Encrypter"]
+  - term: "Encryption Primitive"
+    synonyms: ["Key Encryption Primitive"]
     definition: "Encrypts key material at rest using X25519 ECDH-derived symmetric keys. The salt and private key proxies are encrypted before storage."
     invariants:
       - "Uses X25519 key agreement + secretbox symmetric encryption"
@@ -108,7 +109,7 @@ terms:
       - "Decryption requires the controller's ECDH private key derived from the salt"
     examples:
       - "encrypter.encrypt(matter=salter) → Cipher (stored as sxlt on KERIA)"
-      - "RandyKeeper stores encrypted private key proxies (prxs) via Encrypter"
+      - "RandyKeeper stores encrypted private key proxies (prxs) via Encryption Primitive"
     related_terms: ["Passcode", "Salt", "Key Storage"]
 
 events:
@@ -134,7 +135,7 @@ events:
 
   - name: "KeyMaterialEncrypted"
     payload: "type: sxlt | prxs | nxts, storage_target: string"
-    triggers: "Encrypter encrypts key material for at-rest storage"
+    triggers: "Encryption Primitive encrypts key material for at-rest storage"
 
 rules:
   - "Private keys NEVER leave the controller's device under any circumstances"

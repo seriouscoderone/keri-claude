@@ -33,7 +33,7 @@ terms:
 
   - term: "Local Key Manager"
     synonyms: ["Manager", "Keeper"]
-    definition: "Manages private keys entirely on the controller's device. Generates Signers (private key wrappers that produce signatures) from a Salter with configurable security tiers. No passcode-over-network — the salt lives on the local filesystem, encrypted at rest."
+    definition: "Manages private keys entirely on the controller's device. Generates Signers (private key wrappers that produce signatures) from a Salt with configurable security tiers. No passcode-over-network — the salt lives on the local filesystem, encrypted at rest."
     invariants:
       - "Keys stored locally in encrypted form — no network dependency for key operations"
       - "Manager holds current signing keys (Signers) and pre-rotated next key digests (Digers)"
@@ -45,7 +45,7 @@ terms:
     examples:
       - "mgr = Manager(ks=Keeper(db), salt=salter.qb64) → local key manager with on-disk key store"
       - "verfers, digers, _, _ = mgr.incept(icount=1, ncount=1) → Ed25519 keypair + next key digest"
-      - "mgr.sign(ser=event.raw, pre=hab.pre) → [Siger] — indexed signature from local private key"
+      - "mgr.sign(ser=event.raw, pre=hab.pre) → [Indexed Signature] — indexed signature from local private key"
       - "Alternatively, a controller.incept(key_config) call handles key generation internally"
     related_terms: ["Habitat", "Local Database", "Direct Witness Communication"]
 
@@ -157,7 +157,7 @@ events:
     triggers: "Controller creates a new Habitat via the Identifier Repository or kli incept"
 
   - name: "KeysRotated"
-    payload: "aid: AID, sn: int, new_verfers: [Verfer], new_digers: [Diger]"
+    payload: "aid: AID, sn: int, new_verfers: [Verification Key], new_digers: [Digest]"
     triggers: "Controller rotates keys via hab.rotate() or kli rotate"
 
   - name: "InteractionSealed"
@@ -165,7 +165,7 @@ events:
     triggers: "Controller creates an interaction event via hab.interact() or kli interact"
 
   - name: "WitnessReceiptCollected"
-    payload: "aid: AID, sn: int, witness_aid: AID, receipt_dig: Diger"
+    payload: "aid: AID, sn: int, witness_aid: AID, receipt_dig: Digest"
     triggers: "Controller receives a witness receipt after sending an event directly"
 
   - name: "ToadSatisfied"

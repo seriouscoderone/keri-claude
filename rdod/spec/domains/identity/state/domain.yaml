@@ -35,13 +35,13 @@ subdomains: []
 
 kernels:
   - ref: "kernel://cesr/primitives"
-    relationship: "Typed CESR primitives (SAID, AID, Verfer, Diger) used as first-class types in key state fields and state queries"
+    relationship: "Typed CESR primitives (SAID, AID, Verification Key, Digest) used as first-class types in key state fields and state queries"
 
 adjacents: []
 
 externals:
   - ref: "domain://externals/cryptographic-primitives"
-    source: "Ed25519/ECDSA public keys (Verfer) for signing key lists, Blake3-256/SHA-256 digests (Diger) for next key commitment lists, SAID computation for event digest tracking"
+    source: "Ed25519/ECDSA public keys (Verification Key) for signing key lists, Blake3-256/SHA-256 digests (Digest) for next key commitment lists, SAID computation for event digest tracking"
     relationship: "Cryptographic primitives appear directly in state machine fields — the tracker stores and compares qualified public keys, digests, and SAIDs as kernel types"
   - ref: "domain://externals/persistence"
     relationship: "State cache for fast key state lookup and KEL access for state reconstruction — the state-read-model outbound port delegates to this external"

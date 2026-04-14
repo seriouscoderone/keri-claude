@@ -4,39 +4,39 @@ domain_ref: "cesr/primitives"
 terms:
   - term: "CESR Primitive Pattern"
     synonyms: ["Primitive Structure"]
-    definition: "The common structure shared by all CESR primitive types. Every primitive is defined by five elements: (1) a base trait (Matter for non-indexed, Indexer for indexed), (2) a code from the code table identifying the algorithm and raw size, (3) raw binary material of the size specified by the code, (4) three domain representations (qb64, qb2, raw) with lossless conversion, and (5) a Sizage entry (hs/ss/fs/ls) governing the encoding geometry."
+    definition: "The common structure shared by all CESR primitive types. Every primitive is defined by five elements: (1) a base trait (Primitive for non-indexed, Indexed Primitive Base for indexed), (2) a code from the code table identifying the algorithm and raw size, (3) raw binary material of the size specified by the code, (4) three domain representations (qb64, qb2, raw) with lossless conversion, and (5) a Sizage entry (hs/ss/fs/ls) governing the encoding geometry."
     invariants:
-      - "Every primitive extends Matter (non-indexed) or Indexer (indexed signatures)"
+      - "Every primitive extends Primitive (non-indexed) or Indexed Primitive Base (indexed signatures)"
       - "The code determines the algorithm — there is no separate algorithm parameter"
       - "Raw size must match the size specified by the code's Sizage entry"
       - "All three domain representations (qb64, qb2, raw) are derivable from any one"
-      - "Agent-noun naming convention: class names end in -er suffix (Verfer, Diger, Siger, Salter)"
-      - "Specialized primitives add domain-specific methods (verify for Verfer, sign for Signer, compare for Diger)"
+      - "Agent-noun naming convention: class names end in -er suffix (Verification Key, Digest, Indexed Signature, Salt)"
+      - "Specialized primitives add domain-specific methods (verify for Verification Key, sign for Signing Key, compare for Digest)"
     examples:
-      - "Verfer: Matter + code D (Ed25519) + 32-byte raw + verify(sig, ser) method"
-      - "Diger: Matter + code E (Blake3-256) + 32-byte raw + compare(ser, diger) method"
-      - "Siger: Indexer + code A (Ed25519 indexed) + 64-byte raw + index + ondex"
-      - "Salter: Matter + code 0A (Salt_128) + 16-byte raw + signer(path, code) method"
-    related_terms: ["Matter", "Indexer", "Sizage", "Code Table"]
+      - "Verification Key: Primitive + code D (Ed25519) + 32-byte raw + verify(sig, ser) method"
+      - "Digest: Primitive + code E (Blake3-256) + 32-byte raw + compare(ser, diger) method"
+      - "Indexed Signature: Indexed Primitive Base + code A (Ed25519 indexed) + 64-byte raw + index + ondex"
+      - "Salt: Primitive + code 0A (Salt_128) + 16-byte raw + signer(path, code) method"
+    related_terms: ["Primitive Base", "Indexed Primitive Base", "Sizage", "Code Table"]
 
-  - term: "Matter"
-    synonyms: ["CESR Matter", "Base Primitive"]
+  - term: "Primitive Base"
+    synonyms: ["CESR Primitive", "Base Primitive", "Matter"]
     specializes: "domain://cesr"
     definition: "The base type for all non-indexed CESR primitives. Encapsulates a (code, raw) pair and provides bidirectional domain transforms to qb64, qb2, and (code, raw)."
     invariants:
-      - "Every Matter instance holds exactly one code (text) and one raw (bytes) value"
+      - "Every Primitive instance holds exactly one code (text) and one raw (bytes) value"
       - "Code MUST be a valid entry in the master code table for the active protocol genus"
       - "Raw size MUST match the size specified by the code table entry"
       - "Supports property access: .code, .raw, .qb64, .qb64b, .qb2"
     examples:
-      - "Matter(qb64='DKxy2sgzfplyr-tgwIxS19f2OchFHtLwPWD3v4oYimBx') — parse from T domain"
-      - "Matter(raw=<32 bytes>, code='D') — construct from R domain"
-    related_terms: ["Verfer", "Diger", "Signer", "Siger", "Cigar", "Salter", "Code Table"]
+      - "Primitive(qb64='DKxy2sgzfplyr-tgwIxS19f2OchFHtLwPWD3v4oYimBx') — parse from T domain"
+      - "Primitive(raw=<32 bytes>, code='D') — construct from R domain"
+    related_terms: ["Verification Key", "Digest", "Signing Key", "Indexed Signature", "Unindexed Signature", "Salt Primitive", "Code Table"]
 
-  - term: "Verfer"
-    synonyms: ["Verifier", "Public Key Primitive"]
+  - term: "Verification Key"
+    synonyms: ["Verifier", "Public Key Primitive", "Verfer"]
     specializes: "domain://cesr"
-    definition: "A public verification key primitive. Extends Matter with a verify(sig, ser) method that validates a signature against serialized data using the embedded public key."
+    definition: "A public verification key primitive. Extends Primitive with a verify(sig, ser) method that validates a signature against serialized data using the embedded public key."
     invariants:
       - "Code determines the key algorithm: D=Ed25519, 1AAA=ECDSA secp256k1 non-transferable, 1AAB=ECDSA secp256k1, 1AAI=ECDSA secp256r1 non-transferable, 1AAJ=ECDSA secp256r1, 1AAC=Ed448 non-transferable, 1AAD=Ed448"
       - "Ed25519 public keys are 32 bytes raw (44 chars qb64, code 'D')"
@@ -44,39 +44,39 @@ terms:
       - "Ed448 public keys are 57 bytes raw (80 chars qb64, code '1AAD')"
       - "verify() returns True if signature is valid for the given serialization"
     examples:
-      - "Verfer(qb64='DKxy2...') — an Ed25519 public key, 44 characters"
-      - "Verfer(raw=<33 bytes>, code='1AAB') — an ECDSA secp256k1 public key, 48 characters"
-    related_terms: ["Signer", "Siger", "Cigar", "Matter"]
+      - "Verification Key(qb64='DKxy2...') — an Ed25519 public key, 44 characters"
+      - "Verification Key(raw=<33 bytes>, code='1AAB') — an ECDSA secp256k1 public key, 48 characters"
+    related_terms: ["Signing Key", "Indexed Signature", "Unindexed Signature", "Primitive Base"]
 
-  - term: "Diger"
-    synonyms: ["Digester", "Digest Primitive", "Hash Primitive"]
+  - term: "Digest"
+    synonyms: ["Digester", "Digest Primitive", "Hash Primitive", "Diger"]
     specializes: "domain://cesr"
-    definition: "A cryptographic digest primitive. Extends Matter with methods to compute digests from serialized data and compare digest values."
+    definition: "A cryptographic digest primitive. Extends Primitive with methods to compute digests from serialized data and compare digest values."
     invariants:
       - "Code determines the hash algorithm: E=Blake3-256, F=Blake2b-256, G=Blake2s-256, H=SHA3-256, I=SHA2-256"
       - "256-bit digests are 32 bytes raw (44 chars qb64)"
       - "512-bit digests (0D=Blake3-512, 0E=Blake2b-512, 0F=SHA3-512, 0G=SHA2-512) are 64 bytes raw (88 chars qb64)"
       - "compare(ser, diger) verifies that the digest of ser matches diger's value"
     examples:
-      - "Diger(ser=b'hello', code='E') — compute Blake3-256 digest of 'hello'"
-      - "Diger(qb64='EGK0JxOC...') — wrap an existing 44-char Blake3-256 digest"
-    related_terms: ["SAID", "Saider", "Matter"]
+      - "Digest(ser=b'hello', code='E') — compute Blake3-256 digest of 'hello'"
+      - "Digest(qb64='EGK0JxOC...') — wrap an existing 44-char Blake3-256 digest"
+    related_terms: ["SAID", "SAID Primitive", "Primitive Base"]
 
-  - term: "Signer"
-    synonyms: ["Private Key Primitive"]
-    definition: "A private signing key primitive. Extends Matter with a sign(ser) method that produces a Siger or Cigar signature over serialized data."
+  - term: "Signing Key"
+    synonyms: ["Private Key Primitive", "Signer"]
+    definition: "A private signing key primitive. Extends Primitive with a sign(ser) method that produces a Indexed Signature or Unindexed Signature signature over serialized data."
     invariants:
       - "Code determines the key algorithm: A=Ed25519 seed, J=ECDSA secp256k1 seed, K=Ed448 seed"
       - "Private key material is 32 bytes raw for Ed25519/ECDSA seeds (44 chars qb64)"
-      - "The corresponding Verfer (public key) is derivable from the Signer"
-      - "sign(ser, index) returns a Siger (indexed); sign(ser) returns a Cigar (unindexed)"
+      - "The corresponding Verification Key (public key) is derivable from the Signing Key"
+      - "sign(ser, index) returns a Indexed Signature (indexed); sign(ser) returns a Unindexed Signature (unindexed)"
     examples:
-      - "Signer(raw=<32 bytes>, code='A') — an Ed25519 private key"
-      - "signer.sign(b'data', index=0) — produce an indexed Ed25519 signature (Siger)"
-    related_terms: ["Verfer", "Siger", "Cigar", "Salter", "Matter"]
+      - "Signing Key(raw=<32 bytes>, code='A') — an Ed25519 private key"
+      - "signer.sign(b'data', index=0) — produce an indexed Ed25519 signature (Indexed Signature)"
+    related_terms: ["Verification Key", "Indexed Signature", "Unindexed Signature", "Salt Primitive", "Primitive Base"]
 
-  - term: "Siger"
-    synonyms: ["Indexed Signature Primitive"]
+  - term: "Indexed Signature"
+    synonyms: ["Indexed Signature Primitive", "Siger"]
     definition: "An indexed signature primitive used in threshold multi-signature schemes. Contains a signature value and an index into the ordered list of public keys."
     invariants:
       - "Uses context-specific indexed code tables, not the master code table"
@@ -85,51 +85,51 @@ terms:
       - "Dual-indexed codes (2A####, 2B####) support pre-rotation with index and ondex"
       - "Index encodes position in the public key list; ondex encodes position in the rotation key list"
     examples:
-      - "Siger with code 'AA' — Ed25519 signature at index 0, both signing and rotation lists"
-      - "Siger with code 'BD' — Ed25519 signature at index 3, current signing list only"
-      - "Siger with code '2AABAC' — Ed25519 big dual-indexed: index=1, ondex=2"
-    related_terms: ["Verfer", "Signer", "Cigar", "Index", "Ondex"]
+      - "Indexed Signature with code 'AA' — Ed25519 signature at index 0, both signing and rotation lists"
+      - "Indexed Signature with code 'BD' — Ed25519 signature at index 3, current signing list only"
+      - "Indexed Signature with code '2AABAC' — Ed25519 big dual-indexed: index=1, ondex=2"
+    related_terms: ["Verification Key", "Signing Key", "Unindexed Signature", "Index", "Ondex"]
 
-  - term: "Cigar"
-    synonyms: ["Unindexed Signature Primitive"]
-    definition: "An unindexed (non-indexed) signature primitive. Contains a signature value and an associated Verfer (public key) but no key list index."
+  - term: "Unindexed Signature"
+    synonyms: ["Unindexed Signature Primitive", "Cigar"]
+    definition: "An unindexed (non-indexed) signature primitive. Contains a signature value and an associated Verification Key (public key) but no key list index."
     invariants:
       - "Uses the master code table, not indexed code tables"
       - "Code determines algorithm: 0B=Ed25519, 0C=ECDSA secp256k1, 0I=ECDSA secp256r1"
       - "Ed25519 signatures are 64 bytes raw (88 chars qb64 with 2-char code '0B')"
       - "Carries a .verfer property linking to the public key that produced the signature"
     examples:
-      - "Cigar(raw=<64 bytes>, code='0B', verfer=verfer) — Ed25519 unindexed signature with associated public key"
-    related_terms: ["Siger", "Verfer", "Signer", "Matter"]
+      - "Unindexed Signature(raw=<64 bytes>, code='0B', verfer=verfer) — Ed25519 unindexed signature with associated public key"
+    related_terms: ["Indexed Signature", "Verification Key", "Signing Key", "Primitive Base"]
 
-  - term: "Salter"
-    synonyms: ["Salt Primitive", "Seed Primitive"]
+  - term: "Salt Primitive"
+    synonyms: ["Salt Primitive", "Seed Primitive", "Salter"]
     definition: "A salt or seed primitive used to deterministically generate signing keys. Provides a signer() method using argon2 key stretching."
     invariants:
       - "Code 0A for 128-bit (16-byte) random salt — 24 chars qb64"
       - "Key stretching uses argon2 to derive signing keys from the salt"
-      - "signer(path, code) generates a Signer for the given derivation path and algorithm"
+      - "signer(path, code) generates a Signing Key for the given derivation path and algorithm"
     examples:
-      - "Salter(raw=<16 bytes>) — a 128-bit random salt"
-      - "salter.signer(path='0', code='A') — derive an Ed25519 Signer from the salt at path '0'"
-    related_terms: ["Signer", "Matter"]
+      - "Salt(raw=<16 bytes>) — a 128-bit random salt"
+      - "salter.signer(path='0', code='A') — derive an Ed25519 Signing Key from the salt at path '0'"
+    related_terms: ["Signing Key", "Primitive Base"]
 
-  - term: "Prefixer"
-    synonyms: ["Identifier Prefix Primitive"]
+  - term: "Identifier Prefix"
+    synonyms: ["Identifier Prefix Primitive", "Prefixer"]
     definition: "An identifier prefix primitive. Wraps the AID prefix value — either a public key (basic/non-transferable) or a self-addressing digest of the inception event."
     invariants:
       - "Non-transferable basic prefix uses code B (Ed25519) or 1AAA (ECDSA secp256k1) or 1AAI (ECDSA secp256r1)"
       - "Transferable basic prefix uses code D (Ed25519) or 1AAB (ECDSA secp256k1) or 1AAJ (ECDSA secp256r1)"
       - "Self-addressing prefix uses a digest code (E, F, H, I, etc.) applied to the inception event"
     examples:
-      - "Prefixer(qb64='BKxy2...') — non-transferable Ed25519 prefix (code B, cannot rotate)"
-      - "Prefixer(qb64='DKxy2...') — transferable Ed25519 prefix (code D, can rotate)"
-      - "Prefixer(qb64='EGK0J...') — self-addressing prefix (Blake3-256 digest of inception event)"
-    related_terms: ["Verfer", "Diger", "Matter"]
+      - "Identifier Prefix(qb64='BKxy2...') — non-transferable Ed25519 prefix (code B, cannot rotate)"
+      - "Identifier Prefix(qb64='DKxy2...') — transferable Ed25519 prefix (code D, can rotate)"
+      - "Identifier Prefix(qb64='EGK0J...') — self-addressing prefix (Blake3-256 digest of inception event)"
+    related_terms: ["Verification Key", "Digest", "Primitive Base"]
 
   - term: "SAD"
     synonyms: ["Self-Addressing Data", "Self-Addressed Data"]
-    definition: "A data structure that contains a field ('d') whose value is the cryptographic digest of the structure itself. The foundation of KERI's content-addressable design — events, credentials, and schemas are all SADs. The Sadder trait serializes SADs; Saider computes their SAID; Saidify is the derivation algorithm."
+    definition: "A data structure that contains a field ('d') whose value is the cryptographic digest of the structure itself. The foundation of KERI's content-addressable design — events, credentials, and schemas are all SADs. The Sadder trait serializes SADs; SAID Primitive computes their SAID; Saidify is the derivation algorithm."
     invariants:
       - "A SAD MUST contain a 'd' field holding its own SAID"
       - "The SAID is computed via the saidify algorithm (dummy → serialize → digest → inject)"
@@ -138,23 +138,23 @@ terms:
     examples:
       - "A KERI inception event is a SAD — its 'd' field is its Blake3-256 digest"
       - "An ACDC credential is a SAD — each section (attributes, edges, rules) is also independently a SAD"
-    related_terms: ["Saider", "Saidify", "Sadder (cesr/composition)", "Serder (cesr/composition)", "Creder (cesr/composition)"]
+    related_terms: ["SAID Primitive", "Saidify", "Sadder (cesr/composition)", "Serder (cesr/composition)", "Creder (cesr/composition)"]
 
-  - term: "Seqner"
-    synonyms: ["Sequence Number Primitive"]
-    definition: "A FIXED-width sequence number primitive. Seqner always uses code 0A (16 bytes raw, 24 chars qb64) regardless of value magnitude — the value is zero-padded to 16 bytes. Distinct from Number, which auto-sizes to the smallest code. Used for database keys where fixed-width enables lexicographic ordering. Seqner does NOT inherit from Number — both independently inherit from Matter."
+  - term: "Fixed-Width Ordinal"
+    synonyms: ["Sequence Number Primitive", "Seqner"]
+    definition: "A FIXED-width sequence number primitive. Fixed-Width Ordinal always uses code 0A (16 bytes raw, 24 chars qb64) regardless of value magnitude — the value is zero-padded to 16 bytes. Distinct from Number, which auto-sizes to the smallest code. Used for database keys where fixed-width enables lexicographic ordering. Fixed-Width Ordinal does NOT inherit from Number — both independently inherit from Primitive."
     invariants:
       - "Always uses code 0A (16 bytes raw, 24 chars qb64) — code is fixed, not auto-selected"
       - "Value range: 0–2^128-1 (16 bytes); any value fits because the raw is always 16 bytes"
       - "Value is zero-padded to 16 bytes — small values have leading zero bytes"
       - "Fixed width enables lexicographic ordering in LMDB database keys"
-      - "Contrast with Number: Number auto-selects the smallest code (M/R/N/S/T/U); Seqner fixes to 0A"
-      - "Seqner and Number are sibling classes (both extend Matter), NOT parent-child"
+      - "Contrast with Number: Number auto-selects the smallest code (M/R/N/S/T/U); Fixed-Width Ordinal fixes to 0A"
+      - "Fixed-Width Ordinal and Number are sibling classes (both extend Primitive), NOT parent-child"
       - "Provides .sn property for the integer sequence number value"
     examples:
-      - "Seqner(sn=0) — code '0A', 16 bytes raw (all zeros), 24 chars qb64"
-      - "Seqner(sn=100000) — code '0A', 16 bytes raw (zero-padded), 24 chars qb64"
-    related_terms: ["Number", "Matter"]
+      - "Fixed-Width Ordinal(sn=0) — code '0A', 16 bytes raw (all zeros), 24 chars qb64"
+      - "Fixed-Width Ordinal(sn=100000) — code '0A', 16 bytes raw (zero-padded), 24 chars qb64"
+    related_terms: ["Number", "Primitive Base"]
 
   - term: "SAID"
     synonyms: ["Self-Addressing Identifier", "Self-Addressing Data Identifier"]
@@ -167,18 +167,18 @@ terms:
     examples:
       - "Top-level d field: EBdXt3gIXOf2BBWNHdSXCJnFJL5OuQPyM5K0neuniccM"
       - "Attribute section d field used as compact form value of a field"
-    related_terms: ["SAD", "Saider", "Saidify", "Diger"]
+    related_terms: ["SAD", "SAID Primitive", "Saidify", "Digest"]
 
-  - term: "Saider"
-    synonyms: ["SAID Primitive", "Self-Addressing Identifier Primitive"]
+  - term: "SAID Primitive"
+    synonyms: ["SAID Primitive", "Self-Addressing Identifier Primitive", "Saider"]
     definition: "A Self-Addressing Identifier primitive. Computes or verifies a SAID — a cryptographic digest used as the unique identifier of the data structure it is embedded in."
     invariants:
       - "SAID is computed by replacing the 'd' field with a dummy value of the correct length, serializing, then digesting"
-      - "Uses the same digest codes as Diger (E=Blake3-256, I=SHA2-256, etc.)"
+      - "Uses the same digest codes as Digest (E=Blake3-256, I=SHA2-256, etc.)"
       - "The SAID is self-referential — it identifies the data structure that contains it"
     examples:
-      - "Saider(sad={'d': ''}, code='E') — compute Blake3-256 SAID of a self-addressing data structure"
-    related_terms: ["Diger", "Matter", "Saidify"]
+      - "SAID Primitive(sad={'d': ''}, code='E') — compute Blake3-256 SAID of a self-addressing data structure"
+    related_terms: ["Digest", "Primitive Base", "Saidify"]
 
   - term: "Saidify"
     synonyms: ["saidify()", "SAID Derivation Algorithm"]
@@ -192,8 +192,8 @@ terms:
     examples:
       - "saidify(sad={'d': '', 'i': 'EAID...'}, code='E') → sad['d'] = 'ESAID...'"
       - "ACDC construction: saidify attributes section → saidify edges section → saidify top-level credential"
-      - "Saider.saidify(sad, label='d') → (original_sad, sad_with_said)"
-    related_terms: ["Saider", "SAID", "Diger", "Sadder (cesr/composition)"]
+      - "SAID Primitive.saidify(sad, label='d') → (original_sad, sad_with_said)"
+    related_terms: ["SAID Primitive", "SAID", "Digest", "Sadder (cesr/composition)"]
 
   - term: "Index"
     synonyms: ["Key Index"]
@@ -205,7 +205,7 @@ terms:
     examples:
       - "Code 'A' + index 'A' = 'AA' — Ed25519 signature at index 0"
       - "Code 'A' + index 'D' = 'AD' — Ed25519 signature at index 3"
-    related_terms: ["Ondex", "Siger"]
+    related_terms: ["Ondex", "Indexed Signature"]
 
   - term: "Ondex"
     synonyms: ["Other Index"]
@@ -216,7 +216,7 @@ terms:
       - "Ondex refers to position in the next rotation keys list (n field of establishment event)"
     examples:
       - "Code '2A' + index 'AB' + ondex 'AC' = '2AABAC' — Ed25519 big dual-indexed, index=1, ondex=2"
-    related_terms: ["Index", "Siger"]
+    related_terms: ["Index", "Indexed Signature"]
 
   # Inherits: "Qualification" from domain://identity
   - term: "Qualification"
@@ -231,33 +231,33 @@ terms:
     examples:
       - "Qualify: ('D', <32 bytes>) -> 'DKxy2sgzfplyr-tgwIxS19f2OchFHtLwPWD3v4oYimBx'"
       - "Dequalify: 'DKxy2sgzfplyr-tgwIxS19f2OchFHtLwPWD3v4oYimBx' -> ('D', <32 bytes>)"
-    related_terms: ["qb64", "qb2", "Code", "Matter"]
+    related_terms: ["qb64", "qb2", "Code", "Primitive Base"]
 
-  - term: "MtrDex"
-    synonyms: ["Matter Code Index", "Matter Code Table Constants"]
-    definition: "The frozen dataclass (or enum) holding all master code table constant strings for non-indexed Matter primitives. Naming convention: -Dex suffix."
+  - term: "Master Code Table"
+    synonyms: ["Primitive Code Index", "Primitive Code Table Constants", "MtrDex"]
+    definition: "The frozen dataclass (or enum) holding all master code table constant strings for non-indexed Primitive primitives. Naming convention: -Dex suffix."
     invariants:
       - "Each attribute maps a descriptive name to its code string"
       - "Values are immutable after definition"
       - "Entries match the master code table for the active protocol genus"
     examples:
-      - "MtrDex.Ed25519N = 'B' — Ed25519 non-transferable prefix"
-      - "MtrDex.Ed25519 = 'D' — Ed25519 public verification key"
-      - "MtrDex.Blake3_256 = 'E' — Blake3-256 digest"
-      - "MtrDex.Ed25519_Seed = 'A' — Ed25519 seed/private key"
-      - "MtrDex.Salt_128 = '0A' — 128-bit random salt"
-    related_terms: ["Code Table", "Matter", "NumDex"]
+      - "Master Code Table.Ed25519N = 'B' — Ed25519 non-transferable prefix"
+      - "Master Code Table.Ed25519 = 'D' — Ed25519 public verification key"
+      - "Master Code Table.Blake3_256 = 'E' — Blake3-256 digest"
+      - "Master Code Table.Ed25519_Seed = 'A' — Ed25519 seed/private key"
+      - "Master Code Table.Salt_128 = '0A' — 128-bit random salt"
+    related_terms: ["Code Table", "Primitive Base", "Number Code Table"]
 
-  - term: "NumDex"
-    synonyms: ["Number Code Index"]
+  - term: "Number Code Table"
+    synonyms: ["Number Code Index", "NumDex"]
     definition: "The frozen dataclass holding code constants for numeric primitives (sequence numbers, counts)."
     invariants:
       - "Short = 'M' (2-byte), Long = '0H' (4-byte), Big = 'N' (8-byte)"
       - "Tall = 'R' (5-byte), Large = 'S' (11-byte), Great = 'T' (14-byte), Vast = 'U' (17-byte)"
     examples:
-      - "NumDex.Short = 'M' — 2-byte number, 4 chars qb64"
-      - "NumDex.Big = 'N' — 8-byte number, 12 chars qb64"
-    related_terms: ["Seqner", "MtrDex"]
+      - "Number Code Table.Short = 'M' — 2-byte number, 4 chars qb64"
+      - "Number Code Table.Big = 'N' — 8-byte number, 12 chars qb64"
+    related_terms: ["Fixed-Width Ordinal", "Master Code Table"]
 
   - term: "One-Character Code"
     synonyms: ["1-Char Code", "Small Fixed Code"]
@@ -317,9 +317,9 @@ terms:
       - "'4B##' — raw bytes, lead size 0"
     related_terms: ["Quadlet", "Triplet", "Code Table"]
 
-  - term: "Indexer"
-    synonyms: ["Indexed Primitive Base"]
-    definition: "The base trait for indexed CESR primitives (parallel to Matter for non-indexed). Encapsulates (code, raw, index, ondex) and provides bidirectional transforms. Used by Siger."
+  - term: "Indexed Primitive Base"
+    synonyms: ["Indexed Primitive Base", "Indexer"]
+    definition: "The base trait for indexed CESR primitives (parallel to Primitive for non-indexed). Encapsulates (code, raw, index, ondex) and provides bidirectional transforms. Used by Indexed Signature."
     invariants:
       - "Carries two indices: index (main key position) and ondex (other/rotation key position)"
       - "Soft size (ss) splits into ms (main index size) and os (other index size)"
@@ -327,29 +327,29 @@ terms:
       - "CurrentSigCodex codes: ondex forbidden (current signing keys only)"
       - "Index must satisfy: index <= 64^ms - 1"
     examples:
-      - "Siger with code 'AA' → index=0, ondex=0 (BothSig, auto-matched)"
-      - "Siger with code 'BD' → index=3, ondex forbidden (CurrentSig)"
-      - "Siger with code '2AABAC' → index=1, ondex=2 (Big dual-indexed)"
-    related_terms: ["Matter", "Siger", "Index", "Ondex", "IdrDex"]
+      - "Indexed Signature with code 'AA' → index=0, ondex=0 (BothSig, auto-matched)"
+      - "Indexed Signature with code 'BD' → index=3, ondex forbidden (CurrentSig)"
+      - "Indexed Signature with code '2AABAC' → index=1, ondex=2 (Big dual-indexed)"
+    related_terms: ["Primitive Base", "Indexed Signature", "Index", "Ondex", "Indexed Code Table"]
 
-  - term: "IdrDex"
-    synonyms: ["Indexer Code Index", "Indexer Code Table Constants"]
-    definition: "The frozen code table for indexed signature primitives. Parallel to MtrDex but for indexed codes."
+  - term: "Indexed Code Table"
+    synonyms: ["Indexed Primitive Base Code Index", "Indexed Primitive Base Code Table Constants", "IdrDex"]
+    definition: "The frozen code table for indexed signature primitives. Parallel to Master Code Table but for indexed codes."
     invariants:
       - "Basic codes (2-char): A/B (Ed25519 both/current), C/D (ECDSA 256k1), E/F (ECDSA 256r1), 0A/0B (Ed448)"
       - "Big codes (4-char): 2A-2F, 3A-3B — support index/ondex > 63 (up to 64^4)"
     examples:
-      - "IdrDex.Ed25519 = 'A' — Ed25519 both-same indexed signature"
-      - "IdrDex.Ed25519_Crt = 'B' — Ed25519 current-only indexed signature"
-      - "IdrDex.Ed25519_Big = '2A' — Ed25519 big dual-indexed"
-    related_terms: ["MtrDex", "Indexer", "Siger"]
+      - "Indexed Code Table.Ed25519 = 'A' — Ed25519 both-same indexed signature"
+      - "Indexed Code Table.Ed25519_Crt = 'B' — Ed25519 current-only indexed signature"
+      - "Indexed Code Table.Ed25519_Big = '2A' — Ed25519 big dual-indexed"
+    related_terms: ["Master Code Table", "Indexed Primitive Base", "Indexed Signature"]
 
   # Inherits: "Sizage" from domain://cesr (identical definition — parent owns this term)
 
   # Sadder, Serder, Creder moved to cesr/composition (message-level serializers, not atomic primitives)
 
-  - term: "Tholder"
-    synonyms: ["Threshold Holder"]
+  - term: "Threshold Primitive"
+    synonyms: ["Threshold Holder", "Tholder"]
     definition: "Represents signing/rotation threshold constraints. Supports simple integer thresholds and weighted fractional thresholds with multiple clauses."
     invariants:
       - "Simple: integer M-of-N (e.g., 2 of 3 keys)"
@@ -358,13 +358,13 @@ terms:
       - "Weighted format: '1/2a1/3a1/3' means clause1=1/2, clause2=1/3, clause3=1/3"
       - "satisfy(indices) checks whether the given key indices meet the threshold"
     examples:
-      - "Tholder('2') — simple threshold: 2 of N signatures required"
-      - "Tholder(['1/2', '1/2', '1/2']) — weighted: any 2 of 3 equal-weight keys"
-    related_terms: ["Siger", "Key State"]
+      - "Signing Threshold('2') — simple threshold: 2 of N signatures required"
+      - "Signing Threshold(['1/2', '1/2', '1/2']) — weighted: any 2 of 3 equal-weight keys"
+    related_terms: ["Indexed Signature", "Key State"]
 
   - term: "Number"
     synonyms: ["Variable-Length Number"]
-    definition: "An AUTO-SIZED unsigned integer primitive. Number auto-selects the smallest code that fits the value from the NumDex progression: M→R→N→S→T→U. Distinct from Seqner, which always uses fixed code 0A."
+    definition: "An AUTO-SIZED unsigned integer primitive. Number auto-selects the smallest code that fits the value from the Number Code Table progression: M→R→N→S→T→U. Distinct from Fixed-Width Ordinal, which always uses fixed code 0A."
     invariants:
       - "Auto-selects smallest code that fits the value — code is chosen by value magnitude, not fixed"
       - "Short (code M): 0–65,535 (2 bytes, 4 chars qb64)"
@@ -374,71 +374,71 @@ terms:
       - "Great (code T): 0–2^112-1 (14 bytes, 20 chars qb64)"
       - "Vast (code U): 0–2^136-1 (17 bytes, 24 chars qb64)"
       - "Auto-sizing order: M → R → N → S → T → U (note: 0H is a valid code but NOT in the auto-sizing path)"
-      - "Number and Seqner are sibling classes (both extend Matter), NOT parent-child"
-      - "Contrast with Seqner: Seqner is always code 0A (fixed, 16 bytes); Number is code-auto-selected"
-      - "Number provides sequence-number access aliases for backward compatibility with Seqner"
+      - "Number and Fixed-Width Ordinal are sibling classes (both extend Primitive), NOT parent-child"
+      - "Contrast with Fixed-Width Ordinal: Fixed-Width Ordinal is always code 0A (fixed, 16 bytes); Number is code-auto-selected"
+      - "Number provides sequence-number access aliases for backward compatibility with Fixed-Width Ordinal"
     examples:
       - "Number(num=42) → code 'M', 4 chars qb64"
       - "Number(num=100000) → code 'R', 8 chars qb64"
       - "Number(num=2**33) → code 'R', 8 chars qb64"
       - "Number(num=2**41) → code 'N', 12 chars qb64"
-    related_terms: ["Seqner", "NumDex", "Matter"]
+    related_terms: ["Fixed-Width Ordinal", "Number Code Table", "Primitive Base"]
 
-  - term: "Dater"
-    synonyms: ["DateTime Primitive"]
+  - term: "DateTime"
+    synonyms: ["DateTime Primitive", "Dater"]
     definition: "An ISO-8601 datetime encoded as a CESR primitive. Special characters substituted for Base64 compatibility: ':' → 'c', '.' → 'd', '+' → 'p'."
     invariants:
       - "Code '1AAG' — 32-char ISO-8601 string (36 chars qb64)"
       - "Character substitution: colon→c, dot→d, plus→p for Base64 safety"
       - "new() with no args captures current UTC time"
     examples:
-      - "Dater('2024-01-15T12c30c00d000000p00c00') — 2024-01-15T12:30:00.000000+00:00"
-    related_terms: ["Matter"]
+      - "DateTime('2024-01-15T12c30c00d000000p00c00') — 2024-01-15T12:30:00.000000+00:00"
+    related_terms: ["Primitive Base"]
 
-  - term: "Bexter"
-    synonyms: ["Base64 Extended"]
+  - term: "Base64 Extended"
+    synonyms: ["Base64 Extended", "Bexter"]
     definition: "A base64 extended encoding primitive for text strings and byte arrays. Computes lead padding (wrap size) from the code's lead size to achieve proper alignment."
     invariants:
       - "Codes: 4A-6A (small StrB64), 7AAA-9AAA (large StrB64), 4B-6B (small Bytes), 7AAB-9AAB (large Bytes)"
       - "bext(): encodes raw with calculated wrap-size padding"
       - "rawify(): decodes bext back to raw bytes"
-      - "Used by Pather for encoding JSON path arrays"
+      - "Used by Path for encoding JSON path arrays"
     examples:
-      - "Bexter(bext='some-base64-text') → variable-length CESR primitive"
-    related_terms: ["Pather", "Matter", "Variable-Length Code"]
+      - "Base64 Extended(bext='some-base64-text') → variable-length CESR primitive"
+    related_terms: ["Path", "Primitive Base", "Variable-Length Code"]
 
-  - term: "Pather"
-    synonyms: ["Path Primitive"]
-    definition: "A path to a nested value within a SAD structure. Encodes a JSON path array as a Bexter, enabling CESR-qualified references to embedded fields."
+  - term: "Path"
+    synonyms: ["Path Primitive", "Pather"]
+    definition: "A path to a nested value within a SAD structure. Encodes a JSON path array as a Base64 Extended, enabling CESR-qualified references to embedded fields."
     invariants:
       - "Constructed from path list: ['a', 'fieldName'] → points to sad['a']['fieldName']"
-      - "Uses Bexter encoding with StrB64 codes"
+      - "Uses Base64 Extended encoding with StrB64 codes"
       - "Used in pathed material groups (-P##) for selective disclosure"
     examples:
-      - "Pather(['a', 'i']) → path to the issuer field inside the attribute section"
-      - "Pather(['e', 'qvi']) → path to the QVI edge"
-    related_terms: ["Bexter", "Sadder (cesr/composition)", "Disclosure"]
+      - "Path(['a', 'i']) → path to the issuer field inside the attribute section"
+      - "Path(['e', 'qvi']) → path to the QVI edge"
+    related_terms: ["Base64 Extended", "Sadder (cesr/composition)", "Disclosure"]
 
-  - term: "Encrypter"
-    synonyms: []
+  - term: "Encryption Primitive"
+    synonyms: ["Encrypter"]
     definition: "Encrypts data using X25519 ECDH key agreement + symmetric encryption (secretbox/sealedbox). Produces Cipher primitives."
     invariants:
       - "Uses X25519 public key for ECDH key agreement"
       - "Symmetric encryption via NaCl secretbox or sealedbox"
       - "Output is a Cipher (CESR-qualified encrypted data)"
     examples:
-      - "Encrypter(verkey=x25519_pubkey).encrypt(matter=salter) → Cipher"
-    related_terms: ["Decrypter", "Cipher", "Salter"]
+      - "Encryption Primitive(verkey=x25519_pubkey).encrypt(matter=salter) → Cipher"
+    related_terms: ["Decryption Primitive", "Cipher", "Salt Primitive"]
 
-  - term: "Decrypter"
-    synonyms: []
-    definition: "Decrypts Cipher primitives using X25519 private key. Recovers the original Matter primitive from encrypted data."
+  - term: "Decryption Primitive"
+    synonyms: ["Decrypter"]
+    definition: "Decrypts Cipher primitives using X25519 private key. Recovers the original Primitive primitive from encrypted data."
     invariants:
       - "Uses X25519 private key for ECDH key agreement"
-      - "decrypt(cipher) → recovered Matter (e.g., Signer, Salter)"
+      - "decrypt(cipher) → recovered Primitive (e.g., Signing Key, Salt)"
     examples:
-      - "Decrypter(seed=x25519_privkey).decrypt(cipher) → Salter"
-    related_terms: ["Encrypter", "Cipher"]
+      - "Decryption Primitive(seed=x25519_privkey).decrypt(cipher) → Salt"
+    related_terms: ["Encryption Primitive", "Cipher"]
 
   - term: "Cipher"
     synonyms: ["Encrypted Primitive"]
@@ -446,33 +446,33 @@ terms:
     invariants:
       - "Codes: 4C-9AC (X25519 SealedBox variants), 4D-9AD (QB64 variants), 4E-9AE (QB2 variants)"
       - "Variable-length — size encoded in the code"
-      - "Provides qb64 and qb2 representations like other Matter types"
+      - "Provides qb64 and qb2 representations like other Primitive types"
     examples:
       - "Cipher(qb64='4C...') — X25519 SealedBox encrypted salt"
-    related_terms: ["Encrypter", "Decrypter", "Matter"]
+    related_terms: ["Encryption Primitive", "Decryption Primitive", "Primitive Base"]
 
   - term: "Tierage"
     synonyms: ["Security Tier"]
     definition: "Security classification for salt-based key stretching operations. Controls argon2 CPU/memory cost parameters."
     invariants:
       - "Values: 'low', 'med', 'high' (plus reserved 'min')"
-      - "Carried by Salter — determines stretching cost when deriving Signers"
+      - "Carried by Salt — determines stretching cost when deriving Signers"
       - "Higher tier = more argon2 iterations = slower but stronger"
     examples:
-      - "Salter(tier=Tierage.low) — fast derivation for development"
-      - "Salter(tier=Tierage.high) — production-grade key stretching"
-    related_terms: ["Salter", "Signer"]
+      - "Salt(tier=Tierage.low) — fast derivation for development"
+      - "Salt(tier=Tierage.high) — production-grade key stretching"
+    related_terms: ["Salt Primitive", "Signing Key"]
 
   - term: "ZeroizeOnDrop"
     synonyms: ["Sensitive Material Cleanup"]
-    definition: "Memory safety pattern ensuring private key material is overwritten with zeros when the holding object is destroyed. Applied to Signer and Salter."
+    definition: "Memory safety pattern ensuring private key material is overwritten with zeros when the holding object is destroyed. Applied to Signing Key and Salt."
     invariants:
       - "All bytes of raw key material are zeroed on object destruction"
       - "Prevents key material from lingering in freed memory"
       - "Implemented via Rust's Zeroize trait or TypeScript manual zeroing"
     examples:
-      - "Signer dropped → 32 bytes of Ed25519 seed overwritten with zeros"
-    related_terms: ["Signer", "Salter"]
+      - "Signing Key dropped → 32 bytes of Ed25519 seed overwritten with zeros"
+    related_terms: ["Signing Key", "Salt Primitive"]
 
   - term: "Mid-Padding Algorithm"
     synonyms: ["qb64 Mid-Padding", "_infil()"]
@@ -485,7 +485,7 @@ terms:
       - "Avoids trailing '=' Base64 padding by adjusting the input alignment"
     examples:
       - "Ed25519 key (code='D', 32 bytes raw, ls=0): ps=(3-32%3)%3=1, prepend 1 zero byte, Base64-encode 33 bytes=44 chars, skip 1 char, prepend 'D' → 44 char qb64"
-    related_terms: ["Qualification", "qb64", "Sizage", "Matter"]
+    related_terms: ["Qualification", "qb64", "Sizage", "Primitive Base"]
 
   - term: "Sizage Table"
     synonyms: ["Code Table Sizes"]
@@ -496,13 +496,13 @@ terms:
       - "xs = extra size (variable portion)"
       - "fs = full size (total qb64 character count, 0 for variable-length)"
       - "ls = lead size (number of lead padding bytes)"
-      - "Complete table must be extracted from keripy's Matter.Sizes, Indexer.Sizes, and Counter sizes"
+      - "Complete table must be extracted from keripy's Primitive.Sizes, Indexed Primitive Base.Sizes, and Counter sizes"
       - "Every code table entry MUST have a corresponding Sizage entry"
     examples:
       - "Code 'D' (Ed25519): hs=1, ss=0, xs=0, fs=44, ls=0"
       - "Code 'E' (Blake3_256): hs=1, ss=0, xs=0, fs=44, ls=0"
       - "Code '0B' (Ed25519_Sig): hs=2, ss=0, xs=0, fs=88, ls=0"
-    related_terms: ["Code Table", "Matter", "Mid-Padding Algorithm"]
+    related_terms: ["Code Table", "Primitive Base", "Mid-Padding Algorithm"]
 
   - term: "SecurityLevel"
     synonyms: ["Crypto Minimum"]
@@ -526,27 +526,27 @@ events:
     triggers: "A qualified primitive is parsed to extract code and raw value"
 
   - name: "SignatureCreated"
-    payload: "signer: Signer, serialization: bytes, signature: Siger | Cigar"
-    triggers: "A Signer signs serialized data to produce an indexed or unindexed signature"
+    payload: "signer: Signing Key, serialization: bytes, signature: Indexed Signature | Unindexed Signature"
+    triggers: "A Signing Key signs serialized data to produce an indexed or unindexed signature"
 
   - name: "SignatureVerified"
-    payload: "verfer: Verfer, signature: bytes, serialization: bytes, valid: bool"
-    triggers: "A Verfer verifies a signature against serialized data"
+    payload: "verfer: Verification Key, signature: bytes, serialization: bytes, valid: bool"
+    triggers: "A Verification Key verifies a signature against serialized data"
 
   - name: "DigestComputed"
-    payload: "code: Code, serialization: bytes, digest: Diger"
+    payload: "code: Code, serialization: bytes, digest: Digest"
     triggers: "Serialized data is hashed to produce a digest primitive"
 
   - name: "KeyDerived"
-    payload: "salter: Salter, path: str, code: Code, signer: Signer"
-    triggers: "A Salter derives a Signer via argon2 key stretching at a given derivation path"
+    payload: "salter: Salt, path: str, code: Code, signer: Signing Key"
+    triggers: "A Salt derives a Signing Key via argon2 key stretching at a given derivation path"
 
 rules:
   - "The code determines the algorithm — there is no separate algorithm parameter; the code IS the algorithm identifier"
   - "Raw binary size MUST match the size dictated by the code table entry — mismatches are errors"
   - "Non-transferable prefix codes (B, 1AAA, 1AAI, 1AAC) indicate the AID cannot rotate keys"
   - "Transferable prefix codes (D, 1AAB, 1AAJ, 1AAD) indicate the AID supports key rotation"
-  - "Indexed signatures (Siger) use context-specific code tables; unindexed signatures (Cigar) use the master code table"
+  - "Indexed signatures (Indexed Signature) use context-specific code tables; unindexed signatures (Unindexed Signature) use the master code table"
   - "Self-addressing identifiers (SAIDs) are computed by digesting the serialization with the 'd' field replaced by a dummy string of the correct length"
-  - "Agent-noun naming convention: class names end in -er suffix (Verfer, Diger, Siger, Cigar, Salter, Signer)"
-  - "Code table constant naming convention: frozen dataclass names end in -Dex suffix (MtrDex, NumDex, DigDex)"
+  - "Agent-noun naming convention: class names end in -er suffix (Verification Key, Digest, Indexed Signature, Unindexed Signature, Salt, Signing Key)"
+  - "Code table constant naming convention: frozen dataclass names end in -Dex suffix (Master Code Table, Number Code Table, DigDex)"

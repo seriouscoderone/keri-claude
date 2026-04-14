@@ -26,7 +26,7 @@ terms:
       - "At rotation, the new signing keys must include a threshold-satisficing subset of the previously pre-committed next keys (unblinded)"
       - "Ordered — index position matters for indexed signatures and threshold satisfaction"
       - "Each key is a qualified public key with a CESR prefix code identifying its algorithm"
-      - "In keripy, stored as a list of Verfer instances on the Kever"
+      - "In keripy, stored as a list of Verification Key instances on the Kever"
       - "In keriox, stored as current_public_keys in the KeyConfig struct"
     examples:
       - "A list of three Ed25519 public keys: ['DBFiIgoCOpJ...', 'DG-YwInLUx...', 'DGIAk2jkC3...']"
@@ -42,9 +42,9 @@ terms:
       - "The actual public keys are kept secret until used in a subsequent rotation"
       - "Provides post-quantum resistance — attacker must compromise both current and pre-committed keys"
       - "An empty next key digest list (n = []) signals a non-transferable AID — no further rotations possible"
-      - "In keripy, stored as a list of Diger instances on the Kever (ndigers attribute)"
+      - "In keripy, stored as a list of Digest instances on the Kever (ndigers attribute)"
       - "In keriox, stored as NextKeysData within KeyConfig, holding digests and the next threshold"
-      - "The digest is computed over the raw qualified public key bytes (qb64 of the Verfer)"
+      - "The digest is computed over the raw qualified public key bytes (qb64 of the Verification Key)"
     examples:
       - "A list of three Blake3-256 digests: ['ELeFYMmuJb...', 'ENY9GYShOj...', 'EGyJ7y3Tle...']"
       - "Empty list [] in inception means the AID is non-transferable — permanently bound to inception keys"
@@ -61,7 +61,7 @@ terms:
       - "The pairing is atomic: current keys and next digests are always updated together at each establishment event"
       - "In keriox, KeyConfig bundles current_public_keys, next_keys_data (digests + next threshold), and the signing threshold"
     examples:
-      - "In keripy: verfers=[Verfer(qb64='DABC...'), Verfer(qb64='DDEF...')] + ndigers=[Diger(qb64='EABC...')]"
+      - "In keripy: verfers=[Verification Key(qb64='DABC...'), Verification Key(qb64='DDEF...')] + ndigers=[Digest(qb64='EABC...')]"
       - "In keriox: KeyConfig { current_public_keys: [...], next_keys_data: NextKeysData { digests: [...], threshold: ... } }"
       - "After rotation: previous ndigers are consumed (verified against new keys), new ndigers committed"
     related_terms: ["Signing Keys", "Next Key Digests", "Pre-rotation Commitment", "Partial Rotation"]
