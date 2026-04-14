@@ -142,9 +142,9 @@ terms:
 
   - term: "Seqner"
     synonyms: ["Sequence Number Primitive"]
-    definition: "A FIXED-width sequence number primitive. Seqner always uses code 0A (Salt_128, 16 bytes raw, 24 chars qb64) regardless of value magnitude — the value is zero-padded to 16 bytes. Distinct from Number, which auto-sizes to the smallest code. Used for LMDB database keys where fixed-width enables lexicographic ordering. Seqner does NOT inherit from Number — both independently inherit from Matter."
+    definition: "A FIXED-width sequence number primitive. Seqner always uses code 0A (16 bytes raw, 24 chars qb64) regardless of value magnitude — the value is zero-padded to 16 bytes. Distinct from Number, which auto-sizes to the smallest code. Used for database keys where fixed-width enables lexicographic ordering. Seqner does NOT inherit from Number — both independently inherit from Matter."
     invariants:
-      - "Always uses code 0A (Salt_128, 16 bytes raw, 24 chars qb64) — code is fixed, not auto-selected"
+      - "Always uses code 0A (16 bytes raw, 24 chars qb64) — code is fixed, not auto-selected"
       - "Value range: 0–2^128-1 (16 bytes); any value fits because the raw is always 16 bytes"
       - "Value is zero-padded to 16 bytes — small values have leading zero bytes"
       - "Fixed width enables lexicographic ordering in LMDB database keys"
