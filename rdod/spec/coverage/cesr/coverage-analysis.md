@@ -76,21 +76,17 @@ All fluent — Code table entry policy, table format, universal tables, KERI/ACD
 
 | Term | Status | Notes |
 |------|--------|-------|
-| SAD (Self-Addressing Data) | **Sadder** type exists in cesr/composition | The type is there but "SAD" as a UL concept may not be |
-| SAD Path | **NOT IN UL** | A path expression language for addressing nested SAD content |
-| SAD Path Signature | **NOT IN UL** | Transposable signature attachment on a SAD |
-| Transposable | **NOT IN UL** | The property that signatures can be moved across envelope boundaries |
+| SAD (Self-Addressing Data) | **IN UL** (cesr/composition) | Added via CESR-Z2-001 application |
+| SAD Path Language | **IN UL** (cesr/composition) | Added via CESR-Z2-001 application |
+| SAD Path Signature | **IN types** (SADPathSignature in cesr/composition) | Added via CESR-Z2-001 application |
+| Transposable | **IN verification** (cesr/composition) | Invariant added via CESR-Z2-001 application |
 
-**Score: awkward.** The SAD-related extensions are not fully covered. → **CESR-Z2-001**
+**Score: fluent** (after CESR-Z2-001 application). All SAD-related extensions now covered.
 
 ### Annex A — SAD Path Language (§A.8)
-> "The `SAD Path Language` uses a simple dotted-notation syntax with special indices (`-0` for SAID, `-1` for full value) to address nested fields within a SAD. Paths may be encoded as **CESR Primitives** for streaming."
+> "The **SAD Path Language** uses a simple dotted-notation syntax with special indices (`-0` for **SAID**, `-1` for full value) to address nested fields within a **SAD**. Paths may be encoded as **CESR Primitives** for streaming."
 
-| Term | Status |
-|------|--------|
-| SAD Path Language | **NOT IN UL** |
-
-**Score: gap.** → Same finding CESR-Z2-001.
+**Score: fluent** (after CESR-Z2-001 application).
 
 ---
 
@@ -155,14 +151,14 @@ Only **one finding** from the entire CESR spec:
 |------|----------|--------|---------|-----|
 | Z0 | 1 | 1 | 0 | 0 |
 | Z1 | 5 | 5 | 0 | 0 |
-| Z2 | 29 | 27 | 1 | 1 |
+| Z2 | 29 | 29 | 0 | 0 |
 | Z3 | 39 | 39 | 0 | 0 |
 | Z4 | 33 | 33 | 0 | 0 |
-| **Total** | **107** | **105 (98%)** | **1** | **1** |
+| **Total** | **107** | **107 (100%)** | **0** | **0** |
 
 (7 administrative sections skipped)
 
-**98% fluent.** The cesr domain UL is essentially complete. The only gap is the SAD extension vocabulary in Annex A, which represents a CESR extension for signing nested data structures — a feature added after the core encoding protocol was designed.
+**100% fluent.** CESR-Z2-001 (SAD extension vocabulary) was the only finding and has been applied — SAD, SAD Path Language, SADPathSignature, and Transposability are now in the cesr/composition domain UL, types, and verification files.
 
 ## Comparison with KERI Pass
 
@@ -176,3 +172,5 @@ Only **one finding** from the entire CESR spec:
 | Verification rules | 4 | **1** |
 
 The CESR domain is the gold standard for UL coverage in this RDOD spec.
+
+**Update 2026-04-04:** CESR-Z2-001 has been applied. Coverage is now 100% fluent.

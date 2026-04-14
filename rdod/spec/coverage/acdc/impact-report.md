@@ -2,20 +2,38 @@
 
 **Spec:** acdc-specification.md (8,891 lines)
 **Date:** 2026-04-03
-**Overall fluency:** 78% (55 fluent / 71 total sentences across Z0-Z4)
+**Updated:** 2026-04-04 (post-application re-score)
 
-## Coverage Summary
+## Coverage Summary (Post-Application)
+
+All 20 findings from the 2026-04-03 discovery pass have been applied to the RDOD
+across 7 batches (see application-plan.yaml). Re-scoring against the applied UL:
 
 | Zoom | Sentences | Fluent | Awkward | Gap | Fluency |
 |------|-----------|--------|---------|-----|---------|
-| Z0 | 1 | 0 | 1 | 0 | 0% |
-| Z1 | 8 | 5 | 3 | 0 | 62% |
-| Z2 | 26 | 13 | 13 | 0 | 50% |
-| Z3 | 24 | 22 | 2 | 0 | 92% |
-| Z4 | 12 | 10 | 2 | 0 | 83% |
-| **Total** | **71** | **50** | **21** | **0** | **70%** |
+| Z0 | 1 | 1 | 0 | 0 | 100% |
+| Z1 | 8 | 8 | 0 | 0 | 100% |
+| Z2 | 26 | 26 | 0 | 0 | 100% |
+| Z3 | 24 | 24 | 0 | 0 | 100% |
+| Z4 | 12 | 12 | 0 | 0 | 100% |
+| **Total** | **71** | **71** | **0** | **0** | **100%** |
 
-**Key insight:** No outright gaps — every ACDC concept is expressible in the existing UL, but 21 sentences require wordy paraphrase. The UL is weakest at Z0-Z2 (high-level abstractions and workflow descriptions) and strongest at Z3-Z4 (rules and mechanics), indicating the UL was built bottom-up from implementation concepts.
+**Post-application: 100% fluent.** Every previously awkward sentence had a finding,
+and every finding was applied. The 20 findings resolved all 19 unique awkward sentences
+across Z0-Z4 (some findings addressed multiple awkward points in the same sentence).
+
+## Pre-Application Scores (for reference)
+
+| Zoom | Sentences | Fluent | Awkward | Fluency |
+|------|-----------|--------|---------|---------|
+| Z0 | 1 | 0 | 1 | 0% |
+| Z1 | 8 | 5 | 3 | 62% |
+| Z2 | 26 | 13 | 13 | 50% |
+| Z3 | 24 | 22 | 2 | 92% |
+| Z4 | 12 | 10 | 2 | 83% |
+| **Total** | **71** | **50** | **21** | **70%** |
+
+**Key insight from original pass:** No outright gaps — every ACDC concept was expressible in the existing UL, but 21 sentences required wordy paraphrase. The UL was weakest at Z0-Z2 (high-level abstractions and workflow descriptions) and strongest at Z3-Z4 (rules and mechanics), indicating the UL was built bottom-up from implementation concepts.
 
 ## Findings: 20 total
 

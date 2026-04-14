@@ -20,7 +20,7 @@ errors:
     severity: "transient"
     context:
       - field: "sender_aid"
-        type: "string"
+        type: "types://cesr/primitives#AID"
         description: "The AID of the exchange message sender"
       - field: "verified_indices"
         type: "array[integer]"
@@ -29,7 +29,7 @@ errors:
         type: "string"
         description: "The signing threshold expression that was not satisfied"
       - field: "message_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "The SAID of the partially-signed exchange message"
     related_port: "port://credential-exchange/negotiation/inbound/dispatch-message"
 
@@ -40,7 +40,7 @@ errors:
     severity: "fatal"
     context:
       - field: "message_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "The SAID of the exchange message"
       - field: "route"
         type: "string"
@@ -60,7 +60,7 @@ errors:
         type: "string"
         description: "Specific validation failure (missing essr attachment, invalid diger, expired datetime)"
       - field: "message_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "The SAID of the invalid exchange message"
     related_port: "port://credential-exchange/negotiation/inbound/dispatch-message"
 
@@ -72,13 +72,13 @@ errors:
     severity: "transient"
     context:
       - field: "registry_id"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "The REGID of the missing registry"
       - field: "credential_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "The SAID of the credential in the grant message"
       - field: "message_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "The SAID of the exchange message"
     related_port: "port://credential-exchange/negotiation/inbound/dispatch-message"
 
@@ -90,10 +90,10 @@ errors:
     severity: "transient"
     context:
       - field: "schema_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "The SAID of the missing schema"
       - field: "credential_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "The SAID of the credential referencing the schema"
     related_port: "port://credential-exchange/negotiation/inbound/dispatch-message"
 
@@ -101,10 +101,10 @@ errors:
     description: "Escrowed exchange message expired before prerequisites were met"
     cause: "The partially-signed exchange message sat in escrow beyond TimeoutPSE (10 seconds) without collecting sufficient signatures or resolving dependencies"
     recovery: "abort"
-    severity: "recoverable"
+    severity: "fatal"
     context:
       - field: "message_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "The SAID of the expired exchange message"
       - field: "escrow_queue"
         type: "string"
@@ -121,7 +121,7 @@ errors:
     severity: "fatal"
     context:
       - field: "schema_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "The SAID of the schema"
       - field: "reason"
         type: "string"
@@ -141,7 +141,7 @@ errors:
         type: "string"
         description: "Route of the received message"
       - field: "thread_id"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "SAID of the negotiation thread"
     related_port: "port://credential-exchange/negotiation/inbound/negotiate"
 
@@ -155,10 +155,10 @@ errors:
         type: "string"
         description: "Which party should send in this FSM state (discloser or disclosee)"
       - field: "actual_signer"
-        type: "string"
+        type: "types://cesr/primitives#AID"
         description: "AID of the actual message signer"
       - field: "thread_id"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "SAID of the negotiation thread"
     related_port: "port://credential-exchange/negotiation/inbound/negotiate"
 
@@ -186,7 +186,7 @@ errors:
         type: "string"
         description: "Which artifact is missing (acdc, tel_event, kel_seal)"
       - field: "message_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "SAID of the incomplete grant message"
     related_port: "port://credential-exchange/negotiation/inbound/direct-issuance"
 
@@ -197,7 +197,7 @@ errors:
     severity: "fatal"
     context:
       - field: "credential_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "SAID of the credential being granted"
       - field: "verification_step"
         type: "string"
@@ -211,10 +211,10 @@ errors:
     severity: "transient"
     context:
       - field: "destination_aid"
-        type: "string"
+        type: "types://cesr/primitives#AID"
         description: "AID of the intended recipient"
       - field: "message_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "SAID of the undelivered message"
       - field: "reason"
         type: "string"
@@ -228,7 +228,7 @@ errors:
     severity: "transient"
     context:
       - field: "aid"
-        type: "string"
+        type: "types://cesr/primitives#AID"
         description: "AID whose KEL is missing"
     related_port: "port://credential-exchange/negotiation/outbound/kel-lookup"
 
@@ -239,6 +239,6 @@ errors:
     severity: "transient"
     context:
       - field: "credential_said"
-        type: "string"
+        type: "types://cesr/primitives#SAID"
         description: "SAID of the credential whose TEL is missing"
     related_port: "port://credential-exchange/negotiation/outbound/tel-lookup"

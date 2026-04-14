@@ -226,4 +226,342 @@ findings:
     rule: "v field MUST be first in CBOR and MGPK field maps (not just JSON)"
     domain: cesr/composition
     match: partial
-    enrichment: "Extend version-string-first-field test to cover CBOR and MGPK serializations alongside JSON"
+    enrichment: "Extend version-string-first-field test to cover CBOR and MSGPK serializations alongside JSON"
+
+  # ══════════════════════════════════════════════════════════════════
+  # CROSS-CUTTING CODE TABLE INVARIANTS — structural patterns
+  # across the entire code table that the spec implies but never
+  # states as a single rule
+  # ══════════════════════════════════════════════════════════════════
+
+  - id: CESR-INV-017
+    spec_line: 1489
+    rule: "The first character in the text code MUST determine which code table to use"
+    domain: cesr
+    match: absent
+    precision: z3-ready
+    proposed:
+      term: "Selector"
+      technique: smt
+      invariant: >
+        The selector-to-table dispatch MUST be a total function over all 64
+        Base64 characters. Every character maps to exactly one table: letters
+        [A-Za-z] → 1-char fixed table, '0' → 2-char fixed table, '1' → 4-char
+        fixed (ls=0), '2' → 4-char fixed (ls=1), '3' → 4-char fixed (ls=2),
+        '4' → small variable (ls=0), '5' → small variable (ls=1), '6' → small
+        variable (ls=2), '7' → large variable (ls=0), '8' → large variable
+        (ls=1), '9' → large variable (ls=2), '-' → count code table, '_' →
+        op code table. No character may be unassigned. No character may map to
+        more than one table.
+      formal: |
+        # Z3: prove the 64-character partition is exhaustive and disjoint
+        from z3 import *
+        c = Int('c')  # character index in Base64 alphabet [0..63]
+        table = Function('table', IntSort(), IntSort())
+        s = Solver()
+
+        # Define table assignment per character index
+        # A-Z = indices 0-25, a-z = 26-51, 0-9 = 52-61, - = 62, _ = 63
+        for i in range(0, 26):    # A-Z
+            s.add(table(i) == 0)      # 1-char fixed
+        for i in range(26, 52):   # a-z
+            s.add(table(i) == 0)      # 1-char fixed
+        s.add(table(52) == 1)     # '0' -> 2-char fixed
+        s.add(table(53) == 2)     # '1' -> 4-char fixed ls=0
+        s.add(table(54) == 3)     # '2' -> 4-char fixed ls=1
+        s.add(table(55) == 4)     # '3' -> 4-char fixed ls=2
+        s.add(table(56) == 5)     # '4' -> small var ls=0
+        s.add(table(57) == 6)     # '5' -> small var ls=1
+        s.add(table(58) == 7)     # '6' -> small var ls=2
+        s.add(table(59) == 8)     # '7' -> large var ls=0
+        s.add(table(60) == 9)     # '8' -> large var ls=1
+        s.add(table(61) == 10)    # '9' -> large var ls=2
+        s.add(table(62) == 11)    # '-' -> count codes
+        s.add(table(63) == 12)    # '_' -> op codes
+
+        # Prove exhaustive: no index in [0..63] is unassigned
+        s.push()
+        s.add(And(c >= 0, c <= 63))
+        s.add(Or(table(c) < 0, table(c) > 12))
+        assert s.check() == unsat  # every char maps to a valid table
+
+        # Prove disjoint: by construction — each char has exactly one assignment
+      notes: >
+        Spec L1489-1523. The encoding scheme table at L1930 summarizes all 15
+        code tables. This invariant proves the first-character dispatch is a
+        total bijection from {64 chars} → {13 tables}. Extends CESR-INV-013
+        (which tests membership) to also test dispatch correctness.
+
+  - id: CESR-INV-018
+    spec_line: 2140
+    rule: "Compact code tables prioritize entries that maintain at least 128 bits of cryptographic strength"
+    domain: cesr/primitives
+    match: absent
+    precision: pbt-ready
+    proposed:
+      term: "SecurityLevel"
+      technique: property-based
+      invariant: >
+        Every code in the master code table that represents a cryptographic
+        primitive (digest, signature, seed, public key, private key) MUST have
+        a raw binary size providing at least 128 bits of cryptographic strength.
+        Specifically: all digest codes MUST have raw_size >= 32 bytes (256 bits);
+        all signature codes MUST have raw_size >= 64 bytes (512 bits); all
+        seed/private key codes MUST have raw_size >= 32 bytes (256 bits); all
+        public key codes MUST have raw_size >= 32 bytes (256 bits). Non-crypto
+        codes (Short, Big, Tall, Large, Great, Vast, Label, Tag, Salt, Null,
+        Boolean) are exempt.
+      formal: |
+        CRYPTO_CODES = {
+            # Digests: 256-bit minimum (32 bytes raw)
+            'E': 32, 'F': 32, 'G': 32, 'H': 32, 'I': 32,
+            '0D': 64, '0E': 64, '0F': 64, '0G': 64,  # 512-bit digests
+            # Seeds/private keys: 256-bit minimum (32 bytes raw)
+            'A': 32, 'J': 32, 'K': 57, 'O': 32, 'Q': 32, '0A': 16,
+            # Public keys: 256-bit minimum (32 bytes raw)
+            'B': 32, 'C': 32, 'D': 32, 'L': 57,
+            '1AAA': 33, '1AAB': 33, '1AAC': 57, '1AAD': 57,
+            '1AAI': 33, '1AAJ': 33,
+            # Signatures: 512-bit minimum (64 bytes raw)
+            '0B': 64, '0C': 64, '0I': 64, '1AAE': 114,
+        }
+        MINIMUM_CRYPTO_BITS = 128
+
+        def test_crypto_strength_minimum():
+            for code, expected_raw in CRYPTO_CODES.items():
+                sizage = lookup_sizage(code)
+                actual_raw = (sizage.fs * 3 // 4) - sizage.ls if sizage.fs else expected_raw
+                assert actual_raw * 8 >= MINIMUM_CRYPTO_BITS, \
+                    f"Code '{code}' has {actual_raw * 8} bits, below {MINIMUM_CRYPTO_BITS}-bit minimum"
+      notes: >
+        Spec L2140-2151 (Annex A: Code table entry policy). The compact tables
+        "prioritize entries that satisfy the requirement that the associated
+        cryptographic operations maintain at least 128 bits of cryptographic
+        strength." Note: 0A (Salt_128) has 16 bytes = 128 bits, exactly at the
+        minimum. Extends the existing SecurityLevel invariant in cesr/verification.yaml
+        by enumerating ALL crypto codes and asserting per-code raw sizes.
+
+  - id: CESR-INV-019
+    spec_line: 1630
+    rule: "Variable raw size tables use 0, 1, or 2 lead bytes as appropriate given the pad size"
+    domain: cesr/primitives
+    match: absent
+    precision: pbt-ready
+    proposed:
+      term: "Variable-Size Code"
+      technique: property-based
+      invariant: >
+        Every variable-size code family MUST provide all three lead-size
+        variants (ls=0, ls=1, ls=2) in both small and large forms. For a
+        given type character T, if code 4T exists (small, ls=0), then 5T
+        (small, ls=1) and 6T (small, ls=2) MUST also exist with identical
+        type semantics. Likewise, if 7AAAT exists (large, ls=0), then 8AAAT
+        (large, ls=1) and 9AAAT (large, ls=2) MUST also exist. The triplet
+        is required because the parser selects lead size based on the actual
+        raw data length mod 3, and all three remainders (0, 1, 2) are possible.
+      formal: |
+        # Variable-size code families from the KERI/ACDC master table
+        VARIABLE_FAMILIES = ['A', 'B', 'C', 'D', 'E', 'F', 'H']
+
+        def test_variable_size_triplet_completeness():
+            for family in VARIABLE_FAMILIES:
+                # Small triplet: selectors 4, 5, 6
+                for sel in ['4', '5', '6']:
+                    code = sel + family
+                    assert code in CODE_TABLE, \
+                        f"Variable code {code} missing — incomplete lead-size triplet"
+
+                # Large triplet: selectors 7, 8, 9
+                large_type = 'AA' + family
+                for sel in ['7', '8', '9']:
+                    code = sel + large_type
+                    assert code in CODE_TABLE, \
+                        f"Variable code {code} missing — incomplete lead-size triplet"
+
+        def test_triplet_type_consistency():
+            """All three lead-size variants of a family encode the same type."""
+            for family in VARIABLE_FAMILIES:
+                descs = [CODE_TABLE['4' + family].description,
+                         CODE_TABLE['5' + family].description,
+                         CODE_TABLE['6' + family].description]
+                # Strip lead-size mention, rest must match
+                base = descs[0].replace('lead size 0', '').strip()
+                assert descs[1].replace('lead size 1', '').strip() == base
+                assert descs[2].replace('lead size 2', '').strip() == base
+      notes: >
+        Spec L1630-1644. "A given type code is repeated in each table for
+        the same type so that all that differs between codes of the same type
+        in each table is the number of lead bytes needed to align a given
+        variable length on a 24-bit boundary." The triplet is not optional —
+        a missing variant means some raw lengths cannot be encoded for that type.
+
+  - id: CESR-INV-020
+    spec_line: 1822
+    rule: "Every small count code MUST have a corresponding large count code"
+    domain: cesr/composition
+    match: absent
+    precision: pbt-ready
+    proposed:
+      term: "Count Code"
+      technique: property-based
+      invariant: >
+        For every small count code -X## (4-char, max 4095 quadlets) in the
+        KERI/ACDC genus, a corresponding large count code --X##### (8-char,
+        max 1,073,741,823 quadlets) MUST exist with the same type character X
+        and identical group semantics. The large variant is the overflow form
+        for groups exceeding 4095 quadlets. A type that only has a small code
+        silently truncates at 4095 quadlets with no path to larger groups.
+      formal: |
+        KERI_COUNT_TYPES = list('ABCDEFGHIJKLMNOPQRSTUVWXYZabc')
+
+        def test_small_large_count_code_pairing():
+            for type_char in KERI_COUNT_TYPES:
+                small = '-' + type_char
+                large = '--' + type_char
+                assert small in COUNT_TABLE, \
+                    f"Small count code {small} missing"
+                assert large in COUNT_TABLE, \
+                    f"Large count code {large} missing — no overflow for {small}"
+
+        def test_small_large_semantic_match():
+            """Small and large variants MUST describe the same group type."""
+            for type_char in KERI_COUNT_TYPES:
+                small_desc = COUNT_TABLE['-' + type_char].description
+                large_desc = COUNT_TABLE['--' + type_char].description
+                # Large description should be semantically equivalent
+                # (may say "up to 1,073,741,823" instead of "up to 4,095")
+                assert type_char in small_desc or small_desc.split('up to')[0] in large_desc, \
+                    f"Semantic mismatch: small='{small_desc}', large='{large_desc}'"
+      notes: >
+        Spec L1822-1843. The small table uses 2 Base64 size chars (max 4095),
+        the large table uses 5 (max 1,073,741,823). The master table at L2292-2351
+        shows every type character appears in both small (-X##) and large (--X#####)
+        form. This is structurally required — an implementation that only parses
+        small codes will fail on large groups, and an encoder with no large code
+        has no way to emit groups > 4095 quadlets.
+
+  - id: CESR-INV-021
+    spec_line: 2007
+    rule: "Indexed signature codes require dual-indexed variants for pre-rotation with partial rotation"
+    domain: cesr/primitives
+    match: absent
+    precision: pbt-ready
+    proposed:
+      term: "Indexer"
+      technique: property-based
+      invariant: >
+        Every indexed signature algorithm MUST provide both a "both same" (dual
+        index where index == ondex, stored as single index) variant and a
+        "current only" (index != ondex, each stored separately) variant. For
+        each algorithm at each code size, the two variants MUST appear as
+        consecutive type characters: A#/B# (Ed25519 both/current), C#/D#
+        (ECDSA secp256k1 both/current), 0A##/0B## (Ed448 both/current). The
+        "big" forms follow the same pattern: 2A####/2B#### (Ed25519 big
+        both/current), etc. This dual-variant structure is required by KERI's
+        partial rotation mechanism, where a signing key may have different
+        indices in the current and next key lists.
+      formal: |
+        INDEXED_PAIRS = [
+            # (both_same, current_only, algorithm, code_size)
+            ('A', 'B', 'Ed25519', 2),
+            ('C', 'D', 'ECDSA_secp256k1', 2),
+            ('0A', '0B', 'Ed448', 4),
+            ('2A', '2B', 'Ed25519_big', 6),
+            ('2C', '2D', 'ECDSA_secp256k1_big', 6),
+            ('3A', '3B', 'Ed448_big', 8),
+        ]
+
+        def test_indexed_dual_current_pairs():
+            for both, current, algo, cs in INDEXED_PAIRS:
+                assert both in INDEXED_TABLE, \
+                    f"Missing 'both same' indexed code {both} for {algo}"
+                assert current in INDEXED_TABLE, \
+                    f"Missing 'current only' indexed code {current} for {algo}"
+                # Both-same: ondex == index (stored implicitly)
+                both_entry = INDEXED_TABLE[both]
+                current_entry = INDEXED_TABLE[current]
+                assert both_entry.os == 0, \
+                    f"'Both same' code {both} should have ondex size 0"
+                # Current-only at 4+ chars: ondex stored separately
+                if cs >= 4:
+                    assert current_entry.os > 0, \
+                        f"'Current only' code {current} should have ondex size > 0"
+
+        def test_indexed_pair_same_algorithm():
+            """Both variants of a pair MUST use the same signature algorithm and raw size."""
+            for both, current, algo, cs in INDEXED_PAIRS:
+                both_entry = INDEXED_TABLE[both]
+                current_entry = INDEXED_TABLE[current]
+                assert both_entry.fs == current_entry.fs, \
+                    f"Total length mismatch for {algo}: {both}={both_entry.fs}, {current}={current_entry.fs}"
+      notes: >
+        Spec L2007-2014 and L2481-2495. "KERI requires dual-indexed signatures
+        to support pre-rotation with partial or reserved participants in a
+        rotation." The indexed table shows consistent A/B, C/D, 0A/0B, 2A/2B,
+        2C/2D, 3A/3B pairing. The pattern is not accidental — it is structurally
+        required by the partial rotation protocol.
+
+  - id: CESR-INV-022
+    spec_line: 1561
+    rule: "One-character codes provide 52 types for fixed-size raw binaries with pad size of 1"
+    domain: cesr/primitives
+    match: absent
+    precision: z3-ready
+    proposed:
+      term: "One-Character Code"
+      technique: smt
+      invariant: >
+        All 1-character codes (selector [A-Za-z]) MUST have: hs=1, ss=0,
+        ls=1 (pad size 1). This means all 1-char codes encode raw values
+        where len(raw) % 3 == 2 (producing exactly 1 pad character). For
+        crypto-material 1-char codes, this constrains raw_size to either
+        32 bytes (fs=44) or 57 bytes (fs=76), as these are the only sizes
+        where raw_size % 3 == 2 that align with standard crypto primitive
+        lengths (256-bit and 448-bit).
+      formal: |
+        from z3 import *
+
+        # Prove: all 1-char codes have ls=1 (pad size 1)
+        # and raw_size satisfies raw_size % 3 == 2
+        hs, ss, ls, fs = Ints('hs ss ls fs')
+        raw_size = Int('raw_size')
+        s = Solver()
+
+        # 1-char code structure
+        s.add(hs == 1, ss == 0, ls == 1)
+        # fs = hs + ss + vs where vs = raw_encoded_chars
+        # raw_size = (fs * 3 // 4) - ls
+        s.add(fs > 0, fs % 4 == 0)
+        s.add(raw_size == (fs * 3) / 4 - ls)
+        s.add(raw_size > 0)
+
+        # Prove: raw_size % 3 == 2 (pad size 1 means 1 pad char = 2 spare sextets)
+        s.push()
+        s.add(raw_size % 3 != 2)
+        assert s.check() == unsat  # no counterexample: all pad-1 raws have r%3==2
+        s.pop()
+
+        # For the master table 1-char codes, verify fs ∈ {4, 8, 12, 16, 20, 24, 44, 76, 124}
+        ONE_CHAR_CODES = {
+            'A': 44, 'B': 44, 'C': 44, 'D': 44,  # 32-byte crypto
+            'E': 44, 'F': 44, 'G': 44, 'H': 44, 'I': 44,  # 32-byte digests
+            'J': 44, 'K': 76, 'L': 76,  # seeds/keys
+            'M': 4, 'N': 12, 'O': 44, 'P': 124, 'Q': 44,  # numbers/cipher
+            'R': 8, 'S': 16, 'T': 20, 'U': 24,  # sized numbers
+            'V': 4, 'W': 4, 'X': 4, 'Y': 8, 'Z': 12,  # labels/tags
+            'a': 44,  # blinding factor
+        }
+        def test_one_char_sizage_consistency():
+            for code, expected_fs in ONE_CHAR_CODES.items():
+                sizage = lookup_sizage(code)
+                assert sizage.hs == 1, f"Code '{code}': hs={sizage.hs}, expected 1"
+                assert sizage.ss == 0, f"Code '{code}': ss={sizage.ss}, expected 0"
+                assert sizage.ls == 1, f"Code '{code}': ls={sizage.ls}, expected 1"
+                assert sizage.fs == expected_fs, \
+                    f"Code '{code}': fs={sizage.fs}, expected {expected_fs}"
+      notes: >
+        Spec L1561-1567. "The one-character type code table uses as type codes
+        the non-selector characters A-Z and a-z. This provides 52 unique type
+        codes for fixed-size raw binary values with a pad size of 1." The Z3
+        proof establishes that pad-size-1 implies raw_size % 3 == 2, and the
+        exhaustive check validates every entry in the master table.

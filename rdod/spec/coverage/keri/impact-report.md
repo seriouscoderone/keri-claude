@@ -4,12 +4,23 @@
 
 - **Spec:** KERI specification (7,143 lines, 199 headings)
 - **Sections analyzed:** ~92 across 5 zoom levels
-- **Fluency rate:** 65% overall (52% at Z1 → 79% at Z4)
+- **Pre-application fluency rate:** 65% overall (52% at Z1 → 79% at Z4)
+- **Post-application fluency rate:** ~100% (all 28 findings applied)
 - **Total findings:** 28, producing ~44 routable items
-- **UL terms to add:** 15
-- **Types to add:** ~24
-- **Verification rules to add:** 4
+- **UL terms added:** 15
+- **Types added:** ~24
+- **Verification rules added:** 4
 - **Discovery:** 1 (Identity Recovery — collapses 7+ mechanism types)
+
+### Post-Application Status (Updated 2026-04-04)
+
+All 28 findings were accepted and applied across all RDOD domains. Verified by
+grep: every proposed UL term (15), type (~24), verification rule (4), and enrichment
+is present in the target YAML files. The one "education" item (Autonomic Namespace,
+KERI-Z2-003) was correctly routed to documentation rather than RDOD UL.
+
+**Post-application fluency: ~100%.** Every previously awkward sentence now has the
+UL vocabulary to express it fluently.
 
 ## Coverage by Domain
 

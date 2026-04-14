@@ -1,22 +1,29 @@
 # Precision Report — CESR Specification Invariant Coverage
 
 **Spec:** cesr-specification.md
-**Date:** 2026-04-03
+**Date:** 2026-04-04
 **Existing verification entries:** ~105 across 3 files (cesr: 29, composition: 37, primitives: 39)
-**Total normative rules reviewed:** ~52 (deduplicated from ~100 MUST statements)
+**Total normative rules reviewed:** ~58 (deduplicated from ~100 MUST statements)
+**Total findings:** 22 (12 absent, 10 partial)
 
 ## Coverage Summary
 
 | Category | Exact | Partial | Absent | Total |
 |----------|-------|---------|--------|-------|
-| Core encoding (composability, alignment, stable, mid-pad) | 10 | 4 | 1 | 15 |
-| Count codes + stream parsing | 12 | 4 | 3 | 19 |
+| Core encoding (composability, alignment, stable, mid-pad) | 10 | 4 | 2 | 16 |
+| Count codes + stream parsing | 12 | 4 | 4 | 20 |
 | SAID + version + code tables | 3 | 5 | 2 | 10 |
-| **Total** | **25** | **13** | **6** | **44 unique testable** |
+| Cross-cutting code table structure | 0 | 0 | 4 | 4 |
+| **Total** | **25** | **13** | **12** | **50 unique testable** |
 
 **Plus 8 untestable/process rules** (version increment discipline, design constraints).
 
-**Overall: 25 exact (57%), 13 partial (30%), 6 absent (13%)**
+**Overall: 25 exact (50%), 13 partial (26%), 12 absent (24%)**
+
+Note: the 6 new cross-cutting findings (CESR-INV-017 through CESR-INV-022) represent
+structural patterns across the entire code table — invariants about the table's *design*
+rather than individual entries. These are the answer to "can the code table be represented
+as invariants?" — not per-row facts, but cross-cutting rules that constrain all rows.
 
 This is dramatically better than the ACDC spec coverage (which was 27% exact before our work). The CESR verification files are comprehensive and precise.
 
@@ -42,6 +49,17 @@ Zero vague entries — every existing match is test-derivable. The CESR domain h
 | CESR-INV-004 | 2682 | v2.XX MUST support v1.XX backward compat | pbt-ready | cesr/composition |
 | CESR-INV-005 | 3294 | SAD Path array-context integer constraint | pbt-ready | cesr/composition |
 | CESR-INV-006 | 2838 | SAID verification protocol (verify, not just generate) | pbt-ready | cesr/primitives |
+
+### Absent — Cross-cutting code table structure (new)
+
+| ID | Line | Gap | Precision | Domain |
+|----|------|-----|-----------|--------|
+| CESR-INV-017 | 1489 | Selector-to-table dispatch is a total function over all 64 Base64 chars | z3-ready | cesr |
+| CESR-INV-018 | 2140 | All crypto codes maintain ≥128-bit cryptographic strength | pbt-ready | cesr/primitives |
+| CESR-INV-019 | 1630 | Variable-size families MUST provide all 3 lead-size variants (ls=0,1,2) | pbt-ready | cesr/primitives |
+| CESR-INV-020 | 1822 | Every small count code MUST have a corresponding large count code | pbt-ready | cesr/composition |
+| CESR-INV-021 | 2007 | Indexed sig algorithms MUST provide both-same + current-only variants | pbt-ready | cesr/primitives |
+| CESR-INV-022 | 1561 | All 1-char codes: hs=1, ss=0, ls=1 (pad size 1) with fs consistency | z3-ready | cesr/primitives |
 
 ### Partial (enrichment needed)
 
@@ -76,4 +94,6 @@ The existing coverage is excellent in these areas:
 1. **Highest priority:** CESR-INV-001 (non-native enclosure) and CESR-INV-002 (special count codes) — structural gaps affecting stream parser correctness
 2. **High priority:** CESR-INV-004 (v1 backward compat) and CESR-INV-006 (SAID verify protocol) — interoperability gaps
 3. **Medium priority:** CESR-INV-011 (mutual exclusion Z3) and CESR-INV-015 (code set enumeration) — strengthening existing coverage
-4. **Low priority:** Partial enrichments (CESR-INV-007 through CESR-INV-016) — refinements to already-good entries
+4. **Cross-cutting (new):** CESR-INV-017 (selector dispatch totality), CESR-INV-019 (variable triplets), CESR-INV-020 (small/large pairing) — these are the "code table as invariants" findings; they capture structural patterns that hold across ALL table entries
+5. **Low priority:** CESR-INV-018 (128-bit minimum), CESR-INV-021 (indexed pairs), CESR-INV-022 (1-char sizage) — strengthen existing coverage; the SecurityLevel invariant already partially covers INV-018
+6. **Partial enrichments:** CESR-INV-007 through CESR-INV-016 — refinements to already-good entries

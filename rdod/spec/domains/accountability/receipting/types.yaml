@@ -44,7 +44,7 @@ types:
       - name: "default"
         fields:
           - name: "prefix"
-            type: "string"
+            type: "types://cesr/primitives#AID"
             required: true
             description: "The AID this KERL belongs to"
           - name: "events"
@@ -85,6 +85,24 @@ types:
         invariants:
           - "toad_satisfied == (receipt_count >= toad)"
           - "receipt_count increments by exactly 1 on each successful attachment (or stays the same for duplicate)"
+
+  # L5-FIX: ReceiptInput — replaces compound type ref in receipt-lifecycle port
+  - name: "ReceiptInput"
+    description: "Input to the receipt-lifecycle port — pairs the event being receipted with the witness signing context needed to verify the receipt."
+    variants:
+      - name: "default"
+        fields:
+          - name: "event_said"
+            type: "types://cesr/primitives#SAID"
+            required: true
+            description: "SAID of the event being receipted"
+          - name: "signing_keys"
+            type: "types://accountability/receipting#SigningKeys"
+            required: true
+            description: "Witness key set for receipt verification"
+        invariants:
+          - "event_said must reference an event in the local KEL (or the receipt is escrowed)"
+          - "signing_keys must satisfy the witness threshold for signature verification"
 
   # L5-O6: EscrowType — enum for receipt escrow queue classification
   - name: "EscrowType"
