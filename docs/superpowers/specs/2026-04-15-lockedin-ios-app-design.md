@@ -17,7 +17,20 @@ Witnesses are optional. The free tier works with no cloud infrastructure at all.
 
 ---
 
-## 2. Architecture
+## 2. Repository Structure
+
+The project spans two repositories:
+
+| Repository | Path | Purpose |
+|---|---|---|
+| `keripy` (fork) | `~/code/keripy` branch `feat/dynamodb-backend` | SQLiteDBer storage adapter added to existing keripy fork |
+| `locked-in` (new) | `~/code/locked-in` | iOS app: Swift shell, Python bridge, SwiftUI views |
+
+`locked-in` depends on keripy as a Python package (`pip install git+https://github.com/seriouscoderone/keripy.git@feat/dynamodb-backend`). The SQLiteDBer lives in keripy because it's a general-purpose storage adapter, not LockedIn-specific. The bridge and iOS app are LockedIn-specific.
+
+---
+
+## 3. Architecture
 
 ```
 +-------------------------------------------------------+
@@ -74,10 +87,11 @@ Witnesses are optional. The free tier works with no cloud infrastructure at all.
 | KERI stack as the database | No separate app database. Every data point is a verifiable credential. Eliminates impedance mismatch between app state and protocol state. |
 | PythonKit for bridge | Embeds CPython in Swift process. Synchronous calls. Single-language debugging on the Python side. |
 | keripy serverless fork (feat/dynamodb-backend) | Already decoupled from LMDB. DynamoDBer proves the interface is abstractable. SQLiteDBer follows the same pattern. |
+| Two repos (keripy + locked-in) | SQLiteDBer is a general-purpose adapter — belongs in keripy. Bridge and iOS app are LockedIn-specific — belong in their own repo. |
 
 ---
 
-## 3. Presence Attestation Domain Model
+## 4. Presence Attestation Domain Model
 
 ### Ubiquitous Language
 
@@ -169,7 +183,7 @@ Total KEL events per day: ~25 (24 hourly anchors + 1 daily Chronicle). Witnesses
 
 ---
 
-## 4. User Journeys
+## 5. User Journeys
 
 ### Setup & Identity
 
@@ -218,7 +232,7 @@ View current trust tier -> see per-witness health (last receipt, reachability) -
 
 ---
 
-## 5. Background Observation Pipeline
+## 6. Background Observation Pipeline
 
 ### Always-On Execution Model
 
@@ -313,7 +327,7 @@ Everything else is optional user-initiated activity.
 
 ---
 
-## 6. Swift <-> Python Bridge API
+## 7. Swift <-> Python Bridge API
 
 Narrow interface between native shell and keripy. 16 functions mapping to 10 user journeys.
 
@@ -436,7 +450,7 @@ PythonKit (Swift package that embeds CPython). Each bridge function maps to a Py
 
 ---
 
-## 7. iOS App Structure
+## 8. iOS App Structure
 
 ### SwiftUI View Hierarchy
 
@@ -472,7 +486,7 @@ LockedInApp (root)
 
 ---
 
-## 8. Security Model
+## 9. Security Model
 
 ### Secret Storage
 
@@ -520,22 +534,24 @@ If iOS kills the background task, if the user hasn't opened the app after reboot
 
 ---
 
-## 9. SQLiteDBer Implementation
+## 10. SQLiteDBer Implementation
 
 ### What It Is
 
 A `SQLiteDBer` class implementing the same method interface as `DynamoDBer` on the `feat/dynamodb-backend` branch. Drop-in replacement — `subing.py`, `koming.py`, `basing.py` work unchanged on top of it.
 
+### Where It Lives
+
+In keripy (`~/code/keripy` on branch `feat/dynamodb-backend`), not in the locked-in repo. SQLiteDBer is a general-purpose storage adapter — any keripy consumer can use it, not just LockedIn.
+
 ### Schema
 
 ```sql
--- Single table design (mirrors DynamoDB's single-table pattern)
 CREATE TABLE keri_store (
-    subdb   TEXT    NOT NULL,   -- subdatabase name ('evts.', 'sigs.', 'rcts.', etc.)
-    key     BLOB    NOT NULL,   -- primary key (same bytes keripy uses)
-    sort    BLOB    NOT NULL DEFAULT x'',  -- sort key (ordinals, io-sets, dups)
-    value   BLOB    NOT NULL,   -- stored value (CESR primitives, events, encrypted keys)
-
+    subdb  TEXT NOT NULL,
+    key    BLOB NOT NULL,
+    sort   BLOB NOT NULL DEFAULT x'',
+    value  BLOB NOT NULL,
     PRIMARY KEY (subdb, key, sort)
 );
 
@@ -543,66 +559,24 @@ CREATE INDEX idx_subdb_key ON keri_store (subdb, key);
 CREATE INDEX idx_subdb ON keri_store (subdb);
 
 CREATE TABLE keri_meta (
-    subdb   TEXT    PRIMARY KEY,
+    subdb   TEXT PRIMARY KEY,
     dupsort INTEGER NOT NULL DEFAULT 0,
-    flags   TEXT    -- JSON for future extensibility
+    flags   TEXT
 );
 ```
 
-### Method Mapping
-
-| DynamoDBer method | SQLite equivalent |
-|---|---|
-| `putVal(db, key, val)` | `INSERT OR IGNORE INTO keri_store (subdb, key, sort, value) VALUES (?, ?, x'', ?)` |
-| `setVal(db, key, val)` | `INSERT OR REPLACE INTO keri_store ...` |
-| `getVal(db, key)` | `SELECT value FROM keri_store WHERE subdb=? AND key=? AND sort=x''` |
-| `delVal(db, key)` | `DELETE FROM keri_store WHERE subdb=? AND key=? AND sort=x''` |
-| `putOnVal(db, key, on, val)` | `INSERT OR IGNORE ... sort = on_as_32hex` |
-| `getOnVal(db, key, on)` | `SELECT ... WHERE sort = on_as_32hex` |
-| `addIoSetVal(db, key, val)` | `INSERT ... sort = next_insertion_order_hex` |
-| `getIoSetVals(db, key)` | `SELECT ... WHERE subdb=? AND key=? ORDER BY sort` |
-| `putVals(db, key, vals)` | Multiple inserts with `sort = val` for dup ordering |
-| `cnt*(db, key)` | `SELECT COUNT(*) ...` |
-| Iterators | SQLite cursors with `ORDER BY key, sort` |
-
 ### Integration Into keripy Fork
 
-New file: `src/keri/db/sqlitedbing.py` (~800-1000 lines)
+New file: `src/keri/db/sqlitedbing.py`
 Update: `src/keri/db/__init__.py` — add optional import (same pattern as DynamoDBer)
 
-```python
-try:
-    from .sqlitedbing import SQLiteDBer, openSQLite
-except ImportError:
-    pass  # sqlite3 not available (unlikely — it's in Python stdlib)
-```
+### Implementation Plan
 
-App bootstrap:
-
-```python
-from keri.db.sqlitedbing import SQLiteDBer
-
-db = SQLiteDBer.open(
-    name="lockedin",
-    stores=[...all Baser subdbs...],
-    path="/var/mobile/.../lockedin.sqlite"
-)
-baser = Baser(db=db)  # everything else works unchanged
-```
-
-### Operational Considerations
-
-| Concern | Mitigation |
-|---|---|
-| Concurrent read/write | `PRAGMA journal_mode=WAL` — background observations write while UI reads |
-| Bulk Epoch issuance | Wrap 12 Observation inserts + TEL anchor in single `BEGIN/COMMIT` |
-| File size growth | ~280KB/day (288 Observations x ~1KB). ~100MB/year. Manageable. Older Chronicles prunable. |
-| Thread safety | Serialized mode or one connection per thread |
-| iOS file protection | `NSFileProtectionCompleteUntilFirstUserAuthentication` — matches always-on model |
+See: `docs/superpowers/plans/2026-04-15-sqlitedber-implementation.md` (8 TDD tasks)
 
 ---
 
-## 10. Recovery Model
+## 11. Recovery Model
 
 KERI's recovery mechanism IS the backup strategy. There is no export/import.
 
@@ -616,9 +590,9 @@ KERI's recovery mechanism IS the backup strategy. There is no export/import.
 
 ---
 
-## 11. Dependencies
+## 12. Dependencies
 
-### iOS Side
+### iOS Side (~/code/locked-in)
 - Swift 5.9+ / SwiftUI
 - PythonKit (CPython embedding)
 - CoreLocation (GPS + barometric)
@@ -642,7 +616,7 @@ KERI's recovery mechanism IS the backup strategy. There is no export/import.
 
 ---
 
-## 12. What This Design Does NOT Cover
+## 13. What This Design Does NOT Cover
 
 These are explicitly out of scope and belong to consuming ecosystems or future work:
 
