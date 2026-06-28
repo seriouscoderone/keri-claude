@@ -211,7 +211,9 @@ export class KeriChatStack extends cdk.Stack {
       defaultDatabaseName: databaseName,
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
-      serverlessV2MinCapacity: 0.5,
+      // Min 0 enables Aurora Serverless v2 auto-pause: the cluster scales to
+      // 0 ACU (no compute cost) after ~5 min idle, resuming on next connection.
+      serverlessV2MinCapacity: 0,
       serverlessV2MaxCapacity: 4,
       writer: rds.ClusterInstance.serverlessV2('Writer'),
       enableDataApi: true,
