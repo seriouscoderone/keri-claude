@@ -215,6 +215,10 @@ export class KeriChatStack extends cdk.Stack {
       // 0 ACU (no compute cost) after ~5 min idle, resuming on next connection.
       serverlessV2MinCapacity: 0,
       serverlessV2MaxCapacity: 4,
+      // 300s is what the cluster is running today, but it lives only in live
+      // state — the deployed template never carried it. Declaring it makes the
+      // pause behaviour reproducible from code.
+      serverlessV2AutoPauseDuration: cdk.Duration.minutes(5),
       writer: rds.ClusterInstance.serverlessV2('Writer'),
       enableDataApi: true,
       storageEncrypted: true,
