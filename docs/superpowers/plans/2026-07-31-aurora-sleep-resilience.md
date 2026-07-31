@@ -473,6 +473,51 @@ cases are the load-bearing tests."
   - `{"type":"status","state":"waking","elapsedMs":<number>,"detail":"Waking the knowledge base…"}`
   - `{"type":"error","code":"DATABASE_RESUMING","error":"Knowledge base is waking up","detail":"..."}`
 
+- [ ] **Step 0: Give `lambda/` a type-check first**
+
+`infrastructure/tsconfig.json` excludes `lambda/`, and the CDK bundles it with esbuild — which strips types without checking them. Verified empirically: planting `const x: number = "nope";` in a lambda file leaves `npm run build` exiting 0. So **every type error in `lambda/` currently ships to production silently.** Tasks 2, 3 and 10 all add real logic there, so close this before adding more.
+
+Create `infrastructure/lambda/tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts"]
+}
+```
+
+`DOM` is in `lib` because the handlers use `fetch`, `Request` and `Headers`. `noEmit` is set because the CDK does the actual bundling — this config exists only to check types.
+
+Add the script to `infrastructure/package.json`:
+
+```json
+"typecheck:lambda": "tsc -p lambda/tsconfig.json",
+```
+
+Verify it both passes now and actually catches errors:
+
+```bash
+cd infrastructure && npm run typecheck:lambda && echo "CLEAN"
+printf '\nconst __probe: number = "nope";\n' >> lambda/shared/aurora-wake.ts
+npm run typecheck:lambda; echo "exit=$? (expect non-zero)"
+git checkout lambda/shared/aurora-wake.ts
+npm run typecheck:lambda && echo "CLEAN AGAIN"
+```
+
+Expected: `CLEAN`, then a non-zero exit naming `__probe`, then `CLEAN AGAIN`. If the probe does not fail the check, the config is not covering `lambda/` — fix that before continuing.
+
+Run `npm run typecheck:lambda` before each commit in this task and in Tasks 3 and 10.
+
 - [ ] **Step 1: Import the module and declare the budget**
 
 In `infrastructure/lambda/chat-handler/index.ts`, after the existing `import { Writable } from 'stream';` (line 10), add:
@@ -569,18 +614,20 @@ In `writeErrorSSE`, insert this as the **first** branch, immediately after the `
   }
 ```
 
-- [ ] **Step 5: Verify it compiles and synthesises**
+- [ ] **Step 5: Type-check and synthesise**
 
 ```bash
-cd infrastructure && npx cdk synth KeriChat > /dev/null && echo "SYNTH OK"
+cd infrastructure && npm run typecheck:lambda && npx cdk synth KeriChat > /dev/null && echo "OK"
 ```
 
-Expected: `SYNTH OK`. A synth failure here almost always means the `../shared/aurora-wake` import path is wrong — it resolves from `lambda/chat-handler/` to `lambda/shared/`.
+Expected: `OK`. Note that `cdk synth` alone would **not** catch a type error — that is why the type-check runs first. A synth failure almost always means the `../shared/aurora-wake` import path is wrong; it resolves from `lambda/chat-handler/` to `lambda/shared/`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add infrastructure/lambda/chat-handler/index.ts
+git add infrastructure/lambda/tsconfig.json \
+        infrastructure/package.json \
+        infrastructure/lambda/chat-handler/index.ts
 git commit -m "feat(chat): retry a resuming knowledge base behind SSE heartbeats
 
 retrieveChunks is the only step that touches Aurora. Wrap it in a 90s wake
@@ -675,13 +722,13 @@ with:
 
 Note the warm branch **never throws and never returns non-200**: warming is an optimisation, and a client must never be blocked or shown an error by it.
 
-- [ ] **Step 3: Verify synth**
+- [ ] **Step 3: Type-check and synthesise**
 
 ```bash
-cd infrastructure && npx cdk synth KeriChat > /dev/null && echo "SYNTH OK"
+cd infrastructure && npm run typecheck:lambda && npx cdk synth KeriChat > /dev/null && echo "OK"
 ```
 
-Expected: `SYNTH OK`.
+Expected: `OK`. The type-check is the load-bearing half — `cdk synth` bundles with esbuild, which strips types without checking them, so synth alone would pass a type error straight through to production.
 
 - [ ] **Step 4: Commit**
 
@@ -1704,7 +1751,7 @@ with:
 - [ ] **Step 5: Synth, deploy, and verify**
 
 ```bash
-cd infrastructure && npx cdk synth KeriChat > /dev/null && echo "SYNTH OK"
+cd infrastructure && npm run typecheck:lambda && npx cdk synth KeriChat > /dev/null && echo "OK"
 ./scripts/deploy.sh --profile personal
 ```
 
