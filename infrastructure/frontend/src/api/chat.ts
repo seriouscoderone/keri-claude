@@ -1,3 +1,41 @@
+/**
+ * The knowledge base runs on Aurora Serverless v2 at min capacity 0 and pauses
+ * after 5 minutes idle; resuming takes ~25s. Warming triggers that resume
+ * ahead of a real query so the wait is usually invisible.
+ *
+ * Tied to intent rather than a timer: page load and first keystroke. A
+ * periodic keepalive would hold the cluster awake for as long as a tab stayed
+ * open, which defeats the cost saving the sleep exists for.
+ */
+const WARM_TTL_MS = 4 * 60 * 1000;
+const WARM_KEY = 'keri-chat:last-warm';
+
+/** Fire-and-forget. Warming is an optimisation and must never surface. */
+export async function warm(): Promise<void> {
+  try {
+    await fetch('/api/warm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+  } catch {
+    // Deliberately swallowed.
+  }
+}
+
+/** Warm unless we already did within WARM_TTL_MS. Never rejects. */
+export async function warmIfStale(): Promise<void> {
+  try {
+    const last = Number(sessionStorage.getItem(WARM_KEY) ?? 0);
+    if (Date.now() - last < WARM_TTL_MS) return;
+    // Stamp before awaiting, so concurrent callers do not both fire.
+    sessionStorage.setItem(WARM_KEY, String(Date.now()));
+    await warm();
+  } catch {
+    // sessionStorage can throw in private-mode browsers; warming is optional.
+  }
+}
+
 export interface NumberedCitation {
   number: number;
   content: string;
@@ -48,6 +86,16 @@ interface SSEDoneEvent {
   type: 'done';
 }
 
+export interface WakeStatus {
+  state: string;
+  elapsedMs: number;
+  detail?: string;
+}
+
+interface SSEStatusEvent extends WakeStatus {
+  type: 'status';
+}
+
 interface SSEErrorEvent {
   type: 'error';
   error: string;
@@ -55,7 +103,12 @@ interface SSEErrorEvent {
   detail?: string;
 }
 
-type SSEEvent = SSEChunkEvent | SSECitationsEvent | SSEDoneEvent | SSEErrorEvent;
+type SSEEvent =
+  | SSEChunkEvent
+  | SSECitationsEvent
+  | SSEDoneEvent
+  | SSEErrorEvent
+  | SSEStatusEvent;
 
 export async function streamMessage(
   message: string,
@@ -63,6 +116,7 @@ export async function streamMessage(
   attachments: Attachment[] | undefined,
   onChunk: (text: string) => void,
   onCitations: (citations: NumberedCitation[]) => void,
+  onStatus?: (status: WakeStatus) => void,
 ): Promise<void> {
   const res = await fetch('/api/chat', {
     method: 'POST',
@@ -124,6 +178,13 @@ export async function streamMessage(
           break;
         case 'citations':
           onCitations(event.data);
+          break;
+        case 'status':
+          onStatus?.({
+            state: event.state,
+            elapsedMs: event.elapsedMs,
+            detail: event.detail,
+          });
           break;
         case 'error':
           throw new ChatApiError(500, {
