@@ -144,7 +144,7 @@ describe('retryWhileWaking', () => {
 
     const settled = retryWhileWaking(op, { timeoutMs: 9_000 }).catch((e) => e);
     await vi.advanceTimersByTimeAsync(30_000);
-    const err = await settled;
+    const err = (await settled) as AuroraWakeTimeout;
 
     expect(err).toBeInstanceOf(AuroraWakeTimeout);
     expect(err.name).toBe('AuroraWakeTimeout');

@@ -8,9 +8,21 @@ import {
   RetrieveCommand,
 } from '@aws-sdk/client-bedrock-agent-runtime';
 import { Writable } from 'stream';
+import {
+  retryWhileWaking,
+  AuroraWakeTimeout,
+} from '../shared/aurora-wake';
 
 const bedrockRuntime = new BedrockRuntimeClient({});
 const bedrockAgent = new BedrockAgentRuntimeClient({});
+
+/**
+ * Aurora resume measured at 25s on 2026-07-31; this is 3.6x that. Safe despite
+ * CloudFront's 60s readTimeout on /api/*, because the response is a stream and
+ * that 60s is idle time *between bytes* — the status heartbeats below reset it.
+ * The Lambda's own timeout is 300s.
+ */
+const WAKE_BUDGET_MS = 90_000;
 
 interface Attachment {
   name: string;
@@ -95,14 +107,17 @@ async function reformulateQuery(
   }
 }
 
-async function retrieveChunks(query: string): Promise<Chunk[]> {
+async function retrieveChunks(
+  query: string,
+  numberOfResults = 10,
+): Promise<Chunk[]> {
   const response = await bedrockAgent.send(
     new RetrieveCommand({
       knowledgeBaseId: process.env.KNOWLEDGE_BASE_ID!,
       retrievalQuery: { text: query },
       retrievalConfiguration: {
         vectorSearchConfiguration: {
-          numberOfResults: 10,
+          numberOfResults,
         },
       },
     }),
@@ -171,6 +186,18 @@ function writeSSE(stream: Writable, data: object): void {
 function writeErrorSSE(stream: Writable, err: unknown): void {
   const errMsg = err instanceof Error ? err.message : String(err);
   const errName = err instanceof Error ? err.name : '';
+
+  if (err instanceof AuroraWakeTimeout || errName === 'AuroraWakeTimeout') {
+    writeSSE(stream, {
+      type: 'error',
+      error: 'Knowledge base is waking up',
+      code: 'DATABASE_RESUMING',
+      detail:
+        'The database sleeps when idle to save cost. It should be ready in ' +
+        'about 30 seconds — please try again.',
+    });
+    return;
+  }
 
   if (
     errMsg.includes('use case details have not been submitted') ||
@@ -271,8 +298,22 @@ export const handler = awslambda.streamifyResponse(
       // Step 1: Reformulate query (synchronous)
       const reformulatedQuery = await reformulateQuery(body.message, history);
 
-      // Step 2: Retrieve chunks (synchronous)
-      const chunks = await retrieveChunks(reformulatedQuery);
+      // Step 2: Retrieve chunks — the only step that touches Aurora, so the
+      // only one that can meet a paused cluster. Heartbeats keep CloudFront's
+      // idle timer alive and drive the client's progress message.
+      const chunks = await retryWhileWaking(
+        () => retrieveChunks(reformulatedQuery),
+        {
+          timeoutMs: WAKE_BUDGET_MS,
+          onWaking: (elapsedMs) =>
+            writeSSE(httpStream, {
+              type: 'status',
+              state: 'waking',
+              elapsedMs,
+              detail: 'Waking the knowledge base…',
+            }),
+        },
+      );
 
       const systemPrompt = SYSTEM_PROMPT_TEMPLATE.replace(
         '{CHUNKS}',

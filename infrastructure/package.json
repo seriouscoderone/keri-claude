@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
+    "typecheck:lambda": "tsc -p lambda/tsconfig.json",
     "test": "vitest run",
     "cdk": "cdk",
     "synth": "cdk synth KeriChat",
@@ -15,6 +16,10 @@
     "publish:template": "bash scripts/publish-template.sh keri-host-chat-stack us-east-1"
   },
   "devDependencies": {
+    "@aws-sdk/client-bedrock-agent": "^3.1100.0",
+    "@aws-sdk/client-bedrock-agent-runtime": "^3.1100.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1100.0",
+    "@aws-sdk/client-rds-data": "^3.1100.0",
     "@types/node": "^22.0.0",
     "aws-cdk": "^2.180.0",
     "esbuild": "^0.24.0",
