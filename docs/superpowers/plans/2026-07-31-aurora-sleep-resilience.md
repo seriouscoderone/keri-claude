@@ -504,6 +504,32 @@ Add the script to `infrastructure/package.json`:
 "typecheck:lambda": "tsc -p lambda/tsconfig.json",
 ```
 
+**The handlers' AWS SDK imports need type stubs.** Every `NodejsFunction` sets `externalModules: ['@aws-sdk/*']` (stack lines 236, 552, 627, 697), so those packages were deliberately never installed — which means `tsc` cannot resolve their types and reports `TS2307` for each, plus a knock-on implicit-`any` at `chat-handler/index.ts:112`. Install them as **devDependencies**: they stay external to the bundle and devDependencies are never deployed, so this is types-only with no runtime impact.
+
+```bash
+cd infrastructure
+npm install --save-dev @aws-sdk/client-bedrock-agent-runtime@^3 \
+                      @aws-sdk/client-bedrock-runtime@^3 \
+                      @aws-sdk/client-bedrock-agent@^3 \
+                      @aws-sdk/client-rds-data@^3
+```
+
+**Task 1's test file needs one narrowing.** `aurora-wake.test.ts:150-152` reads `.attempts` / `.elapsedMs` off a value that `.catch((e) => e)` widened to `unknown`, which strict mode rejects. Narrow it once at the assignment and keep every assertion:
+
+```ts
+const err = (await settled) as AuroraWakeTimeout;
+```
+
+The `expect(err).toBeInstanceOf(AuroraWakeTimeout)` assertion is what proves the type at runtime, so the cast asserts nothing the test does not already verify. Never weaken an assertion to satisfy the checker.
+
+**If resolving the modules surfaces new errors in `db-init/` or `ingestion-handler/`** — currently masked by the `TS2307`s — do not fix them. Narrow the include instead, and report exactly what was excluded:
+
+```json
+"include": ["shared/**/*.ts", "chat-handler/**/*.ts", "mcp-handler/**/*.ts"]
+```
+
+A gate covering the code this project touches is worth having; a repo-wide type cleanup is not this task.
+
 Verify it both passes now and actually catches errors:
 
 ```bash
