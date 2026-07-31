@@ -11,6 +11,7 @@ import { Writable } from 'stream';
 import {
   retryWhileWaking,
   AuroraWakeTimeout,
+  isAuroraWakeError,
 } from '../shared/aurora-wake';
 
 const bedrockRuntime = new BedrockRuntimeClient({});
@@ -267,6 +268,46 @@ declare const awslambda: {
 
 export const handler = awslambda.streamifyResponse(
   async (event: any, responseStream: Writable, _context: any) => {
+    const path: string =
+      event.rawPath ?? event.requestContext?.http?.path ?? '';
+
+    // Warm path: trigger an Aurora resume and return at once. One Retrieve is
+    // enough to start the wake; there is deliberately no retry loop here,
+    // because the caller is not waiting for an answer.
+    if (path.endsWith('/warm')) {
+      const warmStream = awslambda.HttpResponseStream.from(responseStream, {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      });
+
+      let status = 'ready';
+      try {
+        // numberOfResults: 1 — this is a connection probe, not a query.
+        await retrieveChunks('warm', 1);
+      } catch (err) {
+        status = isAuroraWakeError(err) ? 'warming' : 'unavailable';
+        console.log(
+          JSON.stringify({
+            level: 'INFO',
+            event: 'warm_probe',
+            status,
+            error_snippet:
+              err instanceof Error ? err.message.slice(0, 120) : String(err),
+          }),
+        );
+      }
+
+      warmStream.write(JSON.stringify({ status }));
+      warmStream.end();
+      return;
+    }
+
     const httpStream = awslambda.HttpResponseStream.from(responseStream, {
       statusCode: 200,
       headers: {
