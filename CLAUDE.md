@@ -4,29 +4,70 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Repo Is
 
-A Claude Code **skills catalog** for the KERI (Key Event Receipt Infrastructure) ecosystem. It packages KERI domain knowledge — coding conventions, naming patterns, reference material — as portable skills that can be installed into any KERI project.
+A Claude Code **plugin** for the KERI (Key Event Receipt Infrastructure) ecosystem, distributed through its own plugin marketplace. It packages KERI domain knowledge — coding conventions, naming patterns, reference material — plus an MCP server and a deployed knowledge-base chat service.
 
-This is NOT a KERI implementation. It contains no protocol code. It teaches Claude how to write KERI-style code and work effectively across KERI projects.
+It contains **no KERI protocol code**. It teaches Claude how to write KERI-style code and work effectively across KERI projects. It does, however, contain real deployable software: a CDK stack, Lambda handlers, a React app, and a stdio MCP server.
+
+### Plugin identity — read this before wondering where a skill came from
+
+| | |
+|---|---|
+| Plugin name | `keri` (`.claude-plugin/plugin.json`) |
+| Marketplace | `keri-skills` (`.claude-plugin/marketplace.json`) |
+| Published from | GitHub `SeriousCoderOne/keri-claude`, marketplace source `./` |
+| Installed as | `keri@keri-skills` |
+
+**Skills reach a Claude session by two different paths, and both may be live at once:**
+
+1. **Plugin install** — skills appear namespaced, e.g. `keri:chat`, `keri:spec`. Served from `~/.claude/plugins/cache/keri-skills/keri/<version>/`, which is a **git clone pinned to the commit installed**.
+2. **Working inside this repo** — skills appear unscoped, e.g. `chat`, `spec`, discovered from `.claude/skills/`.
+
+So seeing both `chat` and `keri:chat` in one session is expected, not a bug.
+
+**The installed copy can be badly stale.** It is pinned at install time and does not track `master`. To check what a machine actually has:
+
+```bash
+python3 -c "import json;d=json.load(open('$HOME/.claude/plugins/installed_plugins.json'));print(json.dumps(d['plugins'].get('keri@keri-skills'),indent=2))"
+git log -1 --format='%h %ad %s' --date=short <gitCommitSha from above>
+```
+
+Refresh with `/plugin update keri@keri-skills`, then `/reload-plugins`. Skill `SKILL.md` edits take effect live, but changes to `plugin.json`, hooks, and MCP servers need the reload or a restart.
+
+**`skills/` is a symlink to `.claude/skills/`.** Editing either path edits the same files. The symlink exists so the plugin loader and the in-repo loader can both find them.
 
 ## Repository Structure
 
 ```
+.claude-plugin/         # PLUGIN MANIFESTS — this is what makes the repo a plugin
+  plugin.json           # name: keri. Also where MCP servers are declared.
+  marketplace.json      # name: keri-skills. Lists this repo as plugin source "./"
 .claude/
-  skills/
-    keri-style/         # KERI coding style skill (auto-activates on KERI code)
-      SKILL.md          # Skill definition with YAML front matter
-      references/
-        naming_conventions.md
-        patterns.md
-        examples.md
+  skills/               # 19 skills. `skills/` at the repo root is a symlink here.
+    style/              # KERI coding style (gerund modules, -er agent classes)
+    spec/ cesr/ acdc/   # Protocol specifications
+    keripy/ keriox/ cesride/ parside/ signify-ts/   # Implementation APIs
+    design0-ecosystem/ design1-service/            # Architecture planning C0-C3
+    design2-infrastructure/ design3-domain/
+    spec-hardening/ spec-invariant-coverage/ spec-ul-coverage/
+    lib-distill/ spec-distill/                     # Skill-authoring tools
+    chat/               # Queries the deployed knowledge base (see below)
+mcp-servers/
+  keri-chat/            # stdio MCP server exposing ask_keri_chat
 infrastructure/         # KeriChat CDK stack (Bedrock KB + Aurora + CloudFront)
   lib/stacks/           # CDK stack definition
-  lambda/               # Lambda handlers (chat, ingestion, db-init)
+  lambda/               # Lambda handlers (chat, mcp, ingestion, db-init)
   frontend/             # React chat UI
   edge/                 # WAF blocked page + landing page HTML
   scripts/
+    deploy.sh           # Build frontend + read parameters.json + cdk deploy
     publish-template.sh # Build + publish Launch Stack template
     sync-docs.sh        # Manual doc sync (for updates outside deploy)
+rdod/
+  spec/domains/         # Formal DDD specification of the KERI ecosystem
+docs/
+  superpowers/
+    specs/              # Design documents
+    plans/              # Implementation plans
 scripts/
   download-whitepapers.sh  # Download KERI papers/specs into staging/
   staging/              # Raw documents (PDFs, HTML, TXT) — deployed to S3
@@ -51,19 +92,74 @@ user_invocable: true          # optional
 
 Reference files go alongside SKILL.md. Claude Code discovers skills from `.claude/skills/` automatically when installed into a project.
 
-### Installing skills into a project
+### Getting these skills into another project
+
+Installing the plugin is the supported path — it delivers the skills **and** the
+`ask_keri_chat` MCP server together:
 
 ```bash
-# Single skill
-cp -r /path/to/keri-claude/skills/keri-style .claude/skills/
+/plugin marketplace add SeriousCoderOne/keri-claude
+/plugin install keri@keri-skills
+```
 
-# All skills via --add-dir
-claude --add-dir /path/to/keri-claude
+The two older methods still work but deliver skills only, no MCP server, and no
+update path:
+
+```bash
+cp -r /path/to/keri-claude/skills/style .claude/skills/   # one skill
+claude --add-dir /path/to/keri-claude                      # all skills, ad hoc
 ```
 
 ## Infrastructure (KeriChat)
 
 The `infrastructure/` directory contains a CDK stack that deploys a complete KERI knowledge base chat system: Aurora Serverless v2 (pgvector), Bedrock Knowledge Base, Lambda chat handler with streaming, and CloudFront distribution.
+
+### The live deployment
+
+This is a **single-stack, single-region** deployment. Region is not optional: the
+Nova multimodal embedding model the Knowledge Base uses exists only in
+`us-east-1`.
+
+| | |
+|---|---|
+| Stack | `KeriChat` |
+| Region | `us-east-1` |
+| Public URL | https://chat.keri.host |
+| Request path | CloudFront → Lambda Function URL (`RESPONSE_STREAM`), **no API Gateway** |
+| Access | WAF WebACL IP allowlist, driven by `allowedIpCidrs` in `parameters.json` |
+
+Discover live values rather than assuming them — resource names carry CDK
+hashes and the AWS profile is site-specific:
+
+```bash
+# Stack outputs (function URLs, distribution domain, bucket names)
+AWS_PROFILE=personal aws cloudformation describe-stacks --region us-east-1 \
+  --stack-name KeriChat --query 'Stacks[0].Outputs' --output table
+
+# IDs the chat handler needs are also in SSM
+AWS_PROFILE=personal aws ssm get-parameters --region us-east-1 \
+  --names /keri-chat/knowledge-base-id /keri-chat/document-bucket-name \
+          /keri-chat/data-source-id --query 'Parameters[].[Name,Value]' --output text
+```
+
+**The database sleeps.** Aurora runs at `serverlessV2MinCapacity: 0` and pauses
+after 5 minutes idle, taking ~25s to resume. This is a deliberate cost decision.
+Anything that queries the Knowledge Base must tolerate a resume — see
+`infrastructure/lambda/shared/aurora-wake.ts`. When debugging "the chat is
+broken", check capacity first:
+
+```bash
+AWS_PROFILE=personal aws cloudwatch get-metric-statistics --region us-east-1 \
+  --namespace AWS/RDS --metric-name ServerlessDatabaseCapacity \
+  --dimensions Name=DBClusterIdentifier,Value=kerichat-clustereb0386a7-oxx495f7jnz6 \
+  --start-time "$(date -u -v-15M +%Y-%m-%dT%H:%M:%S)" \
+  --end-time "$(date -u +%Y-%m-%dT%H:%M:%S)" \
+  --period 60 --statistics Average \
+  --query 'sort_by(Datapoints,&Timestamp)[-1].Average' --output text
+```
+
+`0.0` means paused. Chat Lambda logs live in the log group matching
+`/aws/lambda/KeriChat-ChatHandler*`; there are several, so filter by recency.
 
 ### Deployment workflow
 
@@ -229,7 +325,7 @@ The spec wins ties. But always cross-check with implementations — three-way ag
 
 ## KERI Domain Context
 
-The keri-style skill teaches the "Domain-Specific Gerund-Agent Pattern with CESR-Native Nomenclature" used across all KERI implementations. Key conventions:
+The `style` skill (`.claude/skills/style/`) teaches the "Domain-Specific Gerund-Agent Pattern with CESR-Native Nomenclature" used across all KERI implementations. Key conventions:
 
 - **Modules:** gerund `-ing` suffix (`coring.py`, `eventing.py`, `signing.py`)
 - **Classes:** agent noun `-er` suffix (`Verfer`, `Diger`, `Siger`, `Salter`)
