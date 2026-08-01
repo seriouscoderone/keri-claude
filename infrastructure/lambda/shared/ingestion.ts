@@ -2,6 +2,7 @@ import {
   BedrockAgentClient,
   StartIngestionJobCommand,
   GetIngestionJobCommand,
+  ListIngestionJobsCommand,
   type IngestionJobStatistics,
 } from '@aws-sdk/client-bedrock-agent';
 import { isAuroraWakeError, WAKE_RETRY_INTERVAL_MS } from './aurora-wake';
@@ -63,6 +64,7 @@ export async function startIngestion(
 }
 
 export type IngestionOutcome = {
+  ingestionJobId?: string;
   status: string;
   statistics?: IngestionJobStatistics;
   failureReasons?: string[];
@@ -77,6 +79,7 @@ export async function getIngestion(
     new GetIngestionJobCommand({ knowledgeBaseId, dataSourceId, ingestionJobId }),
   );
   return {
+    ingestionJobId: res.ingestionJob?.ingestionJobId,
     status: res.ingestionJob?.status ?? 'UNKNOWN',
     statistics: res.ingestionJob?.statistics,
     failureReasons: res.ingestionJob?.failureReasons,
@@ -96,4 +99,26 @@ export function assertIngestionHealthy(outcome: IngestionOutcome): void {
         `Statistics: ${JSON.stringify(outcome.statistics)}`,
     );
   }
+}
+
+/**
+ * The most recently started job for this data source. Used instead of a
+ * remembered job id because the custom-resource provider replays on-event's
+ * output on every poll, so a retry job id cannot be threaded through.
+ */
+export async function getLatestIngestion(
+  knowledgeBaseId: string,
+  dataSourceId: string,
+): Promise<IngestionOutcome | undefined> {
+  const res = await client.send(
+    new ListIngestionJobsCommand({
+      knowledgeBaseId,
+      dataSourceId,
+      maxResults: 1,
+      sortBy: { attribute: 'STARTED_AT', order: 'DESCENDING' },
+    }),
+  );
+  const summary = res.ingestionJobSummaries?.[0];
+  if (!summary?.ingestionJobId) return undefined;
+  return getIngestion(knowledgeBaseId, dataSourceId, summary.ingestionJobId);
 }

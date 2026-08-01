@@ -1,74 +1,119 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const getIngestion = vi.fn();
+const getLatestIngestion = vi.fn();
+const startIngestion = vi.fn();
 vi.mock('../shared/ingestion', async () => {
   const actual = await vi.importActual<typeof import('../shared/ingestion')>('../shared/ingestion');
-  return { ...actual, getIngestion };
+  return { ...actual, getLatestIngestion, startIngestion };
 });
 
-// Imported after the mock so the handler picks it up.
 const { handler } = await import('./is-complete');
 
-const EVENT = {
-  RequestType: 'Update' as const,
-  Data: { IngestionJobId: 'JOB123' },
-};
+const EVENT = { RequestType: 'Update' as const, Data: { IngestionJobId: 'JOB123' } };
+
+const outcome = (over: Record<string, unknown> = {}) => ({
+  ingestionJobId: 'JOB123',
+  status: 'COMPLETE',
+  statistics: {
+    numberOfDocumentsScanned: 64,
+    numberOfNewDocumentsIndexed: 64,
+    numberOfModifiedDocumentsIndexed: 0,
+    numberOfDocumentsFailed: 0,
+  },
+  ...over,
+});
 
 beforeEach(() => {
   process.env.KNOWLEDGE_BASE_ID = 'KB1';
   process.env.DATA_SOURCE_ID = 'DS1';
-  getIngestion.mockReset();
+  getLatestIngestion.mockReset();
+  startIngestion.mockReset();
+  startIngestion.mockResolvedValue('JOB124');
 });
 
 describe('deploy-time ingestion completion', () => {
-  it('keeps polling while the job is in progress', async () => {
-    getIngestion.mockResolvedValue({ status: 'IN_PROGRESS' });
+  it('keeps polling while in progress', async () => {
+    getLatestIngestion.mockResolvedValue(outcome({ status: 'IN_PROGRESS' }));
     await expect(handler(EVENT)).resolves.toEqual({ IsComplete: false });
+    expect(startIngestion).not.toHaveBeenCalled();
   });
 
-  it('keeps polling while the job is starting', async () => {
-    getIngestion.mockResolvedValue({ status: 'STARTING' });
-    await expect(handler(EVENT)).resolves.toEqual({ IsComplete: false });
-  });
-
-  it('completes when the job is COMPLETE with no failed documents', async () => {
-    getIngestion.mockResolvedValue({
-      status: 'COMPLETE',
-      statistics: { numberOfDocumentsScanned: 64, numberOfDocumentsFailed: 0 },
-    });
+  it('completes on a clean COMPLETE', async () => {
+    getLatestIngestion.mockResolvedValue(outcome());
     const res = await handler(EVENT);
     expect(res.IsComplete).toBe(true);
+    expect(startIngestion).not.toHaveBeenCalled();
   });
 
-  // The regression this whole change exists for: a green deploy must not be
-  // possible when ingestion did not actually succeed.
   it('FAILS the deploy when the job FAILED', async () => {
-    getIngestion.mockResolvedValue({
-      status: 'FAILED',
-      failureReasons: ['vector store unavailable'],
-    });
+    getLatestIngestion.mockResolvedValue(
+      outcome({ status: 'FAILED', failureReasons: ['vector store unavailable'] }),
+    );
     await expect(handler(EVENT)).rejects.toThrow(/FAILED.*vector store unavailable/s);
   });
 
   it('FAILS the deploy when the job was STOPPED', async () => {
-    getIngestion.mockResolvedValue({ status: 'STOPPED' });
+    getLatestIngestion.mockResolvedValue(outcome({ status: 'STOPPED' }));
     await expect(handler(EVENT)).rejects.toThrow(/STOPPED/);
   });
 
-  it('FAILS the deploy on a COMPLETE job that silently dropped documents', async () => {
-    getIngestion.mockResolvedValue({
-      status: 'COMPLETE',
-      statistics: { numberOfDocumentsScanned: 64, numberOfDocumentsFailed: 3 },
-    });
-    await expect(handler(EVENT)).rejects.toThrow(/3 document\(s\) failed to index/);
+  // Aurora auto-pausing mid-ingestion fails individual files that are fine.
+  // Another job sweeps them up, so long as progress is still being made.
+  it('retries when a COMPLETE job made progress but dropped some documents', async () => {
+    getLatestIngestion.mockResolvedValue(
+      outcome({
+        statistics: {
+          numberOfDocumentsScanned: 64,
+          numberOfNewDocumentsIndexed: 37,
+          numberOfModifiedDocumentsIndexed: 0,
+          numberOfDocumentsFailed: 3,
+        },
+      }),
+    );
+    await expect(handler(EVENT)).resolves.toEqual({ IsComplete: false });
+    expect(startIngestion).toHaveBeenCalledWith('KB1', 'DS1');
+  });
+
+  // Convergence guard: retrying a job that indexed nothing would loop until
+  // totalTimeout, so fail immediately instead.
+  it('FAILS rather than looping when a COMPLETE job made no progress', async () => {
+    getLatestIngestion.mockResolvedValue(
+      outcome({
+        statistics: {
+          numberOfDocumentsScanned: 64,
+          numberOfNewDocumentsIndexed: 0,
+          numberOfModifiedDocumentsIndexed: 0,
+          numberOfDocumentsFailed: 3,
+        },
+        failureReasons: ['unparseable file'],
+      }),
+    );
+    await expect(handler(EVENT)).rejects.toThrow(/indexed nothing new/);
+    expect(startIngestion).not.toHaveBeenCalled();
+  });
+
+  it('counts modified documents as progress', async () => {
+    getLatestIngestion.mockResolvedValue(
+      outcome({
+        statistics: {
+          numberOfDocumentsScanned: 64,
+          numberOfNewDocumentsIndexed: 0,
+          numberOfModifiedDocumentsIndexed: 5,
+          numberOfDocumentsFailed: 1,
+        },
+      }),
+    );
+    await expect(handler(EVENT)).resolves.toEqual({ IsComplete: false });
+    expect(startIngestion).toHaveBeenCalled();
   });
 
   it('is a no-op on Delete', async () => {
     await expect(handler({ RequestType: 'Delete' })).resolves.toEqual({ IsComplete: true });
-    expect(getIngestion).not.toHaveBeenCalled();
+    expect(getLatestIngestion).not.toHaveBeenCalled();
   });
 
-  it('fails loudly if on-event did not hand over a job id', async () => {
-    await expect(handler({ RequestType: 'Create', Data: {} })).rejects.toThrow(/without an IngestionJobId/);
+  it('fails loudly when no job exists at all', async () => {
+    getLatestIngestion.mockResolvedValue(undefined);
+    await expect(handler(EVENT)).rejects.toThrow(/No ingestion job found/);
   });
 });

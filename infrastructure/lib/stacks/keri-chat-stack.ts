@@ -216,7 +216,15 @@ export class KeriChatStack extends cdk.Stack {
 
     const cluster = new rds.DatabaseCluster(this, 'Cluster', {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_16_6,
+        // Pinned versions rot. 16.6 stopped being creatable, so a fresh deploy
+        // of the published template died with "Cannot find version 16.6 for
+        // aurora-postgresql" while the existing cluster kept running happily —
+        // invisible until a Launch Stack integration test tried it
+        // (2026-08-01). 16.11 is what the live cluster had already auto-upgraded
+        // to, so this also reconciles that drift rather than forcing a change.
+        // If a fresh deploy fails this way again, check:
+        //   aws rds describe-db-engine-versions --engine aurora-postgresql
+        version: rds.AuroraPostgresEngineVersion.VER_16_11,
       }),
       credentials: rds.Credentials.fromGeneratedSecret('bedrock_admin'),
       defaultDatabaseName: databaseName,
@@ -666,7 +674,7 @@ export class KeriChatStack extends cdk.Stack {
     ingestionIsCompleteFn.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ['bedrock:GetIngestionJob'],
+        actions: ['bedrock:GetIngestionJob', 'bedrock:ListIngestionJobs', 'bedrock:StartIngestionJob'],
         resources: [kbArn],
       }),
     );
@@ -675,9 +683,12 @@ export class KeriChatStack extends cdk.Stack {
       onEventHandler: ingestionOnEventFn,
       isCompleteHandler: ingestionIsCompleteFn,
       queryInterval: cdk.Duration.seconds(30),
-      // Ingesting the full corpus took ~2 min on a warm cluster; allow for a
-      // cold resume plus a much larger corpus before giving up.
-      totalTimeout: cdk.Duration.minutes(45),
+      // An incremental ingestion takes ~2 min, but a FIRST-time ingestion of
+      // the whole corpus into an empty vector store took well over 45 minutes
+      // on a fresh stack and was still going when the old 45-minute budget
+      // expired — which rolled the whole stack back. Launch Stack deploys are
+      // always first-time, so this has to accommodate them.
+      totalTimeout: cdk.Duration.hours(2),
     });
 
     const deployIngestion = new cdk.CustomResource(this, 'DeployIngestion', {
