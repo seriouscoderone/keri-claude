@@ -118,8 +118,6 @@ add_source docs keridoc-llms-full.txt \
   "https://raw.githubusercontent.com/seriouscoderone/keridoc/refs/heads/main/llm-docs/llms-full.txt"
 add_source docs wot-terms-llms-full.txt \
   "https://seriouscoderone.github.io/WOT-terms/llms-full.txt"
-add_source docs vlei-llm-doc.md \
-  "https://raw.githubusercontent.com/seriouscoderone/vLEI/feat/llm-doc-generation/docs/llm-doc.md"
 add_source docs vlei-trainings-llm-context.md \
   "https://raw.githubusercontent.com/GLEIF-IT/vlei-trainings/main/markdown/llm_context.md"
 add_source docs signifypy-docs.html \
@@ -149,9 +147,26 @@ PROVENANCE=(
   "acdc-specification.html|spec-render|trustoverip/kswg-acdc-specification"
   "keridoc-llms-full.txt|fork|seriouscoderone/keridoc|WebOfTrust/keridoc|main"
   "wot-terms-llms-full.txt|fork|seriouscoderone/WOT-terms|WebOfTrust/WOT-terms|add-llm-docs"
-  "vlei-llm-doc.md|fork|seriouscoderone/vLEI|WebOfTrust/vLEI|feat/llm-doc-generation"
   "signifypy-docs.html|fork|seriouscoderone/signifypy|WebOfTrust/signifypy|main"
 )
+
+# The authoritative vLEI credential schemas, from upstream — no fork involved.
+# These replaced vlei-llm-doc.md, which was fork-generated prose describing the
+# schemas without containing any of their structure (zero oneOf/edge/rule
+# blocks). vlei-trainings-llm-context.md already covers the narrative more
+# thoroughly, so the fork source was duplicated content holding a fork
+# dependency open.
+VLEI_SCHEMA_BASE="https://raw.githubusercontent.com/WebOfTrust/vLEI/main/schema/acdc"
+VLEI_SCHEMAS=(
+  qualified-vLEI-issuer-vLEI-credential
+  legal-entity-vLEI-credential
+  legal-entity-official-organizational-role-vLEI-credential
+  legal-entity-engagement-context-role-vLEI-credential
+  oor-authorization-vlei-credential
+  ecr-authorization-vlei-credential
+  verifiable-ixbrl-report-attestation
+)
+VLEI_SCHEMA_DOC="vlei-credential-schemas.md"
 
 report_upstream_lag() {
   if ! command -v gh &>/dev/null; then
@@ -338,6 +353,110 @@ process_source() {
   fi
 }
 
+# Compose the vLEI schemas into one markdown document. They are staged as
+# markdown rather than raw .json because staging/ is the Bedrock KB source and
+# markdown is a format the KB definitely ingests; .json is not worth guessing
+# about, and the BucketDeployment uploads whatever is here with prune: false.
+compose_vlei_schemas() {
+  local name="$VLEI_SCHEMA_DOC"
+  local dest="$STAGING_DIR/$name"
+  local existed=false old_hash=""
+
+  if [ -f "$dest" ]; then
+    existed=true
+    old_hash="$(hash_of "$dest")"
+    if ! in_scope docs "$name"; then
+      if [ "$MODE" = "check" ]; then
+        printf '  skipped    %s (not in target)\n' "$name"
+      else
+        printf '  cached     %s\n' "$name"
+      fi
+      CACHED_COUNT=$((CACHED_COUNT + 1))
+      return
+    fi
+  fi
+
+  local work="$STAGING_DIR/.vlei-schemas.$$"
+  mkdir -p "$work"
+  local s
+  for s in "${VLEI_SCHEMAS[@]}"; do
+    if ! curl -fsSL --retry 2 -o "$work/$s.json" "$VLEI_SCHEMA_BASE/$s.json"; then
+      rm -rf "$work"
+      if $existed; then
+        printf '  WARN       %s (fetch of %s failed, keeping cached copy)\n' "$name" "$s"
+        WARN_COUNT=$((WARN_COUNT + 1))
+      else
+        printf '  FAIL       %s (fetch of %s failed)\n' "$name" "$s"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+      fi
+      return
+    fi
+  done
+
+  local tmp="$dest.compose.$$"
+  {
+    echo "# vLEI Credential Schemas"
+    echo
+    echo "The authoritative ACDC JSON Schemas for the vLEI ecosystem, from"
+    echo "\`WebOfTrust/vLEI\` \`schema/acdc/\`. Each schema's \`\$id\` is its SAID —"
+    echo "the value a credential carries in its \`s\` field to identify its schema."
+    echo
+    for s in "${VLEI_SCHEMAS[@]}"; do
+      python3 - "$work/$s.json" "$s" <<'PY'
+import json, sys
+path, slug = sys.argv[1], sys.argv[2]
+d = json.load(open(path))
+print(f"## {d.get('title', slug)}")
+print()
+print(f"- Schema SAID: `{d.get('$id', 'unknown')}`")
+print(f"- Source: `schema/acdc/{slug}.json`")
+desc = d.get('description')
+if desc:
+    print(f"- Description: {desc}")
+print()
+print("```json")
+print(json.dumps(d, indent=2))
+print("```")
+print()
+PY
+    done
+  } > "$tmp"
+
+  rm -rf "$work"
+  local new_hash
+  new_hash="$(hash_of "$tmp")"
+
+  if [ "$MODE" = "check" ] && $existed; then
+    rm -f "$tmp"
+    if [ "$old_hash" != "$new_hash" ]; then
+      printf '  STALE      %s\n' "$name"
+      STALE_NAMES+=("$name")
+      note_stale_group docs
+    else
+      printf '  ok         %s\n' "$name"
+      SAME_COUNT=$((SAME_COUNT + 1))
+    fi
+    return
+  fi
+
+  if $existed && [ "$old_hash" = "$new_hash" ]; then
+    rm -f "$tmp"
+    printf '  unchanged  %s\n' "$name"
+    SAME_COUNT=$((SAME_COUNT + 1))
+    return
+  fi
+
+  mv "$tmp" "$dest"
+  if ! $existed; then
+    printf '  NEW        %s (%s schemas)\n' "$name" "${#VLEI_SCHEMAS[@]}"
+    NEW_COUNT=$((NEW_COUNT + 1))
+  else
+    printf '  CHANGED    %s\n' "$name"
+    CHANGED_COUNT=$((CHANGED_COUNT + 1))
+    CHANGED_NAMES+=("$name")
+  fi
+}
+
 # Images are listed dynamically and overwritten in place; they are static assets
 # so they are excluded from a bare --refresh.
 process_image_dir() {
@@ -392,6 +511,8 @@ for rec in "${SOURCES[@]}"; do
   IFS='|' read -r group name url <<< "$rec"
   process_source "$group" "$name" "$url"
 done
+
+compose_vlei_schemas
 
 process_image_dir "whitepapers/assets"
 process_image_dir "whitepapers/graphics"
