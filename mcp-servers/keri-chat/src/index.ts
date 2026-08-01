@@ -192,6 +192,13 @@ async function queryKeriChat(
     }
   }
 
+  if (!answer) {
+    throw new ChatApiError(
+      "Stream ended with no content",
+      "DATABASE_RESUMING",
+    );
+  }
+
   return { answer, citations };
 }
 

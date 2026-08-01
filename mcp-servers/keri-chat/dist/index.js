@@ -30808,6 +30808,12 @@ async function queryKeriChat(question, conversationHistory) {
       }
     }
   }
+  if (!answer) {
+    throw new ChatApiError(
+      "Stream ended with no content",
+      "DATABASE_RESUMING"
+    );
+  }
   return { answer, citations };
 }
 async function logEntry(question, result) {

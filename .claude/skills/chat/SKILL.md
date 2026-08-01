@@ -83,6 +83,7 @@ The backend emits newline-delimited SSE events (`data: {JSON}\n\n`):
 | Type | Shape | Description |
 |------|-------|-------------|
 | `chunk` | `{type: "chunk", text: "..."}` | Incremental answer text |
+| `status` | `{type: "status", state: "waking", elapsedMs, detail}` | Aurora resume heartbeat; ignore or display |
 | `citations` | `{type: "citations", data: [{number, content, source}, ...]}` | Sent after answer completes |
 | `done` | `{type: "done"}` | Stream end signal |
 | `error` | `{type: "error", error, code, detail}` | Error (see codes below) |
@@ -145,11 +146,18 @@ Every KeriChat deployment includes a hosted MCP endpoint at `/mcp`. Users with a
   "mcpServers": {
     "keri-chat": {
       "type": "url",
-      "url": "https://<your-domain>/mcp"
+      "url": "https://<your-domain>/mcp",
+      "timeout": 120000
     }
   }
 }
 ```
+
+The explicit `timeout` matters here: the endpoint is non-streaming and can take
+up to ~85s to first byte during an Aurora resume, while Claude Code's default
+per-request timer for HTTP MCP servers is only 60s — without raising it, a
+slow resume produces a client-side timeout instead of the endpoint's soft
+"ask again" result.
 
 The hosted endpoint exposes the same `ask_keri_chat` tool. Since it's stateless (Lambda), conversation history is passed explicitly via the `history` parameter rather than auto-accumulated.
 

@@ -22,6 +22,10 @@ const bedrockAgent = new BedrockAgentRuntimeClient({});
  * CloudFront's 60s readTimeout on /api/*, because the response is a stream and
  * that 60s is idle time *between bytes* — the status heartbeats below reset it.
  * The Lambda's own timeout is 300s.
+ *
+ * This budget is soft, not hard: the deadline is checked only after a failed
+ * attempt, and the retrieve call itself has no per-call timeout. So the real
+ * ceiling is 90s plus one in-flight Retrieve (~4s observed).
  */
 const WAKE_BUDGET_MS = 90_000;
 

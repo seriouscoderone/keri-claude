@@ -61,10 +61,12 @@ async function queryKeriChat(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: question, history }),
     // /mcp's CloudFront readTimeout is 90s and this hop is NOT streaming, so
-    // that is a hard time-to-first-byte ceiling. The effective wake budget
-    // here is therefore 85s, slightly under the chat handler's 90s: on a
-    // pathologically slow resume we give up first and tell the caller to ask
-    // again, rather than threading a per-caller budget through the contract.
+    // that is a hard time-to-first-byte ceiling. This 85s budget covers wake
+    // *and* generation, not wake alone — so the wake portion is roughly
+    // 45-75s depending on answer length. It is slightly under the chat
+    // handler's 90s wake budget: on a pathologically slow resume we give up
+    // first and tell the caller to ask again, rather than threading a
+    // per-caller budget through the contract.
     signal: AbortSignal.timeout(85_000),
   });
 
@@ -129,6 +131,13 @@ async function queryKeriChat(
           return { answer, citations };
       }
     }
+  }
+
+  if (!answer) {
+    throw new ChatApiError(
+      'Stream ended with no content',
+      'DATABASE_RESUMING',
+    );
   }
 
   return { answer, citations };

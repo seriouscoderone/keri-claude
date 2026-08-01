@@ -121,11 +121,19 @@ it — there is no project-level MCP config.
 clone with no `node_modules` and no build step, so the committed file must be
 self-contained. `npm run build` bundles it with esbuild.
 
+**`dist/index.js` must only ever be produced by `npm run build`, never by
+`tsc`.** `tsc` output is unbundled — it still `import`s the SDK and `zod` at
+runtime instead of inlining them — so it cannot start in a plugin cache. That
+is why `tsconfig.json` has `"noEmit": true` and `npm run dev` delegates to the
+esbuild watcher rather than running `tsc --watch`. Only `dist/index.js` itself
+is git-tracked; `.gitignore` re-excludes `dist/*.d.ts` and `dist/*.map` so a
+stray `tsc` artefact can't get staged.
+
 **After changing `src/`, rebuild and commit the bundle:**
 
 ```bash
 cd mcp-servers/keri-chat
-npm run build && npm run typecheck
+npm run typecheck && npm run build
 git add dist/index.js src/index.ts
 ```
 
@@ -134,6 +142,20 @@ self-contained by moving `node_modules` aside and running
 `node dist/index.js < /dev/null` — it must print its startup line.
 
 Changes to `plugin.json` need `/reload-plugins` or a restart to take effect.
+
+There is no project-level MCP config committed to the repo (`.claude/settings.json`
+was deliberately removed). A contributor working in this repo without the
+plugin installed can still get `ask_keri_chat` locally by declaring the server
+in an untracked `.claude/settings.local.json`.
+
+The local stdio server may occupy a tool call for up to ~160s in the worst
+case (a 10s warm probe followed by a 150s query abort). That's well inside
+Claude Code's stdio limits — stdio has no per-request timer, the default
+`MCP_TOOL_TIMEOUT` is roughly 28 hours, and the idle window is 30 minutes — so
+no client configuration is needed for the local server. The hosted `/mcp`
+HTTP endpoint is a different story: it needs an explicit `timeout` in its
+client config, documented in the `chat` skill (`.claude/skills/chat/SKILL.md`),
+because the default per-request timer for HTTP MCP servers is only 60s.
 
 ## Infrastructure (KeriChat)
 
