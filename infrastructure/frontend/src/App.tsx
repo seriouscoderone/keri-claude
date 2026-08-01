@@ -2,7 +2,7 @@ import { useChat } from './hooks/useChat';
 import ChatWindow from './components/ChatWindow';
 
 export default function App() {
-  const { messages, isLoading, error, send, reset } = useChat();
+  const { messages, isLoading, error, wakeStatus, send, reset } = useChat();
 
   return (
     <div className="flex flex-col h-screen bg-keri-dark">
@@ -47,6 +47,7 @@ export default function App() {
           messages={messages}
           isLoading={isLoading}
           error={error}
+          wakeStatus={wakeStatus}
           onSend={send}
         />
       </main>

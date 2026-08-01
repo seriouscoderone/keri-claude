@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, FormEvent, KeyboardEvent } from 'react';
 import { Message, ChatErrorInfo } from '../hooks/useChat';
-import { Attachment } from '../api/chat';
+import { Attachment, warmIfStale } from '../api/chat';
 import MessageBubble from './MessageBubble';
 
 const EXAMPLE_QUESTIONS = [
@@ -14,6 +14,7 @@ interface Props {
   messages: Message[];
   isLoading: boolean;
   error?: ChatErrorInfo;
+  wakeStatus?: string;
   onSend: (text: string, attachments?: Attachment[]) => void;
 }
 
@@ -25,6 +26,7 @@ export default function ChatWindow({
   messages,
   isLoading,
   error,
+  wakeStatus,
   onSend,
 }: Props) {
   const [input, setInput] = useState('');
@@ -59,6 +61,15 @@ export default function ChatWindow({
       e.preventDefault();
       handleSubmit(e);
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const next = e.target.value;
+    // First keystroke into an empty composer is the strongest available signal
+    // of intent — warm now so the cluster is up by the time they hit send.
+    // warmIfStale() no-ops if we warmed within the last 4 minutes.
+    if (!input && next) void warmIfStale();
+    setInput(next);
   };
 
   const handleExampleClick = (question: string) => {
@@ -126,21 +137,29 @@ export default function ChatWindow({
                 <MessageBubble key={i} message={msg} />
               ))}
 
-              {/* Show loading dots only during pre-streaming phase (reformulate/retrieve) */}
               {isLoading && (!messages.length || messages[messages.length - 1]?.content === '') && (
                 <div className="flex justify-start mb-4">
                   <div className="bg-keri-surface rounded-2xl rounded-bl-sm px-4 py-3">
-                    <div className="flex gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-keri-text-muted animate-pulse" />
-                      <span
-                        className="w-2 h-2 rounded-full bg-keri-text-muted animate-pulse"
-                        style={{ animationDelay: '0.15s' }}
-                      />
-                      <span
-                        className="w-2 h-2 rounded-full bg-keri-text-muted animate-pulse"
-                        style={{ animationDelay: '0.3s' }}
-                      />
-                    </div>
+                    {wakeStatus ? (
+                      <p className="text-sm text-keri-text-muted">
+                        {wakeStatus}
+                        <span className="block text-xs text-keri-text-muted/70 mt-0.5">
+                          The database sleeps when idle to keep costs near zero.
+                        </span>
+                      </p>
+                    ) : (
+                      <div className="flex gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-keri-text-muted animate-pulse" />
+                        <span
+                          className="w-2 h-2 rounded-full bg-keri-text-muted animate-pulse"
+                          style={{ animationDelay: '0.15s' }}
+                        />
+                        <span
+                          className="w-2 h-2 rounded-full bg-keri-text-muted animate-pulse"
+                          style={{ animationDelay: '0.3s' }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -222,7 +241,7 @@ export default function ChatWindow({
             <textarea
               ref={textareaRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder="Ask about KERI, CESR, or ACDC..."
               rows={1}
