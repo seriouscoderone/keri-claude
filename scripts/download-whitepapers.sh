@@ -3,7 +3,7 @@
 # a sha256 manifest so it is obvious which sources actually changed.
 #
 #   ./download-whitepapers.sh                       fetch only what is missing
-#   ./download-whitepapers.sh --check               report staleness, change nothing
+#   ./download-whitepapers.sh --check               report staleness (see note)
 #   ./download-whitepapers.sh --check specs         ...for one group (much faster)
 #   ./download-whitepapers.sh --refresh             re-fetch specs, papers and docs
 #   ./download-whitepapers.sh --refresh specs       re-fetch one group
@@ -12,6 +12,15 @@
 #
 # Fetching without --refresh is the default because scripts/staging/ is baked
 # into the CDK asset bundle at synth time; stable bytes mean stable deploys.
+#
+# --check note: existing files are left alone, but a source that is MISSING is
+# fetched and kept, so there is something to compare against next time — it is
+# read-only only for a complete corpus. A bare --check downloads every source
+# to a temp file to compare (slow), and skips the images group entirely.
+#
+# Specs are normally updated by ./build-specs.sh, not --refresh: once rendered
+# locally they are listed in locally-built.sha256 and --refresh reports them
+# PROTECTED rather than downgrading to upstream's older committed render.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -31,7 +40,7 @@ TARGET=""         # "" = nothing in scope beyond missing files
 FORCE=false       # override the locally-built guard
 
 usage() {
-  sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'
   echo
   echo "Targets: all (default), specs, papers, docs, images, or a filename glob."
   echo "  --force   replace files built by build-specs.sh (see locally-built.sha256)"
@@ -138,9 +147,14 @@ add_source docs signifypy-docs.html \
 #
 # The branch field matters: it must be the branch the export is actually built
 # from, not the fork's default branch. wot-terms-llms-full.txt is published to
-# gh-pages by a workflow that lives on add-llm-docs, and vlei-llm-doc.md is
-# fetched straight off feat/llm-doc-generation. Checking main would report a
-# reassuring "identical" about a branch we never read.
+# gh-pages by a workflow that lives on add-llm-docs, so checking main would
+# report a reassuring "identical" about a branch we never read.
+#
+# If one of these reports BEHIND, --refresh cannot fix it. Sync the fork, then
+# re-run the workflow that regenerates the export:
+#   keridoc    .github/workflows/ (llm docs)          — push to main
+#   WOT-terms  D-deploy-to-gh-pages.yml on add-llm-docs — gh workflow run (manual only)
+#   signifypy  docs.yaml on main                       — push to main
 PROVENANCE=(
   "keri-specification.html|spec-render|trustoverip/kswg-keri-specification"
   "cesr-specification.html|spec-render|trustoverip/kswg-cesr-specification"
@@ -328,7 +342,10 @@ process_source() {
   if $existed && ! $FORCE && [ "$old_hash" != "$new_hash" ] \
      && is_locally_built "$name" "$old_hash"; then
     rm -f "$tmp"
-    printf '  PROTECTED  %s (built from source; --force to take upstream)\n' "$name"
+    # Say what to do, not just what was refused. "PROTECTED" alone reads as
+    # "already current", which would send someone away from build-specs.sh —
+    # the only thing that actually updates a locally-rendered spec.
+    printf '  PROTECTED  %s — upstream differs but is OLDER; run ./build-specs.sh to update (--force takes upstream anyway)\n' "$name"
     PROTECTED_COUNT=$((PROTECTED_COUNT + 1))
     return
   fi

@@ -22,9 +22,14 @@ DS_ID=$(aws $AWS_OPTS ssm get-parameter --name /keri-chat/data-source-id --query
 
 echo "Syncing $STAGING_DIR -> s3://$BUCKET_NAME/"
 
+# Patterns are matched against the whole key, so a bare ".DS_Store" only
+# excludes it at the top level — a Finder visit to staging/images/ would
+# otherwise upload one and have Bedrock index it as a document. Leading '*'
+# makes each pattern match at any depth, matching the find used for the
+# expected-count check below.
 aws $AWS_OPTS s3 sync "$STAGING_DIR" "s3://$BUCKET_NAME/" \
-  --exclude ".DS_Store" \
-  --exclude "distill-*" \
+  --exclude "*.DS_Store" \
+  --exclude "*distill-*" \
   --exclude "*.py" \
   --delete
 

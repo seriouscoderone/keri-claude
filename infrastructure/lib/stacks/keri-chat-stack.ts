@@ -300,7 +300,10 @@ export class KeriChatStack extends cdk.Stack {
     // Images live alongside text so the data source can ingest both.
     const documentDeployment = new s3deploy.BucketDeployment(this, 'DocumentDeployment', {
       sources: [s3deploy.Source.asset(path.join(__dirname, '../../../scripts/staging'), {
-        exclude: ['.DS_Store', 'distill-*', '*.py'],
+        // Leading '*' so these match at any depth, not just the top level.
+        // A nested staging/images/.DS_Store would otherwise be uploaded and
+        // indexed by the Knowledge Base as a document.
+        exclude: ['*.DS_Store', '*distill-*', '*.py'],
       })],
       destinationBucket: documentBucket,
       prune: false,
