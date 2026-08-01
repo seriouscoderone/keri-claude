@@ -1,20 +1,16 @@
-import {
-  BedrockAgentClient,
-  StartIngestionJobCommand,
-} from '@aws-sdk/client-bedrock-agent';
-import { retryWhileWaking } from '../shared/aurora-wake';
-
-const client = new BedrockAgentClient({});
+import { startIngestion } from '../shared/ingestion';
 
 /**
- * StartIngestionJob is rejected outright while Aurora is resuming from its
- * auto-pause, so it needs the same wake retry the chat path uses.
+ * Daily EventBridge entry point.
  *
- * The daily EventBridge schedule masked this: asynchronous invocations are
- * retried twice by AWS, so a first attempt landing on a paused cluster
- * self-healed. CloudFormation's deploy-time custom resource gets no such
- * retry — it fails the whole stack update. Putting the retry here fixes both
- * callers rather than only the one that surfaced the problem.
+ * The retry logic lives in shared/ingestion.ts so this and the deploy-time
+ * custom resource cannot drift apart — the original bug was that only the chat
+ * path had Aurora wake handling, and the ingestion path silently relied on
+ * EventBridge's two free async retries to paper over it.
+ *
+ * This path deliberately does not wait for the job to finish: nothing consumes
+ * the result, and holding a Lambda open for the duration would only add cost.
+ * The deploy-time path waits, because there a failure must fail the deploy.
  */
 export const handler = async () => {
   const knowledgeBaseId = process.env.KNOWLEDGE_BASE_ID!;
@@ -22,32 +18,8 @@ export const handler = async () => {
 
   console.log('Starting ingestion job', { knowledgeBaseId, dataSourceId });
 
-  const response = await retryWhileWaking(
-    () =>
-      client.send(
-        new StartIngestionJobCommand({
-          knowledgeBaseId,
-          dataSourceId,
-        }),
-      ),
-    {
-      // A resume measured ~25s; allow generous headroom while staying inside
-      // the Lambda timeout so a genuine failure still reports as one.
-      timeoutMs: 120_000,
-      onWaking: (elapsedMs, attempt) =>
-        console.log(
-          JSON.stringify({
-            level: 'WARN',
-            event: 'ingestion_waiting_for_aurora',
-            attempt,
-            elapsed_ms: elapsedMs,
-          }),
-        ),
-    },
-  );
+  const ingestionJobId = await startIngestion(knowledgeBaseId, dataSourceId);
 
-  const ingestionJobId = response.ingestionJob?.ingestionJobId;
   console.log('Ingestion job started:', ingestionJobId);
-
   return { ingestionJobId };
 };

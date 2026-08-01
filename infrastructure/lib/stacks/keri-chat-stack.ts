@@ -300,10 +300,18 @@ export class KeriChatStack extends cdk.Stack {
     // Images live alongside text so the data source can ingest both.
     const documentDeployment = new s3deploy.BucketDeployment(this, 'DocumentDeployment', {
       sources: [s3deploy.Source.asset(path.join(__dirname, '../../../scripts/staging'), {
-        // Leading '*' so these match at any depth, not just the top level.
-        // A nested staging/images/.DS_Store would otherwise be uploaded and
-        // indexed by the Knowledge Base as a document.
-        exclude: ['*.DS_Store', '*distill-*', '*.py'],
+        // Do NOT add a leading '*' here, however tempting the symmetry with
+        // sync-docs.sh is. These two use different matchers:
+        //
+        //   CDK asset exclude — gitignore semantics. A bare name already
+        //     matches at any depth, and '*' does NOT match a leading dot, so
+        //     '*.DS_Store' silently stops excluding '.DS_Store' altogether.
+        //   aws s3 sync --exclude — fnmatch over the whole key. A bare name
+        //     matches ONLY at the root, so there the leading '*' is required.
+        //
+        // Getting this backwards uploaded a .DS_Store that Bedrock then failed
+        // to index (2026-08-01).
+        exclude: ['.DS_Store', 'distill-*', '*.py'],
       })],
       destinationBucket: documentBucket,
       prune: false,
@@ -587,54 +595,87 @@ export class KeriChatStack extends cdk.Stack {
     // 8b. Deploy-time ingestion — triggers after document upload
     // =================================================================
 
-    // An AwsCustomResource is only invoked when its own properties change.
+    // A custom resource is only invoked when its own properties change.
     // knowledgeBaseId and dataSourceId are stable, so without a value that
     // tracks the documents, a docs-only deploy uploaded new files to S3 and
     // never re-ingested them — the KB kept serving the previous vectors until
-    // the daily rule happened to fire. Fingerprinting scripts/manifest.sha256
-    // (which changes exactly when the corpus changes) into `description` makes
-    // the resource update, and description is a real StartIngestionJob field.
+    // the daily rule happened to fire. Fingerprinting scripts/manifest.sha256,
+    // which changes exactly when the corpus changes, is what makes it fire.
+    // DON'T REMOVE IT.
     const corpusVersion = (() => {
       const manifest = path.join(__dirname, '../../../scripts/manifest.sha256');
       if (!fs.existsSync(manifest)) return 'no-manifest';
       return crypto.createHash('sha256').update(fs.readFileSync(manifest)).digest('hex').slice(0, 16);
     })();
 
-    // Invoke the ingestion Lambda rather than calling Bedrock directly. Aurora
-    // rejects StartIngestionJob while resuming from auto-pause, and a raw
-    // AwsCustomResource has no retry — it fails the whole stack update. The
-    // Lambda owns the wake retry, so routing through it makes the deploy-time
-    // and daily-schedule paths share one code path and one fix.
-    const ingestionInvoke = {
-      service: 'Lambda',
-      action: 'invoke',
-      parameters: {
-        FunctionName: ingestionFn.functionName,
-        InvocationType: 'RequestResponse',
-        // Not read by the handler — it exists so the resource's properties
-        // change when the corpus does, which is what makes CloudFormation
-        // re-invoke this at all.
-        Payload: JSON.stringify({ reason: 'deploy', corpusVersion }),
-      },
-      physicalResourceId: cr.PhysicalResourceId.of('deploy-ingestion'),
+    // cr.Provider, not AwsCustomResource. An AwsCustomResource calling
+    // Lambda.invoke reported success whenever the *API call* succeeded — a
+    // handler error still produced a green deploy, so a broken ingestion was
+    // invisible. Under a Provider a thrown error fails the resource, and the
+    // isCompleteHandler waits for the job to actually finish instead of just
+    // starting it. That makes a failed — or partially failed — ingestion a red
+    // deploy, which is the only reliable signal that the KB is stale.
+    const ingestionCrEnvironment = {
+      KNOWLEDGE_BASE_ID: knowledgeBaseId,
+      DATA_SOURCE_ID: dataSourceId,
     };
 
-    // Trade-off worth knowing: Lambda.invoke counts a handler error as a
-    // successful API call, so a genuine ingestion failure no longer fails the
-    // deploy the way the direct Bedrock call did. The daily schedule is the
-    // net, and the handler logs loudly — but a red deploy is no longer the
-    // signal. Check the IngestionHandler log group if the KB looks stale.
-    const deployIngestion = new cr.AwsCustomResource(this, 'DeployIngestion', {
-      onCreate: ingestionInvoke,
-      onUpdate: ingestionInvoke,
-      // The wake retry can hold the invocation for up to the Lambda's 180s.
-      timeout: cdk.Duration.minutes(5),
-      policy: cr.AwsCustomResourcePolicy.fromStatements([
-        new iam.PolicyStatement({
-          actions: ['lambda:InvokeFunction'],
-          resources: [ingestionFn.functionArn],
-        }),
-      ]),
+    const ingestionOnEventFn = new lambda.NodejsFunction(this, 'IngestionOnEvent', {
+      entry: path.join(__dirname, '../../lambda/ingestion-cr/on-event.ts'),
+      handler: 'handler',
+      runtime: lambdaBase.Runtime.NODEJS_22_X,
+      // Must exceed the 120s Aurora wake window inside startIngestion.
+      timeout: cdk.Duration.seconds(180),
+      memorySize: 256,
+      environment: ingestionCrEnvironment,
+      bundling: { externalModules: ['@aws-sdk/*'] },
+    });
+
+    const ingestionIsCompleteFn = new lambda.NodejsFunction(this, 'IngestionIsComplete', {
+      entry: path.join(__dirname, '../../lambda/ingestion-cr/is-complete.ts'),
+      handler: 'handler',
+      runtime: lambdaBase.Runtime.NODEJS_22_X,
+      timeout: cdk.Duration.seconds(60),
+      memorySize: 256,
+      environment: ingestionCrEnvironment,
+      bundling: { externalModules: ['@aws-sdk/*'] },
+    });
+
+    const kbArn = cdk.Fn.sub(
+      'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/${kbId}',
+      { kbId: knowledgeBaseId },
+    );
+
+    ingestionOnEventFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['bedrock:StartIngestionJob'],
+        resources: [kbArn],
+      }),
+    );
+    ingestionIsCompleteFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['bedrock:GetIngestionJob'],
+        resources: [kbArn],
+      }),
+    );
+
+    const ingestionProvider = new cr.Provider(this, 'DeployIngestionProvider', {
+      onEventHandler: ingestionOnEventFn,
+      isCompleteHandler: ingestionIsCompleteFn,
+      queryInterval: cdk.Duration.seconds(30),
+      // Ingesting the full corpus took ~2 min on a warm cluster; allow for a
+      // cold resume plus a much larger corpus before giving up.
+      totalTimeout: cdk.Duration.minutes(45),
+    });
+
+    const deployIngestion = new cdk.CustomResource(this, 'DeployIngestion', {
+      serviceToken: ingestionProvider.serviceToken,
+      properties: {
+        // The change-detector. See corpusVersion above.
+        CorpusVersion: corpusVersion,
+      },
     });
 
     deployIngestion.node.addDependency(documentDeployment);
