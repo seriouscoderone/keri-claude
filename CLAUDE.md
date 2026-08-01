@@ -192,11 +192,21 @@ AWS_PROFILE=personal aws ssm get-parameters --region us-east-1 \
           /keri-chat/data-source-id --query 'Parameters[].[Name,Value]' --output text
 ```
 
-**The database sleeps.** Aurora runs at `serverlessV2MinCapacity: 0` and pauses
-after 5 minutes idle, taking ~25s to resume. This is a deliberate cost decision.
-Anything that queries the Knowledge Base must tolerate a resume — see
-`infrastructure/lambda/shared/aurora-wake.ts`. When debugging "the chat is
-broken", check capacity first:
+**The database sleeps.** Aurora runs at `serverlessV2MinCapacity: 0` with
+`SecondsUntilAutoPause: 300`. This is a deliberate cost decision.
+
+Returning to zero is a **taper, not a cliff**. Measured 2026-08-01 after an
+ingestion burst: `3.0 → 1.5 → 0.59 → 0.0` ACU over ~11 minutes, not 5. Budget
+for ~10-12 minutes of tapering compute after any deploy or ingestion. At 0.0
+ACU compute is free; storage (~0.24 GB) and 1-day backups still bill.
+
+Anything that touches the Knowledge Base must tolerate a resume — see
+`infrastructure/lambda/shared/aurora-wake.ts`, and note that **`retryWhileWaking`
+must wrap every caller**, not just the chat path. `ingestion-handler` was missing
+it until 2026-08-01, which failed a stack update outright; the daily EventBridge
+schedule had masked it because async invocations get two free AWS retries.
+
+When debugging "the chat is broken", check capacity first:
 
 ```bash
 AWS_PROFILE=personal aws cloudwatch get-metric-statistics --region us-east-1 \
@@ -232,6 +242,59 @@ The deploy script builds the React frontend, reads `parameters.json`, passes all
 The stack uses WAF WebACL for IP filtering (driven by `AllowedIpCidrs` CfnParameter), CfnConditions for optional custom domain/TLS, and Nova multimodal embeddings with Nova Lite image parsing. All parameters work at both CDK deploy time and CloudFormation Launch Stack time.
 
 The stack's `BucketDeployment` extracts `scripts/staging/` into the document bucket, then a deploy-time custom resource triggers `StartIngestionJob` so the KB is ready immediately. A daily EventBridge rule handles ongoing re-ingestion.
+
+Two things about that deploy-time ingestion that are easy to get wrong:
+
+- **It only fires because its properties change.** An `AwsCustomResource` is
+  invoked only when its own properties differ, and the KB/data-source ids never
+  do — so before 2026-08-01 a docs-only deploy uploaded new files and never
+  re-ingested them. A fingerprint of `scripts/manifest.sha256` is baked into the
+  resource so it changes exactly when the corpus does. **Don't remove it.**
+- **A failed ingestion no longer fails the deploy.** It invokes the ingestion
+  Lambda, and `Lambda.invoke` counts a handler error as a successful API call.
+  The daily schedule is the net. If the KB looks stale after a green deploy,
+  check the `IngestionHandler` log group.
+
+### Refreshing the knowledge base (the runbook)
+
+`BucketDeployment` uses `prune: false`, so **`cdk deploy` never removes a
+retired document from S3** — it will keep being indexed. Deletions require
+`sync-docs.sh`, which syncs with `--delete`. Full sequence:
+
+```bash
+# 1. Is anything actually stale? Three different questions:
+./scripts/download-whitepapers.sh --check            # our bytes vs the URLs
+./scripts/download-whitepapers.sh --check-upstream   # forks behind / renders behind source
+
+# 2. Refresh what is stale
+./scripts/download-whitepapers.sh --refresh          # or: --refresh specs|papers|docs
+./scripts/build-specs.sh --sync                      # kswg specs, rendered from source
+
+# 3. Review the delta before pushing anything live
+git diff --stat scripts/manifest.sha256
+
+# 4. Deploy (uploads changed docs, fires ingestion)
+cd infrastructure && ./scripts/deploy.sh --profile personal
+
+# 5. REQUIRED if any document was removed — prunes S3 and re-ingests
+./scripts/sync-docs.sh
+
+# 6. Verify: expect 0 failures, and scanned == file count in scripts/staging/
+AWS_PROFILE=personal aws bedrock-agent list-ingestion-jobs --region us-east-1 \
+  --knowledge-base-id "$(aws ssm get-parameter --name /keri-chat/knowledge-base-id \
+     --query Parameter.Value --output text --region us-east-1 --profile personal)" \
+  --data-source-id "$(aws ssm get-parameter --name /keri-chat/data-source-id \
+     --query Parameter.Value --output text --region us-east-1 --profile personal)" \
+  --max-results 1 --sort-by '{"attribute":"STARTED_AT","order":"DESCENDING"}' \
+  --query 'ingestionJobSummaries[0].[status,statistics]'
+```
+
+Then ask `ask_keri_chat` something that only the *new* content can answer — a
+green ingestion proves indexing, not retrievability.
+
+**Baselines.** `scripts/baseline/<date>/` holds a pre-refresh snapshot for
+diffing. `scripts/manifest.sha256` is tracked, so `git log -p` on it is the
+history of what the corpus contained and when.
 
 ### Publishing for Launch Stack
 
