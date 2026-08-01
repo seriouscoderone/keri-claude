@@ -466,14 +466,15 @@ export class KeriChatStack extends cdk.Stack {
         parameters: {
           knowledgeBaseId: new cr.PhysicalResourceIdReference(),
         },
-        // ONLY ResourceNotFoundException — that one genuinely means "already
-        // gone", which is the idempotency we want. ValidationException and
-        // AccessDeniedException were also ignored, and ValidationException is
-        // exactly what delete raises while a data source or in-flight ingestion
-        // still exists. Swallowing it told CloudFormation the delete succeeded
-        // and leaked an ACTIVE Knowledge Base plus its Aurora cluster on every
-        // rollback (observed 2026-08-01, in a test account, still billing).
-        ignoreErrorCodesMatching: 'ResourceNotFoundException',
+        // KNOWN DEFECT, left in place deliberately — see the note on the
+        // DataSource onDelete below. Swallowing ValidationException makes a
+        // rollback leak an ACTIVE Knowledge Base and its Aurora cluster
+        // (observed 2026-08-01). Narrowing it is correct but cannot be shipped
+        // to the existing stack in one step; it needs the DataSource onUpdate
+        // migration first, because these two resources share a provider and a
+        // failed update on either one breaks every consumer of
+        // dataSource.dataSourceId.
+        ignoreErrorCodesMatching: 'ResourceNotFoundException|ValidationException|AccessDeniedException',
       },
       policy: cr.AwsCustomResourcePolicy.fromStatements([
         new iam.PolicyStatement({
@@ -543,17 +544,6 @@ export class KeriChatStack extends cdk.Stack {
           knowledgeBaseId,
           name: 'keri-docs',
           description: 'KERI specification and documentation source',
-          // RETAIN, not the DELETE default. On stack deletion CloudFormation
-          // may destroy the Aurora cluster before Bedrock deletes the data
-          // source, and DELETE makes Bedrock try to remove vectors from a store
-          // that is already gone:
-          //   "Unable to delete data from vector store for data source ...
-          //    consider updating the dataDeletionPolicy to RETAIN"
-          // The data source then ends DELETE_UNSUCCESSFUL and the Knowledge Base
-          // becomes undeletable, needing manual cleanup (observed 2026-08-01).
-          // Retaining is harmless: the vectors live in the cluster, which the
-          // stack destroys wholesale anyway.
-          dataDeletionPolicy: 'RETAIN',
           dataSourceConfiguration: {
             type: 'S3',
             s3Configuration: {
@@ -578,7 +568,16 @@ export class KeriChatStack extends cdk.Stack {
         // still exists. Swallowing it told CloudFormation the delete succeeded
         // and leaked an ACTIVE Knowledge Base plus its Aurora cluster on every
         // rollback (observed 2026-08-01, in a test account, still billing).
-        ignoreErrorCodesMatching: 'ResourceNotFoundException',
+        // NOT narrowed, unlike the KnowledgeBase above — deliberately.
+        // This resource has no onUpdate, and AwsCustomResource defaults that to
+        // "no call", which returns no response data. So ANY property change
+        // here (even to this string) makes CloudFormation issue an Update that
+        // yields nothing, and every reference to dataSource.dataSourceId then
+        // fails the stack. Narrowing this rolled production back on 2026-08-01.
+        // Hardening it needs a two-step migration: first ship an onUpdate
+        // (getDataSource) plus bedrock:GetDataSource in the policy and let that
+        // settle, only then change anything else.
+        ignoreErrorCodesMatching: 'ResourceNotFoundException|ValidationException|AccessDeniedException',
       },
       policy: cr.AwsCustomResourcePolicy.fromStatements([
         new iam.PolicyStatement({
