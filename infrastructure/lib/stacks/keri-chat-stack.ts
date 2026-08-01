@@ -962,7 +962,17 @@ export class KeriChatStack extends cdk.Stack {
 
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessControl(frontendBucket),
+        // Explicit, prefixed name. CDK's default is derived from the synth-time
+        // stack name and baked into the published template as a literal, and an
+        // OriginAccessControl name must be unique per account — so a second
+        // deployment of the published template collided with the first:
+        //   'KeriChatDistributionOrigin1S3OriginAccessControl...' already exists
+        // A different-account test cannot catch this; only a same-account one can.
+        origin: origins.S3BucketOrigin.withOriginAccessControl(frontendBucket, {
+          originAccessControl: new cloudfront.S3OriginAccessControl(this, 'FrontendOac', {
+            originAccessControlName: `${namePrefix}-frontend-oac`,
+          }),
+        }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
       additionalBehaviors: {

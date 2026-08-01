@@ -322,12 +322,136 @@ history of what the corpus contained and when.
 
 ### Publishing for Launch Stack
 
+`deploy.sh` republishes automatically from `publishBucket` in `parameters.json`,
+so this is rarely run by hand:
+
 ```bash
 cd infrastructure
 ./scripts/publish-template.sh keri-host-chat-stack
 ```
 
-This synths, zips all assets (including the ~113MB document bundle), uploads to the public S3 bucket, and prints a Launch Stack URL.
+It synths, zips assets, uploads to the public bucket and prints a Launch Stack
+URL. Asset keys are content hashes, so unchanged assets are skipped and a no-op
+republish uploads nothing. It also prunes assets the new template no longer
+references, because each corpus change re-hashes the ~96MB bundle.
+
+**The prune scans the raw template for any `latest/...` string.** Do not narrow
+it to a property name: Lambda code uses `S3Key` but `BucketDeployment` uses
+`SourceObjectKeys`, and matching only the former deleted the document bundle
+while reporting success.
+
+### Integration testing the published template
+
+```bash
+cd infrastructure
+./scripts/integration-test.sh --profile personal          # build, verify, tear down
+./scripts/integration-test.sh --profile personal --keep   # leave it up to poke at
+```
+
+Deploys the **published** template into a throwaway stack, asserts 0 failed
+documents and that scanned == object count, checks the frontend, then tears down
+from an `EXIT` trap so a failure still cleans up. Takes 45–90 minutes, almost all
+of it first-time embedding.
+
+It runs in the **same account as production**, because `NamePrefix` is a
+CloudFormation parameter — every account-unique name (Knowledge Base, WAF
+ACL/IPSet, SSM paths) is chosen at launch time. It passes an empty
+`HostedZoneId`, so no DNS or certificate is involved and the frontend is reached
+through the CloudFront domain directly.
+
+**Why this exists:** unit tests cannot catch what only breaks on a *fresh*
+deploy, which is the only kind a Launch Stack user does. Real bugs it found, all
+invisible from a healthy running stack:
+
+| Bug | Why it hid |
+|---|---|
+| Aurora `VER_16_6` no longer creatable | The live cluster had auto-upgraded to 16.11 outside CloudFormation |
+| Aurora auto-pauses *mid-ingestion*, Bedrock fails files | Incremental ingestion is short enough never to hit it |
+| 45-minute ingestion budget too small | A first ingestion of the full corpus far exceeds it |
+| Rollback leaked an ACTIVE KB + billing Aurora cluster | `onDelete` swallowed the `ValidationException` that says otherwise |
+| `dataDeletionPolicy: DELETE` stranded the KB | Only bites when the cluster is destroyed first |
+
+### Recovering a Knowledge Base stuck in DELETE_UNSUCCESSFUL
+
+Symptom, after the vector store has already been destroyed:
+
+```
+Unable to delete data from vector store for data source with ID <id>.
+... consider updating the dataDeletionPolicy of the data source to RETAIN
+```
+
+The fix is exactly what the message says, but **`UpdateDataSource` is a full
+replacement, not a patch**. Sending only the fields you want to change makes AWS
+treat every omitted field as removed, and you get a misleading rejection:
+
+```
+vectorIngestionConfiguration.parsingConfiguration cannot be updated once created
+```
+
+That error means "you dropped an immutable field", not "this cannot be changed".
+Round-trip the whole definition and flip only the policy:
+
+```bash
+KB=<kb-id>; DS=<ds-id>
+aws bedrock-agent get-data-source --knowledge-base-id $KB --data-source-id $DS \
+  --query dataSource --output json > /tmp/ds.json
+python3 - <<'PY'
+import json
+d = json.load(open('/tmp/ds.json'))
+json.dump({k: d[k] for k in
+           ('knowledgeBaseId','dataSourceId','name','dataSourceConfiguration',
+            'vectorIngestionConfiguration')}
+          | {'description': d.get('description',''), 'dataDeletionPolicy': 'RETAIN'},
+          open('/tmp/ds-update.json','w'))
+PY
+aws bedrock-agent update-data-source --cli-input-json file:///tmp/ds-update.json
+aws bedrock-agent delete-data-source   --knowledge-base-id $KB --data-source-id $DS
+aws bedrock-agent delete-knowledge-base --knowledge-base-id $KB
+```
+
+### Changing the KnowledgeBase or DataSource custom resources
+
+Both are `cr.AwsCustomResource`. **Any** property change on one — even a single
+character of `ignoreErrorCodesMatching` — makes CloudFormation issue an Update.
+The DataSource had no `onUpdate`, and `AwsCustomResource` defaults that to *"no
+call"*; a call never made returns no response data, so every reference to
+`dataSource.dataSourceId` fails the stack with:
+
+```
+Vendor response doesn't contain dataSource.dataSourceId attribute
+```
+
+That froze the resource and rolled production back three times. It now has an
+`onUpdate: getDataSource`, so it is safe to edit — but if you add a similar
+custom resource, give it an `onUpdate` from the start.
+
+The related trap: an IAM grant added in the *same* deployment as the call that
+needs it may not have taken effect yet. Grant it out-of-band first
+(`aws iam put-role-policy` on the shared provider role), deploy, then remove the
+bootstrap policy once the template carries the permission.
+
+`cdk diff` will warn **"KnowledgeBase may be replaced"** whenever a name becomes
+a token. That is CDK being unable to resolve tokens, not a real replacement —
+but verify rather than assume, because a replacement destroys every vector.
+Resolve the `Fn::Join` forms with the parameter default and diff against
+`aws cloudformation get-template`; if `Create` and `Update` are identical, there
+is no replacement.
+
+### Vector lifecycle — Bedrock handles it, do not purge
+
+Measured 2026-08-01 against the live store: 64 distinct `sourceUrl` values for 64
+S3 objects, no vectors without an object, and the retired `vlei-llm-doc.md` had
+**0** chunks after deletion. Documents replaced the same day had **0** duplicate
+long chunks, so modification replaces rather than appends.
+
+A periodic full purge is therefore unnecessary and actively worse: re-embedding
+the whole corpus is where the Aurora auto-pause failures happen. Purge only if
+the chunking strategy or embedding model changes, since existing vectors would
+then be incomparable.
+
+(Roughly 5% of chunks are duplicated *within* the three LLM-export dumps —
+`wot-terms-llms-full.txt`, `vlei-trainings-llm-context.md`, `keridoc-llms-full.txt`
+— which is source-content repetition, not staleness.)
 
 ### S3 bucket naming
 
