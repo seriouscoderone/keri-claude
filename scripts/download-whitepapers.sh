@@ -8,6 +8,7 @@
 #   ./download-whitepapers.sh --refresh             re-fetch specs, papers and docs
 #   ./download-whitepapers.sh --refresh specs       re-fetch one group
 #   ./download-whitepapers.sh --refresh 'acdc-*'    re-fetch by filename glob
+#   ./download-whitepapers.sh --check-upstream      report lag that --check cannot see
 #
 # Fetching without --refresh is the default because scripts/staging/ is baked
 # into the CDK asset bundle at synth time; stable bytes mean stable deploys.
@@ -30,7 +31,7 @@ TARGET=""         # "" = nothing in scope beyond missing files
 FORCE=false       # override the locally-built guard
 
 usage() {
-  sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
   echo
   echo "Targets: all (default), specs, papers, docs, images, or a filename glob."
   echo "  --force   replace files built by build-specs.sh (see locally-built.sha256)"
@@ -48,6 +49,7 @@ while [ $# -gt 0 ]; do
       fi
       shift
       ;;
+    --check-upstream) MODE="upstream"; shift ;;
     --force) FORCE=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; echo >&2; usage >&2; exit 2 ;;
@@ -122,6 +124,111 @@ add_source docs vlei-trainings-llm-context.md \
   "https://raw.githubusercontent.com/GLEIF-IT/vlei-trainings/main/markdown/llm_context.md"
 add_source docs signifypy-docs.html \
   "https://raw.githubusercontent.com/seriouscoderone/signifypy/main/docs/singlehtml/index.html"
+
+# --- Upstream provenance: name|kind|repo[|parent] ---
+#
+# --check only compares our bytes against a URL. It cannot see that the URL
+# itself serves stale content, and two layers above it do exactly that:
+#
+#   spec-render  We fetch docs/index.html, a *committed* Spec-Up-T artifact.
+#                Upstream regenerates it by hand, so it lags its own spec/
+#                source. Use build-specs.sh to render locally instead.
+#   fork         The LLM exports are produced by CI on a fork, because the
+#                upstream PRs adding that generation were never merged. A fork
+#                behind its parent serves stale content forever, and --check
+#                happily calls it "ok".
+#
+# The branch field matters: it must be the branch the export is actually built
+# from, not the fork's default branch. wot-terms-llms-full.txt is published to
+# gh-pages by a workflow that lives on add-llm-docs, and vlei-llm-doc.md is
+# fetched straight off feat/llm-doc-generation. Checking main would report a
+# reassuring "identical" about a branch we never read.
+PROVENANCE=(
+  "keri-specification.html|spec-render|trustoverip/kswg-keri-specification"
+  "cesr-specification.html|spec-render|trustoverip/kswg-cesr-specification"
+  "acdc-specification.html|spec-render|trustoverip/kswg-acdc-specification"
+  "keridoc-llms-full.txt|fork|seriouscoderone/keridoc|WebOfTrust/keridoc|main"
+  "wot-terms-llms-full.txt|fork|seriouscoderone/WOT-terms|WebOfTrust/WOT-terms|add-llm-docs"
+  "vlei-llm-doc.md|fork|seriouscoderone/vLEI|WebOfTrust/vLEI|feat/llm-doc-generation"
+  "signifypy-docs.html|fork|seriouscoderone/signifypy|WebOfTrust/signifypy|main"
+)
+
+report_upstream_lag() {
+  if ! command -v gh &>/dev/null; then
+    echo "SKIP: gh not installed — cannot inspect upstream provenance"
+    return
+  fi
+  if ! gh auth status &>/dev/null; then
+    echo "SKIP: gh not authenticated (run 'gh auth login')"
+    return
+  fi
+
+  local lagging=0 rec name kind repo parent
+
+  echo "Rendered specs — is the committed render behind its own spec/ source?"
+  for rec in "${PROVENANCE[@]}"; do
+    IFS='|' read -r name kind repo parent <<< "$rec"
+    [ "$kind" = "spec-render" ] || continue
+    local rendered source
+    rendered=$(gh api "repos/$repo/commits?path=docs/index.html&per_page=1" \
+      --jq '.[0].commit.committer.date' 2>/dev/null | cut -c1-10)
+    source=$(gh api "repos/$repo/commits?path=spec&per_page=1" \
+      --jq '.[0].commit.committer.date' 2>/dev/null | cut -c1-10)
+    # If we already render this one ourselves, upstream's lag does not reach us.
+    local staged_hash="" bypassed=false
+    if [ -f "$STAGING_DIR/$name" ]; then
+      staged_hash="$(hash_of "$STAGING_DIR/$name")"
+      is_locally_built "$name" "$staged_hash" && bypassed=true
+    fi
+
+    if [ -z "$rendered" ] || [ -z "$source" ]; then
+      printf '  %-28s (lookup failed)\n' "$name"
+    elif [ "$rendered" \< "$source" ]; then
+      if $bypassed; then
+        printf '  %-28s bypassed  upstream render %s lags source %s, but we build locally\n' \
+          "$name" "$rendered" "$source"
+      else
+        printf '  %-28s LAGS  render %s < source %s\n' "$name" "$rendered" "$source"
+        lagging=$((lagging + 1))
+      fi
+    else
+      printf '  %-28s ok    render %s%s\n' "$name" "$rendered" \
+        "$($bypassed && echo ' (built locally)')"
+    fi
+  done
+
+  echo
+  echo "Fork-generated exports — is the fork behind its parent?"
+  for rec in "${PROVENANCE[@]}"; do
+    IFS='|' read -r name kind repo parent branch <<< "$rec"
+    [ "$kind" = "fork" ] || continue
+    local owner base cmp status behind
+    owner="${repo%%/*}"
+    base=$(gh api "repos/$parent" --jq '.default_branch' 2>/dev/null)
+    cmp=$(gh api "repos/$parent/compare/$base...$owner:$branch" \
+      --jq '"\(.status) \(.behind_by)"' 2>/dev/null)
+    if [ -z "$cmp" ]; then
+      printf '  %-28s (compare failed: %s@%s)\n' "$name" "$repo" "$branch"
+      continue
+    fi
+    status="${cmp% *}"; behind="${cmp##* }"
+    if [ "$behind" -gt 0 ]; then
+      printf '  %-28s BEHIND %s commits  [%s @ %s]\n' "$name" "$behind" "$repo" "$branch"
+      lagging=$((lagging + 1))
+    else
+      printf '  %-28s ok    %-9s [%s @ %s]\n' "$name" "$status" "$repo" "$branch"
+    fi
+  done
+
+  echo
+  if [ "$lagging" -eq 0 ]; then
+    echo "No upstream lag detected."
+  else
+    echo "$lagging source(s) lag upstream. --refresh cannot fix these:"
+    echo "  rendered specs  -> ./build-specs.sh --sync"
+    echo "  forks behind    -> gh repo sync, then re-run the fork's export workflow"
+  fi
+}
 
 # --- Helpers ---
 
@@ -267,6 +374,13 @@ process_image_dir() {
 }
 
 # --- Fetch phase ---
+
+if [ "$MODE" = "upstream" ]; then
+  echo "=== Upstream provenance check ==="
+  echo
+  report_upstream_lag
+  exit 0
+fi
 
 case "$MODE:$TARGET" in
   check:*)  echo "=== Checking sources against upstream (target: $TARGET) ===" ;;
