@@ -227,6 +227,10 @@ All deployment parameters are driven by `parameters.json` (copied from `paramete
 
 ```bash
 # 1. Download KERI papers, specs, and docs into scripts/staging/
+#    NOTE: this fetches only what is MISSING. On an existing checkout it is a
+#    no-op that prints "cached" for everything — it will NOT pick up upstream
+#    changes. To refresh an existing corpus see "Refreshing the knowledge base
+#    (the runbook)" below; deploying after this alone republishes stale docs.
 ./scripts/download-whitepapers.sh
 
 # 2. Configure deployment
@@ -257,40 +261,60 @@ Two things about that deploy-time ingestion that are easy to get wrong:
 
 ### Refreshing the knowledge base (the runbook)
 
-`BucketDeployment` uses `prune: false`, so **`cdk deploy` never removes a
-retired document from S3** — it will keep being indexed. Deletions require
-`sync-docs.sh`, which syncs with `--delete`. Full sequence:
+**`sync-docs.sh` is the step that actually publishes the corpus.** It syncs with
+`--delete`, waits for the job, and prints the statistics against an expected
+count. `BucketDeployment` uses `prune: false`, so **`cdk deploy` alone never
+removes a retired document from S3** — it keeps being indexed.
 
 ```bash
-# 1. Is anything actually stale? Three different questions:
+# 1. Is anything actually stale? Two different questions:
 ./scripts/download-whitepapers.sh --check            # our bytes vs the URLs
 ./scripts/download-whitepapers.sh --check-upstream   # forks behind / renders behind source
 
 # 2. Refresh what is stale
 ./scripts/download-whitepapers.sh --refresh          # or: --refresh specs|papers|docs
-./scripts/build-specs.sh --sync                      # kswg specs, rendered from source
+./scripts/build-specs.sh --sync                      # kswg specs — see prerequisites below
 
-# 3. Review the delta before pushing anything live
-git diff --stat scripts/manifest.sha256
+# 3. Review the delta before pushing anything live.
+#    staging/ and markdown/ are gitignored, so the manifest IS the diff.
+#    A '-' line here means a document was retired.
+git diff scripts/manifest.sha256
 
-# 4. Deploy (uploads changed docs, fires ingestion)
-cd infrastructure && ./scripts/deploy.sh --profile personal
+# 4. Publish + ingest + verify, in one step. Always safe to run.
+cd infrastructure && ./scripts/sync-docs.sh
 
-# 5. REQUIRED if any document was removed — prunes S3 and re-ingests
-./scripts/sync-docs.sh
-
-# 6. Verify: expect 0 failures, and scanned == file count in scripts/staging/
-AWS_PROFILE=personal aws bedrock-agent list-ingestion-jobs --region us-east-1 \
-  --knowledge-base-id "$(aws ssm get-parameter --name /keri-chat/knowledge-base-id \
-     --query Parameter.Value --output text --region us-east-1 --profile personal)" \
-  --data-source-id "$(aws ssm get-parameter --name /keri-chat/data-source-id \
-     --query Parameter.Value --output text --region us-east-1 --profile personal)" \
-  --max-results 1 --sort-by '{"attribute":"STARTED_AT","order":"DESCENDING"}' \
-  --query 'ingestionJobSummaries[0].[status,statistics]'
+# 5. Only if you also changed CDK code, or need the baked-in ~113MB asset
+#    bundle refreshed for Launch Stack. Not needed for a docs-only refresh.
+./scripts/deploy.sh --profile personal
 ```
 
 Then ask `ask_keri_chat` something that only the *new* content can answer — a
 green ingestion proves indexing, not retrievability.
+
+**Why `sync-docs.sh` before `deploy.sh`, and why it is always safe:** Bedrock
+allows one active ingestion job per data source, and `deploy.sh` fires its own.
+Running them the other way round used to collide. The script now waits out both
+that conflict and an Aurora resume (it calls the API directly, so it cannot use
+the Lambda's `retryWhileWaking` and carries its own retry), then polls to
+COMPLETE and fails loudly on FAILED. Running it when nothing changed is a clean
+no-op.
+
+The expected `numberOfDocumentsScanned` is every file `sync-docs.sh` uploads —
+**images included** (36 top-level + 28 images = 64 as of 2026-08-01). The script
+prints this number for you; don't compare against the top-level count alone.
+
+**`build-specs.sh --sync` has prerequisites it only warns about.** It needs the
+sibling checkouts (`../kswg-{keri,cesr,acdc}-specification`, i.e. the full KERI
+monorepo layout), a clean working tree in each, and authenticated `gh`. A
+missing prerequisite prints `SKIP:` and continues, so a partial skip silently
+leaves upstream's stale render in place. `--sync` also runs `gh repo sync`
+against your GitHub forks — a remote side effect. It re-runs
+`download-whitepapers.sh` itself at the end, so the manifest is already updated
+when it finishes.
+
+**A bare `--check` downloads every source to a temp file to compare** — slow.
+Prefer `--check specs`. It also excludes `images`, so "all checked sources match
+upstream" does not cover them.
 
 **Baselines.** `scripts/baseline/<date>/` holds a pre-refresh snapshot for
 diffing. `scripts/manifest.sha256` is tracked, so `git log -p` on it is the
