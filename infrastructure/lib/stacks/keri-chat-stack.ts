@@ -167,7 +167,23 @@ export class KeriChatStack extends cdk.Stack {
     // destroy every vector. A second stack in the same account (e.g. an
     // integration test) passes -c namePrefix=<other> for a disjoint set.
 
-    const namePrefix = this.node.tryGetContext('namePrefix') ?? 'keri-chat';
+    // A CfnParameter, not synth-time context, so the PUBLISHED template can be
+    // launched more than once in one account — which is what makes an
+    // integration test possible without a second AWS account. Changing it at
+    // launch time gives a fully disjoint set of account-unique names.
+    //
+    // Default is the historical literal, so the live stack is unaffected: the
+    // resolved values are identical and CloudFormation sees no change. Renaming
+    // the Knowledge Base would REPLACE it.
+    const namePrefixParam = new cdk.CfnParameter(this, 'NamePrefix', {
+      type: 'String',
+      default: this.node.tryGetContext('namePrefix') ?? 'keri-chat',
+      allowedPattern: '[a-z][a-z0-9-]{2,30}',
+      description:
+        'Prefix for account-unique resource names (Knowledge Base, WAF, SSM paths). ' +
+        'Change it to deploy a second, independent copy in the same account.',
+    });
+    const namePrefix = namePrefixParam.valueAsString;
 
     // -----------------------------------------------------------------
     // CfnConditions
@@ -1046,18 +1062,27 @@ export class KeriChatStack extends cdk.Stack {
 
     new ssm.StringParameter(this, 'KnowledgeBaseIdParam', {
       parameterName: `/${namePrefix}/knowledge-base-id`,
+      // namePrefix is a CfnParameter token, so CDK cannot infer whether this
+      // is a simple name or a path. It is a path.
+      simpleName: false,
       stringValue: knowledgeBaseId,
       description: 'Bedrock Knowledge Base ID for KERI Chat',
     });
 
     new ssm.StringParameter(this, 'DocumentBucketNameParam', {
       parameterName: `/${namePrefix}/document-bucket-name`,
+      // namePrefix is a CfnParameter token, so CDK cannot infer whether this
+      // is a simple name or a path. It is a path.
+      simpleName: false,
       stringValue: documentBucket.bucketName,
       description: 'S3 bucket name for KERI Chat documents',
     });
 
     new ssm.StringParameter(this, 'DataSourceIdParam', {
       parameterName: `/${namePrefix}/data-source-id`,
+      // namePrefix is a CfnParameter token, so CDK cannot infer whether this
+      // is a simple name or a path. It is a path.
+      simpleName: false,
       stringValue: dataSourceId,
       description: 'Bedrock Data Source ID for KERI Chat',
     });
