@@ -160,6 +160,16 @@ export class KeriChatStack extends cdk.Stack {
     });
 
     // -----------------------------------------------------------------
+    // Account-unique resource names
+    // -----------------------------------------------------------------
+    // Defaults to the historical literals so the live stack's template stays
+    // byte-identical — renaming the Knowledge Base would REPLACE it and
+    // destroy every vector. A second stack in the same account (e.g. an
+    // integration test) passes -c namePrefix=<other> for a disjoint set.
+
+    const namePrefix = this.node.tryGetContext('namePrefix') ?? 'keri-chat';
+
+    // -----------------------------------------------------------------
     // CfnConditions
     // -----------------------------------------------------------------
 
@@ -402,7 +412,7 @@ export class KeriChatStack extends cdk.Stack {
     }
 
     const kbCreateParams = {
-      name: 'keri-chat-knowledge-base',
+      name: `${namePrefix}-knowledge-base`,
       description: 'KERI ecosystem chat knowledge base',
       roleArn: kbRole.roleArn,
       knowledgeBaseConfiguration: {
@@ -808,14 +818,14 @@ export class KeriChatStack extends cdk.Stack {
     const blockedPageHtml = fs.readFileSync(blockedPagePath, 'utf-8');
 
     const ipSet = new wafv2.CfnIPSet(this, 'AllowedIpSet', {
-      name: 'keri-chat-allowed-ips',
+      name: `${namePrefix}-allowed-ips`,
       scope: 'CLOUDFRONT',
       ipAddressVersion: 'IPV4',
       addresses: cdk.Fn.split(',', allowedIpCidrs.valueAsString),
     });
 
     const webAcl = new wafv2.CfnWebACL(this, 'WebAcl', {
-      name: 'keri-chat-ip-filter',
+      name: `${namePrefix}-ip-filter`,
       scope: 'CLOUDFRONT',
       defaultAction: { block: {
         customResponse: {
@@ -979,19 +989,19 @@ export class KeriChatStack extends cdk.Stack {
     // =================================================================
 
     new ssm.StringParameter(this, 'KnowledgeBaseIdParam', {
-      parameterName: '/keri-chat/knowledge-base-id',
+      parameterName: `/${namePrefix}/knowledge-base-id`,
       stringValue: knowledgeBaseId,
       description: 'Bedrock Knowledge Base ID for KERI Chat',
     });
 
     new ssm.StringParameter(this, 'DocumentBucketNameParam', {
-      parameterName: '/keri-chat/document-bucket-name',
+      parameterName: `/${namePrefix}/document-bucket-name`,
       stringValue: documentBucket.bucketName,
       description: 'S3 bucket name for KERI Chat documents',
     });
 
     new ssm.StringParameter(this, 'DataSourceIdParam', {
-      parameterName: '/keri-chat/data-source-id',
+      parameterName: `/${namePrefix}/data-source-id`,
       stringValue: dataSourceId,
       description: 'Bedrock Data Source ID for KERI Chat',
     });
