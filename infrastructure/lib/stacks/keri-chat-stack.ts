@@ -20,6 +20,7 @@ import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import { Construct } from 'constructs';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as crypto from 'crypto';
 
 /**
  * Embedding model to dimension compatibility matrix.
@@ -546,7 +547,9 @@ export class KeriChatStack extends cdk.Stack {
       entry: path.join(__dirname, '../../lambda/ingestion-handler/index.ts'),
       handler: 'handler',
       runtime: lambdaBase.Runtime.NODEJS_22_X,
-      timeout: cdk.Duration.seconds(60),
+      // Must exceed the handler's 120s Aurora wake window, or the retry is cut
+      // short by the Lambda timeout instead of completing the resume.
+      timeout: cdk.Duration.seconds(180),
       memorySize: 256,
       environment: {
         KNOWLEDGE_BASE_ID: knowledgeBaseId,
@@ -581,29 +584,52 @@ export class KeriChatStack extends cdk.Stack {
     // 8b. Deploy-time ingestion — triggers after document upload
     // =================================================================
 
+    // An AwsCustomResource is only invoked when its own properties change.
+    // knowledgeBaseId and dataSourceId are stable, so without a value that
+    // tracks the documents, a docs-only deploy uploaded new files to S3 and
+    // never re-ingested them — the KB kept serving the previous vectors until
+    // the daily rule happened to fire. Fingerprinting scripts/manifest.sha256
+    // (which changes exactly when the corpus changes) into `description` makes
+    // the resource update, and description is a real StartIngestionJob field.
+    const corpusVersion = (() => {
+      const manifest = path.join(__dirname, '../../../scripts/manifest.sha256');
+      if (!fs.existsSync(manifest)) return 'no-manifest';
+      return crypto.createHash('sha256').update(fs.readFileSync(manifest)).digest('hex').slice(0, 16);
+    })();
+
+    // Invoke the ingestion Lambda rather than calling Bedrock directly. Aurora
+    // rejects StartIngestionJob while resuming from auto-pause, and a raw
+    // AwsCustomResource has no retry — it fails the whole stack update. The
+    // Lambda owns the wake retry, so routing through it makes the deploy-time
+    // and daily-schedule paths share one code path and one fix.
+    const ingestionInvoke = {
+      service: 'Lambda',
+      action: 'invoke',
+      parameters: {
+        FunctionName: ingestionFn.functionName,
+        InvocationType: 'RequestResponse',
+        // Not read by the handler — it exists so the resource's properties
+        // change when the corpus does, which is what makes CloudFormation
+        // re-invoke this at all.
+        Payload: JSON.stringify({ reason: 'deploy', corpusVersion }),
+      },
+      physicalResourceId: cr.PhysicalResourceId.of('deploy-ingestion'),
+    };
+
+    // Trade-off worth knowing: Lambda.invoke counts a handler error as a
+    // successful API call, so a genuine ingestion failure no longer fails the
+    // deploy the way the direct Bedrock call did. The daily schedule is the
+    // net, and the handler logs loudly — but a red deploy is no longer the
+    // signal. Check the IngestionHandler log group if the KB looks stale.
     const deployIngestion = new cr.AwsCustomResource(this, 'DeployIngestion', {
-      onCreate: {
-        service: 'BedrockAgent',
-        action: 'startIngestionJob',
-        parameters: {
-          knowledgeBaseId: knowledgeBaseId,
-          dataSourceId: dataSourceId,
-        },
-        physicalResourceId: cr.PhysicalResourceId.of('deploy-ingestion'),
-      },
-      onUpdate: {
-        service: 'BedrockAgent',
-        action: 'startIngestionJob',
-        parameters: {
-          knowledgeBaseId: knowledgeBaseId,
-          dataSourceId: dataSourceId,
-        },
-        physicalResourceId: cr.PhysicalResourceId.of('deploy-ingestion'),
-      },
+      onCreate: ingestionInvoke,
+      onUpdate: ingestionInvoke,
+      // The wake retry can hold the invocation for up to the Lambda's 180s.
+      timeout: cdk.Duration.minutes(5),
       policy: cr.AwsCustomResourcePolicy.fromStatements([
         new iam.PolicyStatement({
-          actions: ['bedrock:StartIngestionJob'],
-          resources: ['*'],
+          actions: ['lambda:InvokeFunction'],
+          resources: [ingestionFn.functionArn],
         }),
       ]),
     });
