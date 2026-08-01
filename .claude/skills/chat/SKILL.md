@@ -22,6 +22,11 @@ Query the keri.host knowledge base for spec-grounded answers about KERI, CESR, a
 
 Use the `ask_keri_chat` MCP tool. It maintains conversation history automatically across calls.
 
+> The knowledge base runs on Aurora Serverless v2 at zero minimum capacity, so
+> it sleeps after about five minutes idle and takes ~25s to resume. The server
+> waits through a resume and streams `status` events while it does, and the MCP
+> server triggers a resume at startup, so this is usually invisible.
+
 ```
 ask_keri_chat({ question: "What is pre-rotation in KERI?" })
 ```
@@ -88,6 +93,9 @@ The backend emits newline-delimited SSE events (`data: {JSON}\n\n`):
 - `MODEL_ACCESS_REQUIRED` — Anthropic use case details not yet submitted in Bedrock console
 - `MARKETPLACE_SUBSCRIPTION` — Bedrock Marketplace subscription still provisioning
 - `THROTTLED` — rate-limited, retry after a moment
+- `DATABASE_RESUMING` — the knowledge base was waking from idle and did not
+  finish within the server's 90s budget. The attempt itself triggers the
+  resume, so simply asking again usually succeeds within a few seconds.
 - `INTERNAL_ERROR` — unexpected server error
 
 ## Query Log

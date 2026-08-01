@@ -110,6 +110,31 @@ cp -r /path/to/keri-claude/skills/style .claude/skills/   # one skill
 claude --add-dir /path/to/keri-claude                      # all skills, ad hoc
 ```
 
+## The keri-chat MCP server
+
+`mcp-servers/keri-chat/` is a stdio MCP server exposing the `ask_keri_chat`
+tool against the hosted knowledge base. It is declared in
+`.claude-plugin/plugin.json` under `mcpServers`, so every plugin install gets
+it — there is no project-level MCP config.
+
+**`dist/index.js` is a tracked build artifact.** The plugin cache is a git
+clone with no `node_modules` and no build step, so the committed file must be
+self-contained. `npm run build` bundles it with esbuild.
+
+**After changing `src/`, rebuild and commit the bundle:**
+
+```bash
+cd mcp-servers/keri-chat
+npm run build && npm run typecheck
+git add dist/index.js src/index.ts
+```
+
+Forgetting this ships stale behaviour to every install. Verify the bundle is
+self-contained by moving `node_modules` aside and running
+`node dist/index.js < /dev/null` — it must print its startup line.
+
+Changes to `plugin.json` need `/reload-plugins` or a restart to take effect.
+
 ## Infrastructure (KeriChat)
 
 The `infrastructure/` directory contains a CDK stack that deploys a complete KERI knowledge base chat system: Aurora Serverless v2 (pgvector), Bedrock Knowledge Base, Lambda chat handler with streaming, and CloudFront distribution.
