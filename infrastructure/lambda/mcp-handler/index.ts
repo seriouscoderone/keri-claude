@@ -21,7 +21,28 @@ interface SSEChunkEvent { type: 'chunk'; text: string }
 interface SSECitationsEvent { type: 'citations'; data: NumberedCitation[] }
 interface SSEDoneEvent { type: 'done' }
 interface SSEErrorEvent { type: 'error'; error: string; code?: string; detail?: string }
-type SSEEvent = SSEChunkEvent | SSECitationsEvent | SSEDoneEvent | SSEErrorEvent;
+interface SSEStatusEvent {
+  type: 'status';
+  state: string;
+  elapsedMs: number;
+  detail?: string;
+}
+
+class ChatApiError extends Error {
+  readonly code?: string;
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = 'ChatApiError';
+    this.code = code;
+  }
+}
+
+type SSEEvent =
+  | SSEChunkEvent
+  | SSECitationsEvent
+  | SSEDoneEvent
+  | SSEErrorEvent
+  | SSEStatusEvent;
 
 interface HistoryEntry {
   role: 'user' | 'assistant';
@@ -39,7 +60,12 @@ async function queryKeriChat(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: question, history }),
-    signal: AbortSignal.timeout(80_000),
+    // /mcp's CloudFront readTimeout is 90s and this hop is NOT streaming, so
+    // that is a hard time-to-first-byte ceiling. The effective wake budget
+    // here is therefore 85s, slightly under the chat handler's 90s: on a
+    // pathologically slow resume we give up first and tell the caller to ask
+    // again, rather than threading a per-caller budget through the contract.
+    signal: AbortSignal.timeout(85_000),
   });
 
   if (!res.ok) {
@@ -91,9 +117,13 @@ async function queryKeriChat(
         case 'citations':
           citations = event.data;
           break;
+        case 'status':
+          // Aurora wake heartbeat. Must not leak into the answer text.
+          break;
         case 'error':
-          throw new Error(
+          throw new ChatApiError(
             `Chat API error [${event.code ?? 'UNKNOWN'}]: ${event.error}${event.detail ? ` — ${event.detail}` : ''}`,
+            event.code,
           );
         case 'done':
           return { answer, citations };
@@ -169,7 +199,36 @@ export async function handler(event: {
         .describe('Conversation history for multi-turn context'),
     },
     async ({ question, history }) => {
-      const result = await queryKeriChat(question, history, CHAT_FN_URL);
+      let result: ChatResult;
+      try {
+        result = await queryKeriChat(question, history, CHAT_FN_URL);
+      } catch (err) {
+        const code = err instanceof ChatApiError ? err.code : undefined;
+        const timedOut =
+          err instanceof Error &&
+          (err.name === 'TimeoutError' || err.name === 'AbortError');
+
+        if (code === 'DATABASE_RESUMING' || timedOut) {
+          // Soft result, not a throw: a throw reads as "server broken". The
+          // abandoned attempt has already triggered the resume, so a repeat
+          // question lands on a warming cluster.
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text:
+                  'The KERI knowledge base was waking from idle and did not ' +
+                  'finish in time. It sleeps when unused to keep hosting costs ' +
+                  'near zero, and takes about 25 seconds to resume. The wake ' +
+                  'has now been triggered — ask the same question again and it ' +
+                  'should answer normally.',
+              },
+            ],
+            isError: true,
+          };
+        }
+        throw err;
+      }
 
       let text = result.answer;
       if (result.citations.length > 0) {
