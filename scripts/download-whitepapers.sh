@@ -27,11 +27,13 @@ mkdir -p "$STAGING_DIR" "$MARKDOWN_DIR" "$IMAGES_DIR"
 
 MODE="fetch"      # fetch | check
 TARGET=""         # "" = nothing in scope beyond missing files
+FORCE=false       # override the locally-built guard
 
 usage() {
   sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
   echo
   echo "Targets: all (default), specs, papers, docs, images, or a filename glob."
+  echo "  --force   replace files built by build-specs.sh (see locally-built.sha256)"
 }
 
 while [ $# -gt 0 ]; do
@@ -46,10 +48,21 @@ while [ $# -gt 0 ]; do
       fi
       shift
       ;;
+    --force) FORCE=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; echo >&2; usage >&2; exit 2 ;;
   esac
 done
+
+BUILT_LIST="$SCRIPT_DIR/locally-built.sha256"
+
+# A spec render built by build-specs.sh is newer than upstream's committed
+# docs/index.html, so refreshing from upstream would silently regress it.
+is_locally_built() {
+  local name="$1" hash="$2"
+  [ -f "$BUILT_LIST" ] || return 1
+  grep -q "^$hash  $name\$" "$BUILT_LIST"
+}
 
 # --- Source registry: group|name|url ---
 
@@ -125,7 +138,7 @@ in_scope() {
   esac
 }
 
-NEW_COUNT=0; CHANGED_COUNT=0; SAME_COUNT=0; CACHED_COUNT=0; FAIL_COUNT=0; WARN_COUNT=0
+NEW_COUNT=0; CHANGED_COUNT=0; SAME_COUNT=0; CACHED_COUNT=0; FAIL_COUNT=0; WARN_COUNT=0; PROTECTED_COUNT=0
 CHANGED_NAMES=(); STALE_NAMES=(); STALE_GROUPS=""
 
 note_stale_group() {
@@ -186,6 +199,15 @@ process_source() {
       printf '  ok         %s\n' "$name"
       SAME_COUNT=$((SAME_COUNT + 1))
     fi
+    return
+  fi
+
+  # Never trade a locally-built render for upstream's older committed one.
+  if $existed && ! $FORCE && [ "$old_hash" != "$new_hash" ] \
+     && is_locally_built "$name" "$old_hash"; then
+    rm -f "$tmp"
+    printf '  PROTECTED  %s (built from source; --force to take upstream)\n' "$name"
+    PROTECTED_COUNT=$((PROTECTED_COUNT + 1))
     return
   fi
 
@@ -281,7 +303,7 @@ if [ "$MODE" = "check" ]; then
 fi
 
 echo
-echo "Fetch summary: $NEW_COUNT new, $CHANGED_COUNT changed, $SAME_COUNT unchanged, $CACHED_COUNT cached, $WARN_COUNT kept-after-failure, $FAIL_COUNT failed"
+echo "Fetch summary: $NEW_COUNT new, $CHANGED_COUNT changed, $SAME_COUNT unchanged, $CACHED_COUNT cached, $WARN_COUNT kept-after-failure, $PROTECTED_COUNT protected, $FAIL_COUNT failed"
 
 # --- Convert phase ---
 #
