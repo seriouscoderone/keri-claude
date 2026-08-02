@@ -714,7 +714,10 @@ export class KeriChatStack extends cdk.Stack {
       entry: path.join(__dirname, '../../lambda/ingestion-cr/is-complete.ts'),
       handler: 'handler',
       runtime: lambdaBase.Runtime.NODEJS_22_X,
-      timeout: cdk.Duration.seconds(60),
+      // Must exceed anything the handler can block on. It was 60s while the
+      // handler could spend 120s retrying a start, so the Lambda died without
+      // responding and CloudFormation failed the stack.
+      timeout: cdk.Duration.seconds(120),
       memorySize: 256,
       environment: ingestionCrEnvironment,
       bundling: { externalModules: ['@aws-sdk/*'] },

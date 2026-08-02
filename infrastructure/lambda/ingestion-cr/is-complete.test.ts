@@ -71,7 +71,7 @@ describe('deploy-time ingestion completion', () => {
       }),
     );
     await expect(handler(EVENT)).resolves.toEqual({ IsComplete: false });
-    expect(startIngestion).toHaveBeenCalledWith('KB1', 'DS1');
+    expect(startIngestion).toHaveBeenCalledWith('KB1', 'DS1', { timeoutMs: 20_000 });
   });
 
   // Convergence guard: retrying a job that indexed nothing would loop until
@@ -105,6 +105,23 @@ describe('deploy-time ingestion completion', () => {
     );
     await expect(handler(EVENT)).resolves.toEqual({ IsComplete: false });
     expect(startIngestion).toHaveBeenCalled();
+  });
+
+  // A start that cannot happen right now must not blow up the poll: the Lambda
+  // dying mid-call sends CloudFormation nothing and fails the whole stack.
+  it('defers rather than throwing when the retry start fails', async () => {
+    getLatestIngestion.mockResolvedValue(
+      outcome({
+        statistics: {
+          numberOfDocumentsScanned: 64,
+          numberOfNewDocumentsIndexed: 37,
+          numberOfModifiedDocumentsIndexed: 0,
+          numberOfDocumentsFailed: 3,
+        },
+      }),
+    );
+    startIngestion.mockRejectedValue(new Error('ConflictException: ongoing ingestion job'));
+    await expect(handler(EVENT)).resolves.toEqual({ IsComplete: false });
   });
 
   it('is a no-op on Delete', async () => {

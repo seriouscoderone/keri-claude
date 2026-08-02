@@ -77,7 +77,25 @@ export const handler = async (event: {
       }
 
       // Progress was made — sweep up whatever the sleeping vector store dropped.
-      const next = await startIngestion(knowledgeBaseId, dataSourceId);
+      // Short budget on purpose. This runs inside a polled Lambda, so a
+      // failure to start right now is not fatal — the next poll retries. A long
+      // internal retry here outlives the Lambda timeout, and a Lambda that dies
+      // mid-call sends CloudFormation nothing at all:
+      //   "CloudFormation did not receive a response from your Custom Resource"
+      // which failed the whole stack even though the retry itself worked.
+      let next: string;
+      try {
+        next = await startIngestion(knowledgeBaseId, dataSourceId, { timeoutMs: 20_000 });
+      } catch (err) {
+        console.log(
+          JSON.stringify({
+            level: 'WARN',
+            event: 'ingestion_retry_start_deferred',
+            reason: (err as Error).message.slice(0, 160),
+          }),
+        );
+        return { IsComplete: false };
+      }
       console.log(
         JSON.stringify({
           level: 'WARN',
