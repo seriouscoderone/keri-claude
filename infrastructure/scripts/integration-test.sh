@@ -163,9 +163,37 @@ DS=$($AWS ssm get-parameter --name "/$PREFIX/data-source-id" --query Parameter.V
 BUCKET_T=$($AWS ssm get-parameter --name "/$PREFIX/document-bucket-name" --query Parameter.Value --output text)
 echo "  knowledge base : $KB"
 
-STATS=$($AWS bedrock-agent list-ingestion-jobs --knowledge-base-id "$KB" --data-source-id "$DS" \
-  --max-results 1 --sort-by '{"attribute":"STARTED_AT","order":"DESCENDING"}' \
-  --query 'ingestionJobSummaries[0].statistics' --output json)
+# CREATE_COMPLETE does NOT mean ingestion finished. The deploy-time resource
+# accepts a still-running job at its 45-minute budget, because CloudFormation
+# abandons any custom resource at 60 minutes regardless. This script has no such
+# ceiling, so it waits for the real answer before asserting.
+echo "  waiting for ingestion to settle (not bound by CloudFormation's 1h limit)..."
+ING_DEADLINE=$(( $(date +%s) + 5400 ))   # 90 min
+while :; do
+  JOB_STATUS=$($AWS bedrock-agent list-ingestion-jobs --knowledge-base-id "$KB" --data-source-id "$DS" \
+    --max-results 1 --sort-by '{"attribute":"STARTED_AT","order":"DESCENDING"}' \
+    --query 'ingestionJobSummaries[0].status' --output text 2>/dev/null || echo UNKNOWN)
+  STATS=$($AWS bedrock-agent list-ingestion-jobs --knowledge-base-id "$KB" --data-source-id "$DS" \
+    --max-results 1 --sort-by '{"attribute":"STARTED_AT","order":"DESCENDING"}' \
+    --query 'ingestionJobSummaries[0].statistics' --output json)
+  IDX=$(echo "$STATS" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('numberOfNewDocumentsIndexed',0)+d.get('numberOfModifiedDocumentsIndexed',0))")
+  FLD=$(echo "$STATS" | python3 -c "import json,sys;print(json.load(sys.stdin).get('numberOfDocumentsFailed',0))")
+  echo "    [$(date -u +%H:%M:%S)] $JOB_STATUS indexed=$IDX failed=$FLD"
+
+  case "$JOB_STATUS" in
+    COMPLETE)
+      # A job can finish with failures caused by Aurora auto-pausing under it.
+      # Another job sweeps those up; only give up when one stops making progress.
+      if [ "$FLD" = "0" ]; then break; fi
+      if [ "$IDX" = "0" ]; then echo "    no progress and $FLD failed — giving up"; break; fi
+      echo "    $FLD failed with progress — starting a sweep-up job"
+      $AWS bedrock-agent start-ingestion-job --knowledge-base-id "$KB" --data-source-id "$DS" >/dev/null 2>&1 || true
+      sleep 30 ;;
+    FAILED|STOPPED) break ;;
+  esac
+  [ "$(date +%s)" -lt "$ING_DEADLINE" ] || { echo "    TIMEOUT waiting for ingestion"; break; }
+  sleep 60
+done
 echo "  ingestion      : $(echo "$STATS" | tr -d '\n ')"
 
 FAILED_DOCS=$(echo "$STATS" | python3 -c "import json,sys;print(json.load(sys.stdin).get('numberOfDocumentsFailed',0))")
