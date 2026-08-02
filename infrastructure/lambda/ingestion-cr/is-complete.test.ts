@@ -9,7 +9,11 @@ vi.mock('../shared/ingestion', async () => {
 
 const { handler } = await import('./is-complete');
 
-const EVENT = { RequestType: 'Update' as const, Data: { IngestionJobId: 'JOB123' } };
+const FUTURE = String(Date.now() + 10 * 60 * 1000);   // budget still open
+const PAST   = String(Date.now() - 60 * 1000);        // budget expired
+
+const EVENT  = { RequestType: 'Update' as const, Data: { IngestionJobId: 'JOB123', Deadline: FUTURE } };
+const LATE   = { RequestType: 'Update' as const, Data: { IngestionJobId: 'JOB123', Deadline: PAST } };
 
 const outcome = (over: Record<string, unknown> = {}) => ({
   ingestionJobId: 'JOB123',
@@ -122,6 +126,53 @@ describe('deploy-time ingestion completion', () => {
     );
     startIngestion.mockRejectedValue(new Error('ConflictException: ongoing ingestion job'));
     await expect(handler(EVENT)).resolves.toEqual({ IsComplete: false });
+  });
+
+  // CloudFormation abandons a custom resource at 60 minutes regardless, so a
+  // still-healthy job past our budget must be accepted, not failed.
+  it('accepts a still-running job once the budget expires', async () => {
+    getLatestIngestion.mockResolvedValue(outcome({ status: 'IN_PROGRESS' }));
+    const res = await handler(LATE);
+    expect(res.IsComplete).toBe(true);
+    expect(res.Data?.StillRunning).toBe('true');
+  });
+
+  it('accepts a partially-failed job once the budget expires, without retrying', async () => {
+    getLatestIngestion.mockResolvedValue(
+      outcome({
+        statistics: {
+          numberOfDocumentsScanned: 64,
+          numberOfNewDocumentsIndexed: 58,
+          numberOfModifiedDocumentsIndexed: 0,
+          numberOfDocumentsFailed: 6,
+        },
+      }),
+    );
+    const res = await handler(LATE);
+    expect(res.IsComplete).toBe(true);
+    expect(res.Data?.IncompleteAtDeadline).toBe('true');
+    expect(startIngestion).not.toHaveBeenCalled();
+  });
+
+  // Breakage still fails, budget or no budget — otherwise the deadline would
+  // become a way to launder real failures into green deploys.
+  it('FAILS an expired job that actually FAILED', async () => {
+    getLatestIngestion.mockResolvedValue(outcome({ status: 'FAILED', failureReasons: ['boom'] }));
+    await expect(handler(LATE)).rejects.toThrow(/FAILED.*boom/s);
+  });
+
+  it('FAILS an expired job that made no progress', async () => {
+    getLatestIngestion.mockResolvedValue(
+      outcome({
+        statistics: {
+          numberOfDocumentsScanned: 64,
+          numberOfNewDocumentsIndexed: 0,
+          numberOfModifiedDocumentsIndexed: 0,
+          numberOfDocumentsFailed: 3,
+        },
+      }),
+    );
+    await expect(handler(LATE)).rejects.toThrow(/indexed nothing new/);
   });
 
   it('is a no-op on Delete', async () => {

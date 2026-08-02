@@ -74,15 +74,21 @@ teardown() {
   kb=$($AWS ssm get-parameter --name "/$PREFIX/knowledge-base-id" --query Parameter.Value --output text 2>/dev/null || true)
   ds=$($AWS ssm get-parameter --name "/$PREFIX/data-source-id" --query Parameter.Value --output text 2>/dev/null || true)
   if [ -n "$kb" ] && [ -n "$ds" ]; then
-    job=$($AWS bedrock-agent list-ingestion-jobs --knowledge-base-id "$kb" --data-source-id "$ds" \
-      --filters '[{"attribute":"STATUS","operator":"EQ","values":["IN_PROGRESS"]}]' \
-      --query 'ingestionJobSummaries[0].ingestionJobId' --output text 2>/dev/null || true)
-    if [ -n "$job" ] && [ "$job" != "None" ]; then
-      echo "  stopping in-flight ingestion $job"
+    # Loop, don't stop once. The completion handler starts a sweep-up job when a
+    # job finishes with failures, so a single stop races against a fresh start
+    # and the delete then fails with "There is at least one running ingestion
+    # job for this data source".
+    local round
+    for round in 1 2 3 4 5; do
+      job=$($AWS bedrock-agent list-ingestion-jobs --knowledge-base-id "$kb" --data-source-id "$ds" \
+        --filters '[{"attribute":"STATUS","operator":"EQ","values":["IN_PROGRESS"]}]' \
+        --query 'ingestionJobSummaries[0].ingestionJobId' --output text 2>/dev/null || true)
+      [ -n "$job" ] && [ "$job" != "None" ] || { [ "$round" -gt 1 ] && echo "  no ingestion running"; break; }
+      echo "  stopping in-flight ingestion $job (round $round)"
       $AWS bedrock-agent stop-ingestion-job --knowledge-base-id "$kb" --data-source-id "$ds" \
         --ingestion-job-id "$job" >/dev/null 2>&1 || true
       sleep 30
-    fi
+    done
   fi
 
   echo "  deleting $STACK"

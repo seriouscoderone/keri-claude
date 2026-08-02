@@ -373,6 +373,25 @@ invisible from a healthy running stack:
 | CloudFront OAC name collided | CDK bakes the synth-time stack name in; OAC names are account-unique, so only a same-account test sees it |
 | IPv6 clients got 403 despite being allowlisted | `chat.keri.host` has no AAAA record, so production is only ever reached over IPv4 |
 
+**CloudFormation abandons any custom resource that has not responded within ONE
+HOUR, and that ceiling is not configurable.** Measured 2026-08-02: a fresh stack
+failed at exactly 60.4 minutes with the isComplete handler still polling
+happily. Any `totalTimeout` at or above 60 minutes is unreachable — it merely
+looks configured.
+
+Because a first-time ingestion of the full corpus takes 45-90 minutes, waiting
+for completion is a coin flip against that ceiling. The deploy-time resource
+therefore carries its own 45-minute budget (stamped by `on-event` into `Data`,
+since the completion handler is otherwise stateless) and, once past it:
+
+- still `FAILED`/`STOPPED`, or completed having indexed nothing → **fail the deploy**
+- still running, or completed with progress and some failures → **accept**, and
+  let the daily ingestion rule finish the job
+
+Failing on evidence of breakage, accepting on the absence of it. Production's
+incremental ingestion takes ~2 minutes and always completes inside the budget,
+so it keeps the full fail-loudly guarantee.
+
 ### Recovering a Knowledge Base stuck in DELETE_UNSUCCESSFUL
 
 Symptom, after the vector store has already been destroyed:

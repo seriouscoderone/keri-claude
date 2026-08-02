@@ -747,12 +747,13 @@ export class KeriChatStack extends cdk.Stack {
       onEventHandler: ingestionOnEventFn,
       isCompleteHandler: ingestionIsCompleteFn,
       queryInterval: cdk.Duration.seconds(30),
-      // An incremental ingestion takes ~2 min, but a FIRST-time ingestion of
-      // the whole corpus into an empty vector store took well over 45 minutes
-      // on a fresh stack and was still going when the old 45-minute budget
-      // expired — which rolled the whole stack back. Launch Stack deploys are
-      // always first-time, so this has to accommodate them.
-      totalTimeout: cdk.Duration.hours(2),
+      // Backstop only, and it MUST stay under 60 minutes. CloudFormation
+      // abandons any custom resource that has not responded within one hour —
+      // not configurable — so the 2h this used to say was unreachable: a fresh
+      // stack died at exactly 60.4 min with isComplete still polling happily.
+      // The handler self-completes at its own 45-minute budget, so this should
+      // never fire; if it does, something is wrong with the handler itself.
+      totalTimeout: cdk.Duration.minutes(50),
     });
 
     const deployIngestion = new cdk.CustomResource(this, 'DeployIngestion', {
