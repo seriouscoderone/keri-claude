@@ -174,8 +174,17 @@ CF=$($AWS cloudformation describe-stacks --stack-name "$STACK" \
   --query "Stacks[0].Outputs[?contains(OutputKey,'Distribution')||contains(OutputKey,'CloudFront')].OutputValue" --output text | head -1)
 if [ -n "$CF" ]; then
   code=$(curl -s -o /dev/null -w '%{http_code}' "https://${CF#https://}") || code=000
-  echo "  frontend       : HTTP $code ($CF)"
-  [ "$code" = "200" ] || { echo "  FAIL: frontend did not return 200" >&2; rc=1; }
+  # Also check IPv6 explicitly. The WAF allowlist is IPv4-only, so an
+  # IPv6-enabled distribution 403s allowlisted users; production masked that by
+  # having no AAAA record. A bare curl picks whichever family resolves first,
+  # which makes the failure intermittent rather than obvious.
+  code6=$(curl -6 -s -o /dev/null -w '%{http_code}' "https://${CF#https://}" 2>/dev/null || echo skipped)
+  echo "  frontend       : HTTP $code (IPv6: $code6) ($CF)"
+  [ "$code" = "200" ] || { echo "  FAIL: frontend did not return 200 over IPv4" >&2; rc=1; }
+  case "$code6" in
+    200|skipped|000) ;;
+    *) echo "  FAIL: frontend returned $code6 over IPv6 — allowlist is IPv4-only?" >&2; rc=1 ;;
+  esac
 fi
 
 echo ""

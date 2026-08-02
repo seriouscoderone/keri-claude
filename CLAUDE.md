@@ -370,6 +370,8 @@ invisible from a healthy running stack:
 | 45-minute ingestion budget too small | A first ingestion of the full corpus far exceeds it |
 | Rollback leaked an ACTIVE KB + billing Aurora cluster | `onDelete` swallowed the `ValidationException` that says otherwise |
 | `dataDeletionPolicy: DELETE` stranded the KB | Only bites when the cluster is destroyed first |
+| CloudFront OAC name collided | CDK bakes the synth-time stack name in; OAC names are account-unique, so only a same-account test sees it |
+| IPv6 clients got 403 despite being allowlisted | `chat.keri.host` has no AAAA record, so production is only ever reached over IPv4 |
 
 ### Recovering a Knowledge Base stuck in DELETE_UNSUCCESSFUL
 

@@ -964,6 +964,20 @@ export class KeriChatStack extends cdk.Stack {
     cfnCert.cfnOptions.condition = hasCustomDomain;
 
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
+      // The WAF allowlist is IPv4-only (AllowedIpCidrs is documented as an IPv4
+      // CIDR list, and a WAFv2 IPSet is single-address-family), so serving IPv6
+      // means allowlisted users arriving over IPv6 are blocked with a 403 they
+      // cannot explain.
+      //
+      // Production hid this: its Route53 alias never created an AAAA record, so
+      // chat.keri.host is only ever reached over IPv4. The raw CloudFront domain
+      // DOES publish AAAA — so every Launch Stack user without a custom domain
+      // hit it. Measured 2026-08-02: same host, IPv4 200 / IPv6 403.
+      //
+      // Fails closed, so this is a usability bug rather than a security one.
+      // Supporting IPv6 properly means a second IPSet with IPVersion IPV6 plus
+      // its own rule, and a parameter for callers to supply IPv6 CIDRs.
+      enableIpv6: false,
       defaultBehavior: {
         // Explicit, prefixed name. CDK's default is derived from the synth-time
         // stack name and baked into the published template as a literal, and an
